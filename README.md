@@ -79,7 +79,20 @@ da muy buenos resultados en milisegundos, pero **no garantiza el óptimo**. El t
 
 - 1.5s mínimo entre requests al mismo host
 - respeta `Retry-After`, backoff exponencial, reintentos limitados
-- User-Agent identificable — **cambiá `CONTACTO` por tu mail** en `mtgcl/http.py`
+- User-Agent identificable, con una vía de contacto
+
+Sobre esa vía de contacto: por defecto es la URL del repo, no un mail. Este código
+vive en un repo público y corre en Streamlit Cloud, y una dirección de correo ahí
+la cosechan los bots de spam en minutos — quien tenga una queja abre un issue.
+Cambiá `tu-usuario` en [`mtgcl/http.py`](mtgcl/http.py) por tu usuario de GitHub.
+
+Si preferís que te escriban por mail, no lo pongas en el código:
+
+```bash
+export MUCHI_CONTACTO="tu-mail@ejemplo.cl"
+```
+
+(en Streamlit Cloud va en *Settings → Secrets*).
 - las búsquedas se cachean 30 min
 
 El refresco en vivo hace que scry golpee 30 tiendas por carta. Está detrás de un
