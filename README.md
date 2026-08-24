@@ -70,6 +70,17 @@ streamlit run app.py
 - **Mi lista** — pegás el mazo (`4 Lightning Bolt`, `2x Sol Ring`, `Counterspell`…).
 - **Carrito** — el reparto óptimo entre tiendas, agrupado, con links de compra y CSV.
 
+### Tiendas vs. particulares
+
+scry.cl mezcla dos cosas: tiendas establecidas y vendedores particulares de su
+propio marketplace. Muchi **muestra sólo las tiendas por defecto**; el toggle
+*Solo tiendas establecidas* en la barra lateral incluye a los particulares.
+
+El discriminador es el dominio, no el nombre: las tiendas despachan desde su
+propio sitio (`catlotus.cl`, `gameofmagicsingles.cl`, `www.paytowin.cl`…) y los
+particulares cuelgan todos de `marketplace.scry.cl`. Medido sobre `Sol Ring`:
+33 vendedores se reducen a 13 tiendas, y 198 ofertas a 161.
+
 ### La optimización
 
 Comprar cada carta donde está más barata suele ser **peor**: si eso te deja comprando

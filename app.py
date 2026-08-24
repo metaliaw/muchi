@@ -45,8 +45,11 @@ def sugerencias(q: str):
         return []
 
 
-def filtrar(ofertas, acabado: str, tiendas):
+def filtrar(ofertas, acabado: str, tiendas, solo_tiendas: bool = True):
     out = ofertas
+    if solo_tiendas:
+        # Deja fuera a los particulares de marketplace.scry.cl
+        out = [o for o in out if not o.marketplace]
     if acabado == "Solo normal":
         out = [o for o in out if not o.es_foil]
     elif acabado == "Solo foil":
@@ -85,6 +88,11 @@ st.write("")
 with st.sidebar:
     st.markdown(f"### {HUELLA} Preferencias")
     acabado = st.radio("Acabado", ["Todos", "Solo normal", "Solo foil"], index=0)
+    solo_tiendas = st.toggle(
+        "Solo tiendas establecidas", value=True,
+        help="Excluye a los vendedores particulares del marketplace de scry.cl "
+             "y deja unicamente las tiendas con sitio propio.",
+    )
     envio = st.number_input(
         "Costo de envio por tienda (CLP)", 0, 20000, 4000, step=500,
         help="Muchi lo usa para decidir si conviene concentrar la compra en menos tiendas.",
@@ -133,9 +141,17 @@ with tab_buscar:
         if ofertas:
             db.guardar(base(), elegida, ofertas)
 
-        tiendas_disp = sorted({o.store for o in ofertas})
+        # El filtro de marketplace va primero: el multiselect no debe ofrecer
+        # tiendas que despues quedarian excluidas igual.
+        elegibles = [o for o in ofertas if not (solo_tiendas and o.marketplace)]
+        tiendas_disp = sorted({o.store for o in elegibles})
         sel = st.multiselect("Filtrar tiendas", tiendas_disp, default=[], key="f_tiendas")
-        visibles = filtrar(ofertas, acabado, sel)
+        visibles = filtrar(ofertas, acabado, sel, solo_tiendas)
+
+        ocultas = len(ofertas) - len(elegibles)
+        if ocultas:
+            st.caption(f"{ocultas} ofertas de particulares ocultas "
+                       "(cambialo en la barra lateral)")
 
         if not visibles:
             st.info("Sin stock con esos filtros. Prueba el refresco en vivo mas abajo.")
@@ -226,7 +242,8 @@ with tab_carrito:
     if not pedidos or not crudas:
         st.info("Primero carga una lista en la pestana Mi lista.")
     else:
-        ofertas_por_carta = {k: filtrar(v, acabado, None) for k, v in crudas.items()}
+        ofertas_por_carta = {k: filtrar(v, acabado, None, solo_tiendas)
+                             for k, v in crudas.items()}
         ofertas_por_carta = {k: v for k, v in ofertas_por_carta.items() if v}
 
         estrategia = st.radio(
