@@ -4,10 +4,10 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from mtgcl import db, decklist, estilo, optimizer
+from mtgcl import catalogo, db, decklist, estilo, optimizer
 from mtgcl.http import PoliteSession
 from mtgcl.models import Offer
-from mtgcl.sources import edhrec, scry
+from mtgcl.sources import edhrec, scry, shopify
 
 GATO = "\U0001F431"    # cara de gato
 HUELLA = "\U0001F43E"  # huellitas
@@ -33,8 +33,22 @@ def base():
 
 
 @st.cache_data(ttl=1800, show_spinner=False)
-def buscar(nombre: str):
+def buscar_en_scry(nombre: str):
     return scry.buscar_carta(sesion(), nombre)
+
+
+def buscar(nombre: str):
+    """scry + las tiendas indexadas localmente, deduplicado por URL.
+
+    Si una tienda esta en scry y ademas indexada directo, la version de scry
+    manda: es la que trae el precio ya normalizado por su pipeline.
+    """
+    card_id, ofertas = buscar_en_scry(nombre)
+    # Se descarta por tienda, no por URL: si scry ya cubre esa tienda para esta
+    # carta, duplicar sus ofertas desde el indice local solo inflaria el conteo.
+    cubiertas = {o.store for o in ofertas}
+    locales = [o for o in catalogo.buscar(base(), nombre) if o.store not in cubiertas]
+    return card_id, sorted(ofertas + locales, key=lambda o: o.price_clp)
 
 
 @st.cache_data(ttl=600, show_spinner=False)
@@ -121,8 +135,8 @@ with col_nota:
         "Mostrando solo tiendas establecidas"
     )
 
-tab_buscar, tab_lista, tab_comandante, tab_carrito = st.tabs(
-    [f"{PEZ} Buscar", "Mi lista", "Comandante", "Carrito"]
+tab_buscar, tab_lista, tab_comandante, tab_carrito, tab_tiendas = st.tabs(
+    [f"{PEZ} Buscar", "Mi lista", "Comandante", "Carrito", "Tiendas"]
 )
 
 # ------------------------------------------------------------------ buscar
@@ -198,7 +212,7 @@ with tab_buscar:
                         text=f"Consultando {ev.get('store', '...')} ({hechas}/{total})",
                     )
                 barra.progress(1.0, text="Listo")
-                buscar.clear()
+                buscar_en_scry.clear()
                 st.rerun()
             except Exception as e:
                 st.warning(f"El refresco fallo: {e}")
@@ -426,4 +440,66 @@ with tab_carrito:
             df.to_csv(index=False).encode("utf-8"),
             "carrito-muchi.csv",
             "text/csv",
+        )
+
+# ------------------------------------------------------------------ tiendas
+with tab_tiendas:
+    st.markdown("#### De donde salen los precios")
+    st.caption(
+        "La mayoria viene de scry.cl, que indexa 30 tiendas. Las de abajo Muchi "
+        "las consulta directo, porque scry no las cubre o para contrastar."
+    )
+
+    filas = {f["tienda"]: f for f in catalogo.estado(base())}
+
+    for tienda, url in shopify.TIENDAS.items():
+        f = filas.get(tienda)
+        c1, c2 = st.columns([3, 1])
+        with c1:
+            if f:
+                st.markdown(
+                    f'<div class="mu-card"><div class="mu-fila"><div class="mu-izq">'
+                    f'<div class="mu-nombre">{tienda}</div>'
+                    f'<div class="mu-sub">{f["ofertas"]:,} ofertas de '
+                    f'{f["productos"]:,} productos &middot; {f["actualizado"][:16]}</div>'
+                    f'</div><a class="mu-btn" href="{url}" target="_blank" '
+                    f'rel="noopener">Ir</a></div></div>'.replace(",", "."),
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    f'<div class="mu-card"><div class="mu-fila"><div class="mu-izq">'
+                    f'<div class="mu-nombre">{tienda}</div>'
+                    f'<div class="mu-sub">sin indexar</div></div>'
+                    f'<a class="mu-btn" href="{url}" target="_blank" '
+                    f'rel="noopener">Ir</a></div></div>',
+                    unsafe_allow_html=True,
+                )
+        if c2.button("Indexar", key=f"idx_{tienda}", use_container_width=True):
+            barra = st.progress(0.0, text=f"Bajando el catalogo de {tienda}...")
+            try:
+                def avance(prods, ofs, _t=tienda):
+                    barra.progress(min(prods / 4000, 0.95),
+                                   text=f"{_t}: {prods:,} productos, {ofs:,} ofertas"
+                                        .replace(",", "."))
+
+                n = catalogo.indexar(sesion(), base(), tienda, url, avance)
+                barra.progress(1.0, text="Listo")
+                st.success(f"{tienda}: {n:,} ofertas indexadas.".replace(",", "."))
+                st.rerun()
+            except Exception as e:
+                st.error(f"No pude indexar {tienda}: {e}")
+
+    st.divider()
+    st.markdown("##### Tiendas chilenas que Muchi no puede consultar")
+    st.caption("No estan en scry y no exponen sus precios de forma automatizable. "
+               "Muchi te enlaza para que las mires a mano.")
+    for tienda, (url, motivo) in shopify.FUERA_DE_ALCANCE.items():
+        st.markdown(
+            f'<div class="mu-card"><div class="mu-fila"><div class="mu-izq">'
+            f'<div class="mu-nombre">{tienda}</div>'
+            f'<div class="mu-sub">{motivo}</div></div>'
+            f'<a class="mu-btn" href="{url}" target="_blank" rel="noopener">Buscar ahi</a>'
+            f"</div></div>",
+            unsafe_allow_html=True,
         )

@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from mtgcl import decklist, optimizer  # noqa: E402
+from mtgcl import catalogo, decklist, optimizer  # noqa: E402
 from mtgcl.models import Offer, Pedido  # noqa: E402
 from mtgcl.sources import edhrec, scry, shopify  # noqa: E402
 
@@ -92,6 +92,53 @@ def test_optimizador_respeta_cantidades():
     ofertas = {"a": [_oferta("T1", "A", 250)]}
     plan = optimizer.plan_optimo(pedidos, ofertas, envio_por_tienda=0)
     assert plan.costo_cartas == 1000, plan.costo_cartas
+
+
+def _cx_memoria():
+    import sqlite3
+    cx = sqlite3.connect(":memory:")
+    cx.row_factory = sqlite3.Row
+    catalogo.asegurar_tablas(cx)
+    return cx
+
+
+def _sembrar(cx, tienda, carta, precio, url):
+    from mtgcl.texto import slug as _slug
+    cx.execute(
+        "INSERT INTO catalogo (clave, tienda, carta_slug, carta, titulo, precio,"
+        " url, acabado, condicion, idioma) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        (url, tienda, _slug(carta), carta, f"{carta} [XYZ - 1]", precio, url,
+         "Normal", "Near Mint", "English"),
+    )
+    cx.commit()
+
+
+def test_catalogo_busca_por_slug_no_por_texto():
+    cx = _cx_memoria()
+    _sembrar(cx, "PDA Chile", "Ragavan, Nimble Pilferer", 90000, "http://x/1")
+    # distinta capitalizacion y puntuacion deben encontrar lo mismo
+    assert len(catalogo.buscar(cx, "ragavan nimble pilferer")) == 1
+    assert len(catalogo.buscar(cx, "RAGAVAN, NIMBLE PILFERER")) == 1
+    assert catalogo.buscar(cx, "Otra Carta") == []
+
+
+def test_catalogo_ordena_por_precio_y_marca_origen():
+    cx = _cx_memoria()
+    _sembrar(cx, "PDA Chile", "Sol Ring", 5000, "http://x/caro")
+    _sembrar(cx, "PDA Chile", "Sol Ring", 1200, "http://x/barato")
+    ofertas = catalogo.buscar(cx, "Sol Ring")
+    assert [o.price_clp for o in ofertas] == [1200, 5000]
+    assert all(o.source == "directo" for o in ofertas)
+    # nunca son marketplace: son tiendas con sitio propio
+    assert all(not o.marketplace for o in ofertas)
+
+
+def test_pda_chile_configurada():
+    assert "PDA Chile" in shopify.TIENDAS
+    assert shopify.TIENDAS["PDA Chile"].startswith("https://")
+    # las inalcanzables se declaran con motivo, no se omiten en silencio
+    for tienda, (url, motivo) in shopify.FUERA_DE_ALCANCE.items():
+        assert url.startswith("https://") and len(motivo) > 20, tienda
 
 
 def test_slug():
