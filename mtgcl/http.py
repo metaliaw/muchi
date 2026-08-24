@@ -22,7 +22,7 @@ import requests
 # Si preferis que te escriban por mail, no lo escribas aca: exportalo como
 #     MUCHI_CONTACTO="tu-mail@ejemplo.cl"
 # (en Streamlit Cloud: Settings -> Secrets/Variables).
-CONTACTO = os.getenv("MUCHI_CONTACTO", "https://github.com/tu-usuario/muchi")
+CONTACTO = os.getenv("MUCHI_CONTACTO", "https://github.com/metaliaw/muchi")
 USER_AGENT = f"Muchi/0.1 (uso personal; +{CONTACTO})"
 
 
