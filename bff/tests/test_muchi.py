@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from mtgcl import decklist, optimizer  # noqa: E402
 from mtgcl.models import Offer, Pedido  # noqa: E402
-from mtgcl.sources import scry, shopify  # noqa: E402
+from mtgcl.sources import edhrec, scry, shopify  # noqa: E402
 
 
 def test_decklist_formatos():
@@ -145,6 +145,46 @@ def test_marca_marketplace_al_parsear():
     ofertas = scry._ofertas_desde_html(html)
     por_tienda = {o.store: o.marketplace for o in ofertas}
     assert por_tienda == {"Magic Master": True, "CatLotus": False}, por_tienda
+
+
+def _rec(nombre, cat="Top Cards", inc=0.5, sin=0.1):
+    return edhrec.Recomendacion(nombre=nombre, categoria=cat, tag=cat.lower(),
+                                inclusion=inc, sinergia=sin, num_decks=10)
+
+
+def test_edhrec_slug_comandantes():
+    assert edhrec.slug("Atraxa, Praetors' Voice") == "atraxa-praetors-voice"
+    assert edhrec.slug("Kenrith, the Returned King") == "kenrith-the-returned-king"
+    assert edhrec.slug("Edgar Markov") == "edgar-markov"
+
+
+def test_faltantes_descuenta_lo_que_ya_tengo():
+    recs = [_rec("Sol Ring"), _rec("Skullclamp"), _rec("Arcane Signet")]
+    # La comparacion es normalizada: mayusculas y puntuacion no deben importar
+    faltan = edhrec.faltantes(recs, {"sol ring", "ARCANE SIGNET"})
+    assert [r.nombre for r in faltan] == ["Skullclamp"]
+
+
+def test_faltantes_sin_mazo_devuelve_todo():
+    recs = [_rec("Sol Ring"), _rec("Skullclamp")]
+    assert len(edhrec.faltantes(recs, set())) == 2
+
+
+def test_categorias_conserva_el_orden():
+    recs = [_rec("A", "Top Cards"), _rec("B", "Creatures"),
+            _rec("C", "Top Cards"), _rec("D", "Instants")]
+    assert edhrec.categorias(recs) == ["Top Cards", "Creatures", "Instants"]
+
+
+def test_basicas_se_reconocen():
+    for n in ("Mountain", "island", "Snow-Covered Forest", "Wastes"):
+        assert edhrec.es_basica(n) is True, n
+    for n in ("Mountain Valley", "Goblin Warchief", "Islandia"):
+        assert edhrec.es_basica(n) is False, n
+
+
+def test_inclusion_pct():
+    assert _rec("X", inc=0.6127).inclusion_pct == 61.3
 
 
 def test_parse_titulo_shopify():
