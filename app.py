@@ -60,7 +60,10 @@ def filtrar(ofertas, acabado: str, tiendas, solo_tiendas: bool = True):
 
 
 def tarjeta_oferta(o: Offer, mejor: bool = False) -> str:
-    pills = f'<span class="mu-pill tienda">{o.store}</span>'
+    clase_vendedor = "particular" if o.marketplace else "tienda"
+    pills = f'<span class="mu-pill {clase_vendedor}">{o.store}</span>'
+    if o.marketplace:
+        pills += '<span class="mu-pill particular">particular</span>'
     if o.es_foil:
         pills += '<span class="mu-pill foil">Foil</span>'
     if o.condition:
@@ -88,11 +91,6 @@ st.write("")
 with st.sidebar:
     st.markdown(f"### {HUELLA} Preferencias")
     acabado = st.radio("Acabado", ["Todos", "Solo normal", "Solo foil"], index=0)
-    solo_tiendas = st.toggle(
-        "Solo tiendas establecidas", value=True,
-        help="Excluye a los vendedores particulares del marketplace de scry.cl "
-             "y deja unicamente las tiendas con sitio propio.",
-    )
     envio = st.number_input(
         "Costo de envio por tienda (CLP)", 0, 20000, 4000, step=500,
         help="Muchi lo usa para decidir si conviene concentrar la compra en menos tiendas.",
@@ -101,6 +99,26 @@ with st.sidebar:
     st.caption(
         "Precios via **scry.cl**, que indexa ~30 tiendas chilenas. "
         "Verifica edicion, estado y stock en la tienda antes de pagar."
+    )
+
+# Va arriba de las pestanas a proposito: afecta a las tres (busqueda, lista y
+# el total del carrito), asi que escondido en la barra lateral cambiaba los
+# resultados sin que se viera desde donde.
+col_filtro, col_nota = st.columns([2, 3])
+with col_filtro:
+    incluir_particulares = st.checkbox(
+        "Incluir vendedores particulares",
+        value=False,
+        help="Las tiendas establecidas despachan desde su propio sitio. Los "
+             "particulares venden por el marketplace de scry.cl: suelen ser mas "
+             "baratos, pero son personas, no locales.",
+    )
+solo_tiendas = not incluir_particulares
+with col_nota:
+    st.caption(
+        "Mostrando tiendas y particulares de scry.cl"
+        if incluir_particulares else
+        "Mostrando solo tiendas establecidas"
     )
 
 tab_buscar, tab_lista, tab_carrito = st.tabs(
@@ -150,8 +168,8 @@ with tab_buscar:
 
         ocultas = len(ofertas) - len(elegibles)
         if ocultas:
-            st.caption(f"{ocultas} ofertas de particulares ocultas "
-                       "(cambialo en la barra lateral)")
+            st.caption(f"Hay {ocultas} ofertas de particulares ocultas. "
+                       "Marca la casilla de arriba para verlas.")
 
         if not visibles:
             st.info("Sin stock con esos filtros. Prueba el refresco en vivo mas abajo.")
