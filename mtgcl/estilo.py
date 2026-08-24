@@ -1,0 +1,157 @@
+"""Identidad visual de Muchi.
+
+Paleta base elegida (los 5 pasteles) + dos derivados que la paleta no trae:
+una tinta oscura y un acento saturado. Sin ellos no hay contraste legible:
+cinco pasteles claros no pueden sostener texto ni jerarquia por si solos.
+
+  #FDC9DA  rosa lavanda    #E9EDF6  niebla azulada    #FDBFD3  rosa
+  #FFCFE2  rosa claro      #FDEEF5  rosa papel
+  derivados -> #6E5A68 tinta   #E0729B acento   #7B8FC7 periwinkle
+"""
+
+CSS = """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Quicksand:wght@400;500;600;700&display=swap');
+
+:root {
+  --mu-rosa-lav: #FDC9DA;
+  --mu-niebla:   #E9EDF6;
+  --mu-rosa:     #FDBFD3;
+  --mu-rosa-cl:  #FFCFE2;
+  --mu-papel:    #FDEEF5;
+  --mu-tinta:    #6E5A68;
+  --mu-tinta-sw: #A08F9C;
+  --mu-acento:   #E0729B;
+  --mu-peri:     #7B8FC7;
+  --mu-blanco:   #FFFFFF;
+  --mu-sombra:   0 6px 20px rgba(224, 114, 155, .16);
+  --mu-sombra-sw:0 3px 12px rgba(123, 143, 199, .12);
+}
+
+html, body, [class*="css"], .stMarkdown, .stTextInput, .stTextArea, .stSelectbox {
+  font-family: 'Quicksand', ui-rounded, system-ui, sans-serif;
+}
+h1, h2, h3, h4 { font-family: 'Baloo 2', 'Quicksand', sans-serif !important; color: var(--mu-tinta); }
+
+.stApp {
+  background:
+    radial-gradient(circle at 10% 6%,  var(--mu-niebla)   0%, transparent 40%),
+    radial-gradient(circle at 90% 3%,  var(--mu-rosa-lav) 0%, transparent 38%),
+    radial-gradient(circle at 50% 97%, var(--mu-rosa-cl)  0%, transparent 42%),
+    var(--mu-papel);
+}
+
+/* ---------- encabezado ---------- */
+.mu-hero {
+  background: linear-gradient(120deg, var(--mu-rosa-lav) 0%, var(--mu-niebla) 48%, var(--mu-rosa) 100%);
+  border: 3px solid var(--mu-blanco);
+  border-radius: 30px;
+  padding: 24px 30px;
+  box-shadow: var(--mu-sombra);
+  display: flex; align-items: center; gap: 18px;
+}
+.mu-hero .emoji { font-size: 3rem; line-height: 1; filter: drop-shadow(0 3px 5px rgba(110,90,104,.18)); }
+.mu-hero h1 { margin: 0; font-size: 2.6rem; font-weight: 800; letter-spacing: -1px; color: #fff;
+              text-shadow: 0 2px 8px rgba(224,114,155,.45); }
+.mu-hero p  { margin: 4px 0 0; color: var(--mu-tinta); font-weight: 700; font-size: .95rem; opacity: .85; }
+
+/* ---------- tarjeta de oferta ---------- */
+.mu-card {
+  background: var(--mu-blanco);
+  border: 2px solid var(--mu-rosa-cl);
+  border-radius: 22px;
+  padding: 14px 18px;
+  box-shadow: var(--mu-sombra-sw);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.mu-card:hover { transform: translateY(-2px); box-shadow: var(--mu-sombra); }
+.mu-card.mejor { border-color: var(--mu-peri); background: linear-gradient(180deg, var(--mu-niebla) 0%, #fff 65%); }
+
+.mu-nombre { font-family:'Baloo 2',sans-serif; font-size:1.06rem; font-weight:700; color:var(--mu-tinta); }
+.mu-sub    { font-size:.8rem; color:var(--mu-tinta-sw); font-weight:600; }
+.mu-precio { font-family:'Baloo 2',sans-serif; font-size:1.55rem; font-weight:800; color:var(--mu-acento); line-height:1; }
+.mu-precio.mejor { color: var(--mu-peri); }
+
+/* ---------- pastillas ---------- */
+.mu-pill { display:inline-block; padding:3px 11px; border-radius:999px;
+           font-size:.71rem; font-weight:700; margin:0 5px 3px 0; white-space:nowrap; }
+.mu-pill.tienda { background: var(--mu-rosa-lav); color:#8A4C66; }
+.mu-pill.foil   { background: #FFF0C2;            color:#8A6A11; }
+.mu-pill.mejor  { background: var(--mu-niebla);   color:#4A5F96; }
+.mu-pill.cond   { background: #F4F1F5;            color:#7C6C78; }
+
+/* ---------- tiles ---------- */
+.mu-tile { background:var(--mu-blanco); border:2px solid var(--mu-rosa-cl); border-radius:22px;
+           padding:14px 16px; text-align:center; box-shadow:var(--mu-sombra-sw); height:100%; }
+.mu-tile .et  { font-size:.72rem; font-weight:700; color:var(--mu-tinta-sw);
+                text-transform:uppercase; letter-spacing:.7px; }
+.mu-tile .val { font-family:'Baloo 2',sans-serif; font-size:1.65rem; font-weight:800;
+                color:var(--mu-tinta); line-height:1.2; }
+.mu-tile.ok { border-color: var(--mu-peri); }
+.mu-tile.ok .val { color: var(--mu-peri); }
+
+/* ---------- encabezado de tienda en el carrito ---------- */
+.mu-tienda-hd {
+  background: linear-gradient(120deg, var(--mu-rosa-cl), var(--mu-niebla));
+  border-radius: 999px; padding: 8px 18px; margin: 4px 0 10px;
+  font-family:'Baloo 2',sans-serif; font-weight:800; color:var(--mu-tinta); font-size:1.05rem;
+}
+
+/* ---------- widgets ---------- */
+.stButton > button, .stLinkButton > a, .stDownloadButton > button {
+  border-radius:999px !important; font-weight:700 !important;
+  border:2px solid var(--mu-rosa-cl) !important; color:var(--mu-tinta) !important;
+  transition:all .15s ease;
+}
+.stButton > button[kind="primary"], .stDownloadButton > button {
+  background:linear-gradient(120deg, var(--mu-acento), var(--mu-rosa-lav)) !important;
+  color:#fff !important; border:none !important;
+}
+.stButton > button:hover, .stLinkButton > a:hover, .stDownloadButton > button:hover {
+  transform:translateY(-1px); box-shadow:var(--mu-sombra);
+}
+.stTextInput input, .stTextArea textarea, .stNumberInput input {
+  border-radius:16px !important; border:2px solid var(--mu-rosa-cl) !important; background:#fff !important;
+}
+.stTextInput input:focus, .stTextArea textarea:focus { border-color:var(--mu-acento) !important; }
+
+/* Streamlit >=1.60 dejo de exponer data-baseweb="tab"; se apunta a ambos. */
+.stTabs [data-baseweb="tab-list"], .stTabs [role="tablist"] { gap:8px; background:transparent; border-bottom:none; }
+.stTabs [data-baseweb="tab"],
+.stTabs [data-testid="stTab"] { border-radius:999px !important; padding:8px 22px !important; background:#fff;
+  border:2px solid var(--mu-rosa-cl); font-weight:700; color:var(--mu-tinta-sw); }
+.stTabs [data-testid="stTab"] [data-testid="stMarkdownContainer"] p { font-weight:700; margin:0; }
+.stTabs [data-testid="stTab"]::after { display:none !important; }  /* subrayado nativo */
+.stTabs [aria-selected="true"] {
+  background:linear-gradient(120deg, var(--mu-acento), var(--mu-rosa-lav)) !important;
+  color:#fff !important; border-color:transparent !important;
+}
+/* ---------- fila interna de las tarjetas ---------- */
+.mu-fila { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+.mu-izq  { flex:1; min-width:240px; }
+
+.mu-btn {
+  display:inline-block; padding:8px 20px; border-radius:999px;
+  font-family:'Quicksand',sans-serif; font-weight:700; font-size:.86rem;
+  text-decoration:none !important; white-space:nowrap;
+  background:linear-gradient(120deg, var(--mu-acento), var(--mu-rosa-lav));
+  color:#fff !important; box-shadow:var(--mu-sombra-sw); transition:all .15s ease;
+}
+.mu-btn:hover { transform:translateY(-1px); box-shadow:var(--mu-sombra); }
+
+.stProgress > div > div > div > div { background:linear-gradient(90deg, var(--mu-acento), var(--mu-peri)); }
+[data-testid="stExpander"] { border-radius:20px; border:2px solid var(--mu-rosa-cl); background:#fff; }
+[data-testid="stSidebar"] { background: linear-gradient(180deg, var(--mu-rosa-cl) 0%, var(--mu-niebla) 100%); }
+#MainMenu, footer { visibility:hidden; }
+</style>
+"""
+
+
+def hero(titulo: str, bajada: str, emoji: str = "\U0001F431") -> str:
+    return (f'<div class="mu-hero"><div class="emoji">{emoji}</div>'
+            f'<div><h1>{titulo}</h1><p>{bajada}</p></div></div>')
+
+
+def tile(etiqueta: str, valor: str, ok: bool = False) -> str:
+    clase = "mu-tile ok" if ok else "mu-tile"
+    return f'<div class="{clase}"><div class="et">{etiqueta}</div><div class="val">{valor}</div></div>'
