@@ -79,6 +79,10 @@ h1, h2, h3, h4 { font-family: 'Baloo 2', 'Quicksand', sans-serif !important; col
 .mu-pill.foil   { background: #FFF0C2;            color:#8A6A11; }
 .mu-pill.mejor  { background: var(--mu-niebla);   color:#4A5F96; }
 .mu-pill.cond   { background: #F4F1F5;            color:#7C6C78; }
+/* Particular del marketplace: en niebla, no en rosa, para que se lea distinto
+   de una tienda establecida sin gritar "peligro". */
+.mu-pill.particular { background: var(--mu-niebla); color:#5B6B96;
+                      border:1px dashed #A8B6D8; }
 
 /* ---------- tiles ---------- */
 .mu-tile { background:var(--mu-blanco); border:2px solid var(--mu-rosa-cl); border-radius:22px;
