@@ -5,15 +5,25 @@ y las tiendas son negocios chicos: si las martillamos, nos bloquean (con razon).
 """
 from __future__ import annotations
 
+import os
 import threading
 import time
 from urllib.parse import urlparse
 
 import requests
 
-# Cambia esto por tu mail: si algo molesta, que sepan a quien escribirle.
-CONTACTO = "cambiame@ejemplo.cl"
-USER_AGENT = f"mtg-precios-cl/0.1 (uso personal; {CONTACTO})"
+# Via de contacto que viaja en el User-Agent de cada request. Existe para que
+# scry.cl o una tienda puedan avisarte en vez de bloquearte de una.
+#
+# Por defecto apunta al repo, no a un mail: esto corre en Streamlit Cloud y vive
+# en un repo publico, y una direccion de correo ahi la cosechan los bots de spam
+# en minutos. Quien tenga una queja abre un issue.
+#
+# Si preferis que te escriban por mail, no lo escribas aca: exportalo como
+#     MUCHI_CONTACTO="tu-mail@ejemplo.cl"
+# (en Streamlit Cloud: Settings -> Secrets/Variables).
+CONTACTO = os.getenv("MUCHI_CONTACTO", "https://github.com/tu-usuario/muchi")
+USER_AGENT = f"Muchi/0.1 (uso personal; +{CONTACTO})"
 
 
 class RateLimited(RuntimeError):
