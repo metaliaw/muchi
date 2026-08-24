@@ -1,13 +1,32 @@
 """Muchi - buscador kawaii de cartas Magic en tiendas chilenas."""
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pandas as pd
 import streamlit as st
 
 from mtgcl import catalogo, db, decklist, estilo, optimizer
 from mtgcl.http import PoliteSession
 from mtgcl.models import Offer
-from mtgcl.sources import api_tienda, edhrec, scry, shopify
+from mtgcl.sources import api_tienda, edhrec, moxfield, scry, shopify
+
+INVENTARIOS = Path(__file__).resolve().parent / "inventarios-moxfield.json"
+
+
+def cargar_inventarios():
+    """Listas de Moxfield usadas como catalogo. Opcional: sin archivo, nada."""
+    if not INVENTARIOS.exists():
+        return None, []
+    cfg = json.loads(INVENTARIOS.read_text(encoding="utf-8"))
+    tienda = cfg.get("tienda") or "Inventario Moxfield"
+    listas = [
+        moxfield.Inventario(tienda, l["etiqueta"], moxfield.id_de_url(l["url"]),
+                            int(l.get("tasa", 700)))
+        for l in cfg.get("listas", [])
+    ]
+    return tienda, listas
 
 GATO = "\U0001F431"    # cara de gato
 HUELLA = "\U0001F43E"  # huellitas
@@ -501,6 +520,49 @@ with tab_tiendas:
                 st.rerun()
             except Exception as e:
                 st.error(f"No pude indexar {tienda}: {e}")
+
+    tienda_mox, listas_mox = cargar_inventarios()
+    if listas_mox:
+        st.divider()
+        st.markdown("##### Inventario en listas de Moxfield")
+        st.caption(
+            f"{len(listas_mox)} listas, con precio de CardKingdom por la tasa de cada una. "
+            "Los foils se cotizan con ck_foil, no con ck."
+        )
+
+        f = filas.get(tienda_mox)
+        if f:
+            st.markdown(
+                f'<div class="mu-card"><div class="mu-fila"><div class="mu-izq">'
+                f'<div class="mu-nombre">{tienda_mox}</div>'
+                f'<div class="mu-sub">{f["ofertas"]:,} ofertas &middot; '
+                f'{f["actualizado"][:16]}</div></div></div></div>'.replace(",", "."),
+                unsafe_allow_html=True,
+            )
+
+        tasas = ", ".join(f'{i.etiqueta} x{i.tasa}' for i in listas_mox)
+        st.caption(tasas)
+
+        if st.button("Indexar las listas de Moxfield", key="idx_mox"):
+            barra = st.progress(0.0, text="Bajando listas...")
+            todas, sin_precio = [], 0
+            try:
+                for i, inv in enumerate(listas_mox):
+                    barra.progress(i / len(listas_mox), text=f"Bajando {inv.etiqueta}...")
+                    r = moxfield.inventario(sesion(), inv)
+                    todas += r.ofertas
+                    sin_precio += r.sin_precio
+                catalogo.guardar_ofertas(base(), tienda_mox, todas)
+                barra.progress(1.0, text="Listo")
+                aviso = f"{len(todas):,} ofertas indexadas.".replace(",", ".")
+                if sin_precio:
+                    aviso += f" {sin_precio} entradas quedaron fuera por no traer precio de CardKingdom."
+                st.success(aviso)
+                st.rerun()
+            except moxfield.ListaNoEncontrada as e:
+                st.error(f"Esa lista no existe o no es publica: {e}")
+            except Exception as e:
+                st.error(f"No pude importar: {e}")
 
     st.divider()
     st.markdown("##### Tiendas chilenas que Muchi no puede consultar")

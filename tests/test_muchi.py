@@ -1,4 +1,4 @@
-"""Pruebas de la logica que no depende de la red.
+﻿"""Pruebas de la logica que no depende de la red.
 
 Corre con pytest, o directo:  python tests/test_muchi.py
 """
@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from mtgcl import catalogo, decklist, optimizer  # noqa: E402
 from mtgcl.models import Offer, Pedido  # noqa: E402
-from mtgcl.sources import api_tienda, edhrec, scry, shopify  # noqa: E402
+from mtgcl.sources import api_tienda, edhrec, moxfield, scry, shopify  # noqa: E402
 
 
 def test_decklist_formatos():
@@ -193,6 +193,44 @@ def test_ejemplo_de_config_es_json_valido():
         assert not t.apikey, f"{t.nombre} trae una clave en el archivo"
 
 
+def test_moxfield_id_de_url():
+    assert moxfield.id_de_url(
+        "https://moxfield.com/decks/yqdRPdoUlEiFz21qKYHGMA") == "yqdRPdoUlEiFz21qKYHGMA"
+    assert moxfield.id_de_url(
+        "https://www.moxfield.com/decks/l-hvQOWPTEKJ0rMjMUHJxg/") == "l-hvQOWPTEKJ0rMjMUHJxg"
+    assert moxfield.id_de_url("l_sw58BtJUaWZj9n6VNCDw") == "l_sw58BtJUaWZj9n6VNCDw"
+    for malo in ("", "https://ejemplo.cl/algo/otro"):
+        try:
+            moxfield.id_de_url(malo)
+            raise AssertionError(f"deberia rechazar {malo!r}")
+        except ValueError:
+            pass
+
+
+def test_moxfield_foil_usa_ck_foil():
+    """El bug caro: cotizar un foil con el precio no-foil."""
+    precios = {"ck": 1.50, "ck_foil": 17.99}
+    assert moxfield._precio_ck(precios, es_foil=True) == 17.99
+    assert moxfield._precio_ck(precios, es_foil=False) == 1.50
+    # si falta el del acabado pedido, NO se cae al otro
+    assert moxfield._precio_ck({"ck": 1.50}, es_foil=True) is None
+    assert moxfield._precio_ck({"ck_foil": 17.99}, es_foil=False) is None
+    assert moxfield._precio_ck({}, es_foil=False) is None
+
+
+def test_config_de_inventarios_es_coherente():
+    ruta = Path(__file__).resolve().parent.parent / "inventarios-moxfield.json"
+    cfg = json.loads(ruta.read_text(encoding="utf-8"))
+    listas = cfg["listas"]
+    assert len(listas) == 9
+    for l in listas:
+        assert moxfield.id_de_url(l["url"])
+        assert 100 <= l["tasa"] <= 2000, l
+    # la lista de foils japoneses cotiza distinto y eso no debe perderse
+    japo = [l for l in listas if l["tasa"] != 700]
+    assert len(japo) == 1 and japo[0]["tasa"] == 500, japo
+
+
 def test_slug():
     assert scry.slug("Ragavan, Nimble Pilferer") == "ragavan-nimble-pilferer"
     assert scry.slug("Jotun Grunt") == "jotun-grunt"
@@ -325,3 +363,4 @@ if __name__ == "__main__":
             print(f"  FALLA {nombre}: {e}")
     print("\nTodo verde" if not fallos else f"\n{fallos} pruebas fallaron")
     sys.exit(1 if fallos else 0)
+
