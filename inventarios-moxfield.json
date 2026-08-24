@@ -5,7 +5,7 @@
     "Indexar desde la pestaña Tiendas de la app."
   ],
 
-  "tienda": "REVISAR: nombre de la tienda",
+  "tienda": "El Wombat Rabioso TCG",
 
   "listas": [
     { "etiqueta": "Artefacto",  "url": "https://moxfield.com/decks/yqdRPdoUlEiFz21qKYHGMA", "tasa": 700 },
