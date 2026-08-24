@@ -208,6 +208,9 @@ GET https://api2.moxfield.com/v3/decks/all/<publicId>
 Se configura en `inventarios-moxfield.json`, una tasa por lista — porque no todas
 cotizan igual: la de foils japoneses va a ×500 y el resto a ×700.
 
+Hoy alimenta a **El Wombat Rabioso TCG**, que vende por Facebook y lleva su stock
+en 9 listas por color: 2.233 ofertas, 3.893 copias.
+
 > **Los foils usan `ck_foil`, no `ck`.** Es la diferencia entre cotizar un
 > Masticore [V10] a US$ 1,50 o a US$ 17,99. Usar `ck` para todo también dejaba
 > 175 de 2.249 entradas sin precio; con la clave correcta por acabado quedan 16.
@@ -219,9 +222,6 @@ inventarles un valor.
 
 No se omiten en silencio: la pestaña **Tiendas** las enlaza para revisarlas a mano.
 
-- **El Wombat Rabioso TCG** — vende por Facebook; su catálogo vive en el Supabase
-  de [su propia app](https://buscadorcartas-wombat.streamlit.app). No hay feed
-  público ni deep-link por URL.
 - **Magic Chile** — su `robots.txt` bloquea a todos los bots
   (`User-agent: *` → `Disallow: /`).
 - **Gaming Place** — el servidor responde 403 a peticiones automatizadas.

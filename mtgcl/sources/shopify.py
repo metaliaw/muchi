@@ -34,10 +34,6 @@ TIENDAS = {
 # Tiendas chilenas que Muchi NO puede consultar, y por que. Se muestran en la
 # app como enlaces para que las revises a mano en vez de fingir que no existen.
 FUERA_DE_ALCANCE = {
-    "El Wombat Rabioso TCG": (
-        "https://buscadorcartas-wombat.streamlit.app",
-        "Su catalogo vive en la base de datos de su propia app; no hay feed publico.",
-    ),
     "Magic Chile": (
         "https://www.magic-chile.cl",
         "Su robots.txt bloquea a todos los bots (User-agent: * -> Disallow: /).",
