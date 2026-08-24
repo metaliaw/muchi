@@ -181,6 +181,29 @@ Valhalla Store · Zendicard
 *Marketplace Scry* no es una tienda sino el paraguas de los vendedores
 particulares; es la que filtra la casilla *Incluir vendedores particulares*.
 
+### Tiendas que Muchi consulta directo
+
+`/products.json` de Shopify no acepta búsqueda: sólo pagina el catálogo entero.
+Así que Muchi lo baja una vez, lo guarda en SQLite y busca localmente. Se hace
+desde la pestaña **Tiendas**, a mano — es descarga masiva, no una consulta.
+
+| Tienda | Por qué |
+|---|---|
+| **PDA Chile** | ~3.600 ofertas. **No está en scry**: es la única vía para verla. |
+| Dragón Durmiente | ya está en scry; sirve para contrastar o si scry cae |
+| PayToWin | ídem |
+
+### Tiendas chilenas fuera de alcance
+
+No se omiten en silencio: la pestaña **Tiendas** las enlaza para revisarlas a mano.
+
+- **El Wombat Rabioso TCG** — vende por Facebook; su catálogo vive en el Supabase
+  de [su propia app](https://buscadorcartas-wombat.streamlit.app). No hay feed
+  público ni deep-link por URL.
+- **Magic Chile** — su `robots.txt` bloquea a todos los bots
+  (`User-agent: *` → `Disallow: /`).
+- **Gaming Place** — el servidor responde 403 a peticiones automatizadas.
+
 ## Paleta
 
 `#FDC9DA` `#E9EDF6` `#FDBFD3` `#FFCFE2` `#FDEEF5`

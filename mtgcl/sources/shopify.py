@@ -17,9 +17,35 @@ from collections.abc import Iterator
 from ..http import PoliteSession
 from ..models import Offer
 
+# Tiendas Shopify que Muchi puede consultar directo.
+#
+# Dragon Durmiente y PayToWin ya estan en scry: aca sirven para contrastar
+# precios o si scry se cae. PDA Chile NO esta en scry, asi que esta es la unica
+# via para verla. Su robots.txt permite a User-agent: * -- pero bloquea
+# explicitamente a los crawlers de IA (ClaudeBot, GPTBot, CCBot...). Muchi no es
+# ninguno de esos y no se hace pasar por nadie, pero bajarle el catalogo entero
+# es descarga masiva: por eso la indexacion es manual y no automatica.
 TIENDAS = {
     "Dragon Durmiente": "https://dragondurmiente.cl",
     "PayToWin": "https://www.paytowin.cl",
+    "PDA Chile": "https://www.pdachile.cl",
+}
+
+# Tiendas chilenas que Muchi NO puede consultar, y por que. Se muestran en la
+# app como enlaces para que las revises a mano en vez de fingir que no existen.
+FUERA_DE_ALCANCE = {
+    "El Wombat Rabioso TCG": (
+        "https://buscadorcartas-wombat.streamlit.app",
+        "Su catalogo vive en la base de datos de su propia app; no hay feed publico.",
+    ),
+    "Magic Chile": (
+        "https://www.magic-chile.cl",
+        "Su robots.txt bloquea a todos los bots (User-agent: * -> Disallow: /).",
+    ),
+    "Gaming Place": (
+        "https://www.gamingplace.cl",
+        "El servidor rechaza las peticiones automatizadas con 403.",
+    ),
 }
 
 _TITULO = re.compile(
