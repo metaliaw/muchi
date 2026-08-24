@@ -193,6 +193,28 @@ desde la pestaña **Tiendas**, a mano — es descarga masiva, no una consulta.
 | Dragón Durmiente | ya está en scry; sirve para contrastar o si scry cae |
 | PayToWin | ídem |
 
+### Inventario en listas de Moxfield
+
+Para tiendas sin e-commerce que llevan su stock en [Moxfield](https://moxfield.com).
+La API que usa el propio sitio devuelve el precio de CardKingdom **ya calculado**,
+así que la convención "CK × 700" es exacta y no una estimación:
+
+```
+GET https://api2.moxfield.com/v3/decks/all/<publicId>
+  -> boards.*.cards[*].card.prices.ck        (no foil)
+                            .prices.ck_foil  (foil)
+```
+
+Se configura en `inventarios-moxfield.json`, una tasa por lista — porque no todas
+cotizan igual: la de foils japoneses va a ×500 y el resto a ×700.
+
+> **Los foils usan `ck_foil`, no `ck`.** Es la diferencia entre cotizar un
+> Masticore [V10] a US$ 1,50 o a US$ 17,99. Usar `ck` para todo también dejaba
+> 175 de 2.249 entradas sin precio; con la clave correcta por acabado quedan 16.
+
+Las entradas sin precio de CardKingdom se omiten y se informa cuántas, en vez de
+inventarles un valor.
+
 ### Tiendas chilenas fuera de alcance
 
 No se omiten en silencio: la pestaña **Tiendas** las enlaza para revisarlas a mano.
