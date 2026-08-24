@@ -130,6 +130,42 @@ h1, h2, h3, h4 { font-family: 'Baloo 2', 'Quicksand', sans-serif !important; col
   background:linear-gradient(120deg, var(--mu-acento), var(--mu-rosa-lav)) !important;
   color:#fff !important; border-color:transparent !important;
 }
+/* ---------- Muchi, el gatito ---------- */
+.mu-gato { position:relative; text-align:center; padding:4px 0 0; }
+.mu-gato img {
+  width:132px; height:132px; image-rendering:pixelated;   /* nada de suavizado */
+  cursor:pointer; transition:transform .18s ease;
+  filter: drop-shadow(0 4px 8px rgba(224,114,155,.28));
+}
+.mu-gato:hover img { transform:translateY(-3px) scale(1.05); }
+
+/* globo de dialogo */
+.mu-globo {
+  position:relative; background:var(--mu-blanco);
+  border:2px solid var(--mu-rosa-cl); border-radius:18px;
+  padding:10px 14px; margin:6px 4px 10px;
+  font-family:'Quicksand',sans-serif; font-weight:600; font-size:.9rem;
+  color:var(--mu-tinta); box-shadow:var(--mu-sombra-sw);
+}
+.mu-globo::after {
+  content:''; position:absolute; top:-9px; left:50%; margin-left:-8px;
+  border-left:8px solid transparent; border-right:8px solid transparent;
+  border-bottom:9px solid var(--mu-rosa-cl);
+}
+
+/* corazoncitos que suben al apretarla */
+.mu-corazones { position:relative; height:0; pointer-events:none; }
+.mu-corazon {
+  position:absolute; bottom:0; font-size:1.1rem; opacity:0;
+  animation: mu-flota 2.1s ease-out forwards;
+}
+@keyframes mu-flota {
+  0%   { transform:translateY(0) scale(.5) rotate(0deg);      opacity:0; }
+  12%  { opacity:1; }
+  70%  { opacity:1; }
+  100% { transform:translateY(-120px) scale(1.15) rotate(18deg); opacity:0; }
+}
+
 /* ---------- fila interna de las tarjetas ---------- */
 .mu-fila { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
 .mu-izq  { flex:1; min-width:240px; }
