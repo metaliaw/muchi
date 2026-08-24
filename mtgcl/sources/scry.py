@@ -19,6 +19,7 @@ import json
 import re
 import unicodedata
 from collections.abc import Iterator
+from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
 
@@ -27,6 +28,19 @@ from ..models import Offer
 
 BASE = "https://scry.cl"
 _UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+
+
+def es_marketplace(url: str) -> bool:
+    """True si la oferta la publica un particular en el marketplace de scry.
+
+    El discriminador es el dominio, no el nombre. Las tiendas establecidas
+    despachan desde su propio sitio (catlotus.cl, gameofmagicsingles.cl,
+    www.paytowin.cl...); los vendedores particulares cuelgan todos de
+    marketplace.scry.cl. Medido sobre 2 cartas: 62 ofertas de 31 vendedores
+    distintos bajo ese unico dominio.
+    """
+    host = urlparse(url).netloc.lower()
+    return host == "scry.cl" or host.endswith(".scry.cl")
 
 
 def slug(nombre: str) -> str:
@@ -84,6 +98,7 @@ def _ofertas_desde_html(html: str, nombre_fallback: str = "") -> list[Offer]:
             condition=cond.title(),
             key=clave or "",
             source="scry",
+            marketplace=es_marketplace(url),
         ))
 
     return sorted(ofertas, key=lambda o: o.price_clp)

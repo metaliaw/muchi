@@ -122,6 +122,31 @@ def test_parse_offers_desde_html_real():
     assert ofertas[0].edicion == "MH2"
 
 
+def test_marketplace_vs_tienda():
+    """Los particulares de scry cuelgan de marketplace.scry.cl; las tiendas no."""
+    assert scry.es_marketplace("https://marketplace.scry.cl/magic-master/sol-ring") is True
+    assert scry.es_marketplace("https://scry.cl/card/sol-ring") is True
+    assert scry.es_marketplace("https://catlotus.cl/carta/123") is False
+    assert scry.es_marketplace("https://www.paytowin.cl/products/x") is False
+    assert scry.es_marketplace("https://gameofmagicsingles.cl/products/y") is False
+    # No debe confundirse con un dominio que apenas contenga la cadena
+    assert scry.es_marketplace("https://noscry.cl/x") is False
+
+
+def test_marca_marketplace_al_parsear():
+    html = (
+        '<a data-track-type="store_offer_click" data-store-name="Magic Master" '
+        'data-offer-title="Sol Ring - NM" data-price-clp="1791" data-variant-key="k1" '
+        'data-product-url="https://marketplace.scry.cl/magic-master/sol-ring">Ver</a>'
+        '<a data-track-type="store_offer_click" data-store-name="CatLotus" '
+        'data-offer-title="Sol Ring - NM" data-price-clp="2000" data-variant-key="k2" '
+        'data-product-url="https://catlotus.cl/x">Ver</a>'
+    )
+    ofertas = scry._ofertas_desde_html(html)
+    por_tienda = {o.store: o.marketplace for o in ofertas}
+    assert por_tienda == {"Magic Master": True, "CatLotus": False}, por_tienda
+
+
 def test_parse_titulo_shopify():
     d = shopify.parse_titulo("Ragavan, Nimble Pilferer (Borderless) [MH2 - 138]")
     assert d["nombre"] == "Ragavan, Nimble Pilferer"

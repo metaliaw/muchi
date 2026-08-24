@@ -18,6 +18,9 @@ class Offer:
     stock: int | None = None
     source: str = "scry"
     key: str = ""       # id de variante, para deduplicar
+    # True = vendedor particular del marketplace de scry; False = tienda con sitio
+    # propio. Lo determina la fuente al parsear (ver sources/scry.py).
+    marketplace: bool = False
 
     @property
     def es_foil(self) -> bool:
