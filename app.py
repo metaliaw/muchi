@@ -7,7 +7,7 @@ import streamlit as st
 from mtgcl import catalogo, db, decklist, estilo, optimizer
 from mtgcl.http import PoliteSession
 from mtgcl.models import Offer
-from mtgcl.sources import edhrec, scry, shopify
+from mtgcl.sources import api_tienda, edhrec, scry, shopify
 
 GATO = "\U0001F431"    # cara de gato
 HUELLA = "\U0001F43E"  # huellitas
@@ -48,7 +48,19 @@ def buscar(nombre: str):
     # carta, duplicar sus ofertas desde el indice local solo inflaria el conteo.
     cubiertas = {o.store for o in ofertas}
     locales = [o for o in catalogo.buscar(base(), nombre) if o.store not in cubiertas]
-    return card_id, sorted(ofertas + locales, key=lambda o: o.price_clp)
+
+    # Tiendas que exponen una API de solo lectura (ver INTEGRAR-TIENDA.md).
+    # Si una falla no puede tumbar la busqueda entera.
+    por_api: list[Offer] = []
+    for tienda in api_tienda.cargar():
+        if tienda.nombre in cubiertas:
+            continue
+        try:
+            por_api += api_tienda.buscar(sesion(), tienda, nombre)
+        except Exception:
+            continue
+
+    return card_id, sorted(ofertas + locales + por_api, key=lambda o: o.price_clp)
 
 
 @st.cache_data(ttl=600, show_spinner=False)
