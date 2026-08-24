@@ -36,17 +36,25 @@ vía `/products.json`, útil para contrastar precios o si scry se cae.
 
 ## Instalar
 
-Necesitás Python. En tu equipo no está instalado (los `python.exe` del PATH son los
-stubs de la Microsoft Store):
+Requiere Python 3.12. En Windows, si `python` abre la Microsoft Store en vez de
+correr, lo que tenés en el PATH son los stubs y falta instalarlo de verdad:
 
 ```bash
 winget install --id Python.Python.3.12 -e
 ```
 
-Cerrá y reabrí la terminal, y después:
+Después, desde la raíz del repo:
 
 ```bash
-cd C:\Users\sofia.foresi\src\mtg-precios-cl && python -m venv .venv && .venv\Scripts\activate && pip install -r requirements.txt
+python -m venv .venv
+```
+
+```bash
+.venv\Scripts\activate
+```
+
+```bash
+pip install -r requirements.txt
 ```
 
 ## Correr
@@ -80,11 +88,11 @@ da muy buenos resultados en milisegundos, pero **no garantiza el óptimo**. El t
 - 1.5s mínimo entre requests al mismo host
 - respeta `Retry-After`, backoff exponencial, reintentos limitados
 - User-Agent identificable, con una vía de contacto
+- las búsquedas se cachean 30 min
 
 Sobre esa vía de contacto: por defecto es la URL del repo, no un mail. Este código
 vive en un repo público y corre en Streamlit Cloud, y una dirección de correo ahí
 la cosechan los bots de spam en minutos — quien tenga una queja abre un issue.
-Cambiá `tu-usuario` en [`mtgcl/http.py`](mtgcl/http.py) por tu usuario de GitHub.
 
 Si preferís que te escriban por mail, no lo pongas en el código:
 
@@ -93,7 +101,6 @@ export MUCHI_CONTACTO="tu-mail@ejemplo.cl"
 ```
 
 (en Streamlit Cloud va en *Settings → Secrets*).
-- las búsquedas se cachean 30 min
 
 El refresco en vivo hace que scry golpee 30 tiendas por carta. Está detrás de un
 botón a propósito: no lo corras en loop sobre una decklist de 100 cartas.
