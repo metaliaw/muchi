@@ -7,7 +7,7 @@ import streamlit as st
 from mtgcl import db, decklist, estilo, optimizer
 from mtgcl.http import PoliteSession
 from mtgcl.models import Offer
-from mtgcl.sources import scry
+from mtgcl.sources import edhrec, scry
 
 GATO = "\U0001F431"    # cara de gato
 HUELLA = "\U0001F43E"  # huellitas
@@ -121,8 +121,8 @@ with col_nota:
         "Mostrando solo tiendas establecidas"
     )
 
-tab_buscar, tab_lista, tab_carrito = st.tabs(
-    [f"{PEZ} Buscar", "Mi lista", "Carrito"]
+tab_buscar, tab_lista, tab_comandante, tab_carrito = st.tabs(
+    [f"{PEZ} Buscar", "Mi lista", "Comandante", "Carrito"]
 )
 
 # ------------------------------------------------------------------ buscar
@@ -213,6 +213,15 @@ with tab_buscar:
 # ------------------------------------------------------------------ mi lista
 with tab_lista:
     st.markdown("#### Pega tu mazo y Muchi busca todo")
+
+    # La pestana Comandante deja aca lo que querés sumar. Se mezcla ANTES de
+    # crear el textarea: Streamlit no deja tocar la session_state de un widget
+    # una vez instanciado, y asi el texto sigue siendo la unica fuente de verdad.
+    if st.session_state.get("_sumar_al_mazo"):
+        extra = st.session_state.pop("_sumar_al_mazo")
+        previo = st.session_state.get("decklist", "") or ""
+        st.session_state["decklist"] = (previo.rstrip() + "\n" + extra).strip()
+
     texto = st.text_area(
         "Una carta por linea",
         height=220,
@@ -251,6 +260,83 @@ with tab_lista:
             f"Encontre precios para {len(encontrado)} de {len(pedidos)} cartas. "
             "Anda a la pestana Carrito."
         )
+
+# ------------------------------------------------------------------ comandante
+@st.cache_data(ttl=86400, show_spinner=False)
+def recomendaciones(comandante: str):
+    return edhrec.recomendaciones(sesion(), comandante)
+
+
+with tab_comandante:
+    st.markdown("#### Que le falta a tu mazo")
+    st.caption("Muchi le pregunta a EDHREC que juega la gente con ese comandante "
+               "y descuenta lo que ya tenes en Mi lista.")
+
+    comandante = st.text_input(
+        "Tu comandante", placeholder="Ej: Atraxa, Praetors' Voice", key="comandante"
+    )
+
+    if comandante and len(comandante) >= 3:
+        try:
+            recs = recomendaciones(comandante)
+        except edhrec.ComandanteNoEncontrado:
+            recs = []
+            st.error(
+                f"EDHREC no tiene pagina para **{comandante}**. Revisa que el nombre "
+                "este completo y en ingles (ej: *Atraxa, Praetors' Voice*)."
+            )
+        except Exception as e:
+            recs = []
+            st.error(f"No pude consultar EDHREC: {e}")
+
+        if recs:
+            mis_pedidos = st.session_state.get("pedidos") or []
+            ya_tengo = {p.nombre for p in mis_pedidos}
+            pendientes = edhrec.faltantes(recs, ya_tengo)
+
+            c1, c2, c3 = st.columns(3)
+            c1.markdown(estilo.tile("Recomendadas", str(len(recs))), unsafe_allow_html=True)
+            c2.markdown(estilo.tile("Ya las tenes", str(len(recs) - len(pendientes))),
+                        unsafe_allow_html=True)
+            c3.markdown(estilo.tile("Te faltan", str(len(pendientes)), ok=True),
+                        unsafe_allow_html=True)
+            st.write("")
+
+            if not ya_tengo:
+                st.info("Carga tu mazo en **Mi lista** y Muchi descuenta lo que ya tenes.")
+
+            cats = edhrec.categorias(pendientes)
+            col_cat, col_n = st.columns([3, 1])
+            cat = col_cat.selectbox("Categoria", ["Todas"] + cats)
+            cuantas = col_n.number_input("Cuantas", 5, 50, 15, step=5)
+
+            visibles = [r for r in pendientes if cat == "Todas" or r.categoria == cat]
+            visibles = visibles[: int(cuantas)]
+
+            for r in visibles:
+                st.markdown(
+                    f'<div class="mu-card"><div class="mu-fila">'
+                    f'<div class="mu-izq"><div class="mu-nombre">{r.nombre}</div>'
+                    f'<div style="margin-top:6px">'
+                    f'<span class="mu-pill tienda">{r.categoria}</span>'
+                    f'<span class="mu-pill cond">sinergia {r.sinergia:+.2f}</span>'
+                    f'</div></div>'
+                    f'<div style="text-align:right">'
+                    f'<div class="mu-precio">{r.inclusion_pct:.0f}%</div>'
+                    f'<div class="mu-sub">de los mazos</div></div>'
+                    f"</div></div>",
+                    unsafe_allow_html=True,
+                )
+
+            if visibles and st.button(
+                f"Sumar estas {len(visibles)} a Mi lista", type="primary",
+                key="add_recs",
+            ):
+                st.session_state["_sumar_al_mazo"] = "\n".join(
+                    f"1 {r.nombre}" for r in visibles
+                )
+                st.rerun()
+
 
 # ------------------------------------------------------------------ carrito
 with tab_carrito:

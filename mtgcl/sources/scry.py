@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import json
 import re
-import unicodedata
 from collections.abc import Iterator
 from urllib.parse import urlparse
 
@@ -25,6 +24,7 @@ from bs4 import BeautifulSoup
 
 from ..http import PoliteSession
 from ..models import Offer
+from ..texto import slug
 
 BASE = "https://scry.cl"
 _UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
@@ -43,12 +43,8 @@ def es_marketplace(url: str) -> bool:
     return host == "scry.cl" or host.endswith(".scry.cl")
 
 
-def slug(nombre: str) -> str:
-    """'Ragavan, Nimble Pilferer' -> 'ragavan-nimble-pilferer'."""
-    s = unicodedata.normalize("NFD", nombre)
-    s = "".join(c for c in s if unicodedata.category(c) != "Mn")
-    s = re.sub(r"[^a-zA-Z0-9]+", "-", s).strip("-").lower()
-    return re.sub(r"-{2,}", "-", s)
+# Reexportado por comodidad: scry.slug(...) sigue funcionando como antes.
+slug = slug
 
 
 def autocomplete(sess: PoliteSession, q: str, limite: int = 10) -> list[str]:

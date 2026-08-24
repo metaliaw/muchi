@@ -68,7 +68,28 @@ streamlit run app.py
 - **🐟 Buscar** — una carta, todas las ofertas ordenadas por precio, la más barata
   marcada con 🐾. Botón de refresco en vivo si querés precios del minuto.
 - **Mi lista** — pegás el mazo (`4 Lightning Bolt`, `2x Sol Ring`, `Counterspell`…).
+- **Comandante** — ponés tu comandante y Muchi le pregunta a [EDHREC](https://edhrec.com)
+  qué juega la gente con él, descontando lo que ya tenés en *Mi lista*. Un botón
+  suma las recomendaciones a tu lista para cotizarlas.
 - **Carrito** — el reparto óptimo entre tiendas, agrupado, con links de compra y CSV.
+
+### Las recomendaciones
+
+Salen de `https://json.edhrec.com/pages/commanders/<slug>.json` — el mismo JSON
+que consume el sitio de EDHREC, una sola petición por comandante. Trae dos
+métricas que conviene no confundir:
+
+- **inclusión** (`num_decks / potential_decks`): qué tan común es la carta.
+  *"El 61% de los Krenko juegan Skullclamp."*
+- **sinergia**: cuánto más aparece con ese comandante que en el resto del formato.
+  Inclusión alta + sinergia baja = staple genérico (Sol Ring). Sinergia alta =
+  específica de ese mazo.
+
+Las tierras básicas quedan fuera: `Mountain` aparece en el 97,6% de los Krenko y
+como sugerencia de compra no aporta nada.
+
+> Un comandante inexistente responde **403**, no 404 — está manejado como
+> "no encontrado".
 
 ### Tiendas vs. particulares
 
@@ -140,10 +161,25 @@ mtgcl/
   optimizer.py          reparto entre tiendas (greedy + búsqueda local)
   db.py                 SQLite: histórico de precios
   estilo.py             tema kawaii (paleta Muchi)
+  texto.py              slug compartido entre fuentes
   sources/
-    scry.py             agregador (fuente principal)
+    scry.py             agregador de precios (fuente principal)
     shopify.py          Dragón Durmiente + PayToWin directo
+    edhrec.py           recomendaciones por comandante
 ```
+
+## Las 30 tiendas que indexa scry
+
+AFK Store · BloodMoon · CardNexus · CardSouls · Cartas La Fortaleza ·
+Cartas Magicsur · CatLotus · ChronoMagic · Collector Center · Dominio Arcano ·
+Dragon Durmiente · Friki Cards · Game of Magic Singles · GameQuest ·
+HunterCard TCG · Ineko Card Shop · La Comarca · LaCripta · Magic4Ever ·
+Marketplace Scry · MetaGame · Oasis Games · PayToWin · PiedraBruja ·
+Reino Eldrazi · Rhystic Bazaar · Rivendel El Concilio · Singles Winterland ·
+Valhalla Store · Zendicard
+
+*Marketplace Scry* no es una tienda sino el paraguas de los vendedores
+particulares; es la que filtra la casilla *Incluir vendedores particulares*.
 
 ## Paleta
 
