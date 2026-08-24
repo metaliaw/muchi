@@ -11,7 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from mtgcl import catalogo, decklist, optimizer  # noqa: E402
+from mtgcl import catalogo, decklist, gatito, optimizer  # noqa: E402
 from mtgcl.models import Offer, Pedido  # noqa: E402
 from mtgcl.sources import api_tienda, edhrec, moxfield, scry, shopify  # noqa: E402
 
@@ -231,6 +231,35 @@ def test_config_de_inventarios_es_coherente():
     assert len(japo) == 1 and japo[0]["tasa"] == 500, japo
 
 
+def test_sprite_de_muchi_existe_y_es_gif():
+    ruta = Path(__file__).resolve().parent.parent / "assets" / "muchi.gif"
+    assert ruta.exists(), "falta assets/muchi.gif (corre tools/generar_muchi.py)"
+    assert ruta.read_bytes()[:6] in (b"GIF87a", b"GIF89a")
+    uri = gatito.sprite_datauri(ruta)
+    assert uri.startswith("data:image/gif;base64,")
+
+
+def test_sin_sprite_muchi_no_rompe():
+    """Si falta el GIF cae a un emoji en vez de reventar la app."""
+    assert gatito.sprite_datauri("no-existe.gif") is None
+    html = gatito.html_gato(None)
+    assert "mu-gato" in html and "img" not in html
+
+
+def test_corazones_varian_entre_clics():
+    uno = gatito.html_corazones(semilla=1)
+    dos = gatito.html_corazones(semilla=2)
+    # Cuidado: el contenedor se llama "mu-corazones" y contiene la subcadena.
+    assert uno.count('class="mu-corazon"') == 9
+    assert uno != dos, "con la misma posicion siempre se notaria que es la misma animacion"
+
+
+def test_saludos_y_ayudas_no_estan_vacios():
+    assert gatito.SALUDOS and all(s.strip() for s in gatito.SALUDOS)
+    for titulo, detalle in gatito.AYUDAS:
+        assert titulo.strip() and len(detalle) > 30, titulo
+
+
 def test_slug():
     assert scry.slug("Ragavan, Nimble Pilferer") == "ragavan-nimble-pilferer"
     assert scry.slug("Jotun Grunt") == "jotun-grunt"
@@ -363,4 +392,5 @@ if __name__ == "__main__":
             print(f"  FALLA {nombre}: {e}")
     print("\nTodo verde" if not fallos else f"\n{fallos} pruebas fallaron")
     sys.exit(1 if fallos else 0)
+
 
