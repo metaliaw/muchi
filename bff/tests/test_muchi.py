@@ -4,6 +4,8 @@ Corre con pytest, o directo:  python tests/test_muchi.py
 """
 from __future__ import annotations
 
+import json
+import os
 import sys
 from pathlib import Path
 
@@ -11,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from mtgcl import catalogo, decklist, optimizer  # noqa: E402
 from mtgcl.models import Offer, Pedido  # noqa: E402
-from mtgcl.sources import edhrec, scry, shopify  # noqa: E402
+from mtgcl.sources import api_tienda, edhrec, scry, shopify  # noqa: E402
 
 
 def test_decklist_formatos():
@@ -139,6 +141,56 @@ def test_pda_chile_configurada():
     # las inalcanzables se declaran con motivo, no se omiten en silencio
     for tienda, (url, motivo) in shopify.FUERA_DE_ALCANCE.items():
         assert url.startswith("https://") and len(motivo) > 20, tienda
+
+
+def test_api_tienda_sin_config_no_hace_nada():
+    """La feature es opcional: sin archivo, lista vacia y cero peticiones."""
+    assert api_tienda.cargar("no-existe-este-archivo.json") == []
+
+
+def test_api_tienda_mapea_campos_y_filtra_sin_stock():
+    tienda = api_tienda.TiendaAPI(
+        nombre="Wombat", url="https://x/rest/v1/stock", tipo="postgrest",
+        campos={"nombre": "carta", "precio": "precio_clp", "stock": "cantidad",
+                "edicion": "set_codigo", "condicion": "estado", "url": "link"},
+    )
+    filas = [
+        {"carta": "Sol Ring", "precio_clp": 3500, "cantidad": 4,
+         "set_codigo": "C21", "estado": "NM", "link": "https://x/sol-ring"},
+        {"carta": "Black Lotus", "precio_clp": 999999, "cantidad": 0},  # sin stock
+        {"carta": "Roto", "precio_clp": None, "cantidad": 2},           # sin precio
+        {"carta": "Brainstorm", "precio_clp": "4.750", "cantidad": 1},  # precio con punto
+    ]
+    ofertas = api_tienda.a_ofertas(tienda, filas)
+
+    assert [o.card_name for o in ofertas] == ["Sol Ring", "Brainstorm"]
+    o = ofertas[0]
+    assert o.price_clp == 3500 and o.store == "Wombat"
+    assert o.title == "Sol Ring [C21] - NM"
+    assert o.url == "https://x/sol-ring"
+    assert o.source == "api" and not o.marketplace
+    assert ofertas[1].price_clp == 4750, "debe parsear '4.750' como 4750"
+
+
+def test_api_tienda_apikey_sale_del_entorno_no_del_archivo():
+    tienda = api_tienda.TiendaAPI(nombre="X", url="https://x", env_apikey="MUCHI_TEST_KEY")
+    os.environ.pop("MUCHI_TEST_KEY", None)
+    assert tienda.apikey == ""
+    os.environ["MUCHI_TEST_KEY"] = "secreta"
+    try:
+        assert tienda.apikey == "secreta"
+    finally:
+        os.environ.pop("MUCHI_TEST_KEY", None)
+
+
+def test_ejemplo_de_config_es_json_valido():
+    ruta = Path(__file__).resolve().parent.parent / "tiendas-api.ejemplo.json"
+    datos = json.loads(ruta.read_text(encoding="utf-8"))
+    tiendas = [api_tienda.TiendaAPI(**t) for t in datos["tiendas"]]
+    assert len(tiendas) == 2
+    # el ejemplo no debe traer ninguna clave de verdad
+    for t in tiendas:
+        assert not t.apikey, f"{t.nombre} trae una clave en el archivo"
 
 
 def test_slug():
