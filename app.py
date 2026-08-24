@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from mtgcl import catalogo, db, decklist, estilo, optimizer
+from mtgcl import catalogo, db, decklist, estilo, gatito, optimizer
 from mtgcl.http import PoliteSession
 from mtgcl.models import Offer
 from mtgcl.sources import api_tienda, edhrec, moxfield, scry, shopify
@@ -49,6 +49,12 @@ def sesion() -> PoliteSession:
 @st.cache_resource
 def base():
     return db.conectar()
+
+
+@st.cache_data(show_spinner=False)
+def sprite_muchi():
+    """El GIF pesa ~47 KB en base64: se lee una sola vez, no en cada rerun."""
+    return gatito.sprite_datauri()
 
 
 @st.cache_data(ttl=1800, show_spinner=False)
@@ -134,6 +140,30 @@ st.markdown(
 st.write("")
 
 with st.sidebar:
+    # ---- Muchi ----
+    st.markdown(gatito.html_gato(sprite_muchi()), unsafe_allow_html=True)
+
+    if st.button("Muchi, ayudame!", key="muchi", use_container_width=True):
+        st.session_state["muchi_habla"] = True
+        st.session_state["muchi_veces"] = st.session_state.get("muchi_veces", 0) + 1
+
+    if st.session_state.get("muchi_habla"):
+        veces = st.session_state.get("muchi_veces", 1)
+        # La semilla cambia con cada clic: si no, los corazones caerian siempre
+        # en el mismo lugar y se notaria que es la misma animacion.
+        st.markdown(gatito.html_corazones(semilla=veces), unsafe_allow_html=True)
+        st.markdown(
+            gatito.html_globo(gatito.SALUDOS[veces % len(gatito.SALUDOS)]),
+            unsafe_allow_html=True,
+        )
+        for titulo, detalle in gatito.AYUDAS:
+            with st.expander(titulo):
+                st.write(detalle)
+        if st.button("Gracias Muchi \U0001F49D", key="muchi_chau", use_container_width=True):
+            st.session_state["muchi_habla"] = False
+            st.rerun()
+
+    st.divider()
     st.markdown(f"### {HUELLA} Preferencias")
     acabado = st.radio("Acabado", ["Todos", "Solo normal", "Solo foil"], index=0)
     envio = st.number_input(
