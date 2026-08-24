@@ -83,6 +83,35 @@ def indexar(sess: PoliteSession, cx: sqlite3.Connection, tienda: str, base: str,
     return len(filas)
 
 
+def guardar_ofertas(cx: sqlite3.Connection, tienda: str, ofertas: list[Offer],
+                    productos: int | None = None) -> int:
+    """Reemplaza el catalogo de una tienda con las ofertas dadas.
+
+    Lo usa el importador de Moxfield, que ya trae Offer armadas y no necesita
+    pasar por el parseo de titulos de Shopify.
+    """
+    asegurar_tablas(cx)
+    filas = [
+        (o.key or o.url, tienda, slug(o.card_name), o.card_name, o.title,
+         o.price_clp, o.url, o.finish, o.condition, o.language)
+        for o in ofertas
+    ]
+    cx.execute("DELETE FROM catalogo WHERE tienda = ?", (tienda,))
+    cx.executemany(
+        "INSERT OR REPLACE INTO catalogo (clave, tienda, carta_slug, carta, titulo,"
+        " precio, url, acabado, condicion, idioma) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        filas,
+    )
+    cx.execute(
+        "INSERT OR REPLACE INTO catalogo_meta (tienda, actualizado, productos)"
+        " VALUES (?,?,?)",
+        (tienda, datetime.now(timezone.utc).isoformat(timespec="seconds"),
+         productos if productos is not None else len(ofertas)),
+    )
+    cx.commit()
+    return len(filas)
+
+
 def buscar(cx: sqlite3.Connection, nombre: str) -> list[Offer]:
     """Ofertas locales para una carta. Compara por slug, no por texto literal."""
     asegurar_tablas(cx)
