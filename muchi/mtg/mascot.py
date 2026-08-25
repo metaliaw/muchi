@@ -14,55 +14,57 @@ import base64
 import random
 from pathlib import Path
 
-SPRITE = Path(__file__).resolve().parent.parent / "assets" / "muchi.gif"
+from muchi.paths import ASSETS
+
+SPRITE = ASSETS / "muchi.gif"
 
 # Cosas que Muchi puede decir al saludar. Todas apuntan a algo que la app hace.
-SALUDOS = [
+GREETINGS = [
     "Miau, en que te ayudo?",
     "Nya~ que carta andas buscando?",
     "Aca estoy! Que necesitas?",
     "Miau miau, armamos un mazo?",
 ]
 
-AYUDAS = [
-    ("Buscar una carta", "Escribi el nombre en la pestana Buscar y te muestro todas las tiendas ordenadas por precio."),
+HELP_TOPICS = [
+    ("Buscar una carta", "Escribe el nombre en la pestana Buscar y te muestro todas las tiendas ordenadas por precio."),
     ("Cotizar un mazo entero", "Pega la lista en Mi lista y despues anda al Carrito: reparto la compra entre tiendas mirando tambien los envios."),
-    ("Que le falta a mi mazo", "En Comandante pongo lo que juega la gente con ese comandante y descuento lo que ya tenes."),
+    ("Que le falta a mi mazo", "En Comandante pongo lo que juega la gente con ese comandante y descuento lo que ya tienes."),
     ("De donde salen los precios", "De scry.cl (30 tiendas) mas las que indexo directo. Mira la pestana Tiendas."),
 ]
 
 
-def sprite_datauri(ruta: Path | str = SPRITE) -> str | None:
+def read_sprite_datauri(path: Path | str = SPRITE) -> str | None:
     """El GIF como data URI. None si todavia no se genero."""
-    ruta = Path(ruta)
-    if not ruta.exists():
+    path = Path(path)
+    if not path.exists():
         return None
-    b64 = base64.b64encode(ruta.read_bytes()).decode("ascii")
+    b64 = base64.b64encode(path.read_bytes()).decode("ascii")
     return f"data:image/gif;base64,{b64}"
 
 
-def html_gato(datauri: str | None) -> str:
+def build_cat_html(datauri: str | None) -> str:
     if not datauri:
         # Sin sprite no rompemos nada: cae a un emoji.
         return '<div class="mu-gato" style="font-size:4rem">\U0001F431</div>'
     return f'<div class="mu-gato"><img src="{datauri}" alt="Muchi" title="Apretame!"></div>'
 
 
-def html_corazones(cantidad: int = 9, semilla: int | None = None) -> str:
+def build_hearts_html(quantity: int = 9, seed: int | None = None) -> str:
     """Corazoncitos subiendo, cada uno con su desfase para que no vayan en fila."""
-    rnd = random.Random(semilla)
-    piezas = []
-    for _ in range(cantidad):
-        izq = rnd.randint(4, 88)
-        retraso = rnd.uniform(0, 0.7)
-        escala = rnd.uniform(0.75, 1.35)
+    rnd = random.Random(seed)
+    pieces = []
+    for _ in range(quantity):
+        left = rnd.randint(4, 88)
+        delay = rnd.uniform(0, 0.7)
+        scale = rnd.uniform(0.75, 1.35)
         emoji = rnd.choice(["\U0001F49D", "\U0001F495", "\U0001F49E", "\U0001F338"])
-        piezas.append(
-            f'<span class="mu-corazon" style="left:{izq}%;'
-            f'animation-delay:{retraso:.2f}s;font-size:{escala:.2f}rem">{emoji}</span>'
+        pieces.append(
+            f'<span class="mu-corazon" style="left:{left}%;'
+            f'animation-delay:{delay:.2f}s;font-size:{scale:.2f}rem">{emoji}</span>'
         )
-    return '<div class="mu-corazones">' + "".join(piezas) + "</div>"
+    return '<div class="mu-corazones">' + "".join(pieces) + "</div>"
 
 
-def html_globo(texto: str) -> str:
-    return f'<div class="mu-globo">{texto}</div>'
+def build_bubble_html(text: str) -> str:
+    return f'<div class="mu-globo">{text}</div>'
