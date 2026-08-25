@@ -1,609 +1,515 @@
-"""Muchi - buscador kawaii de cartas Magic en tiendas chilenas."""
-from __future__ import annotations
+"""Muchi - buscador kawaii de cartas Magic en tiendas chilenas.
 
-import json
-from pathlib import Path
+Este archivo es el Script: Casta el elenco una vez, Reparte las pestanas y
+Cuenta la historia. No Nombra una sola Fuente concreta -- eso Vive en
+muchi/mtg/cast.py, y detras de el, en muchi/mtg/sources/.
+"""
+from __future__ import annotations
 
 import pandas as pd
 import streamlit as st
 
-from mtgcl import catalogo, db, decklist, estilo, gatito, optimizer
-from mtgcl.http import PoliteSession
-from mtgcl.models import Offer
-from mtgcl.sources import api_tienda, edhrec, moxfield, scry, shopify
+from muchi.mtg import decklist, style, mascot, history, deck, offers, optimizer
+from muchi.mtg import cast as muchi_cast
+from muchi.mtg import stores as store_index
+from muchi.mtg.style import format_clp as clp
+from muchi.mtg.ports import CommanderNotFound, InventoryUnavailable
 
-INVENTARIOS = Path(__file__).resolve().parent / "inventarios-moxfield.json"
+CAT = "\U0001F431"    # cara de gato
+PAW = "\U0001F43E"  # huellitas
+FISH = "\U0001F41F"
 
-
-def cargar_inventarios():
-    """Listas de Moxfield usadas como catalogo. Opcional: sin archivo, nada."""
-    if not INVENTARIOS.exists():
-        return None, []
-    cfg = json.loads(INVENTARIOS.read_text(encoding="utf-8"))
-    tienda = cfg.get("tienda") or "Inventario Moxfield"
-    listas = [
-        moxfield.Inventario(tienda, l["etiqueta"], moxfield.id_de_url(l["url"]),
-                            int(l.get("tasa", 700)))
-        for l in cfg.get("listas", [])
-    ]
-    return tienda, listas
-
-GATO = "\U0001F431"    # cara de gato
-HUELLA = "\U0001F43E"  # huellitas
-PEZ = "\U0001F41F"
-
-st.set_page_config(page_title="Muchi", page_icon=GATO, layout="wide")
-st.markdown(estilo.CSS, unsafe_allow_html=True)
+st.set_page_config(page_title="Muchi", page_icon=CAT, layout="wide")
+st.markdown(style.CSS, unsafe_allow_html=True)
 
 
-def clp(n) -> str:
-    return "$" + f"{int(n):,}".replace(",", ".")
-
-
+# ---------------------------------------------------------------- el elenco
 @st.cache_resource
-def sesion() -> PoliteSession:
-    # 1.5s entre requests al mismo host: scry ya nos tiro un 429 durante el diseno.
-    return PoliteSession(min_interval=1.5)
-
-
-@st.cache_resource
-def base():
-    return db.conectar()
-
-
-@st.cache_data(show_spinner=False)
-def sprite_muchi():
-    """El GIF pesa ~47 KB en base64: se lee una sola vez, no en cada rerun."""
-    return gatito.sprite_datauri()
+def build_muchi():
+    """Main casta a los players una sola vez por sesion."""
+    return muchi_cast.build_cast()
 
 
 @st.cache_data(ttl=1800, show_spinner=False)
-def buscar_en_scry(nombre: str):
-    return scry.buscar_carta(sesion(), nombre)
-
-
-def buscar(nombre: str):
-    """scry + las tiendas indexadas localmente, deduplicado por URL.
-
-    Si una tienda esta en scry y ademas indexada directo, la version de scry
-    manda: es la que trae el precio ya normalizado por su pipeline.
-    """
-    card_id, ofertas = buscar_en_scry(nombre)
-    # Se descarta por tienda, no por URL: si scry ya cubre esa tienda para esta
-    # carta, duplicar sus ofertas desde el indice local solo inflaria el conteo.
-    cubiertas = {o.store for o in ofertas}
-    locales = [o for o in catalogo.buscar(base(), nombre) if o.store not in cubiertas]
-
-    # Tiendas que exponen una API de solo lectura (ver INTEGRAR-TIENDA.md).
-    # Si una falla no puede tumbar la busqueda entera.
-    por_api: list[Offer] = []
-    for tienda in api_tienda.cargar():
-        if tienda.nombre in cubiertas:
-            continue
-        try:
-            por_api += api_tienda.buscar(sesion(), tienda, nombre)
-        except Exception:
-            continue
-
-    return card_id, sorted(ofertas + locales + por_api, key=lambda o: o.price_clp)
+def find_offers(card_name: str):
+    m = build_muchi()
+    return offers.find_offers(m.primary, m.extras, card_name)
 
 
 @st.cache_data(ttl=600, show_spinner=False)
-def sugerencias(q: str):
-    try:
-        return scry.autocomplete(sesion(), q)
-    except Exception:
-        return []
+def suggest_names(text: str):
+    return build_muchi().primary.suggest_names(text)
 
 
-def filtrar(ofertas, acabado: str, tiendas, solo_tiendas: bool = True):
-    out = ofertas
-    if solo_tiendas:
-        # Deja fuera a los particulares de marketplace.scry.cl
-        out = [o for o in out if not o.marketplace]
-    if acabado == "Solo normal":
-        out = [o for o in out if not o.es_foil]
-    elif acabado == "Solo foil":
-        out = [o for o in out if o.es_foil]
-    if tiendas:
-        out = [o for o in out if o.store in tiendas]
-    return sorted(out, key=lambda o: o.price_clp)
+@st.cache_data(ttl=86400, show_spinner=False)
+def recommend_cards(commander: str):
+    return build_muchi().advisor.recommend_cards(commander)
 
 
-def tarjeta_oferta(o: Offer, mejor: bool = False) -> str:
-    clase_vendedor = "particular" if o.marketplace else "tienda"
-    pills = f'<span class="mu-pill {clase_vendedor}">{o.store}</span>'
-    if o.marketplace:
-        pills += '<span class="mu-pill particular">particular</span>'
-    if o.es_foil:
-        pills += '<span class="mu-pill foil">Foil</span>'
-    if o.condition:
-        pills += f'<span class="mu-pill cond">{o.condition}</span>'
-    if mejor:
-        pills += f'<span class="mu-pill mejor">{HUELLA} el mas barato</span>'
-    clase = "mu-card mejor" if mejor else "mu-card"
-    cp = "mu-precio mejor" if mejor else "mu-precio"
-    return (
-        f'<div class="{clase}"><div class="mu-fila">'
-        f'<div class="mu-izq"><div class="mu-nombre">{o.title}</div>'
-        f'<div style="margin-top:6px">{pills}</div></div>'
-        f'<div style="text-align:right"><div class="{cp}">{clp(o.price_clp)}</div></div>'
-        f'<a class="mu-btn" href="{o.url}" target="_blank" rel="noopener">Ver</a>'
-        f"</div></div>"
+@st.cache_data(show_spinner=False)
+def read_muchi_sprite():
+    """El GIF pesa ~47 KB en base64: se lee una sola vez, no en cada rerun."""
+    return mascot.read_sprite_datauri()
+
+
+# ------------------------------------------------------------ barra lateral
+def show_muchi_help() -> None:
+    """Muchi saluda, tira corazones y explica de que se trata."""
+    times = st.session_state.get("muchi_veces", 1)
+    # La semilla cambia con cada clic: si no, los corazones caerian siempre
+    # en el mismo lugar y se notaria que es la misma animacion.
+    st.markdown(mascot.build_hearts_html(seed=times), unsafe_allow_html=True)
+    st.markdown(
+        mascot.build_bubble_html(mascot.GREETINGS[times % len(mascot.GREETINGS)]),
+        unsafe_allow_html=True,
     )
 
+    for title, detail in mascot.HELP_TOPICS:
+        with st.expander(title):
+            st.write(detail)
 
-st.markdown(
-    estilo.hero("Muchi", "Tu gatito buscador de cartas Magic en tiendas chilenas", GATO),
-    unsafe_allow_html=True,
-)
-st.write("")
+    if st.button("Gracias Muchi \U0001F49D", key="muchi_chau", use_container_width=True):
+        st.session_state["muchi_habla"] = False
+        st.rerun()
 
-with st.sidebar:
-    # ---- Muchi ----
-    st.markdown(gatito.html_gato(sprite_muchi()), unsafe_allow_html=True)
+
+def show_preferences() -> tuple[str, int]:
+    """Devuelve (acabado, envio): las dos decisiones que afectan a todo."""
+    st.markdown(mascot.build_cat_html(read_muchi_sprite()), unsafe_allow_html=True)
 
     if st.button("Muchi, ayudame!", key="muchi", use_container_width=True):
         st.session_state["muchi_habla"] = True
         st.session_state["muchi_veces"] = st.session_state.get("muchi_veces", 0) + 1
-
     if st.session_state.get("muchi_habla"):
-        veces = st.session_state.get("muchi_veces", 1)
-        # La semilla cambia con cada clic: si no, los corazones caerian siempre
-        # en el mismo lugar y se notaria que es la misma animacion.
-        st.markdown(gatito.html_corazones(semilla=veces), unsafe_allow_html=True)
-        st.markdown(
-            gatito.html_globo(gatito.SALUDOS[veces % len(gatito.SALUDOS)]),
-            unsafe_allow_html=True,
-        )
-        for titulo, detalle in gatito.AYUDAS:
-            with st.expander(titulo):
-                st.write(detalle)
-        if st.button("Gracias Muchi \U0001F49D", key="muchi_chau", use_container_width=True):
-            st.session_state["muchi_habla"] = False
-            st.rerun()
+        show_muchi_help()
 
     st.divider()
-    st.markdown(f"### {HUELLA} Preferencias")
-    acabado = st.radio("Acabado", ["Todos", "Solo normal", "Solo foil"], index=0)
-    envio = st.number_input(
+    st.markdown(f"### {PAW} Preferencias")
+    finish = st.radio("Acabado", ["Todos", "Solo normal", "Solo foil"], index=0)
+    shipping = st.number_input(
         "Costo de envio por tienda (CLP)", 0, 20000, 4000, step=500,
         help="Muchi lo usa para decidir si conviene concentrar la compra en menos tiendas.",
     )
+
     st.divider()
     st.caption(
         "Precios via **scry.cl**, que indexa ~30 tiendas chilenas. "
         "Verifica edicion, estado y stock en la tienda antes de pagar."
     )
+    return finish, int(shipping)
 
-# Va arriba de las pestanas a proposito: afecta a las tres (busqueda, lista y
-# el total del carrito), asi que escondido en la barra lateral cambiaba los
-# resultados sin que se viera desde donde.
-col_filtro, col_nota = st.columns([2, 3])
-with col_filtro:
-    incluir_particulares = st.checkbox(
-        "Incluir vendedores particulares",
-        value=False,
-        help="Las tiendas establecidas despachan desde su propio sitio. Los "
-             "particulares venden por el marketplace de scry.cl: suelen ser mas "
-             "baratos, pero son personas, no locales.",
-    )
-solo_tiendas = not incluir_particulares
-with col_nota:
-    st.caption(
-        "Mostrando tiendas y particulares de scry.cl"
-        if incluir_particulares else
-        "Mostrando solo tiendas establecidas"
-    )
 
-tab_buscar, tab_lista, tab_comandante, tab_carrito, tab_tiendas = st.tabs(
-    [f"{PEZ} Buscar", "Mi lista", "Comandante", "Carrito", "Tiendas"]
-)
+def ask_seller_filter() -> bool:
+    """True si hay que esconder a los particulares del marketplace.
 
-# ------------------------------------------------------------------ buscar
-with tab_buscar:
-    consulta = st.text_input(
+    Va arriba de las pestanas a proposito: afecta a las tres (busqueda, lista
+    y el total del carrito), asi que escondido en la barra lateral cambiaba
+    los resultados sin que se viera desde donde.
+    """
+    col_filter, col_note = st.columns([2, 3])
+    with col_filter:
+        include = st.checkbox(
+            "Incluir vendedores particulares",
+            value=False,
+            help="Las tiendas establecidas despachan desde su propio sitio. Los "
+                 "particulares venden por el marketplace de scry.cl: suelen ser mas "
+                 "baratos, pero son personas, no locales.",
+        )
+    with col_note:
+        st.caption("Mostrando tiendas y particulares de scry.cl" if include
+                   else "Mostrando solo tiendas establecidas")
+    return not include
+
+
+# ---------------------------------------------------------------- pestanas
+def pick_card(query: str) -> str | None:
+    """Ofrece correcciones y devuelve la carta que el usuario quiso decir."""
+    if not query or len(query) < 3:
+        return None
+
+    options = suggest_names(query)
+    if options and query not in options:
+        st.caption("Quisiste decir?")
+        cols = st.columns(min(len(options), 5))
+        for col, name in zip(cols, options[:5]):
+            if col.button(name, key=f"sug_{name}", use_container_width=True):
+                st.session_state["carta_elegida"] = name
+                st.session_state["carta_elegida_q"] = query
+
+    # La sugerencia elegida solo vale para la consulta que la genero: si el
+    # usuario escribe otra cosa, volvemos a su texto.
+    if st.session_state.get("carta_elegida_q") == query:
+        return st.session_state.get("carta_elegida") or query
+    return query
+
+
+def show_summary(visible: list) -> None:
+    c1, c2, c3 = st.columns(3)
+    c1.markdown(style.paint_tile("Mas barato", clp(visible[0].price_clp), ok=True),
+                unsafe_allow_html=True)
+    c2.markdown(style.paint_tile("Ofertas", str(len(visible))), unsafe_allow_html=True)
+    c3.markdown(style.paint_tile("Tiendas", str(len({o.store for o in visible}))),
+                unsafe_allow_html=True)
+    st.write("")
+
+
+def refresh_live(card_id: str) -> None:
+    """Vuelve a preguntarle a las ~30 tiendas, con barra de avance."""
+    bar = st.progress(0.0, text="Conectando...")
+    try:
+        for progress in build_muchi().primary.refresh_offers(card_id):
+            bar.progress(
+                min(progress.done / progress.total, 1.0),
+                text=f"Consultando {progress.store} ({progress.done}/{progress.total})",
+            )
+        bar.progress(1.0, text="Listo")
+        find_offers.clear()
+        st.rerun()
+    except Exception as e:
+        st.warning(f"El refresco fallo: {e}")
+
+
+def show_price_history(card_name: str) -> None:
+    rows = history.read_history(build_muchi().cx, card_name)
+    if len(rows) <= 1:
+        return
+    with st.expander("Historial de precios"):
+        df = pd.DataFrame(rows)
+        df["ts"] = pd.to_datetime(df["ts"])
+        st.line_chart(df.set_index("ts")[["minimo", "promedio"]])
+
+
+def show_search(finish: str, stores_only: bool) -> None:
+    """Una carta, sus ofertas ordenadas y el refresco en vivo."""
+    query = st.text_input(
         "Que carta buscas?", placeholder="Ej: Sol Ring, Ragavan...", key="q_simple"
     )
+    chosen = pick_card(query)
+    if not chosen:
+        return
 
-    elegida = None
-    if consulta and len(consulta) >= 3:
-        opciones = sugerencias(consulta)
-        if opciones and consulta not in opciones:
-            st.caption("Quisiste decir?")
-            cols = st.columns(min(len(opciones), 5))
-            for col, nombre in zip(cols, opciones[:5]):
-                if col.button(nombre, key=f"sug_{nombre}", use_container_width=True):
-                    st.session_state["carta_elegida"] = nombre
-                    st.session_state["carta_elegida_q"] = consulta
-        # La sugerencia elegida solo vale para la consulta que la genero:
-        # si el usuario escribe otra cosa, volvemos a su texto.
-        if st.session_state.get("carta_elegida_q") == consulta:
-            elegida = st.session_state.get("carta_elegida") or consulta
-        else:
-            elegida = consulta
+    with st.spinner(f"Muchi esta olfateando {chosen}..."):
+        try:
+            card_id, found = find_offers(chosen)
+        except Exception as e:
+            st.error(f"No pude consultar las tiendas: {e}")
+            card_id, found = None, []
 
-    if elegida:
-        with st.spinner(f"Muchi esta olfateando {elegida}..."):
-            try:
-                card_id, ofertas = buscar(elegida)
-            except Exception as e:
-                st.error(f"No pude consultar scry.cl: {e}")
-                card_id, ofertas = None, []
+    if found:
+        history.save_prices(build_muchi().cx, chosen, found)
 
-        if ofertas:
-            db.guardar(base(), elegida, ofertas)
+    # El filtro de particulares va primero: el multiselect no debe ofrecer
+    # tiendas que despues quedarian excluidas igual.
+    eligible = offers.filter_offers(found, stores_only=stores_only)
+    sel = st.multiselect("Filtrar tiendas", sorted({o.store for o in eligible}),
+                         default=[], key="f_tiendas")
+    visible = offers.filter_offers(found, finish, sel, stores_only)
 
-        # El filtro de marketplace va primero: el multiselect no debe ofrecer
-        # tiendas que despues quedarian excluidas igual.
-        elegibles = [o for o in ofertas if not (solo_tiendas and o.marketplace)]
-        tiendas_disp = sorted({o.store for o in elegibles})
-        sel = st.multiselect("Filtrar tiendas", tiendas_disp, default=[], key="f_tiendas")
-        visibles = filtrar(ofertas, acabado, sel, solo_tiendas)
+    hidden = len(found) - len(eligible)
+    if hidden:
+        st.caption(f"Hay {hidden} ofertas de particulares ocultas. "
+                   "Marca la casilla de arriba para verlas.")
 
-        ocultas = len(ofertas) - len(elegibles)
-        if ocultas:
-            st.caption(f"Hay {ocultas} ofertas de particulares ocultas. "
-                       "Marca la casilla de arriba para verlas.")
+    if not visible:
+        st.info("Sin stock con esos filtros. Prueba el refresco en vivo mas abajo.")
+    else:
+        show_summary(visible)
+        for i, o in enumerate(visible):
+            st.markdown(style.paint_offer(o, best=(i == 0)), unsafe_allow_html=True)
 
-        if not visibles:
-            st.info("Sin stock con esos filtros. Prueba el refresco en vivo mas abajo.")
-        else:
-            c1, c2, c3 = st.columns(3)
-            c1.markdown(
-                estilo.tile("Mas barato", clp(visibles[0].price_clp), ok=True),
-                unsafe_allow_html=True,
-            )
-            c2.markdown(estilo.tile("Ofertas", str(len(visibles))), unsafe_allow_html=True)
-            c3.markdown(
-                estilo.tile("Tiendas", str(len({o.store for o in visibles}))),
-                unsafe_allow_html=True,
-            )
-            st.write("")
-            for i, o in enumerate(visibles):
-                st.markdown(tarjeta_oferta(o, mejor=(i == 0)), unsafe_allow_html=True)
+    if card_id and st.button("Refrescar en vivo (consulta las 30 tiendas)", key="refresh"):
+        refresh_live(card_id)
 
-        if card_id and st.button("Refrescar en vivo (consulta las 30 tiendas)", key="refresh"):
-            barra = st.progress(0.0, text="Conectando...")
-            try:
-                for ev in scry.refrescar(sesion(), card_id):
-                    total, hechas = ev.get("total") or 30, ev.get("done") or 0
-                    barra.progress(
-                        min(hechas / total, 1.0),
-                        text=f"Consultando {ev.get('store', '...')} ({hechas}/{total})",
-                    )
-                barra.progress(1.0, text="Listo")
-                buscar_en_scry.clear()
-                st.rerun()
-            except Exception as e:
-                st.warning(f"El refresco fallo: {e}")
+    show_price_history(chosen)
 
-        hist = db.historico(base(), elegida)
-        if len(hist) > 1:
-            with st.expander("Historial de precios"):
-                df = pd.DataFrame([dict(r) for r in hist])
-                df["ts"] = pd.to_datetime(df["ts"])
-                st.line_chart(df.set_index("ts")[["minimo", "promedio"]])
 
-# ------------------------------------------------------------------ mi lista
-with tab_lista:
+def quote_deck_list(orders: list) -> None:
+    """Busca cada carta de la lista y guarda lo que encontro para el carrito."""
+    bar = st.progress(0.0, text="Empezando...")
+    found_by_card: dict[str, list] = {}
+    failed: list[str] = []
+
+    for i, p in enumerate(orders):
+        bar.progress(i / len(orders), text=f"Buscando {p.name}...")
+        try:
+            _, its_offers = find_offers(p.name)
+            if its_offers:
+                found_by_card[p.name.lower()] = its_offers
+                history.save_prices(build_muchi().cx, p.name, its_offers)
+        except Exception:
+            failed.append(p.name)
+
+    bar.progress(1.0, text="Listo")
+    st.session_state["ofertas_lista"] = found_by_card
+    st.session_state["pedidos"] = orders
+    if failed:
+        st.warning("No pude consultar: " + ", ".join(failed))
+    st.success(f"Encontre precios para {len(found_by_card)} de {len(orders)} cartas. "
+               "Anda a la pestana Carrito.")
+
+
+def show_my_list() -> None:
+    """Pegas el mazo, Muchi lo entiende y lo cotiza entero."""
     st.markdown("#### Pega tu mazo y Muchi busca todo")
 
-    # La pestana Comandante deja aca lo que querés sumar. Se mezcla ANTES de
+    # La pestana Comandante deja aca lo que quieres sumar. Se mezcla ANTES de
     # crear el textarea: Streamlit no deja tocar la session_state de un widget
     # una vez instanciado, y asi el texto sigue siendo la unica fuente de verdad.
     if st.session_state.get("_sumar_al_mazo"):
         extra = st.session_state.pop("_sumar_al_mazo")
-        previo = st.session_state.get("decklist", "") or ""
-        st.session_state["decklist"] = (previo.rstrip() + "\n" + extra).strip()
+        previous = st.session_state.get("decklist", "") or ""
+        st.session_state["decklist"] = (previous.rstrip() + "\n" + extra).strip()
 
-    texto = st.text_area(
+    text = st.text_area(
         "Una carta por linea",
         height=220,
         placeholder="4 Lightning Bolt\n1 Ragavan, Nimble Pilferer\n2x Sol Ring\nCounterspell",
         key="decklist",
     )
 
-    pedidos, ignoradas = decklist.parse(texto or "")
-    if pedidos:
-        total_copias = sum(p.cantidad for p in pedidos)
-        st.caption(f"**{len(pedidos)}** cartas distintas - **{total_copias}** copias")
-    if ignoradas:
-        st.warning("No entendi estas lineas: " + " / ".join(ignoradas[:5]))
+    orders, ignored = decklist.parse_decklist(text or "")
+    if orders:
+        copies_total = sum(p.quantity for p in orders)
+        st.caption(f"**{len(orders)}** cartas distintas - **{copies_total}** copias")
+    if ignored:
+        sample = " / ".join(ignored[:5])
+        rest = f" y {len(ignored) - 5} mas" if len(ignored) > 5 else ""
+        st.warning(f"No entendi {len(ignored)} lineas: {sample}{rest}. "
+                   "Revisalas: no quedaron en el pedido.")
 
-    if pedidos and st.button("Buscar precios de la lista", type="primary"):
-        barra = st.progress(0.0, text="Empezando...")
-        encontrado = {}
-        fallidas = []
-
-        for i, p in enumerate(pedidos):
-            barra.progress(i / len(pedidos), text=f"Buscando {p.nombre}...")
-            try:
-                _, ofertas = buscar(p.nombre)
-                if ofertas:
-                    encontrado[p.nombre.lower()] = ofertas
-                    db.guardar(base(), p.nombre, ofertas)
-            except Exception:
-                fallidas.append(p.nombre)
-
-        barra.progress(1.0, text="Listo")
-        st.session_state["ofertas_lista"] = encontrado
-        st.session_state["pedidos"] = pedidos
-        if fallidas:
-            st.warning("No pude consultar: " + ", ".join(fallidas))
-        st.success(
-            f"Encontre precios para {len(encontrado)} de {len(pedidos)} cartas. "
-            "Anda a la pestana Carrito."
-        )
-
-# ------------------------------------------------------------------ comandante
-@st.cache_data(ttl=86400, show_spinner=False)
-def recomendaciones(comandante: str):
-    return edhrec.recomendaciones(sesion(), comandante)
+    if orders and st.button("Buscar precios de la lista", type="primary"):
+        quote_deck_list(orders)
 
 
-with tab_comandante:
+def show_commander() -> None:
+    """Que juega la gente con ese comandante, menos lo que ya tienes."""
     st.markdown("#### Que le falta a tu mazo")
     st.caption("Muchi le pregunta a EDHREC que juega la gente con ese comandante "
-               "y descuenta lo que ya tenes en Mi lista.")
+               "y descuenta lo que ya tienes en Mi lista.")
 
-    comandante = st.text_input(
+    commander = st.text_input(
         "Tu comandante", placeholder="Ej: Atraxa, Praetors' Voice", key="comandante"
     )
+    if not commander or len(commander) < 3:
+        return
 
-    if comandante and len(comandante) >= 3:
-        try:
-            recs = recomendaciones(comandante)
-        except edhrec.ComandanteNoEncontrado:
-            recs = []
-            st.error(
-                f"EDHREC no tiene pagina para **{comandante}**. Revisa que el nombre "
-                "este completo y en ingles (ej: *Atraxa, Praetors' Voice*)."
-            )
-        except Exception as e:
-            recs = []
-            st.error(f"No pude consultar EDHREC: {e}")
+    try:
+        recs = recommend_cards(commander)
+    except CommanderNotFound:
+        recs = []
+        st.error(f"No hay recomendaciones para **{commander}**. Revisa que el nombre "
+                 "este completo y en ingles (ej: *Atraxa, Praetors' Voice*).")
+    except Exception as e:
+        recs = []
+        st.error(f"No pude traer las recomendaciones: {e}")
+    if not recs:
+        return
 
-        if recs:
-            mis_pedidos = st.session_state.get("pedidos") or []
-            ya_tengo = {p.nombre for p in mis_pedidos}
-            pendientes = edhrec.faltantes(recs, ya_tengo)
+    owned = {p.name for p in (st.session_state.get("pedidos") or [])}
+    pending = deck.subtract_owned_cards(recs, owned)
 
-            c1, c2, c3 = st.columns(3)
-            c1.markdown(estilo.tile("Recomendadas", str(len(recs))), unsafe_allow_html=True)
-            c2.markdown(estilo.tile("Ya las tenes", str(len(recs) - len(pendientes))),
-                        unsafe_allow_html=True)
-            c3.markdown(estilo.tile("Te faltan", str(len(pendientes)), ok=True),
-                        unsafe_allow_html=True)
-            st.write("")
+    c1, c2, c3 = st.columns(3)
+    c1.markdown(style.paint_tile("Recomendadas", str(len(recs))), unsafe_allow_html=True)
+    c2.markdown(style.paint_tile("Ya las tienes", str(len(recs) - len(pending))),
+                unsafe_allow_html=True)
+    c3.markdown(style.paint_tile("Te faltan", str(len(pending)), ok=True),
+                unsafe_allow_html=True)
+    st.write("")
 
-            if not ya_tengo:
-                st.info("Carga tu mazo en **Mi lista** y Muchi descuenta lo que ya tenes.")
+    if not owned:
+        st.info("Carga tu mazo en **Mi lista** y Muchi descuenta lo que ya tienes.")
 
-            cats = edhrec.categorias(pendientes)
-            col_cat, col_n = st.columns([3, 1])
-            cat = col_cat.selectbox("Categoria", ["Todas"] + cats)
-            cuantas = col_n.number_input("Cuantas", 5, 50, 15, step=5)
+    col_category, col_n = st.columns([3, 1])
+    category = col_category.selectbox("Categoria", ["Todas"] + deck.list_categories(pending))
+    how_many = col_n.number_input("Cuantas", 5, 50, 15, step=5)
 
-            visibles = [r for r in pendientes if cat == "Todas" or r.categoria == cat]
-            visibles = visibles[: int(cuantas)]
+    visible = [r for r in pending if category == "Todas" or r.category == category]
+    visible = visible[: int(how_many)]
+    for r in visible:
+        st.markdown(style.paint_recommendation(r), unsafe_allow_html=True)
 
-            for r in visibles:
-                st.markdown(
-                    f'<div class="mu-card"><div class="mu-fila">'
-                    f'<div class="mu-izq"><div class="mu-nombre">{r.nombre}</div>'
-                    f'<div style="margin-top:6px">'
-                    f'<span class="mu-pill tienda">{r.categoria}</span>'
-                    f'<span class="mu-pill cond">sinergia {r.sinergia:+.2f}</span>'
-                    f'</div></div>'
-                    f'<div style="text-align:right">'
-                    f'<div class="mu-precio">{r.inclusion_pct:.0f}%</div>'
-                    f'<div class="mu-sub">de los mazos</div></div>'
-                    f"</div></div>",
-                    unsafe_allow_html=True,
-                )
-
-            if visibles and st.button(
-                f"Sumar estas {len(visibles)} a Mi lista", type="primary",
-                key="add_recs",
-            ):
-                st.session_state["_sumar_al_mazo"] = "\n".join(
-                    f"1 {r.nombre}" for r in visibles
-                )
-                st.rerun()
+    if visible and st.button(f"Sumar estas {len(visible)} a Mi lista",
+                             type="primary", key="add_recs"):
+        st.session_state["_sumar_al_mazo"] = "\n".join(f"1 {r.name}" for r in visible)
+        st.rerun()
 
 
-# ------------------------------------------------------------------ carrito
-with tab_carrito:
-    pedidos = st.session_state.get("pedidos")
-    crudas = st.session_state.get("ofertas_lista")
+def show_totals(plan, naive, shipping: int) -> None:
+    savings = naive.total - plan.total
+    c1, c2, c3, c4 = st.columns(4)
+    c1.markdown(style.paint_tile("Total", clp(plan.total), ok=True),
+                unsafe_allow_html=True)
+    c2.markdown(style.paint_tile("Cartas", clp(plan.cards_cost)),
+                unsafe_allow_html=True)
+    c3.markdown(style.paint_tile(f"Envios ({len(plan.stores)})", clp(plan.shipping_cost)),
+                unsafe_allow_html=True)
+    c4.markdown(style.paint_tile("Ahorro vs ingenuo", clp(max(savings, 0)), ok=savings > 0),
+                unsafe_allow_html=True)
+    st.write("")
 
-    if not pedidos or not crudas:
+
+def show_plan_by_store(plan, shipping: int) -> None:
+    """Agrupa el carrito por tienda, la mas cara primero."""
+    by_store: dict[str, list] = {}
+    for line in plan.lines:
+        by_store.setdefault(line.store, []).append(line)
+
+    order = sorted(by_store, key=lambda t: -sum(x.subtotal for x in by_store[t]))
+    for store in order:
+        lines = sorted(by_store[store], key=lambda x: -x.subtotal)
+        sub = sum(x.subtotal for x in lines)
+        st.markdown(style.paint_store_header(store, len(lines), sub, shipping),
+                    unsafe_allow_html=True)
+        for line in lines:
+            st.markdown(style.paint_line(line), unsafe_allow_html=True)
+
+
+def offer_csv(plan) -> None:
+    df = pd.DataFrame([
+        {"carta": x.card_name, "cantidad": x.quantity, "tienda": x.store,
+         "precio_unitario": x.unit_price, "subtotal": x.subtotal, "url": x.url}
+        for x in plan.lines
+    ])
+    st.download_button("Descargar carrito (CSV)",
+                       df.to_csv(index=False).encode("utf-8"),
+                       "carrito-muchi.csv", "text/csv")
+
+
+def show_cart(finish: str, shipping: int, stores_only: bool) -> None:
+    """Reparte la lista entre tiendas pesando cartas contra envios."""
+    orders = st.session_state.get("pedidos")
+    raw = st.session_state.get("ofertas_lista")
+    if not orders or not raw:
         st.info("Primero carga una lista en la pestana Mi lista.")
-    else:
-        ofertas_por_carta = {k: filtrar(v, acabado, None, solo_tiendas)
-                             for k, v in crudas.items()}
-        ofertas_por_carta = {k: v for k, v in ofertas_por_carta.items() if v}
+        return
 
-        estrategia = st.radio(
-            "Como armamos el carrito?",
-            ["Minimizar total (cartas + envios)", "Cada carta en su tienda mas barata"],
-            horizontal=True,
-        )
+    by_card = {k: offers.filter_offers(v, finish, None, stores_only)
+               for k, v in raw.items()}
+    by_card = {k: v for k, v in by_card.items() if v}
 
-        if estrategia.startswith("Minimizar"):
-            plan = optimizer.plan_optimo(pedidos, ofertas_por_carta, envio)
-        else:
-            plan = optimizer.plan_mas_barato(pedidos, ofertas_por_carta, envio)
-
-        ingenuo = optimizer.plan_mas_barato(pedidos, ofertas_por_carta, envio)
-        ahorro = ingenuo.total - plan.total
-
-        c1, c2, c3, c4 = st.columns(4)
-        c1.markdown(estilo.tile("Total", clp(plan.total), ok=True), unsafe_allow_html=True)
-        c2.markdown(estilo.tile("Cartas", clp(plan.costo_cartas)), unsafe_allow_html=True)
-        c3.markdown(
-            estilo.tile(f"Envios ({len(plan.tiendas)})", clp(plan.costo_envios)),
-            unsafe_allow_html=True,
-        )
-        c4.markdown(
-            estilo.tile("Ahorro vs ingenuo", clp(max(ahorro, 0)), ok=ahorro > 0),
-            unsafe_allow_html=True,
-        )
-        st.write("")
-
-        if plan.faltantes:
-            st.warning("Sin stock en ninguna tienda: " + ", ".join(plan.faltantes))
-
-        por_tienda: dict[str, list] = {}
-        for linea in plan.lineas:
-            por_tienda.setdefault(linea.tienda, []).append(linea)
-
-        orden = sorted(por_tienda, key=lambda t: -sum(x.subtotal for x in por_tienda[t]))
-        for tienda in orden:
-            lineas = sorted(por_tienda[tienda], key=lambda x: -x.subtotal)
-            sub = sum(x.subtotal for x in lineas)
-            st.markdown(
-                f'<div class="mu-tienda-hd">{HUELLA} {tienda} &middot; {len(lineas)} cartas '
-                f"&middot; {clp(sub)} + {clp(envio)} envio</div>",
-                unsafe_allow_html=True,
-            )
-            for linea in lineas:
-                st.markdown(
-                    f'<div class="mu-card"><div class="mu-fila">'
-                    f'<div class="mu-izq">'
-                    f'<div class="mu-nombre">{linea.cantidad}x {linea.carta}</div>'
-                    f'<div class="mu-sub">{linea.titulo}</div></div>'
-                    f'<div style="text-align:right">'
-                    f'<div class="mu-precio">{clp(linea.subtotal)}</div>'
-                    f'<div class="mu-sub">{clp(linea.precio_unitario)} c/u</div></div>'
-                    f'<a class="mu-btn" href="{linea.url}" target="_blank" '
-                    f'rel="noopener">Comprar</a>'
-                    f"</div></div>",
-                    unsafe_allow_html=True,
-                )
-
-        df = pd.DataFrame(
-            [
-                {
-                    "carta": x.carta,
-                    "cantidad": x.cantidad,
-                    "tienda": x.tienda,
-                    "precio_unitario": x.precio_unitario,
-                    "subtotal": x.subtotal,
-                    "url": x.url,
-                }
-                for x in plan.lineas
-            ]
-        )
-        st.download_button(
-            "Descargar carrito (CSV)",
-            df.to_csv(index=False).encode("utf-8"),
-            "carrito-muchi.csv",
-            "text/csv",
-        )
-
-# ------------------------------------------------------------------ tiendas
-with tab_tiendas:
-    st.markdown("#### De donde salen los precios")
-    st.caption(
-        "La mayoria viene de scry.cl, que indexa 30 tiendas. Las de abajo Muchi "
-        "las consulta directo, porque scry no las cubre o para contrastar."
+    strategy = st.radio(
+        "Como armamos el carrito?",
+        ["Minimizar total (cartas + envios)", "Cada carta en su tienda mas barata"],
+        horizontal=True,
     )
+    naive = optimizer.build_naive_plan(orders, by_card, shipping)
+    plan = (optimizer.build_optimal_plan(orders, by_card, shipping)
+            if strategy.startswith("Minimizar") else naive)
 
-    filas = {f["tienda"]: f for f in catalogo.estado(base())}
+    show_totals(plan, naive, shipping)
+    if plan.missing:
+        st.warning("Sin stock en ninguna tienda: " + ", ".join(plan.missing))
 
-    for tienda, url in shopify.TIENDAS.items():
-        f = filas.get(tienda)
+    show_plan_by_store(plan, shipping)
+    offer_csv(plan)
+
+
+def show_published_inventory() -> None:
+    """Las listas publicadas que Muchi usa como catalogo de una tienda."""
+    inv = build_muchi().inventory
+    if inv is None:
+        return
+
+    st.divider()
+    st.markdown("##### Inventario en listas publicadas")
+    st.caption(f"{len(inv.list_rates())} listas, con precio de CardKingdom por la tasa de "
+               "cada una. Los foils se cotizan con la tasa foil, no con la normal.")
+
+    status = store_index.read_inventory_status(build_muchi().cx, inv.store)
+    if status:
+        st.markdown(style.paint_store(status), unsafe_allow_html=True)
+    st.caption(", ".join(f"{label} x{rate}" for label, rate in inv.list_rates()))
+
+    if not st.button("Indexar las listas publicadas", key="idx_mox"):
+        return
+
+    bar = st.progress(0.0, text="Bajando listas...")
+    try:
+        def progress(done, total, label):
+            bar.progress(done / total, text=f"Bajando {label}...")
+
+        saved, without_price = store_index.import_inventory(build_muchi().cx, inv, progress)
+        bar.progress(1.0, text="Listo")
+        notice = f"{style.format_thousands(saved)} ofertas indexadas."
+        if without_price:
+            notice += f" {without_price} entradas quedaron fuera por no traer precio."
+        st.success(notice)
+        st.rerun()
+    except InventoryUnavailable as e:
+        st.error(f"Esa lista no existe o no es publica: {e}")
+    except Exception as e:
+        st.error(f"No pude importar: {e}")
+
+
+def index_one_store(status) -> None:
+    bar = st.progress(0.0, text=f"Bajando el catalogo de {status.store}...")
+    try:
+        def progress(prods, ofs, _t=status.store):
+            bar.progress(min(prods / 4000, 0.95),
+                         text=f"{_t}: {style.format_thousands(prods)} productos, "
+                         f"{style.format_thousands(ofs)} ofertas")
+
+        n = store_index.index_store(build_muchi().cx, build_muchi().stores,
+                                    status.store, status.url, progress)
+        bar.progress(1.0, text="Listo")
+        st.success(f"{status.store}: {style.format_thousands(n)} ofertas indexadas.")
+        st.rerun()
+    except Exception as e:
+        st.error(f"No pude indexar {status.store}: {e}")
+
+
+def show_stores() -> None:
+    """De donde salen los precios, y que tienda queda fuera de alcance."""
+    st.markdown("#### De donde salen los precios")
+    st.caption("La mayoria viene de scry.cl, que indexa 30 tiendas. Las de abajo Muchi "
+               "las consulta directo, porque scry no las cubre o para contrastar.")
+
+    for status in store_index.read_stores_status(build_muchi().cx, build_muchi().stores):
         c1, c2 = st.columns([3, 1])
-        with c1:
-            if f:
-                st.markdown(
-                    f'<div class="mu-card"><div class="mu-fila"><div class="mu-izq">'
-                    f'<div class="mu-nombre">{tienda}</div>'
-                    f'<div class="mu-sub">{f["ofertas"]:,} ofertas de '
-                    f'{f["productos"]:,} productos &middot; {f["actualizado"][:16]}</div>'
-                    f'</div><a class="mu-btn" href="{url}" target="_blank" '
-                    f'rel="noopener">Ir</a></div></div>'.replace(",", "."),
-                    unsafe_allow_html=True,
-                )
-            else:
-                st.markdown(
-                    f'<div class="mu-card"><div class="mu-fila"><div class="mu-izq">'
-                    f'<div class="mu-nombre">{tienda}</div>'
-                    f'<div class="mu-sub">sin indexar</div></div>'
-                    f'<a class="mu-btn" href="{url}" target="_blank" '
-                    f'rel="noopener">Ir</a></div></div>',
-                    unsafe_allow_html=True,
-                )
-        if c2.button("Indexar", key=f"idx_{tienda}", use_container_width=True):
-            barra = st.progress(0.0, text=f"Bajando el catalogo de {tienda}...")
-            try:
-                def avance(prods, ofs, _t=tienda):
-                    barra.progress(min(prods / 4000, 0.95),
-                                   text=f"{_t}: {prods:,} productos, {ofs:,} ofertas"
-                                        .replace(",", "."))
+        c1.markdown(style.paint_store(status), unsafe_allow_html=True)
+        if c2.button("Indexar", key=f"idx_{status.store}", use_container_width=True):
+            index_one_store(status)
 
-                n = catalogo.indexar(sesion(), base(), tienda, url, avance)
-                barra.progress(1.0, text="Listo")
-                st.success(f"{tienda}: {n:,} ofertas indexadas.".replace(",", "."))
-                st.rerun()
-            except Exception as e:
-                st.error(f"No pude indexar {tienda}: {e}")
-
-    tienda_mox, listas_mox = cargar_inventarios()
-    if listas_mox:
-        st.divider()
-        st.markdown("##### Inventario en listas de Moxfield")
-        st.caption(
-            f"{len(listas_mox)} listas, con precio de CardKingdom por la tasa de cada una. "
-            "Los foils se cotizan con ck_foil, no con ck."
-        )
-
-        f = filas.get(tienda_mox)
-        if f:
-            st.markdown(
-                f'<div class="mu-card"><div class="mu-fila"><div class="mu-izq">'
-                f'<div class="mu-nombre">{tienda_mox}</div>'
-                f'<div class="mu-sub">{f["ofertas"]:,} ofertas &middot; '
-                f'{f["actualizado"][:16]}</div></div></div></div>'.replace(",", "."),
-                unsafe_allow_html=True,
-            )
-
-        tasas = ", ".join(f'{i.etiqueta} x{i.tasa}' for i in listas_mox)
-        st.caption(tasas)
-
-        if st.button("Indexar las listas de Moxfield", key="idx_mox"):
-            barra = st.progress(0.0, text="Bajando listas...")
-            todas, sin_precio = [], 0
-            try:
-                for i, inv in enumerate(listas_mox):
-                    barra.progress(i / len(listas_mox), text=f"Bajando {inv.etiqueta}...")
-                    r = moxfield.inventario(sesion(), inv)
-                    todas += r.ofertas
-                    sin_precio += r.sin_precio
-                catalogo.guardar_ofertas(base(), tienda_mox, todas)
-                barra.progress(1.0, text="Listo")
-                aviso = f"{len(todas):,} ofertas indexadas.".replace(",", ".")
-                if sin_precio:
-                    aviso += f" {sin_precio} entradas quedaron fuera por no traer precio de CardKingdom."
-                st.success(aviso)
-                st.rerun()
-            except moxfield.ListaNoEncontrada as e:
-                st.error(f"Esa lista no existe o no es publica: {e}")
-            except Exception as e:
-                st.error(f"No pude importar: {e}")
+    show_published_inventory()
 
     st.divider()
     st.markdown("##### Tiendas chilenas que Muchi no puede consultar")
     st.caption("No estan en scry y no exponen sus precios de forma automatizable. "
                "Muchi te enlaza para que las mires a mano.")
-    for tienda, (url, motivo) in shopify.FUERA_DE_ALCANCE.items():
-        st.markdown(
-            f'<div class="mu-card"><div class="mu-fila"><div class="mu-izq">'
-            f'<div class="mu-nombre">{tienda}</div>'
-            f'<div class="mu-sub">{motivo}</div></div>'
-            f'<a class="mu-btn" href="{url}" target="_blank" rel="noopener">Buscar ahi</a>'
-            f"</div></div>",
-            unsafe_allow_html=True,
-        )
+    for store, (url, reason) in build_muchi().stores.list_blocked_stores().items():
+        st.markdown(style.paint_blocked(store, url, reason),
+                    unsafe_allow_html=True)
+
+
+# -------------------------------------------------------------------- muchi
+st.markdown(
+    style.paint_hero("Muchi",
+                     "Tu gatito buscador de cartas Magic en tiendas chilenas",
+                     CAT),
+    unsafe_allow_html=True,
+)
+st.write("")
+
+with st.sidebar:
+    finish, shipping = show_preferences()
+
+stores_only = ask_seller_filter()
+
+tab_search, tab_list, tab_commander, tab_cart, tab_stores = st.tabs(
+    [f"{FISH} Buscar", "Mi lista", "Comandante", "Carrito", "Tiendas"]
+)
+
+with tab_search:
+    show_search(finish, stores_only)
+
+with tab_list:
+    show_my_list()
+
+with tab_commander:
+    show_commander()
+
+with tab_cart:
+    show_cart(finish, shipping, stores_only)
+
+with tab_stores:
+    show_stores()

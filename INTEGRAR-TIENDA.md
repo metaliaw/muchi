@@ -1,13 +1,13 @@
 # Cómo publicar tu stock en Muchi 🐱
 
-Si tenés una tienda de cartas y querés que tus precios aparezcan en
+Si tienes una tienda de cartas y quieres que tus precios aparezcan en
 [Muchi](https://github.com/metaliaw/muchi), hay dos caminos.
 
 ## Camino 1: listate en scry.cl (el más fácil)
 
 [scry.cl](https://scry.cl) ya indexa 30 tiendas chilenas y Muchi lee de ahí.
 Si te sumás a scry, aparecés en Muchi automáticamente — y en cualquier otra
-herramienta que use scry. **No tenés que mantener nada.**
+herramienta que use scry. **No tienes que mantener nada.**
 
 Es la opción recomendada.
 
@@ -21,7 +21,7 @@ peticiones y un `User-Agent` identificable.
 
 ### Si usás Supabase
 
-Ya tenés la API: Supabase expone PostgREST. Lo único que falta es una política
+Ya tienes la API: Supabase expone PostgREST. Lo único que falta es una política
 que permita **leer sólo lo que quieras publicar**.
 
 La clave `anon` está diseñada para ser pública — lo que la hace segura es el
@@ -62,7 +62,7 @@ curl "https://TU-PROYECTO.supabase.co/rest/v1/stock_publico?nombre_carta=ilike.*
   -H "apikey: TU_ANON_KEY"
 ```
 
-### Si tenés otro backend
+### Si tienes otro backend
 
 Cualquier endpoint que reciba un término de búsqueda y devuelva una lista JSON
 sirve. Por ejemplo `GET https://tutienda.cl/api/stock?buscar=sol+ring`:
@@ -85,7 +85,7 @@ Los nombres de los campos no importan: se mapean en la config.
 
 ### Conectarlo
 
-Copiá `tiendas-api.ejemplo.json` a `tiendas-api.json` y completá tu tienda.
+Copiá `store-api.example.json` a `store-api.json` y completá tu tienda.
 La clave va en una variable de entorno, nunca en el archivo:
 
 ```bash
@@ -105,5 +105,5 @@ automatiza checkout ni pagos.
 - No usa credenciales que no nos hayas dado explícitamente
 - No hace scraping de tiendas que no lo permiten
 
-¿Dudas o querés que te ayudemos a configurarlo? Abrí un issue en
+¿Dudas o quieres que te ayudemos a configurarlo? Abre un issue en
 [github.com/metaliaw/muchi](https://github.com/metaliaw/muchi/issues).

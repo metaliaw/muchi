@@ -187,11 +187,114 @@ h1, h2, h3, h4 { font-family: 'Baloo 2', 'Quicksand', sans-serif !important; col
 """
 
 
-def hero(titulo: str, bajada: str, emoji: str = "\U0001F431") -> str:
+def paint_hero(title: str, subtitle: str, emoji: str = "\U0001F431") -> str:
     return (f'<div class="mu-hero"><div class="emoji">{emoji}</div>'
-            f'<div><h1>{titulo}</h1><p>{bajada}</p></div></div>')
+            f'<div><h1>{title}</h1><p>{subtitle}</p></div></div>')
 
 
-def tile(etiqueta: str, valor: str, ok: bool = False) -> str:
-    clase = "mu-tile ok" if ok else "mu-tile"
-    return f'<div class="{clase}"><div class="et">{etiqueta}</div><div class="val">{valor}</div></div>'
+def paint_tile(label: str, value: str, ok: bool = False) -> str:
+    css_class = "mu-tile ok" if ok else "mu-tile"
+    return (f'<div class="{css_class}"><div class="et">{label}</div>'
+            f'<div class="val">{value}</div></div>')
+
+
+def format_clp(n) -> str:
+    """1234567 -> '$1.234.567'. El separador chileno es el punto."""
+    return "$" + format_thousands(n)
+
+
+def format_thousands(n) -> str:
+    return f"{int(n):,}".replace(",", ".")
+
+
+def paint_offer(o, best: bool = False) -> str:
+    """Una oferta: quien la vende, en que estado y a cuanto."""
+    seller = "particular" if o.marketplace else "tienda"
+    card_class = "mu-card mejor" if best else "mu-card"
+    price = "mu-precio mejor" if best else "mu-precio"
+
+    pills = f'<span class="mu-pill {seller}">{o.store}</span>'
+    if o.marketplace:
+        pills += '<span class="mu-pill particular">particular</span>'
+    if o.is_foil:
+        pills += '<span class="mu-pill foil">Foil</span>'
+    if o.condition:
+        pills += f'<span class="mu-pill cond">{o.condition}</span>'
+    if best:
+        pills += '<span class="mu-pill mejor">\U0001F43E el mas barato</span>'
+
+    return (
+        f'<div class="{card_class}"><div class="mu-fila">'
+        f'<div class="mu-izq"><div class="mu-nombre">{o.title}</div>'
+        f'<div style="margin-top:6px">{pills}</div></div>'
+        f'<div style="text-align:right">'
+        f'<div class="{price}">{format_clp(o.price_clp)}</div>'
+        f'</div>'
+        f'<a class="mu-btn" href="{o.url}" target="_blank" rel="noopener">Ver</a>'
+        f"</div></div>"
+    )
+
+
+def paint_recommendation(r) -> str:
+    """Una carta sugerida: su categoria, su sinergia y que tan comun es."""
+    return (
+        f'<div class="mu-card"><div class="mu-fila">'
+        f'<div class="mu-izq"><div class="mu-nombre">{r.name}</div>'
+        f'<div style="margin-top:6px">'
+        f'<span class="mu-pill tienda">{r.category}</span>'
+        f'<span class="mu-pill cond">sinergia {r.synergy:+.2f}</span>'
+        f'</div></div>'
+        f'<div style="text-align:right">'
+        f'<div class="mu-precio">{r.inclusion_pct:.0f}%</div>'
+        f'<div class="mu-sub">de los mazos</div></div>'
+        f"</div></div>"
+    )
+
+
+def paint_store_header(store: str, cards: int, subtotal: int, shipping: int) -> str:
+    return (f'<div class="mu-tienda-hd">\U0001F43E {store} &middot; {cards} cartas '
+            f"&middot; {format_clp(subtotal)} + {format_clp(shipping)} envio</div>")
+
+
+def paint_line(line) -> str:
+    """Una linea del carrito: cuantas copias, de donde y a cuanto la unidad."""
+    return (
+        f'<div class="mu-card"><div class="mu-fila">'
+        f'<div class="mu-izq">'
+        f'<div class="mu-nombre">{line.quantity}x {line.card_name}</div>'
+        f'<div class="mu-sub">{line.title}</div></div>'
+        f'<div style="text-align:right">'
+        f'<div class="mu-precio">{format_clp(line.subtotal)}</div>'
+        f'<div class="mu-sub">{format_clp(line.unit_price)} c/u</div></div>'
+        f'<a class="mu-btn" href="{line.url}" target="_blank" rel="noopener">Comprar</a>'
+        f"</div></div>"
+    )
+
+
+def paint_store(status) -> str:
+    """Una tienda indexable, con lo que el indice local sabe de ella."""
+    if status.indexed:
+        detail = (f'{format_thousands(status.offers)} ofertas de '
+                  f'{format_thousands(status.products)} productos '
+                  f'&middot; {status.updated}')
+    else:
+        detail = "sin indexar"
+
+    return (
+        f'<div class="mu-card"><div class="mu-fila"><div class="mu-izq">'
+        f'<div class="mu-nombre">{status.store}</div>'
+        f'<div class="mu-sub">{detail}</div></div>'
+        f'<a class="mu-btn" href="{status.url}" target="_blank" rel="noopener">Ir</a>'
+        f"</div></div>"
+    )
+
+
+def paint_blocked(store: str, url: str, reason: str) -> str:
+    """Una tienda que Muchi no puede consultar, y por que."""
+    return (
+        f'<div class="mu-card"><div class="mu-fila"><div class="mu-izq">'
+        f'<div class="mu-nombre">{store}</div>'
+        f'<div class="mu-sub">{reason}</div></div>'
+        f'<a class="mu-btn" href="{url}" target="_blank" rel="noopener">Buscar ahi</a>'
+        f"</div></div>"
+    )
