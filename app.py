@@ -6,10 +6,12 @@ muchi/mtg/cast.py, y detras de el, en muchi/mtg/sources/.
 """
 from __future__ import annotations
 
+import html
+
 import pandas as pd
 import streamlit as st
 
-from muchi.mtg import decklist, style, mascot, sprites, history, deck, offers, optimizer
+from muchi.mtg import decklist, style, mascot, sprites, phrases, history, deck, offers, optimizer
 from muchi.mtg import cast as muchi_cast
 from muchi.mtg import stores as store_index
 from muchi.mtg.style import format_clp as clp
@@ -51,6 +53,15 @@ def show_pending_muchi() -> None:
     pending = st.session_state.pop("muchi_aviso", None)
     if pending:
         muchi_says(*pending)
+
+
+def click_muchi() -> None:
+    """Suma una caricia y, cada tantas, deja una frase para decir."""
+    book = phrases.read_phrases()
+    clicks = st.session_state.get("muchi_clicks", 0) + 1
+    st.session_state["muchi_clicks"] = clicks
+    if phrases.speaks_now(clicks, book.every):
+        st.session_state["muchi_click_phrase"] = phrases.pick_phrase(book.phrases)
 
 
 # ---------------------------------------------------------------- el elenco
@@ -99,10 +110,25 @@ def show_muchi_help() -> None:
 
 def show_preferences() -> tuple[str, int]:
     """Devuelve (acabado, envio): las dos decisiones que afectan a todo."""
+    # El clicker va primero: el on_click deja el estado listo y asi el sprite
+    # y el globo de abajo ya lo ven en esta misma pasada.
+    st.button("Acariciar a Muchi", key="muchi_clicker", on_click=click_muchi,
+              help="Apreta a Muchi")
+
     # Muchi mueve la boca mientras esta explicando, y respira el resto del rato.
     talking = bool(st.session_state.get("muchi_habla"))
-    st.markdown(sprites.build_sprite_html("talk" if talking else "idle", scale=5),
-                unsafe_allow_html=True)
+    phrase = st.session_state.get("muchi_click_phrase")
+    state = "talk" if talking else (phrase.state if phrase else "idle")
+    st.markdown(
+        '<div class="mu-clicker-sprite">'
+        + sprites.build_sprite_html(state, scale=sprites.CLICKER_SCALE)
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+
+    if phrase:
+        st.markdown(mascot.build_bubble_html(html.escape(phrase.text)),
+                    unsafe_allow_html=True)
 
     if st.button("Muchi, ayudame!", key="muchi", use_container_width=True):
         st.session_state["muchi_habla"] = True

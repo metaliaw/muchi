@@ -43,6 +43,9 @@ DEFAULT_STYLE = "muchi-retro"
 DEFAULT_STATE = "idle"
 DEFAULT_SCALE = 4
 NOTICE_SCALE = 3
+# El tamano del sprite del clicker en la barra lateral. Vive aca para que el
+# CSS del boton invisible y el sprite que lo tapa usen la misma cuenta.
+CLICKER_SCALE = 5
 
 # Que estado le toca a cada cosa que hace la app.
 STATE_FOR = {
@@ -181,6 +184,19 @@ def build_sprite_css(style: str = DEFAULT_STYLE, scale: int = DEFAULT_SCALE) -> 
   25%     {{ transform:translateX(-3px); }}
   75%     {{ transform:translateX(3px); }}
 }}
+
+/* ---------- el clicker: un boton invisible encima del sprite ---------- */
+/* El boton (st.key="muchi_clicker") va primero en el DOM y el sprite se posa
+   encima con pointer-events:none: asi el clic pasa de largo y le llega al
+   boton, que es quien avisa a Streamlit. */
+.st-key-muchi_clicker button, button.st-key-muchi_clicker {{
+  display:block; width:calc({fw}px * {CLICKER_SCALE}); height:calc({fh}px * {CLICKER_SCALE});
+  margin:0 auto; padding:0; border:none !important; border-radius:0 !important;
+  background:transparent !important; box-shadow:none !important; opacity:0; cursor:pointer;
+  overflow:hidden;
+}}
+.mu-clicker-sprite {{ margin-top:calc({fh}px * {CLICKER_SCALE} * -1); pointer-events:none; }}
+.mu-clicker-sprite .mu-gato {{ padding:0; }}
 
 @media (prefers-reduced-motion:reduce) {{
   .mu-sprite, .mu-nube, .mu-pelusa {{ animation:none; }}
