@@ -1,6 +1,6 @@
 # 🐱 Muchi
 
-Buscador kawaii de cartas Magic en tiendas chilenas. Pegás tu mazo y Muchi te dice
+Buscador kawaii de cartas Magic en tiendas chilenas. Pegas tu mazo y Muchi te dice
 dónde comprar cada carta al mejor precio — considerando los envíos, no sólo el
 precio de la carta.
 
@@ -31,13 +31,14 @@ Flujo por carta:
 
 > `/buscar` existe pero bloquea más de 45s. No se usa.
 
-`mtgcl/sources/shopify.py` es una fuente **directa** para Dragón Durmiente y PayToWin
+`muchi/mtg/sources/shopify.py` es una fuente **directa** para Dragón Durmiente y PayToWin
 vía `/products.json`, útil para contrastar precios o si scry se cae.
 
 ## Instalar
 
-Requiere Python 3.12. En Windows, si `python` abre la Microsoft Store en vez de
-correr, lo que tenés en el PATH son los stubs y falta instalarlo de verdad:
+Requiere Python 3.12 o superior (probado en 3.14). En Windows, si `python` abre
+la Microsoft Store en vez de correr, lo que tienes en el PATH son los stubs y
+falta instalarlo de verdad:
 
 ```bash
 winget install --id Python.Python.3.12 -e
@@ -49,9 +50,19 @@ Después, desde la raíz del repo:
 python -m venv .venv
 ```
 
+Activa el entorno. En Linux y macOS:
+
 ```bash
+source .venv/bin/activate
+```
+
+En Windows (PowerShell o cmd):
+
+```bat
 .venv\Scripts\activate
 ```
+
+Y ya con el entorno activo:
 
 ```bash
 pip install -r requirements.txt
@@ -63,13 +74,53 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
+Queda escuchando en `http://localhost:8501`. En Linux no se abre el navegador
+solo: `.streamlit/config.toml` trae `headless = true`, así que copia la URL a
+mano. Para cortar, `Ctrl+C`.
+
+### Elegir el puerto
+
+Si el 8501 ya está ocupado, pásalo como parámetro:
+
+```bash
+streamlit run app.py --server.port 9123
+```
+
+También sirve por variable de entorno, cómodo para dejarlo fijo en tu shell:
+
+```bash
+STREAMLIT_SERVER_PORT=9123 streamlit run app.py
+```
+
+### Ojo con la red local
+
+Por defecto Streamlit escucha en **todas** las interfaces: el `Network URL` que
+imprime al arrancar es real, y cualquiera en tu red puede entrar. Si quieres que
+responda sólo en tu máquina, pasa también la dirección:
+
+```bash
+streamlit run app.py --server.port 9123 --server.address 127.0.0.1
+```
+
+## Tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
 ## Uso
 
 - **🐟 Buscar** — una carta, todas las ofertas ordenadas por precio, la más barata
-  marcada con 🐾. Botón de refresco en vivo si querés precios del minuto.
-- **Mi lista** — pegás el mazo (`4 Lightning Bolt`, `2x Sol Ring`, `Counterspell`…).
-- **Comandante** — ponés tu comandante y Muchi le pregunta a [EDHREC](https://edhrec.com)
-  qué juega la gente con él, descontando lo que ya tenés en *Mi lista*. Un botón
+  marcada con 🐾. Botón de refresco en vivo si quieres precios del minuto.
+- **Mi lista** — pegas el mazo y Muchi lo entiende. Acepta lo que exportan
+  Moxfield, Archidekt, Arena y deckstats: `4 Lightning Bolt`, `2x Sol Ring`,
+  `1 Sol Ring (LTC) 344 *F*`, `1 Command Tower #!Commander`, o el nombre pelado.
+  Limpia lo que ensucia el portapapeles (comillas curvas, espacios duros,
+  viñetas) y suma las copias aunque escribas la carta distinto: `Yawgmoth's Will`
+  y `Yawgmoths Will` son la misma. Lo que no reconoce te lo dice; no se lo traga.
+- **Comandante** — pones tu comandante y Muchi le pregunta a [EDHREC](https://edhrec.com)
+  qué juega la gente con él, descontando lo que ya tienes en *Mi lista*. Un botón
   suma las recomendaciones a tu lista para cotizarlas.
 - **Carrito** — el reparto óptimo entre tiendas, agrupado, con links de compra y CSV.
 
@@ -115,7 +166,7 @@ da muy buenos resultados en milisegundos, pero **no garantiza el óptimo**. El t
 
 ## Portarse bien
 
-`mtgcl/http.py` no es opcional: scry.cl devolvió un **429** durante el desarrollo.
+`muchi/mtg/http.py` no es opcional: scry.cl devolvió un **429** durante el desarrollo.
 
 - 1.5s mínimo entre requests al mismo host
 - respeta `Retry-After`, backoff exponencial, reintentos limitados
@@ -152,21 +203,69 @@ ni pagos, y nunca debería hacerlo.
 
 ## Estructura
 
+### El idioma
+
+**El código está en inglés; la interfaz y los comentarios, en español.** Los
+identificadores, los nombres de archivo y los tests van en inglés. Lo que lee
+una persona —el texto de la app, los docstrings, los comentarios y esta
+documentación— va en español, porque Muchi es de acá.
+
+Las dos excepciones son a propósito, y las dos están en el borde: las columnas
+de SQLite y las claves de `store-api.json` siguen en español. La primera porque
+renombrarlas obligaría a migrar bases existentes; la segunda porque ese archivo
+lo escribe el dueño de una tienda chilena y su documentación está en español.
+`store_api.build_store()` traduce esas claves al vocabulario del núcleo, y la
+traducción no pasa de ahí.
+
+### Las convenciones
+
+El código sigue las de
+[OneTwoThree](https://github.com/cangrejometralleta/OneTwoThree), con una
+excepción deliberada: **no se usa la capitalización de OneTwoThreeCase**. Los
+comentarios van en minúscula normal; lo que sí se respeta es todo lo demás.
+
+- **Puertos** con el nombre de la necesidad, no del proveedor: `PrimarySource`,
+  `DeckAdvisor`, `StoreCatalog`. `app.py` no nombra a ningún vendor —
+  `muchi/mtg/cast.py` es el único módulo que los importa.
+- **Nombres con verbo**, de tres palabras como máximo: `find_offers`,
+  `paint_offer`, `normalize_name`. Un nombre sin verbo delata una acción
+  que falta.
+- **Cortes en junturas reales** — una coma, un `and`, un punto de una cadena.
+  Antes que partir una expresión larga, se le nombran las partes.
+
 ```
-app.py                  UI Streamlit (3 pestañas)
-mtgcl/
-  http.py               sesión con rate-limit y manejo de 429
-  models.py             Offer, Pedido
-  decklist.py           parseo de listas pegadas
-  optimizer.py          reparto entre tiendas (greedy + búsqueda local)
-  db.py                 SQLite: histórico de precios
-  estilo.py             tema kawaii (paleta Muchi)
-  texto.py              slug compartido entre fuentes
-  sources/
-    scry.py             agregador de precios (fuente principal)
-    shopify.py          Dragón Durmiente + PayToWin directo
-    edhrec.py           recomendaciones por comandante
+app.py                  UI Streamlit (5 pestañas), sólo handlers
+muchi/                  el paquete principal
+  mtg/                  todo lo de Magic: precios, tiendas, mazos
+    ports.py            los puertos que el núcleo declara + errores de dominio
+    cast.py             arma el elenco: ÚNICO módulo que importa sources/
+    offers.py           combina las fuentes y filtra (núcleo)
+    stores.py           indexado y estado de tiendas (núcleo)
+    deck.py             reglas puras sobre recomendaciones (núcleo)
+    history.py          histórico de precios en vocabulario de negocio
+    http.py             sesión con rate-limit y manejo de 429
+    models.py           Offer, Order
+    decklist.py         parseo de listas pegadas
+    optimizer.py        reparto entre tiendas (greedy + búsqueda local)
+    catalog.py          índice local en SQLite
+    db.py               SQLite: histórico de precios
+    style.py            tema kawaii (paleta Muchi) y render de tarjetas
+    mascot.py           Muchi: sprite, globo y corazoncitos
+    text.py             normalización de nombres, compartida entre fuentes
+    sources/            los adaptadores: un vendor por archivo
+      scry.py           agregador de precios (fuente principal)
+      shopify.py        Dragón Durmiente + PayToWin + PDA Chile directo
+      edhrec.py         recomendaciones por comandante
+      moxfield.py       inventarios publicados como listas
+      store_api.py      tiendas con API de sólo lectura
 ```
+
+`muchi/` es el paquete principal y `muchi/mtg/` es todo lo específico de Magic.
+Lo que venga después —una API, por ejemplo— entra como hermano de `mtg/`.
+
+Para cambiar de agregador se toca `cast.py` y se agrega un archivo en
+`sources/`. Nada más. Un test lo verifica:
+`test_only_the_cast_imports_sources`.
 
 ## Las 30 tiendas que indexa scry
 
@@ -205,7 +304,7 @@ GET https://api2.moxfield.com/v3/decks/all/<publicId>
                             .prices.ck_foil  (foil)
 ```
 
-Se configura en `inventarios-moxfield.json`, una tasa por lista — porque no todas
+Se configura en `moxfield-inventories.json`, una tasa por lista — porque no todas
 cotizan igual: la de foils japoneses va a ×500 y el resto a ×700.
 
 Hoy alimenta a **El Wombat Rabioso TCG**, que vende por Facebook y lleva su stock
