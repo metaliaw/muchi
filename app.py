@@ -9,7 +9,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from muchi.mtg import decklist, style, mascot, history, deck, offers, optimizer
+from muchi.mtg import decklist, style, mascot, sprites, history, deck, offers, optimizer
 from muchi.mtg import cast as muchi_cast
 from muchi.mtg import stores as store_index
 from muchi.mtg.style import format_clp as clp
@@ -21,6 +21,36 @@ FISH = "\U0001F41F"
 
 st.set_page_config(page_title="Muchi", page_icon=CAT, layout="wide")
 st.markdown(style.CSS, unsafe_allow_html=True)
+# La hoja de sprites viaja incrustada en este CSS, asi que va una sola vez.
+st.markdown(sprites.build_sprite_css(), unsafe_allow_html=True)
+
+
+# ------------------------------------------------------- los avisos de Muchi
+def muchi_says(text: str, state: str = "alert") -> None:
+    """Un aviso, pensado por Muchi en su globo.
+
+    Reemplaza a st.info/warning/error/success. Las cajas de Streamlit no son de
+    Muchi y traian cuatro colores que peleaban con la paleta; aca el estado del
+    sprite y el color del borde dicen lo mismo, asi que el aviso se entiende
+    antes de leerlo.
+    """
+    st.markdown(sprites.build_notice_html(text, state), unsafe_allow_html=True)
+
+
+def remember_muchi(text: str, state: str = "happy") -> None:
+    """Deja un aviso para DESPUES del st.rerun().
+
+    Un aviso escrito justo antes de un rerun no alcanza a verse: la pagina se
+    vuelve a dibujar desde cero y se lo lleva. Se guarda en session_state y lo
+    saca show_pending_muchi() en la corrida siguiente.
+    """
+    st.session_state["muchi_aviso"] = (text, state)
+
+
+def show_pending_muchi() -> None:
+    pending = st.session_state.pop("muchi_aviso", None)
+    if pending:
+        muchi_says(*pending)
 
 
 # ---------------------------------------------------------------- el elenco
@@ -46,12 +76,6 @@ def recommend_cards(commander: str):
     return build_muchi().advisor.recommend_cards(commander)
 
 
-@st.cache_data(show_spinner=False)
-def read_muchi_sprite():
-    """El GIF pesa ~47 KB en base64: se lee una sola vez, no en cada rerun."""
-    return mascot.read_sprite_datauri()
-
-
 # ------------------------------------------------------------ barra lateral
 def show_muchi_help() -> None:
     """Muchi saluda, tira corazones y explica de que se trata."""
@@ -75,7 +99,10 @@ def show_muchi_help() -> None:
 
 def show_preferences() -> tuple[str, int]:
     """Devuelve (acabado, envio): las dos decisiones que afectan a todo."""
-    st.markdown(mascot.build_cat_html(read_muchi_sprite()), unsafe_allow_html=True)
+    # Muchi mueve la boca mientras esta explicando, y respira el resto del rato.
+    talking = bool(st.session_state.get("muchi_habla"))
+    st.markdown(sprites.build_sprite_html("talk" if talking else "idle", scale=5),
+                unsafe_allow_html=True)
 
     if st.button("Muchi, ayudame!", key="muchi", use_container_width=True):
         st.session_state["muchi_habla"] = True
@@ -166,7 +193,7 @@ def refresh_live(card_id: str) -> None:
         find_offers.clear()
         st.rerun()
     except Exception as e:
-        st.warning(f"El refresco fallo: {e}")
+        muchi_says(f"El refresco fallo: {e}", "angry")
 
 
 def show_price_history(card_name: str) -> None:
@@ -192,7 +219,7 @@ def show_search(finish: str, stores_only: bool) -> None:
         try:
             card_id, found = find_offers(chosen)
         except Exception as e:
-            st.error(f"No pude consultar las tiendas: {e}")
+            muchi_says(f"No pude consultar las tiendas: {e}", "angry")
             card_id, found = None, []
 
     if found:
@@ -211,7 +238,8 @@ def show_search(finish: str, stores_only: bool) -> None:
                    "Marca la casilla de arriba para verlas.")
 
     if not visible:
-        st.info("Sin stock con esos filtros. Prueba el refresco en vivo mas abajo.")
+        muchi_says("Sin stock con esos filtros. Prueba el refresco en vivo mas abajo.",
+                   "alert")
     else:
         show_summary(visible)
         for i, o in enumerate(visible):
@@ -243,9 +271,18 @@ def quote_deck_list(orders: list) -> None:
     st.session_state["ofertas_lista"] = found_by_card
     st.session_state["pedidos"] = orders
     if failed:
-        st.warning("No pude consultar: " + ", ".join(failed))
-    st.success(f"Encontre precios para {len(found_by_card)} de {len(orders)} cartas. "
-               "Anda a la pestana Carrito.")
+        muchi_says("No pude consultar: " + ", ".join(failed), "angry")
+
+    # El caso feliz es que esten todas: ahi Muchi celebra en vez de informar.
+    total, got = len(orders), len(found_by_card)
+    if got == total:
+        muchi_says(f"Las encontre <b>todas</b>! {total} de {total} con precio. "
+                   "Anda a la pestana <b>Carrito</b> y te las reparto entre tiendas.",
+                   "happy")
+    else:
+        muchi_says(f"Encontre precios para <b>{got}</b> de {total} cartas. "
+                   f"Las {total - got} que faltan no aparecieron en ninguna tienda; "
+                   "igual puedes ir al <b>Carrito</b> con el resto.", "alert")
 
 
 def show_my_list() -> None:
@@ -274,8 +311,8 @@ def show_my_list() -> None:
     if ignored:
         sample = " / ".join(ignored[:5])
         rest = f" y {len(ignored) - 5} mas" if len(ignored) > 5 else ""
-        st.warning(f"No entendi {len(ignored)} lineas: {sample}{rest}. "
-                   "Revisalas: no quedaron en el pedido.")
+        muchi_says(f"No entendi {len(ignored)} lineas: {sample}{rest}. "
+                   "Revisalas: no quedaron en el pedido.", "alert")
 
     if orders and st.button("Buscar precios de la lista", type="primary"):
         quote_deck_list(orders)
@@ -297,11 +334,12 @@ def show_commander() -> None:
         recs = recommend_cards(commander)
     except CommanderNotFound:
         recs = []
-        st.error(f"No hay recomendaciones para **{commander}**. Revisa que el nombre "
-                 "este completo y en ingles (ej: *Atraxa, Praetors' Voice*).")
+        muchi_says(f"No hay recomendaciones para <b>{commander}</b>. Revisa que el "
+                   "nombre este completo y en ingles "
+                   "(ej: <i>Atraxa, Praetors' Voice</i>).", "alert")
     except Exception as e:
         recs = []
-        st.error(f"No pude traer las recomendaciones: {e}")
+        muchi_says(f"No pude traer las recomendaciones: {e}", "angry")
     if not recs:
         return
 
@@ -317,7 +355,8 @@ def show_commander() -> None:
     st.write("")
 
     if not owned:
-        st.info("Carga tu mazo en **Mi lista** y Muchi descuenta lo que ya tienes.")
+        muchi_says("Carga tu mazo en <b>Mi lista</b> y descuento lo que ya tienes.",
+                   "idle")
 
     col_category, col_n = st.columns([3, 1])
     category = col_category.selectbox("Categoria", ["Todas"] + deck.list_categories(pending))
@@ -380,7 +419,7 @@ def show_cart(finish: str, shipping: int, stores_only: bool) -> None:
     orders = st.session_state.get("pedidos")
     raw = st.session_state.get("ofertas_lista")
     if not orders or not raw:
-        st.info("Primero carga una lista en la pestana Mi lista.")
+        muchi_says("Primero carga una lista en la pestana <b>Mi lista</b>.", "idle")
         return
 
     by_card = {k: offers.filter_offers(v, finish, None, stores_only)
@@ -398,7 +437,7 @@ def show_cart(finish: str, shipping: int, stores_only: bool) -> None:
 
     show_totals(plan, naive, shipping)
     if plan.missing:
-        st.warning("Sin stock en ninguna tienda: " + ", ".join(plan.missing))
+        muchi_says("Sin stock en ninguna tienda: " + ", ".join(plan.missing), "alert")
 
     show_plan_by_store(plan, shipping)
     offer_csv(plan)
@@ -433,12 +472,12 @@ def show_published_inventory() -> None:
         notice = f"{style.format_thousands(saved)} ofertas indexadas."
         if without_price:
             notice += f" {without_price} entradas quedaron fuera por no traer precio."
-        st.success(notice)
+        remember_muchi(notice, "happy")
         st.rerun()
     except InventoryUnavailable as e:
-        st.error(f"Esa lista no existe o no es publica: {e}")
+        muchi_says(f"Esa lista no existe o no es publica: {e}", "alert")
     except Exception as e:
-        st.error(f"No pude importar: {e}")
+        muchi_says(f"No pude importar: {e}", "angry")
 
 
 def index_one_store(status) -> None:
@@ -452,10 +491,11 @@ def index_one_store(status) -> None:
         n = store_index.index_store(build_muchi().cx, build_muchi().stores,
                                     status.store, status.url, progress)
         bar.progress(1.0, text="Listo")
-        st.success(f"{status.store}: {style.format_thousands(n)} ofertas indexadas.")
+        remember_muchi(f"{status.store}: {style.format_thousands(n)} ofertas "
+                       "indexadas.", "happy")
         st.rerun()
     except Exception as e:
-        st.error(f"No pude indexar {status.store}: {e}")
+        muchi_says(f"No pude indexar {status.store}: {e}", "angry")
 
 
 def show_stores() -> None:
@@ -489,6 +529,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 st.write("")
+show_pending_muchi()
 
 with st.sidebar:
     finish, shipping = show_preferences()
