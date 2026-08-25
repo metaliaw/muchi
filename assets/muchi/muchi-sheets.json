@@ -1,0 +1,122 @@
+{
+  "styles": {
+    "muchi-kawaii": {
+      "frameWidth": 32,
+      "frameHeight": 32,
+      "columns": 8,
+      "animations": {
+        "idle": {
+          "row": 0,
+          "frames": 8,
+          "ms": 140
+        },
+        "talk": {
+          "row": 1,
+          "frames": 6,
+          "ms": 90
+        },
+        "happy": {
+          "row": 2,
+          "frames": 8,
+          "ms": 80
+        },
+        "alert": {
+          "row": 3,
+          "frames": 6,
+          "ms": 100
+        },
+        "angry": {
+          "row": 4,
+          "frames": 6,
+          "ms": 90
+        }
+      }
+    },
+    "muchi-crema": {
+      "frameWidth": 32,
+      "frameHeight": 32,
+      "columns": 8,
+      "animations": {
+        "idle": {
+          "row": 0,
+          "frames": 8,
+          "ms": 140
+        },
+        "talk": {
+          "row": 1,
+          "frames": 6,
+          "ms": 90
+        },
+        "happy": {
+          "row": 2,
+          "frames": 8,
+          "ms": 80
+        },
+        "alert": {
+          "row": 3,
+          "frames": 6,
+          "ms": 100
+        },
+        "angry": {
+          "row": 4,
+          "frames": 6,
+          "ms": 90
+        }
+      }
+    },
+    "muchi-retro": {
+      "frameWidth": 24,
+      "frameHeight": 24,
+      "columns": 8,
+      "animations": {
+        "idle": {
+          "row": 0,
+          "frames": 8,
+          "ms": 140
+        },
+        "talk": {
+          "row": 1,
+          "frames": 6,
+          "ms": 90
+        },
+        "happy": {
+          "row": 2,
+          "frames": 8,
+          "ms": 80
+        },
+        "alert": {
+          "row": 3,
+          "frames": 6,
+          "ms": 100
+        },
+        "angry": {
+          "row": 4,
+          "frames": 6,
+          "ms": 90
+        }
+      }
+    },
+    "muchi-dormida": {
+      "frameWidth": 32,
+      "frameHeight": 24,
+      "columns": 6,
+      "animations": {
+        "sleep": {
+          "row": 0,
+          "frames": 6,
+          "ms": 260
+        },
+        "wake": {
+          "row": 1,
+          "frames": 6,
+          "ms": 140
+        },
+        "purr": {
+          "row": 2,
+          "frames": 4,
+          "ms": 180
+        }
+      }
+    }
+  }
+}
