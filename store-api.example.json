@@ -1,6 +1,6 @@
 {
   "_comentario": [
-    "Copia este archivo como tiendas-api.json y edítalo.",
+    "Copia este archivo como store-api.json y edítalo.",
     "Las claves NO van acá: se ponen en la variable de entorno que nombra env_apikey.",
     "Muchi sólo hace GET. Nunca escribe."
   ],

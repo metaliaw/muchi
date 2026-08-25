@@ -22,8 +22,8 @@ import requests
 # Si preferis que te escriban por mail, no lo escribas aca: exportalo como
 #     MUCHI_CONTACTO="tu-mail@ejemplo.cl"
 # (en Streamlit Cloud: Settings -> Secrets/Variables).
-CONTACTO = os.getenv("MUCHI_CONTACTO", "https://github.com/metaliaw/muchi")
-USER_AGENT = f"Muchi/0.1 (uso personal; +{CONTACTO})"
+CONTACT = os.getenv("MUCHI_CONTACTO", "https://github.com/metaliaw/muchi")
+USER_AGENT = f"Muchi/0.1 (uso personal; +{CONTACT})"
 
 
 class RateLimited(RuntimeError):
@@ -43,44 +43,44 @@ class PoliteSession:
             "Accept-Language": "es-CL,es;q=0.9",
         })
 
-    def _esperar_turno(self, host: str) -> None:
+    def _wait_turn(self, host: str) -> None:
         with self._lock:
-            ahora = time.monotonic()
-            falta = self._last.get(host, 0.0) + self.min_interval - ahora
-            if falta > 0:
-                time.sleep(falta)
-                ahora = time.monotonic()
-            self._last[host] = ahora
+            now = time.monotonic()
+            remaining = self._last.get(host, 0.0) + self.min_interval - now
+            if remaining > 0:
+                time.sleep(remaining)
+                now = time.monotonic()
+            self._last[host] = now
 
     def get(self, url: str, *, params=None, headers=None, stream=False, timeout=None):
         host = urlparse(url).netloc
         backoff = 5.0
-        ultimo_error: Exception | None = None
+        last_error: Exception | None = None
 
         for _ in range(self.max_retries + 1):
-            self._esperar_turno(host)
+            self._wait_turn(host)
             try:
                 r = self._s.get(
                     url, params=params, headers=headers or {},
                     stream=stream, timeout=timeout or self.timeout,
                 )
             except requests.RequestException as e:
-                ultimo_error = e
+                last_error = e
                 time.sleep(backoff)
                 backoff *= 2
                 continue
 
             if r.status_code == 429:
-                espera = r.headers.get("Retry-After")
+                wait = r.headers.get("Retry-After")
                 r.close()
-                time.sleep(min(float(espera) if espera and espera.isdigit() else backoff, 60))
+                time.sleep(min(float(wait) if wait and wait.isdigit() else backoff, 60))
                 backoff *= 2
-                ultimo_error = RateLimited(f"429 en {url}")
+                last_error = RateLimited(f"429 en {url}")
                 continue
 
             if r.status_code >= 500:
                 r.close()
-                ultimo_error = requests.HTTPError(f"{r.status_code} en {url}")
+                last_error = requests.HTTPError(f"{r.status_code} en {url}")
                 time.sleep(backoff)
                 backoff *= 2
                 continue
@@ -88,4 +88,4 @@ class PoliteSession:
             r.raise_for_status()
             return r
 
-        raise ultimo_error or RuntimeError(f"no se pudo obtener {url}")
+        raise last_error or RuntimeError(f"no se pudo obtener {url}")

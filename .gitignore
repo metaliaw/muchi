@@ -6,4 +6,5 @@ data/
 .streamlit/secrets.toml
 .pytest_cache/
 .DS_Store
-tiendas-api.json
+store-api.json
+.claude/
