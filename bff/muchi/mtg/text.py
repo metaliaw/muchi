@@ -9,9 +9,9 @@ import re
 import unicodedata
 
 
-def slug(nombre: str) -> str:
+def normalize_name(name: str) -> str:
     """'Atraxa, Praetors' Voice' -> 'atraxa-praetors-voice'."""
-    s = unicodedata.normalize("NFD", nombre)
+    s = unicodedata.normalize("NFD", name)
     s = "".join(c for c in s if unicodedata.category(c) != "Mn")
     s = re.sub(r"[^a-zA-Z0-9]+", "-", s).strip("-").lower()
     return re.sub(r"-{2,}", "-", s)
