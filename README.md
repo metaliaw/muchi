@@ -36,6 +36,27 @@ vía `/products.json`, útil para contrastar precios o si scry se cae.
 
 ## Instalar
 
+### El camino corto
+
+Hay un script que hace todo solo -- crea el entorno, baja las dependencias y
+levanta Muchi. Desde la raíz del repo:
+
+```bash
+./run.sh          # Linux y macOS
+```
+
+```bat
+run.cmd           :: Windows
+```
+
+La primera vez tarda (instala las dependencias); las siguientes arranca al
+tiro. Sólo vuelve a instalar si `requirements.txt` cambió. Lo que le pases
+viaja tal cual a Streamlit: `./run.sh --server.port 9123`.
+
+Si prefieres hacerlo a mano, sigue leyendo.
+
+### A mano
+
 Requiere Python 3.12 o superior (probado en 3.14). En Windows, si `python` abre
 la Microsoft Store en vez de correr, lo que tienes en el PATH son los stubs y
 falta instalarlo de verdad:
@@ -71,6 +92,12 @@ pip install -r requirements.txt
 ## Correr
 
 ```bash
+./run.sh
+```
+
+O, con el entorno ya activado a mano:
+
+```bash
 streamlit run app.py
 ```
 
@@ -83,13 +110,13 @@ mano. Para cortar, `Ctrl+C`.
 Si el 8501 ya está ocupado, pásalo como parámetro:
 
 ```bash
-streamlit run app.py --server.port 9123
+./run.sh --server.port 9123
 ```
 
 También sirve por variable de entorno, cómodo para dejarlo fijo en tu shell:
 
 ```bash
-STREAMLIT_SERVER_PORT=9123 streamlit run app.py
+STREAMLIT_SERVER_PORT=9123 ./run.sh
 ```
 
 ### Ojo con la red local
@@ -99,7 +126,7 @@ imprime al arrancar es real, y cualquiera en tu red puede entrar. Si quieres que
 responda sólo en tu máquina, pasa también la dirección:
 
 ```bash
-streamlit run app.py --server.port 9123 --server.address 127.0.0.1
+./run.sh --server.port 9123 --server.address 127.0.0.1
 ```
 
 ## Tests
