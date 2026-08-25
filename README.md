@@ -42,16 +42,16 @@ Hay un script que hace todo solo -- crea el entorno, baja las dependencias y
 levanta Muchi. Desde la raíz del repo:
 
 ```bash
-./run.sh          # Linux y macOS
+./muchi-start.sh          # Linux y macOS
 ```
 
 ```bat
-run.cmd           :: Windows
+muchi-start.cmd           :: Windows
 ```
 
 La primera vez tarda (instala las dependencias); las siguientes arranca al
 tiro. Sólo vuelve a instalar si `requirements.txt` cambió. Lo que le pases
-viaja tal cual a Streamlit: `./run.sh --server.port 9123`.
+viaja tal cual a Streamlit: `./muchi-start.sh --server.port 9123`.
 
 Si prefieres hacerlo a mano, sigue leyendo.
 
@@ -92,7 +92,13 @@ pip install -r requirements.txt
 ## Correr
 
 ```bash
-./run.sh
+./muchi-start.sh
+```
+
+En Windows:
+
+```bat
+muchi-start.cmd
 ```
 
 O, con el entorno ya activado a mano:
@@ -110,13 +116,19 @@ mano. Para cortar, `Ctrl+C`.
 Si el 8501 ya está ocupado, pásalo como parámetro:
 
 ```bash
-./run.sh --server.port 9123
+./muchi-start.sh --server.port 9123
+```
+
+En Windows:
+
+```bat
+muchi-start.cmd --server.port 9123
 ```
 
 También sirve por variable de entorno, cómodo para dejarlo fijo en tu shell:
 
 ```bash
-STREAMLIT_SERVER_PORT=9123 ./run.sh
+STREAMLIT_SERVER_PORT=9123 ./muchi-start.sh
 ```
 
 ### Ojo con la red local
@@ -126,7 +138,7 @@ imprime al arrancar es real, y cualquiera en tu red puede entrar. Si quieres que
 responda sólo en tu máquina, pasa también la dirección:
 
 ```bash
-./run.sh --server.port 9123 --server.address 127.0.0.1
+./muchi-start.sh --server.port 9123 --server.address 127.0.0.1
 ```
 
 ## Tests
