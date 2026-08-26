@@ -260,13 +260,13 @@ def test_greetings_and_help_not_empty():
         assert title.strip() and len(detail) > 30, title
 
 
-# ------------------------------------------------------------------ frases
+# ------------------------------------------------------------------ phrases
 def test_phrase_book_reads_yaml():
     from muchi.mtg import phrases
 
     book = phrases.read_phrases()
     assert book.every == 10
-    assert book.phrases, "el YAML de frases no puede venir vacio"
+    assert book.phrases, "the phrases YAML must not be empty"
     assert all(p.text.strip() for p in book.phrases)
     states = {p.state for p in book.phrases}
     assert states <= {"idle", "talk", "happy", "alert", "angry"}, states
@@ -275,7 +275,7 @@ def test_phrase_book_reads_yaml():
 def test_phrase_book_missing_file_is_harmless():
     from muchi.mtg import phrases
 
-    book = phrases.read_phrases(Path("no-existe-este-yaml.yaml"))
+    book = phrases.read_phrases(Path("no-such-phrases.yaml"))
     assert book.every == 0 and book.phrases == ()
 
 
@@ -287,7 +287,7 @@ def test_pick_phrase_returns_one_of_the_list():
     assert phrases.pick_phrase(()) is None
 
 
-def test_speaks_now_on_the_cada_boundary():
+def test_speaks_now_on_the_boundary():
     from muchi.mtg import phrases
 
     assert phrases.speaks_now(10, 10) is True
@@ -300,7 +300,7 @@ def test_speaks_now_on_the_cada_boundary():
 def test_phrases_file_ships_with_example():
     from muchi.mtg import phrases
 
-    assert phrases.PHRASES_PATH.exists(), "falta muchi-frases.yaml en la raiz"
+    assert phrases.PHRASES_PATH.exists(), "muchi-phrases.yaml is missing from the repo root"
     text = phrases.PHRASES_PATH.read_text(encoding="utf-8")
     assert "amsiedad" in text
 
