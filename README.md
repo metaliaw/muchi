@@ -289,7 +289,8 @@ muchi/                  el paquete principal
     catalog.py          índice local en SQLite
     db.py               SQLite: histórico de precios
     style.py            tema kawaii (paleta Muchi) y render de tarjetas
-    mascot.py           Muchi: sprite, globo y corazoncitos
+    mascot.py           el saludo de Muchi: globo y corazoncitos
+    sprites.py          las hojas de sprites, sus estados y los avisos
     text.py             normalización de nombres, compartida entre fuentes
     sources/            los adaptadores: un vendor por archivo
       scry.py           agregador de precios (fuente principal)
@@ -364,6 +365,72 @@ No se omiten en silencio: la pestaña **Tiendas** las enlaza para revisarlas a m
   (`User-agent: *` → `Disallow: /`).
 - **Gaming Place** — el servidor responde 403 a peticiones automatizadas.
 
+## Los sprites
+
+Muchi se anima con hojas de sprites, no con un GIF. Una fila por estado, una
+columna por frame, y el CSS mueve `background-position` con `steps()`. Nada de
+JavaScript: Streamlit borra las etiquetas `<script>` de `st.markdown`, así que
+una animación por JS no correría. Los `@keyframes` se reproducen solos en cada
+rerun. La hoja viaja como data URI, porque Streamlit Cloud no publica rutas
+locales del repo.
+
+| hoja | frame | animaciones |
+|---|---|---|
+| `muchi-retro-sheet.png` | 24×24 | idle, talk, happy, alert, angry |
+| `muchi-crema-sheet.png` | 32×32 | idle, talk, happy, alert, angry |
+| `muchi-kawaii-sheet.png` | 32×32 | idle, talk, happy, alert, angry |
+| `muchi-dormida-sheet.png` | 32×24 | sleep, wake, purr |
+
+El **retro 8-bit** es la mascota de la página. `muchi-crema` es la paleta real
+de la gata —pelo crema, oreja rosada, ojos periwinkle—, `muchi-kawaii` la misma
+geometría en naranjo atigrado y `muchi-dormida` la enroscada, para cuando no
+pasa nada hace rato. Se eligen con el argumento `style` de
+`sprites.build_sprite_html()`.
+
+`idle` y `talk` se repiten en loop. `happy`, `alert`, `angry` y `wake` tienen
+principio y final: se reproducen **una sola vez** y quedan quietas en su último
+frame, que por eso está dibujado como pose de reposo. En loop, el salto del
+último frame al primero se ve como un corte.
+
+### Los avisos
+
+No queda ningún `st.info` / `st.warning` / `st.error` / `st.success` en
+`app.py`: todos pasan por `muchi_says(texto, estado)`, que dibuja a Muchi con el
+estado que corresponde y el texto en un globo de pensamiento. Las cajas de
+Streamlit no son de Muchi y traían cuatro colores que peleaban con la paleta.
+
+| estado | borde | cuándo |
+|---|---|---|
+| `happy` | periwinkle `#7B8FC7` | salió todo bien |
+| `alert` | acento `#E0729B` | falta algo pero se puede seguir |
+| `angry` | `#B4506B` | falló una consulta |
+| `idle` | rosa claro `#FFCFE2` | informativo |
+
+Un aviso escrito justo antes de un `st.rerun()` no alcanza a verse: la página se
+vuelve a dibujar desde cero y se lo lleva. Para esos casos está
+`remember_muchi()`, que lo deja en `session_state`, y `show_pending_muchi()`,
+que lo saca arriba de todo en la corrida siguiente.
+
+### Regenerarlos
+
+El sprite es una grilla de caracteres, no un PNG que se edita a mano. Se toca
+`tools/sprites/muchi_b.py` —o `muchi.py`, o `muchi_c.py`— y se corre:
+
+```bash
+python tools/sprites/anim.py        # hojas, GIFs, frames sueltos y el JSON
+python tools/sprites/build_demo.py  # docs/muchi-sprite-lab.html
+```
+
+Necesitan Pillow (`requirements-dev.txt`). La demo es autocontenida: se abre en
+el navegador y muestra los cuatro cuerpos con sus estados, la grilla de cada
+hoja y el CSS mínimo para pegarlo en otro lado.
+
+En `assets/muchi/` viven las hojas a 1× —las que usa la app—, las `@4x` que solo
+alimentan la demo, `muchi-sheets.json` con la fila, los frames y los
+milisegundos de cada estado, `gif/` con una muestra por animación y `frames/`
+con cada frame suelto a 8×, por si hay que retocar a mano. Todo eso menos las
+hojas y el JSON es derivado: se puede borrar y volver a generar.
+
 ## Paleta
 
 `#FDC9DA` `#E9EDF6` `#FDBFD3` `#FFCFE2` `#FDEEF5`
@@ -371,3 +438,10 @@ No se omiten en silencio: la pestaña **Tiendas** las enlaza para revisarlas a m
 Los cinco pasteles no alcanzan para texto legible, así que se agregaron dos derivados:
 tinta `#6E5A68` y acento `#E0729B`, más periwinkle `#7B8FC7` para marcar el precio
 más bajo (la paleta no trae un color de "éxito").
+
+---
+
+Muchi está siendo asistida por el agente de
+[OneTwoThree](https://github.com/cangrejometralleta/OneTwoThree), que aplica sus
+convenciones de código y su manera de narrar las funciones a lo largo de este
+repo. Véase [Las convenciones](#las-convenciones).
