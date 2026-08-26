@@ -57,16 +57,16 @@ if exist "%VENV_PYTHON%" goto :eof
 
 call :find_python
 if not defined PY_CMD (
-    echo ~nya!~ no encuentro Python 3.12 o mas nuevo.
+    echo ~nya!~ No Encuentro Python 3.12 o Mas Nuevo.
     echo        Instalalo con: winget install --id Python.Python.3.12 -e
-    echo        o apuntame al tuyo con: set MUCHI_PYTHON=C:\ruta\a\python.exe
+    echo        O Apuntame al tuyo con: set MUCHI_PYTHON=C:\ruta\a\python.exe
     exit /b 1
 )
 
-echo ~nya~ creando el entorno en .venv
+echo ~nya~ Creando el Entorno en .venv
 %PY_CMD% -m venv "%VENV%"
 if errorlevel 1 (
-    echo ~nya!~ no pude crear el entorno en "%VENV%"
+    echo ~nya!~ No Pude Crear el Entorno en "%VENV%"
     exit /b 1
 )
 
@@ -83,10 +83,10 @@ if exist "%DEPS_STAMP%" (
     if not errorlevel 1 goto :eof
 )
 
-echo ~nya~ instalando dependencias (esto pasa una sola vez)
+echo ~nya~ Instalando Dependencias (esto pasa una sola vez)
 "%VENV_PYTHON%" -m pip install --quiet --requirement "%ROOT%\requirements.txt"
 if errorlevel 1 (
-    echo ~nya!~ fallo la instalacion de dependencias
+    echo ~nya!~ Fallo la Instalacion de Dependencias
     exit /b 1
 )
 
@@ -96,8 +96,8 @@ goto :eof
 
 rem ------------------------------------------------------------ y a levantarlo
 :run_streamlit
-echo ~nya~ levantando Muchi -- Ctrl+C para cortar
-echo       el navegador no se abre solo: copia la URL que sale abajo
+echo ~nya~ Levantando Muchi -- Ctrl+C para Cortar
+echo       El Navegador no se Abre solo: Copia la URL que Sale abajo
 echo.
 cd /d "%ROOT%"
 "%VENV_PYTHON%" -m streamlit run app.py %*
