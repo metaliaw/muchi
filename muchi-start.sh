@@ -61,11 +61,11 @@ prepare_venv() {
     fi
 
     local python
-    python="$(find_python)" || die "no encuentro Python $MIN_PYTHON o mas nuevo (el README pide $MIN_PYTHON). Instalalo, o apuntame al tuyo con MUCHI_PYTHON=/ruta/a/python"
+    python="$(find_python)" || die "No Encuentro Python $MIN_PYTHON o Mas Nuevo (el README lo Pide). Instalalo, o Apuntame al tuyo con MUCHI_PYTHON=/ruta/a/python"
 
-    say "creando el entorno en .venv con $($python -c 'import sys; print("Python %d.%d.%d" % sys.version_info[:3])')"
+    say "Creando el Entorno en .venv con $($python -c 'import sys; print("Python %d.%d.%d" % sys.version_info[:3])')"
     if ! "$python" -m venv "$VENV" 2>/dev/null; then
-        die "no pude crear el entorno. En Debian/Ubuntu falta el paquete: sudo apt install python3-venv"
+        die "No Pude Crear el Entorno. En Debian/Ubuntu Falta el Paquete: sudo apt install python3-venv"
     fi
 
     "$VENV_PYTHON" -m pip install --quiet --upgrade pip
@@ -83,9 +83,9 @@ install_requirements() {
         return 0
     fi
 
-    say "instalando dependencias (esto pasa una sola vez)"
+    say "Instalando Dependencias (esto pasa una sola vez)"
     "$VENV_PYTHON" -m pip install --quiet --requirement "$ROOT/requirements.txt" \
-        || die "fallo la instalacion de dependencias"
+        || die "Fallo la Instalacion de Dependencias"
 
     printf '%s' "$fingerprint" > "$DEPS_STAMP"
 }
@@ -95,8 +95,8 @@ install_requirements() {
 # `exec` para que Muchi herede el proceso: Ctrl+C corta el server de verdad y
 # el codigo de salida es el suyo, no el del script.
 run_streamlit() {
-    say "levantando Muchi -- Ctrl+C para cortar"
-    note "en Linux el navegador no se abre solo: copia la URL que sale abajo"
+    say "Levantando Muchi -- Ctrl+C para Cortar"
+    note "En Linux el Navegador no se Abre solo: Copia la URL que Sale abajo"
     echo
     cd "$ROOT"
     exec "$VENV_PYTHON" -m streamlit run app.py "$@"
