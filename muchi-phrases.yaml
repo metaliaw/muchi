@@ -1,0 +1,40 @@
+# Phrases Muchi says when you pet her.
+#
+# `every` says how many clicks between random phrases.
+# Below, phrases are grouped by mood: the group's label, the sprite
+# `state` Muchi uses to say them (idle, talk, happy, alert, angry)
+# and the list of phrases for that mood.
+every: 10
+
+phrases:
+  - mood: anxiety
+    state: alert
+    phrases:
+      - "Ver dos islas destapadas me da amsiedad"
+      - "Dos tierras sin destapar... me tiemblan las patitas"
+      - "Un mulligan a cuatro me da cosita"
+
+  - mood: joy
+    state: happy
+    phrases:
+      - "Miau! Otro clic mas cerca de un Sol Ring"
+      - "Encontre justo la carta que buscabas, de nada"
+      - "Nya~ tu mazo quedo filete"
+
+  - mood: annoyed
+    state: angry
+    phrases:
+      - "Otra vez sin stock? Grrr, las tiendas se portan mal"
+      - "El envio salio mas caro que la carta, no puede ser"
+
+  - mood: calm
+    state: idle
+    phrases:
+      - "Mira, si me dejas acariciar me duermo"
+      - "Zzz... me despiertas cuando haya promo"
+
+  - mood: chatty
+    state: talk
+    phrases:
+      - "Sabias que scry.cl indexa 30 tiendas? Yo tampoco"
+      - "Miau miau, y si armamos un mazo nuevo?"
