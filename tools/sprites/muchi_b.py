@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Muchi B - retro 8-bit (24x24)."""
-from pixlib import Canvas, mirror, shift
+from pixlib import Canvas, shift
 
 W = H = 24
 PAL = {

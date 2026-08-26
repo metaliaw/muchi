@@ -3,96 +3,111 @@
     "muchi-kawaii": {
       "frameWidth": 32,
       "frameHeight": 32,
-      "columns": 8,
+      "columns": 16,
       "animations": {
         "idle": {
           "row": 0,
-          "frames": 8,
-          "ms": 140
+          "frames": 16,
+          "ms": 130,
+          "loop": true
         },
         "talk": {
           "row": 1,
           "frames": 6,
-          "ms": 90
+          "ms": 90,
+          "loop": true
         },
         "happy": {
           "row": 2,
           "frames": 8,
-          "ms": 80
+          "ms": 80,
+          "loop": false
         },
         "alert": {
           "row": 3,
           "frames": 6,
-          "ms": 100
+          "ms": 100,
+          "loop": false
         },
         "angry": {
           "row": 4,
           "frames": 6,
-          "ms": 90
+          "ms": 90,
+          "loop": false
         }
       }
     },
     "muchi-crema": {
       "frameWidth": 32,
       "frameHeight": 32,
-      "columns": 8,
+      "columns": 16,
       "animations": {
         "idle": {
           "row": 0,
-          "frames": 8,
-          "ms": 140
+          "frames": 16,
+          "ms": 130,
+          "loop": true
         },
         "talk": {
           "row": 1,
           "frames": 6,
-          "ms": 90
+          "ms": 90,
+          "loop": true
         },
         "happy": {
           "row": 2,
           "frames": 8,
-          "ms": 80
+          "ms": 80,
+          "loop": false
         },
         "alert": {
           "row": 3,
           "frames": 6,
-          "ms": 100
+          "ms": 100,
+          "loop": false
         },
         "angry": {
           "row": 4,
           "frames": 6,
-          "ms": 90
+          "ms": 90,
+          "loop": false
         }
       }
     },
     "muchi-retro": {
       "frameWidth": 24,
       "frameHeight": 24,
-      "columns": 8,
+      "columns": 16,
       "animations": {
         "idle": {
           "row": 0,
-          "frames": 8,
-          "ms": 140
+          "frames": 16,
+          "ms": 130,
+          "loop": true
         },
         "talk": {
           "row": 1,
           "frames": 6,
-          "ms": 90
+          "ms": 90,
+          "loop": true
         },
         "happy": {
           "row": 2,
           "frames": 8,
-          "ms": 80
+          "ms": 80,
+          "loop": false
         },
         "alert": {
           "row": 3,
           "frames": 6,
-          "ms": 100
+          "ms": 100,
+          "loop": false
         },
         "angry": {
           "row": 4,
           "frames": 6,
-          "ms": 90
+          "ms": 90,
+          "loop": false
         }
       }
     },
@@ -104,17 +119,20 @@
         "sleep": {
           "row": 0,
           "frames": 6,
-          "ms": 260
+          "ms": 260,
+          "loop": true
         },
         "wake": {
           "row": 1,
           "frames": 6,
-          "ms": 140
+          "ms": 140,
+          "loop": false
         },
         "purr": {
           "row": 2,
           "frames": 4,
-          "ms": 180
+          "ms": 180,
+          "loop": true
         }
       }
     }
