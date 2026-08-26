@@ -77,17 +77,20 @@ def shift_canvas(cv, dc=0, dr=0):
 # -------------------------------------------------------------- estilo A --
 def frames_a():
     A = {}
-    br = [0, 0, 0, 1, 1, 1, 0, 0]
-    tl = [0, 1, 2, 1, 0, -1, 0, 1]
-    ey = ['open'] * 8
-    ey[6] = 'blink'
+    # 16 frames y no 8: con 8 el parpadeo caia una vez por segundo y se leia
+    # como un tic. Aca respira una vez por ciclo y parpadea una sola vez.
+    br = [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0]
+    tl = [0, 0, 1, 1, 2, 2, 1, 1, 0, 0, -1, -1, 0, 0, 1, 1]
+    ey = ['open'] * 16
+    ey[12] = 'blink'
     A['idle'] = [muchi.build(head_dy=br[i], body_dy=br[i], tail=tl[i], eyes=ey[i])
-                 for i in range(8)]
+                 for i in range(16)]
 
+    # Sin parpadeo: en un loop de medio segundo se veia como un parpadeo epileptico.
     mo = ['closed', 'small', 'open', 'wide', 'open', 'small']
     hb = [0, 0, -1, -1, 0, 0]
-    A['talk'] = [muchi.build(head_dy=hb[i], tail=i % 3 - 1, mouth=mo[i],
-                             eyes='blink' if i == 5 else 'open')
+    tl_t = [0, 1, 2, 2, 1, 0]
+    A['talk'] = [muchi.build(head_dy=hb[i], tail=tl_t[i] - 1, mouth=mo[i], eyes='open')
                  for i in range(6)]
 
     hp = [
@@ -129,16 +132,17 @@ def frames_a():
 # -------------------------------------------------------------- estilo B --
 def frames_b():
     B = {}
-    br = [0, 0, 1, 1, 1, 0, 0, 0]
-    tl = [0, 1, 2, 1, 0, 1, 2, 1]
-    ey = ['open'] * 8
-    ey[5] = 'blink'
+    br = [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0]
+    tl = [0, 0, 1, 1, 2, 2, 1, 1, 0, 0, 0, 1, 1, 2, 2, 1]
+    ey = ['open'] * 16
+    ey[12] = 'blink'
     B['idle'] = [muchi_b.build(body_dy=0, squash=br[i], head_dy=br[i],
-                               tail=tl[i], eyes=ey[i]) for i in range(8)]
+                               tail=tl[i], eyes=ey[i]) for i in range(16)]
 
     mo = ['closed', 'small', 'open', 'wide', 'open', 'small']
+    tl_t = [0, 1, 2, 2, 1, 0]
     B['talk'] = [muchi_b.build(head_dy=-1 if i in (2, 3) else 0, mouth=mo[i],
-                               tail=i % 3, eyes='blink' if i == 5 else 'open')
+                               tail=tl_t[i], eyes='open')
                  for i in range(6)]
 
     hp = [
@@ -222,8 +226,14 @@ STYLES = [
     ('muchi-retro', 24, 24, frames_b, {'B': 110}, None),
     ('muchi-dormida', 32, 24, frames_c, {'B': 90}, None),
 ]
-SPEED = {'idle': 140, 'talk': 90, 'happy': 80, 'alert': 100, 'angry': 90,
+SPEED = {'idle': 130, 'talk': 90, 'happy': 80, 'alert': 100, 'angry': 90,
          'sleep': 260, 'wake': 140, 'purr': 180}
+
+# Las que tienen principio y final NO se repiten: en loop, el salto del ultimo
+# frame al primero se ve como un corte. Se reproducen una vez y quedan quietas
+# en su ultimo frame, que por eso es una pose de reposo valida.
+LOOP = {'idle': True, 'talk': True, 'sleep': True, 'purr': True,
+        'happy': False, 'alert': False, 'angry': False, 'wake': False}
 
 
 def main():
@@ -247,7 +257,8 @@ def main():
                     f'{OUT}/frames/{name}_{an}_{ci:02d}.png')
             pixlib.gif([c.image(1, alpha) for c in cvs],
                        f'{OUT}/gif/{name}_{an}.gif', ms=SPEED[an], scale=6)
-            rows_meta[an] = {'row': ri, 'frames': len(cvs), 'ms': SPEED[an]}
+            rows_meta[an] = {'row': ri, 'frames': len(cvs), 'ms': SPEED[an],
+                             'loop': LOOP[an]}
         sheet.save(f'{OUT}/{name}-sheet.png')
         sheet.resize((sheet.width * 4, sheet.height * 4), Image.NEAREST).save(
             f'{OUT}/{name}-sheet@4x.png')
