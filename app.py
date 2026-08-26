@@ -21,6 +21,10 @@ CAT = "\U0001F431"    # cara de gato
 PAW = "\U0001F43E"  # huellitas
 FISH = "\U0001F41F"
 
+# Desde cuantos clics aparece el contador de caricias. Antes no molesta: es un
+# detalle que se gana acariciando, no una pantalla de estadisticas.
+CLICKS_BEFORE_COUNTER = 3
+
 st.set_page_config(page_title="Muchi", page_icon=CAT, layout="wide")
 st.markdown(style.CSS, unsafe_allow_html=True)
 # La hoja de sprites viaja incrustada en este CSS, asi que va una sola vez.
@@ -56,10 +60,11 @@ def show_pending_muchi() -> None:
 
 
 def click_muchi() -> None:
-    """Suma una caricia y, cada tantas, deja una frase para decir."""
+    """Suma una caricia, salta y, cada tantas, deja una frase para decir."""
     book = phrases.read_phrases()
     clicks = st.session_state.get("muchi_clicks", 0) + 1
     st.session_state["muchi_clicks"] = clicks
+    st.session_state["muchi_salta"] = True
     if phrases.speaks_now(clicks, book.every):
         st.session_state["muchi_click_phrase"] = phrases.pick_phrase(book.phrases)
 
@@ -111,24 +116,33 @@ def show_muchi_help() -> None:
 def show_preferences() -> tuple[str, int]:
     """Devuelve (acabado, envio): las dos decisiones que afectan a todo."""
     # El clicker va primero: el on_click deja el estado listo y asi el sprite
-    # y el globo de abajo ya lo ven en esta misma pasada.
-    st.button("Acariciar a Muchi", key="muchi_clicker", on_click=click_muchi,
-              help="Apreta a Muchi")
+    # y el globo de abajo ya lo ven en esta misma pasada. El boton y el sprite
+    # comparten contenedor para que el hover del contenedor agrande al sprite.
+    with st.container(key="muchi_mascot"):
+        st.button("Acariciar a Muchi", key="muchi_clicker", on_click=click_muchi,
+                  help="Apreta a Muchi")
 
-    # Muchi mueve la boca mientras esta explicando, y respira el resto del rato.
-    talking = bool(st.session_state.get("muchi_habla"))
-    phrase = st.session_state.get("muchi_click_phrase")
-    state = "talk" if talking else (phrase.state if phrase else "idle")
-    st.markdown(
-        '<div class="mu-clicker-sprite">'
-        + sprites.build_sprite_html(state, scale=sprites.CLICKER_SCALE)
-        + "</div>",
-        unsafe_allow_html=True,
-    )
+        # Muchi mueve la boca mientras esta explicando, y respira el resto del rato.
+        talking = bool(st.session_state.get("muchi_habla"))
+        phrase = st.session_state.get("muchi_click_phrase")
+        state = "talk" if talking else (phrase.state if phrase else "idle")
+        # El salto se gasta en la corrida que lo provoco: la siguiente pasada ya
+        # no salta, asi solo rebota con el clic y no con cualquier rerun.
+        salta = " mu-salta" if st.session_state.pop("muchi_salta", False) else ""
+        st.markdown(
+            f'<div class="mu-clicker-sprite{salta}">'
+            + sprites.build_sprite_html(state, scale=sprites.CLICKER_SCALE)
+            + "</div>",
+            unsafe_allow_html=True,
+        )
 
     if phrase:
         st.markdown(mascot.build_bubble_html(html.escape(phrase.text)),
                     unsafe_allow_html=True)
+
+    clicks = st.session_state.get("muchi_clicks", 0)
+    if clicks >= CLICKS_BEFORE_COUNTER:
+        st.caption(f"{PAW} Has acariciado a Muchi {clicks} veces")
 
     if st.button("Muchi, ayudame!", key="muchi", use_container_width=True):
         st.session_state["muchi_habla"] = True

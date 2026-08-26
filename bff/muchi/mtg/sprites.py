@@ -103,37 +103,59 @@ def build_sprite_css(style: str = DEFAULT_STYLE, scale: int = DEFAULT_SCALE) -> 
 
     fw, fh = meta["frameWidth"], meta["frameHeight"]
     cols, rows = meta["columns"], len(meta["animations"])
-    states = "\n".join(
-        f'.mu-sprite.mu-{name} {{ --row:{a["row"]}; --n:{a["frames"]}; '
-        f'--dur:{a["frames"] * a["ms"] / 1000:.2f}s }}'
-        for name, a in meta["animations"].items()
-    )
+    # Las animaciones con principio y final (happy, alert, angry) no se repiten:
+    # en loop, el salto del ultimo frame al primero se ve como un corte. Corren
+    # un frame menos y `forwards` las deja quietas en el ultimo, que es una pose
+    # de reposo. Las variables van en el elemento y las hereda el film (::before);
+    # el conteo y el fill van directo al film, que es quien anima.
+    rules = []
+    for name, a in meta["animations"].items():
+        loop = a.get("loop", True)
+        n = a["frames"] if loop else max(a["frames"] - 1, 1)
+        rules.append(f'.mu-sprite.mu-{name} {{ --row:{a["row"]}; --n:{n}; '
+                     f'--dur:{n * a["ms"] / 1000:.2f}s; }}')
+        if not loop:
+            rules.append(f'.mu-sprite.mu-{name}::before {{ '
+                         f'animation-iteration-count:1; animation-fill-mode:forwards; }}')
+    states = "\n".join(rules)
     return f"""<style>
-/* ---------- el sprite ---------- */
+/* ---------- el sprite: una ventana y un film que se desliza ---------- */
+/* El film (::before) trae la hoja entera y se mueve con transform, no con
+   background-position. Mover el fondo re-muestrea la hoja en cada frame y en
+   pantallas con DPI fraccional deja ver una linea de la fila de arriba; el
+   transform desliza la capa ya rasterizada y la ventana la recorta limpia. */
 .mu-sprite {{
   --s:{scale}; --fw:{fw}; --fh:{fh}; --cols:{cols}; --rows:{rows};
   --row:0; --n:1; --dur:1s;
+  position:relative; overflow:hidden;
   width:calc(var(--fw) * var(--s) * 1px);
   height:calc(var(--fh) * var(--s) * 1px);
+  image-rendering:pixelated;              /* nada de suavizado */
+}}
+.mu-sprite::before {{
+  content:""; position:absolute; top:0; left:0;
+  width:calc(var(--cols) * var(--fw) * var(--s) * 1px);
+  height:calc(var(--rows) * var(--fh) * var(--s) * 1px);
   background-image:url({uri});
   background-repeat:no-repeat;
   background-size:calc(var(--cols) * var(--fw) * var(--s) * 1px)
                   calc(var(--rows) * var(--fh) * var(--s) * 1px);
-  background-position-y:calc(var(--row) * var(--fh) * var(--s) * -1px);
-  image-rendering:pixelated;              /* nada de suavizado */
+  transform:translate(0, calc(var(--row) * var(--fh) * var(--s) * -1px));
   animation:mu-play var(--dur) steps(var(--n)) infinite;
 }}
 @keyframes mu-play {{
-  from {{ background-position-x:0 }}
-  to   {{ background-position-x:calc(var(--n) * var(--fw) * var(--s) * -1px) }}
+  from {{ transform:translate(0, calc(var(--row) * var(--fh) * var(--s) * -1px)); }}
+  to   {{ transform:translate(calc(var(--n) * var(--fw) * var(--s) * -1px),
+                              calc(var(--row) * var(--fh) * var(--s) * -1px)); }}
 }}
 {states}
 
 .mu-gato .mu-sprite {{
-  margin:0 auto; cursor:pointer; transition:transform .18s ease;
+  margin:0 auto; cursor:pointer; transition:transform .22s ease;
+  transform-origin:50% 100%;
   filter:drop-shadow(0 4px 8px rgba(224,114,155,.28));
 }}
-.mu-gato:hover .mu-sprite {{ transform:translateY(-3px) scale(1.05); }}
+.mu-gato:hover .mu-sprite {{ transform:scale(1.05); }}
 
 /* ---------- el aviso: Muchi y su burbuja de pensamiento ---------- */
 .mu-dice {{
@@ -186,9 +208,11 @@ def build_sprite_css(style: str = DEFAULT_STYLE, scale: int = DEFAULT_SCALE) -> 
 }}
 
 /* ---------- el clicker: un boton invisible encima del sprite ---------- */
-/* El boton (st.key="muchi_clicker") va primero en el DOM y el sprite se posa
-   encima con pointer-events:none: asi el clic pasa de largo y le llega al
-   boton, que es quien avisa a Streamlit. */
+/* El boton (st.key="muchi_clicker") y el sprite viven en el mismo contenedor
+   (st.container key="muchi_mascot"). El boton queda primero y el sprite se
+   posa encima con pointer-events:none: asi el clic le llega al boton, que es
+   quien avisa a Streamlit. El hover se cuelga del contenedor, que es el unico
+   que SI recibe el puntero, y agranda el sprite. */
 .st-key-muchi_clicker button, button.st-key-muchi_clicker {{
   display:block; width:calc({fw}px * {CLICKER_SCALE}); height:calc({fh}px * {CLICKER_SCALE});
   margin:0 auto; padding:0; border:none !important; border-radius:0 !important;
@@ -197,9 +221,20 @@ def build_sprite_css(style: str = DEFAULT_STYLE, scale: int = DEFAULT_SCALE) -> 
 }}
 .mu-clicker-sprite {{ margin-top:calc({fh}px * {CLICKER_SCALE} * -1); pointer-events:none; }}
 .mu-clicker-sprite .mu-gato {{ padding:0; }}
+.st-key-muchi_mascot:hover .mu-clicker-sprite .mu-sprite {{ transform:scale(1.05); }}
+
+/* El salto vive en el contenedor .mu-gato, no en el sprite: el sprite ya anima
+   su film en loop y un segundo `animation` en el mismo elemento se lo comeria. */
+.mu-clicker-sprite.mu-salta .mu-gato {{ animation:mu-saltito .28s ease; }}
+@keyframes mu-saltito {{
+  0%,100% {{ transform:translateY(0); }}
+  40%     {{ transform:translateY(-9px); }}
+  70%     {{ transform:translateY(2px); }}
+}}
 
 @media (prefers-reduced-motion:reduce) {{
-  .mu-sprite, .mu-nube, .mu-pelusa {{ animation:none; }}
+  .mu-sprite, .mu-sprite::before, .mu-nube, .mu-pelusa,
+  .mu-clicker-sprite.mu-salta .mu-gato {{ animation:none; }}
 }}
 </style>"""
 
