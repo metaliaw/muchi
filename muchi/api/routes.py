@@ -19,6 +19,8 @@ from muchi.mtg.models import Offer
 from muchi.mtg.ports import InventoryUnavailable
 
 from .schemas import (
+    BlockedStoreOut,
+    CartPlanOut,
     CartPlanRequest,
     DecklistQuoteRequest,
     HistoryRowOut,
@@ -63,8 +65,14 @@ def find_offers(request: Request, q: str = Query(min_length=1)):
 @router.get("/offers/{card_id}/refresh")
 def refresh_offers(request: Request, card_id: str):
     def stream():
-        for p in _cast(request).primary.refresh_offers(card_id):
-            yield sse({"store": p.store, "done": p.done, "total": p.total})
+        try:
+            for p in _cast(request).primary.refresh_offers(card_id):
+                # "index", no "done": el fin del stream es el unico done.
+                yield sse({"store": p.store, "index": p.done, "total": p.total})
+        except Exception as e:  # noqa: BLE001
+            # El stream ya empezo, asi que el error no puede ser un status HTTP.
+            yield sse({"error": str(e)})
+            return
         yield sse({"done": True})
 
     return StreamingResponse(stream(), media_type="text/event-stream")
@@ -111,7 +119,7 @@ def quote_decklist(request: Request, body: DecklistQuoteRequest):
     return StreamingResponse(stream(), media_type="text/event-stream")
 
 
-@router.post("/cart/plan")
+@router.post("/cart/plan", response_model=CartPlanOut)
 def build_cart_plan(request: Request, body: CartPlanRequest):
     orders = [order_from_in(o) for o in body.orders]
     by_card = {k: [offer_from_in(o) for o in v] for k, v in body.offers_by_card.items()}
@@ -128,7 +136,7 @@ def read_stores(request: Request):
     return store_index.read_stores_status(cast.cx, cast.stores)
 
 
-@router.get("/stores/blocked", response_model=dict[str, dict])
+@router.get("/stores/blocked", response_model=dict[str, BlockedStoreOut])
 def list_blocked_stores(request: Request):
     return {s: {"url": u, "reason": r}
             for s, (u, r) in _cast(request).stores.list_blocked_stores().items()}
