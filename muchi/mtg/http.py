@@ -15,15 +15,20 @@ import requests
 # Via de contacto que viaja en el User-Agent de cada request. Existe para que
 # scry.cl o una tienda puedan avisarte en vez de bloquearte de una.
 #
-# Por defecto apunta al repo, no a un mail: esto corre en Streamlit Cloud y vive
-# en un repo publico, y una direccion de correo ahi la cosechan los bots de spam
-# en minutos. Quien tenga una queja abre un issue.
+# Antes apuntaba al repo, para no dejar un correo a la vista de los bots de
+# spam. Ya no sirve: el repo es privado y ahi no puede abrir un issue nadie de
+# afuera, asi que la URL seria una promesa muerta --- peor que no poner nada.
 #
-# Si preferis que te escriban por mail, no lo escribas aca: exportalo como
-#     MUCHI_CONTACTO="tu-mail@ejemplo.cl"
+# El canal se define fuera del codigo, que ademas es donde corresponde:
+#     MUCHI_CONTACTO="donde-te-lleguen@ejemplo.cl"
 # (en Streamlit Cloud: Settings -> Secrets/Variables).
-CONTACT = os.getenv("MUCHI_CONTACTO", "https://github.com/metaliaw/muchi")
-USER_AGENT = f"Muchi/0.1 (uso personal; +{CONTACT})"
+#
+# Sin la variable, el User-Agent igual identifica a Muchi, pero no ofrece por
+# donde reclamar. Se puede salir asi a mirar precios; no se deberia dejar asi
+# corriendo seguido contra tiendas que son negocios chicos.
+CONTACT = os.getenv("MUCHI_CONTACTO", "")
+USER_AGENT = (f"Muchi/0.1 (uso personal; +{CONTACT})" if CONTACT
+              else "Muchi/0.1 (uso personal)")
 
 
 class RateLimited(RuntimeError):
