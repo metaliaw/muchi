@@ -7,6 +7,8 @@ rutas.
 """
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict
 
 from muchi.mtg.models import Offer, Order
@@ -63,7 +65,7 @@ class CartPlanRequest(BaseModel):
     orders: list[OrderIn]
     offers_by_card: dict[str, list[OfferOut]]
     shipping_per_store: int = 0
-    strategy: str = "optimal"      # "optimal" | "naive"
+    strategy: Literal["optimal", "naive"] = "optimal"
 
 
 class CartLineOut(BaseModel):
