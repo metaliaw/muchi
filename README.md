@@ -152,6 +152,9 @@ pytest
 
 - **🐟 Buscar** — una carta, todas las ofertas ordenadas por precio, la más barata
   marcada con 🐾. Botón de refresco en vivo si quieres precios del minuto.
+- **No sé qué busco** — describes lo que quieres que la carta *haga* y Muchi te
+  da opciones desde el catálogo de [Scryfall](https://scryfall.com), en español
+  o en inglés. Un botón te la cotiza ahí mismo o la manda a *Mi lista*.
 - **Mi lista** — pegas el mazo y Muchi lo entiende. Acepta lo que exportan
   Moxfield, Archidekt, Arena y deckstats: `4 Lightning Bolt`, `2x Sol Ring`,
   `1 Sol Ring (LTC) 344 *F*`, `1 Command Tower #!Commander`, o el nombre pelado.
@@ -162,6 +165,75 @@ pytest
   qué juega la gente con él, descontando lo que ya tienes en *Mi lista*. Un botón
   suma las recomendaciones a tu lista para cotizarlas.
 - **Carrito** — el reparto óptimo entre tiendas, agrupado, con links de compra y CSV.
+
+### No sé qué carta busco
+
+Las otras pestañas asumen que ya sabes el nombre. Ésta es para cuando no:
+escribes *"destruye la criatura objetivo"* y Muchi te da opciones.
+
+El detalle que hace todo el trabajo: **el texto de reglas canónico de Magic es en
+inglés y la búsqueda es literal**. Escribir la habilidad en español no devuelve
+nada por sí solo. El puente vive en `muchi/mtg/oracle.py` — núcleo puro, sin una
+línea de sintaxis de ningún proveedor — y son tres piezas:
+
+- **`PHRASES`** — diccionario es→en de frases MTG. Es normalización, no
+  traducción: lo que matchea se reemplaza, lo que no, pasa igual. Por eso
+  `destruye target creature` funciona tan bien como cualquiera de los dos
+  idiomas puros, que es como se escribe de verdad. Hay chilenismos en el set de
+  relleno (`pa`, `po`, `cachai`, `wea`) porque también es como se escribe.
+- **`INTENTS`** — los chips de "para qué la quieres". Cada uno declara su
+  respaldo en texto de reglas, y la fuente decide con qué responde: Scryfall usa
+  las etiquetas de [Tagger](https://tagger.scryfall.com), que son lo más parecido
+  a búsqueda semántica que hay, pero las mantiene la comunidad y pueden
+  renombrarse. El respaldo existe para que un slug muerto no deje la pantalla en
+  blanco.
+- **La escalera** — una sola consulta estricta es todo o nada. `build_requests()`
+  arma varias, de la más estricta a la más suelta, y la app se queda con el
+  primer escalón que devuelve algo, avisando en pantalla qué tuvo que soltar:
+
+  ```
+  1. o:"destroy target creature"                       <- ideal
+  2. o:destroy o:target o:creature                     "buscando las palabras por separado"
+  3. o:"destruye la criatura objetivo" (multilingüe)   "probando tu texto tal cual"
+  4. t:creature f:commander                            "solo con los filtros"
+  ```
+
+  El escalón 2 existe porque la frase exacta no aparece en *"destroy target
+  **attacking** creature"*. El escalón "sin las palabras que no reconocí" sólo se
+  agrega si queda algo que buscar: soltarlas todas no es aflojar, es devolver el
+  catálogo entero filtrado por tipo.
+
+Si no encuentra nada, prueba `/cards/named?fuzzy=` por si lo que escribiste era
+un nombre mal tipeado y no una habilidad.
+
+> **Corre `python tools/verify_scryfall.py` antes de tocar `oracle.py`.**
+> Una consulta mal armada no falla ruidosamente: devuelve cero resultados, que
+> desde la app se ve idéntico a "no existen cartas así". Los tests no pueden
+> distinguir esos dos casos porque no tocan la red. El script chequea contra la
+> API real cada operador y cada slug de Tagger, y corre la escalera de punta a
+> punta mostrando qué escalón gana.
+
+### Español e inglés
+
+El toggle de la barra lateral cambia **sólo cómo se ven** las cartas: nombre,
+tipo, texto y escaneo salen de `printed_name` / `printed_text` /
+`printed_type_line` de la impresión en español, cuando existe.
+
+Dos cosas que no se negocian:
+
+1. **La clave canónica siempre es el nombre en inglés.** Es lo que indexan las
+   tiendas chilenas; si al carrito llegara *Rayo*, la cotización no encontraría
+   nada. Scryfall ayuda: en una impresión traducida, `name` sigue siendo el
+   inglés y el traducido va en `printed_name`. En pantalla el inglés queda
+   visible en una pill al lado, porque es el que hay que tipear en la tienda.
+2. **Siempre hay fallback.** Media biblioteca no tiene impresión en español
+   (reprints, precons, sets viejos). Por eso se busca en inglés y las
+   traducciones se piden después, en **un solo request** para toda la página
+   (`translate_cards`): así el resultado nunca se achica por el idioma de la
+   vista, que no tiene nada que ver con qué cartas existen.
+
+Ojo con `printed_text`: es el texto *impreso en esa impresión*, que puede estar
+desactualizado respecto al Oracle actual. Para reglas manda el inglés.
 
 ### Las recomendaciones
 
@@ -273,12 +345,13 @@ comentarios van en minúscula normal; lo que sí se respeta es todo lo demás.
   Antes que partir una expresión larga, se le nombran las partes.
 
 ```
-app.py                  UI Streamlit (5 pestañas), sólo handlers
+app.py                  UI Streamlit (6 pestañas), sólo handlers
 muchi/                  el paquete principal
   mtg/                  todo lo de Magic: precios, tiendas, mazos
     ports.py            los puertos que el núcleo declara + errores de dominio
     cast.py             arma el elenco: ÚNICO módulo que importa sources/
     offers.py           combina las fuentes y filtra (núcleo)
+    oracle.py           puente es→en y escalera de pedidos (núcleo)
     stores.py           indexado y estado de tiendas (núcleo)
     deck.py             reglas puras sobre recomendaciones (núcleo)
     history.py          histórico de precios en vocabulario de negocio
@@ -294,6 +367,7 @@ muchi/                  el paquete principal
     text.py             normalización de nombres, compartida entre fuentes
     sources/            los adaptadores: un vendor por archivo
       scry.py           agregador de precios (fuente principal)
+      scryfall.py       catálogo de cartas: qué existe y qué dice
       shopify.py        Dragón Durmiente + PayToWin + PDA Chile directo
       edhrec.py         recomendaciones por comandante
       moxfield.py       inventarios publicados como listas
@@ -302,6 +376,12 @@ muchi/                  el paquete principal
 
 `muchi/` es el paquete principal y `muchi/mtg/` es todo lo específico de Magic.
 Lo que venga después —una API, por ejemplo— entra como hermano de `mtg/`.
+
+> `scry.py` y `scryfall.py` se parecen peligrosamente de nombre y son cosas
+> distintas: **scry.cl** es el agregador chileno que sabe cuánto vale una carta
+> acá; **Scryfall** es el catálogo global que sabe qué cartas existen. La app las
+> usa juntas —se elige una carta con uno y se cotiza con el otro— pero cumplen
+> puertos distintos y nada obliga a que sigan siendo los mismos proveedores.
 
 Para cambiar de agregador se toca `cast.py` y se agrega un archivo en
 `sources/`. Nada más. Un test lo verifica:

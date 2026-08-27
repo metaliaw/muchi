@@ -11,11 +11,12 @@ import html
 import pandas as pd
 import streamlit as st
 
-from muchi.mtg import decklist, style, mascot, sprites, phrases, history, deck, offers, optimizer
+from muchi.mtg import (decklist, style, mascot, sprites, phrases, history, deck,
+                       offers, optimizer, oracle)
 from muchi.mtg import cast as muchi_cast
 from muchi.mtg import stores as store_index
 from muchi.mtg.style import format_clp as clp
-from muchi.mtg.ports import CommanderNotFound, InventoryUnavailable
+from muchi.mtg.ports import CommanderNotFound, InventoryUnavailable, QueryFailed
 
 CAT = "\U0001F431"    # cara de gato
 PAW = "\U0001F43E"  # huellitas
@@ -92,6 +93,38 @@ def recommend_cards(commander: str):
     return build_muchi().advisor.recommend_cards(commander)
 
 
+@st.cache_data(ttl=3600, show_spinner=False)
+def search_catalog(text: str, intents: tuple, colors: tuple, card_type: str,
+                   format_name: str, max_mana: int | None, language: str):
+    """Baja la escalera y se queda con el primer escalon que trae cartas.
+
+    Sin try/except a proposito: un pedido que el catalogo no entiende ya vuelve
+    vacio y la escalera sigue sola. Lo que puede explotar aca es la red, y eso
+    no se arregla en el escalon siguiente --- que suba y se muestre de una vez.
+    """
+    catalog = build_muchi().cards
+    for request in oracle.build_requests(text, intents=intents, colors=colors,
+                                         card_type=card_type,
+                                         format_name=format_name,
+                                         max_mana=max_mana):
+        page = catalog.search_cards(request)
+        if page.cards:
+            cards = catalog.translate_cards(list(page.cards), language)
+            return cards, page.total, page.explain, request.note
+    return [], 0, "", ""
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def resolve_card_name(text: str, language: str):
+    """Por si lo que escribio no era una habilidad sino un nombre mal tipeado."""
+    catalog = build_muchi().cards
+    try:
+        card = catalog.resolve_name(text)
+    except QueryFailed:
+        return None
+    return catalog.translate_cards([card], language)[0] if card else None
+
+
 # ------------------------------------------------------------ barra lateral
 def show_muchi_help() -> None:
     """Muchi saluda, tira corazones y explica de que se trata."""
@@ -113,8 +146,8 @@ def show_muchi_help() -> None:
         st.rerun()
 
 
-def show_preferences() -> tuple[str, int]:
-    """Devuelve (acabado, envio): las dos decisiones que afectan a todo."""
+def show_preferences() -> tuple[str, int, str]:
+    """Devuelve (acabado, envio, idioma): las decisiones que afectan a todo."""
     # El clicker va primero: el on_click deja el estado listo y asi el sprite
     # y el globo de abajo ya lo ven en esta misma pasada. El boton y el sprite
     # comparten contenedor para que el hover del contenedor agrande al sprite.
@@ -153,6 +186,11 @@ def show_preferences() -> tuple[str, int]:
     st.divider()
     st.markdown(f"### {PAW} Preferencias")
     finish = st.radio("Acabado", ["Todos", "Solo normal", "Solo foil"], index=0)
+    language = "es" if st.radio(
+        "Idioma de las cartas", ["Espanol", "English"], index=0, horizontal=True,
+        help="Solo cambia como te las muestro. Los precios y el carrito siempre "
+             "usan el nombre en ingles, que es el que indexan las tiendas.",
+    ) == "Espanol" else "en"
     shipping = st.number_input(
         "Costo de envio por tienda (CLP)", 0, 20000, 4000, step=500,
         help="Muchi lo usa para decidir si conviene concentrar la compra en menos tiendas.",
@@ -163,7 +201,7 @@ def show_preferences() -> tuple[str, int]:
         "Precios via **scry.cl**, que indexa ~30 tiendas chilenas. "
         "Verifica edicion, estado y stock en la tienda antes de pagar."
     )
-    return finish, int(shipping)
+    return finish, int(shipping), language
 
 
 def ask_seller_filter() -> bool:
@@ -289,6 +327,143 @@ def show_search(finish: str, stores_only: bool) -> None:
         refresh_live(card_id)
 
     show_price_history(chosen)
+
+
+def ask_what_it_does() -> None:
+    """El formulario del buscador por texto. Deja el pedido en session_state.
+
+    Es un form y no widgets sueltos a proposito: sin el, cada tecla apretada
+    dispararia un rerun y con el una consulta al catalogo. Aca se pregunta una
+    vez, cuando la persona termino de escribir.
+    """
+    with st.form("oraculo"):
+        what = st.text_area(
+            "Que quieres que haga?", height=90, key="ora_texto",
+            placeholder="Ej: gana vida cada vez que una criatura muere",
+        )
+        chips = st.multiselect(
+            "O elige para que la quieres", [i.label for i in oracle.INTENTS],
+            help="Describen que hace la carta, aunque su texto no diga esas palabras.",
+        )
+        c1, c2, c3 = st.columns(3)
+        type_label = c1.selectbox("Tipo", list(oracle.CARD_TYPES))
+        format_label = c2.selectbox("Formato", list(oracle.FORMATS))
+        mana = c3.slider("Mana maximo", 0, 12, 12, help="12 = sin limite.")
+        color_labels = st.multiselect(
+            "Identidad de color", list(oracle.COLORS),
+            help="Lo que cabe en un mazo de esos colores, no solo las cartas de ese color.",
+        )
+        if not st.form_submit_button("Buscar cartas", type="primary"):
+            return
+
+        st.session_state["ora_cfg"] = {
+            "text": what or "",
+            "intents": tuple(i.key for i in oracle.INTENTS if i.label in chips),
+            "colors": tuple(oracle.COLORS[c] for c in color_labels),
+            "card_type": oracle.CARD_TYPES[type_label],
+            "format_name": oracle.FORMATS[format_label],
+            "max_mana": None if mana >= 12 else mana,
+        }
+        st.session_state.pop("ora_cotizar", None)
+
+
+def offer_card_actions(card, suffix: str = "") -> None:
+    """Los dos botones bajo cada carta. Ambos usan el nombre en ingles."""
+    key = f"{card.oracle_id or card.name}{suffix}"
+    b1, b2, _ = st.columns([1, 1, 3])
+    if b1.button("Ver precios", key=f"ora_p_{key}", use_container_width=True):
+        st.session_state["ora_cotizar"] = card.name
+        st.rerun()
+    if b2.button("Sumar a Mi lista", key=f"ora_l_{key}", use_container_width=True):
+        st.session_state["_sumar_al_mazo"] = f"1 {card.name}"
+        remember_muchi(f"<b>{card.name}</b> quedo en Mi lista.", "happy")
+        st.rerun()
+
+
+def show_quick_prices(card_name: str, finish: str, stores_only: bool) -> None:
+    """Cotiza una carta sin salir de la pestana, con las 8 mejores ofertas."""
+    st.divider()
+    st.markdown(f"##### Precios de {card_name}")
+    with st.spinner(f"Muchi esta olfateando {card_name}..."):
+        try:
+            _, found = find_offers(card_name)
+        except Exception as e:
+            muchi_says(f"No pude consultar las tiendas: {e}", "angry")
+            found = []
+
+    if found:
+        history.save_prices(build_muchi().cx, card_name, found)
+
+    visible = offers.filter_offers(found, finish, None, stores_only)
+    if not visible:
+        muchi_says("Sin stock con esos filtros. En la pestana <b>Buscar</b> ademas "
+                   "tienes el refresco en vivo.", "alert")
+    else:
+        for i, o in enumerate(visible[:8]):
+            st.markdown(style.paint_offer(o, best=(i == 0)), unsafe_allow_html=True)
+        if len(visible) > 8:
+            st.caption(f"Hay {len(visible) - 8} ofertas mas en la pestana Buscar.")
+
+    if st.button("Cerrar precios", key="ora_cerrar"):
+        st.session_state.pop("ora_cotizar", None)
+        st.rerun()
+    st.divider()
+
+
+def show_card_finder(finish: str, stores_only: bool, language: str) -> None:
+    """Para cuando no sabes el nombre: describes la habilidad y Muchi busca."""
+    st.markdown("#### Cuentame que hace la carta")
+    st.caption(
+        "Muchi le pregunta al catalogo de Magic. Escribe en espanol, en ingles o "
+        "mezclando: *destruye la criatura objetivo*, *roba una carta cuando muere "
+        "una criatura*, *counter target spell*."
+    )
+
+    ask_what_it_does()
+
+    quoting = st.session_state.get("ora_cotizar")
+    if quoting:
+        show_quick_prices(quoting, finish, stores_only)
+
+    cfg = st.session_state.get("ora_cfg")
+    if not cfg:
+        return
+
+    with st.spinner("Muchi esta hojeando el catalogo..."):
+        try:
+            cards, total, explain, note = search_catalog(language=language, **cfg)
+        except QueryFailed as e:
+            muchi_says(f"No pude consultar el catalogo: {e}", "angry")
+            return
+
+    if not cards:
+        muchi_says("No encontre nada con eso. Prueba con menos palabras, o con los "
+                   "chips de arriba: describir la habilidad en pocas palabras "
+                   "(<i>destruye criatura</i>) funciona mejor que una frase larga.",
+                   "alert")
+        maybe = resolve_card_name(cfg["text"], language) if cfg["text"] else None
+        if maybe:
+            st.caption("Oye, no seria esta carta?")
+            st.markdown(style.paint_card(maybe, language), unsafe_allow_html=True)
+            offer_card_actions(maybe, "_aprox")
+        return
+
+    summary = f"**{style.format_thousands(total)}** cartas calzan."
+    if total > len(cards):
+        summary += f" Muchi te muestra las {len(cards)} mas jugadas."
+    st.caption(summary)
+
+    if note:
+        muchi_says(f"Asi tal cual no encontre nada, asi que busque {note}.", "alert")
+
+    with st.expander("Que le pregunte al catalogo"):
+        st.code(explain, language="text")
+        st.caption("Eso mismo se pega en scryfall.com/search si quieres afinarlo.")
+
+    st.write("")
+    for card in cards:
+        st.markdown(style.paint_card(card, language), unsafe_allow_html=True)
+        offer_card_actions(card)
 
 
 def quote_deck_list(orders: list) -> None:
@@ -572,16 +747,20 @@ st.write("")
 show_pending_muchi()
 
 with st.sidebar:
-    finish, shipping = show_preferences()
+    finish, shipping, language = show_preferences()
 
 stores_only = ask_seller_filter()
 
-tab_search, tab_list, tab_commander, tab_cart, tab_stores = st.tabs(
-    [f"{FISH} Buscar", "Mi lista", "Comandante", "Carrito", "Tiendas"]
+tab_search, tab_finder, tab_list, tab_commander, tab_cart, tab_stores = st.tabs(
+    [f"{FISH} Buscar", "No se que busco", "Mi lista", "Comandante", "Carrito",
+     "Tiendas"]
 )
 
 with tab_search:
     show_search(finish, stores_only)
+
+with tab_finder:
+    show_card_finder(finish, stores_only, language)
 
 with tab_list:
     show_my_list()
