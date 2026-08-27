@@ -258,6 +258,23 @@ def split_phrases(phrases: list[str]) -> list[str]:
     return words
 
 
+def list_fallbacks(keys: tuple[str, ...]) -> tuple[str, ...]:
+    """Las frases con que se describe una intencion sin usar su etiqueta.
+
+    Es el plan B de los chips: una fuente puede tener etiquetas semanticas
+    mejores que buscar texto, pero tambien puede renombrarlas o no tenerlas, y
+    un chip muerto no falla ruidoso --- devuelve cero, que se lee igual que
+    "no existen cartas asi".
+    """
+    out: list[str] = []
+    for key in keys:
+        intent = BY_KEY.get(key)
+        if not intent:
+            continue
+        out += [p for p in intent.fallback if p not in out]
+    return tuple(out)
+
+
 def build_requests(text: str, *, intents: tuple[str, ...] = (),
                    colors: tuple[str, ...] = (), card_type: str = "",
                    format_name: str = "", max_mana: int | None = None,
@@ -280,9 +297,9 @@ def build_requests(text: str, *, intents: tuple[str, ...] = (),
         if request.is_empty:
             return
         same = (request.phrases, request.words, request.intents,
-                request.use_fallback, request.literal_text)
-        if all(same != (s.phrases, s.words, s.intents, s.use_fallback,
-                        s.literal_text) for s in steps):
+                request.literal_text)
+        if all(same != (s.phrases, s.words, s.intents, s.literal_text)
+               for s in steps):
             steps.append(request)
 
     # 1. todo junto
@@ -303,8 +320,8 @@ def build_requests(text: str, *, intents: tuple[str, ...] = (),
 
     # 4. el chip por su texto en vez de por su etiqueta
     if intents:
-        add(CardRequest(phrases=tuple(phrases), intents=intents,
-                        use_fallback=True, **filters,
+        add(CardRequest(phrases=tuple(phrases) + list_fallbacks(intents),
+                        **filters,
                         note="buscando el texto en vez de la etiqueta"))
 
     # 5. el texto crudo, tal cual lo escribio. Ultimo recurso a proposito: que
@@ -317,7 +334,7 @@ def build_requests(text: str, *, intents: tuple[str, ...] = (),
     # 6. solo los filtros y la intencion
     if has_filters or intents:
         add(CardRequest(intents=intents, **filters, note="solo con los filtros"))
-        add(CardRequest(intents=intents, use_fallback=True, **filters,
+        add(CardRequest(phrases=list_fallbacks(intents), **filters,
                         note="solo con los filtros"))
 
     return steps
