@@ -81,10 +81,14 @@ class MuchiClient:
         return data["card_id"], [Offer(**o) for o in data["offers"]]
 
     def refresh_offers(self, card_id: str) -> Iterator[Progress]:
+        # El avance viene como "index": "done" marca solo el fin del stream.
+        # Un error a mitad de camino llega como evento, no como status HTTP.
         for ev in self._iter_sse(f"/offers/{card_id}/refresh"):
+            if "error" in ev:
+                raise ApiError(502, ev["error"])
             if ev.get("done"):
                 return
-            yield Progress(ev["store"], ev["done"], ev["total"])
+            yield Progress(ev["store"], ev["index"], ev["total"])
 
     def recommend_cards(self, commander: str) -> list[Recommendation]:
         data = self._get("/recommend", {"commander": commander}).json()

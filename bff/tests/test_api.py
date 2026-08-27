@@ -44,6 +44,12 @@ class _FakePrimary:
         yield Progress("T2", 2, 2)
 
 
+class _FailingRefresh(_FakePrimary):
+    def refresh_offers(self, card_id):
+        yield Progress("T1", 1, 2)
+        raise QueryFailed("scry se cayo")
+
+
 class _FakeAdvisor:
     def recommend_cards(self, commander):
         if commander == "Nadie":
@@ -204,3 +210,60 @@ def test_inventory_without_config_is_null(client):
 def test_import_inventory_without_config_is_404(client):
     r = client.post("/inventory/import")
     assert r.status_code == 404
+
+
+# ------------------------------------------------------------------- refresh
+def test_refresh_streams_every_store(client):
+    """El avance viaja como "index": si se llamara "done", el cliente cortaria
+    en el primer evento y el refresco quedaria trunco."""
+    events = _events(client.get("/offers/card-1/refresh").text)
+    assert [(e["store"], e["index"], e["total"]) for e in events if "store" in e] == \
+        [("T1", 1, 2), ("T2", 2, 2)]
+    assert events[-1] == {"done": True}
+
+
+def test_refresh_reports_midstream_failure():
+    """Con el stream ya empezado el error no puede ser un status: va como evento."""
+    cast = _make_cast(_FailingRefresh())
+    with TestClient(build_app(cast=cast)) as c:
+        events = _events(c.get("/offers/card-1/refresh").text)
+    assert "scry se cayo" in events[-1]["error"]
+    assert not any(e.get("done") for e in events)
+
+
+def test_client_reads_refresh_progress():
+    """El cliente traduce el wire a Progress, sin cortar antes de tiempo."""
+    from muchi.api.client import ApiError, MuchiClient
+
+    def replay(events):
+        c = MuchiClient(base_url="http://x")
+        c._iter_sse = lambda *a, **k: iter(events)
+        return c.refresh_offers("card-1")
+
+    got = list(replay([{"store": "T1", "index": 1, "total": 2},
+                       {"store": "T2", "index": 2, "total": 2},
+                       {"done": True}]))
+    assert [(p.store, p.done, p.total) for p in got] == [("T1", 1, 2), ("T2", 2, 2)]
+
+    with pytest.raises(ApiError):
+        list(replay([{"store": "T1", "index": 1, "total": 2}, {"error": "scry se cayo"}]))
+
+
+# ------------------------------------------------------------------ contracts
+def test_cart_plan_strategy_must_be_known(client):
+    """Un typo en la estrategia se rechaza; antes caia callado en la naive."""
+    r = client.post("/cart/plan", json={
+        "orders": [{"quantity": 1, "name": "A"}],
+        "offers_by_card": {"a": [_offer("T1", "A", 1000).__dict__]},
+        "shipping_per_store": 0,
+        "strategy": "optimla",
+    })
+    assert r.status_code == 422
+
+
+def test_documented_contracts_are_typed(client):
+    """El plan y las bloqueadas salen con contrato, no como dict suelto."""
+    schema = build_app(cast=_make_cast()).openapi()
+    for path, method in [("/cart/plan", "post"), ("/stores/blocked", "get")]:
+        body = schema["paths"][path][method]["responses"]["200"]["content"]
+        assert body["application/json"]["schema"], f"{path} sigue sin contrato"
