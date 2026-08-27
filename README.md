@@ -284,17 +284,20 @@ da muy buenos resultados en milisegundos, pero **no garantiza el óptimo**. El t
 - User-Agent identificable, con una vía de contacto
 - las búsquedas se cachean 30 min
 
-Sobre esa vía de contacto: por defecto es la URL del repo, no un mail. Este código
-vive en un repo público y corre en Streamlit Cloud, y una dirección de correo ahí
-la cosechan los bots de spam en minutos — quien tenga una queja abre un issue.
-
-Si preferís que te escriban por mail, no lo pongas en el código:
+Sobre esa vía de contacto: **hay que definirla fuera del código**, y sin ella el
+`User-Agent` identifica a Muchi pero no ofrece por dónde reclamar.
 
 ```bash
-export MUCHI_CONTACTO="tu-mail@ejemplo.cl"
+export MUCHI_CONTACTO="donde-te-lleguen@ejemplo.cl"
 ```
 
 (en Streamlit Cloud va en *Settings → Secrets*).
+
+Antes el valor por defecto era la URL del repo, para no dejar un correo a la
+vista de los bots de spam. Dejó de servir cuando el repo pasó a privado: ahí no
+puede abrir un issue nadie de afuera, así que la URL era una promesa muerta —
+peor que no poner nada. Se puede salir sin la variable a mirar precios, pero no
+se debería dejar así corriendo seguido contra tiendas que son negocios chicos.
 
 El refresco en vivo hace que scry golpee 30 tiendas por carta. Está detrás de un
 botón a propósito: no lo corras en loop sobre una decklist de 100 cartas.
