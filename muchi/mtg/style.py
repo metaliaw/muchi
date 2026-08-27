@@ -8,6 +8,9 @@ cinco pasteles claros no pueden sostener texto ni jerarquia por si solos.
   #FFCFE2  rosa claro      #FDEEF5  rosa papel
   derivados -> #6E5A68 tinta   #E0729B acento   #7B8FC7 periwinkle
 """
+from __future__ import annotations
+
+from html import escape
 
 CSS = """
 <style>
@@ -179,6 +182,19 @@ h1, h2, h3, h4 { font-family: 'Baloo 2', 'Quicksand', sans-serif !important; col
 }
 .mu-btn:hover { transform:translateY(-1px); box-shadow:var(--mu-sombra); }
 
+/* ---------- la carta del catalogo, con su escaneo ---------- */
+.mu-carta { display:flex; gap:16px; align-items:flex-start; }
+.mu-carta img {
+  width:132px; flex:none; border-radius:12px; box-shadow:var(--mu-sombra-sw);
+}
+.mu-carta .cuerpo { flex:1; min-width:200px; }
+.mu-oracle {
+  margin-top:8px; font-size:.84rem; line-height:1.45; font-weight:600;
+  color:var(--mu-tinta-sw); white-space:pre-wrap;
+}
+.mu-mana { font-size:.82rem; font-weight:700; color:var(--mu-tinta-sw); }
+@media (max-width:640px) { .mu-carta img { width:96px; } }
+
 .stProgress > div > div > div > div { background:linear-gradient(90deg, var(--mu-acento), var(--mu-peri)); }
 [data-testid="stExpander"] { border-radius:20px; border:2px solid var(--mu-rosa-cl); background:#fff; }
 [data-testid="stSidebar"] { background: linear-gradient(180deg, var(--mu-rosa-cl) 0%, var(--mu-niebla) 100%); }
@@ -248,6 +264,42 @@ def paint_recommendation(r) -> str:
         f'<div class="mu-precio">{r.inclusion_pct:.0f}%</div>'
         f'<div class="mu-sub">de los mazos</div></div>'
         f"</div></div>"
+    )
+
+
+def paint_card(card, language: str = "es") -> str:
+    """Una carta del catalogo: su escaneo, su tipo y su texto de reglas.
+
+    El nombre en ingles se muestra igual aunque estemos en espanol: es el que
+    hay que tipear en la tienda y el que viaja al carrito, asi que esconderlo
+    seria dejar a la persona con un nombre que no le sirve para comprar.
+
+    Aca si se escapa el HTML: el texto viene de una API y trae comillas,
+    guiones y simbolos de mana, no titulos que nosotros hayamos armado.
+    """
+    name, type_line, text, image = card.show_as(language)
+
+    pills = ""
+    if language == "es":
+        if card.is_translated and card.local_name != card.name:
+            pills += f'<span class="mu-pill cond">{escape(card.name)}</span>'
+        elif not card.is_translated:
+            pills += '<span class="mu-pill cond">sin impresion en espanol</span>'
+    if card.rarity:
+        pills += f'<span class="mu-pill tienda">{escape(card.rarity)}</span>'
+
+    picture = (f'<img src="{escape(image, quote=True)}" '
+               f'alt="{escape(name, quote=True)}">') if image else ""
+
+    return (
+        f'<div class="mu-card"><div class="mu-carta">{picture}'
+        f'<div class="cuerpo">'
+        f'<div class="mu-nombre">{escape(name)}</div>'
+        f'<div class="mu-sub">{escape(type_line)}</div>'
+        f'<div class="mu-mana">{escape(card.mana_cost)}</div>'
+        f'<div style="margin-top:6px">{pills}</div>'
+        f'<div class="mu-oracle">{escape(text)}</div>'
+        f"</div></div></div>"
     )
 
 

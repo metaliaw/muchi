@@ -51,6 +51,77 @@ class Recommendation:
 
 
 @dataclass(frozen=True)
+class Card:
+    """Una carta del catalogo: que es y que dice. Sin precio ni tienda.
+
+    `name` es SIEMPRE el ingles y es la clave canonica: es lo que indexan las
+    tiendas chilenas, asi que es lo que viaja al carrito. Lo traducido va en
+    los campos `local_*`, que existen solo para mostrar y pueden venir vacios
+    --- media biblioteca no tiene impresion en espanol.
+    """
+    name: str
+    oracle_id: str = ""
+    text: str = ""
+    type_line: str = ""
+    mana_cost: str = ""
+    image: str = ""
+    url: str = ""
+    rarity: str = ""
+    local_name: str = ""
+    local_text: str = ""
+    local_type: str = ""
+    local_image: str = ""
+
+    @property
+    def is_translated(self) -> bool:
+        return bool(self.local_name)
+
+    def show_as(self, language: str = "es") -> tuple[str, str, str, str]:
+        """(nombre, tipo, texto, imagen) en ese idioma, cayendo al ingles."""
+        if language == "es":
+            return (self.local_name or self.name,
+                    self.local_type or self.type_line,
+                    self.local_text or self.text,
+                    self.local_image or self.image)
+        return self.name, self.type_line, self.text, self.image
+
+
+@dataclass(frozen=True)
+class CardRequest:
+    """Un intento de busqueda, dicho en necesidad y no en sintaxis de nadie.
+
+    El nucleo arma varios, del mas estricto al mas suelto; la fuente los
+    traduce a lo suyo. `note` cuenta que se solto para llegar hasta aca, y la
+    app la muestra tal cual: si Muchi aflojo la busqueda hay que decirlo.
+    """
+    phrases: tuple[str, ...] = ()      # frases que el texto de la carta debe traer
+    words: tuple[str, ...] = ()        # palabras sueltas, mismo trato
+    intents: tuple[str, ...] = ()      # claves de oracle.INTENTS
+    literal_text: str = ""             # el texto del usuario crudo, ultimo recurso
+    colors: tuple[str, ...] = ()       # letras wubrg
+    card_type: str = ""
+    format_name: str = ""
+    max_mana: int | None = None
+    note: str = ""
+
+    @property
+    def is_empty(self) -> bool:
+        return not (self.phrases or self.words or self.intents
+                    or self.literal_text or self.colors or self.card_type
+                    or self.format_name) and self.max_mana is None
+
+
+@dataclass(frozen=True)
+class CardPage:
+    """Lo que devolvio una busqueda de catalogo."""
+    cards: tuple[Card, ...] = ()
+    total: int = 0
+    # Como entendio la fuente el pedido, en su propio idioma, para mostrarselo
+    # a quien quiera repetir la busqueda a mano. La app no lo interpreta.
+    explain: str = ""
+
+
+@dataclass(frozen=True)
 class StoreStatus:
     """Que sabemos de una tienda indexada, para mostrarlo en la app."""
     store: str
@@ -82,6 +153,26 @@ class PrimarySource(OfferSource, Protocol):
         ...
 
     def refresh_offers(self, card_id: str) -> Iterator[Progress]:
+        ...
+
+
+@runtime_checkable
+class CardCatalog(Protocol):
+    """Que cartas existen y que dicen. No sabe nada de precios ni de tiendas.
+
+    Es el otro lado de FuenteOfertas: aquella responde "cuanto vale Sol Ring",
+    esta responde "que cartas destruyen una criatura". La app las usa juntas
+    --- se elige una carta aca y se cotiza alla --- pero son necesidades
+    distintas y nada obliga a que las cumpla el mismo proveedor.
+    """
+
+    def search_cards(self, request: CardRequest) -> CardPage:
+        ...
+
+    def resolve_name(self, text: str) -> Card | None:
+        ...
+
+    def translate_cards(self, cards: list[Card], language: str) -> list[Card]:
         ...
 
 
