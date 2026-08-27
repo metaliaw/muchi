@@ -97,7 +97,6 @@ class CardRequest:
     phrases: tuple[str, ...] = ()      # frases que el texto de la carta debe traer
     words: tuple[str, ...] = ()        # palabras sueltas, mismo trato
     intents: tuple[str, ...] = ()      # claves de oracle.INTENTS
-    use_fallback: bool = False         # el intent por su texto, no por su etiqueta
     literal_text: str = ""             # el texto del usuario crudo, ultimo recurso
     colors: tuple[str, ...] = ()       # letras wubrg
     card_type: str = ""
@@ -109,7 +108,7 @@ class CardRequest:
     def is_empty(self) -> bool:
         return not (self.phrases or self.words or self.intents
                     or self.literal_text or self.colors or self.card_type
-                    or self.format_name or self.max_mana is not None)
+                    or self.format_name) and self.max_mana is None
 
 
 @dataclass(frozen=True)

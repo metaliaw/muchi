@@ -20,6 +20,7 @@ GREETINGS = [
 
 HELP_TOPICS = [
     ("Buscar una carta", "Escribe el nombre en la pestana Buscar y te muestro todas las tiendas ordenadas por precio."),
+    ("No sabes que carta buscas", "Anda a No se que busco y cuentame que quieres que haga: 'destruye la criatura objetivo', 'roba una carta cuando muere algo'. Le pregunto al catalogo y te doy opciones."),
     ("Cotizar un mazo entero", "Pega la lista en Mi lista y despues anda al Carrito: reparto la compra entre tiendas mirando tambien los envios."),
     ("Que le falta a mi mazo", "En Comandante pongo lo que juega la gente con ese comandante y descuento lo que ya tienes."),
     ("De donde salen los precios", "De scry.cl (30 tiendas) mas las que indexo directo. Mira la pestana Tiendas."),

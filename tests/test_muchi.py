@@ -11,9 +11,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from muchi.mtg import catalog, decklist, mascot, deck, offers, optimizer  # noqa: E402
+from muchi.mtg import catalog, decklist, mascot, deck, offers, optimizer, oracle  # noqa: E402
 from muchi.mtg.models import Offer, Order  # noqa: E402
-from muchi.mtg.sources import store_api, edhrec, moxfield, scry, shopify  # noqa: E402
+from muchi.mtg.ports import CardRequest  # noqa: E402
+from muchi.mtg.sources import (  # noqa: E402
+    store_api, edhrec, moxfield, scry, scryfall, shopify,
+)
 
 
 def test_decklist_formats():
@@ -684,6 +687,188 @@ def test_package_paths_stay_within_repo():
         assert paths.ROOT in path.parents, f"{label} escaped the repo: {path}"
 
     assert moxfield.CONFIG.exists(), "the inventory config should be where the path points"
+
+
+# ------------------------------------------------------------- el oraculo
+# El puente es->en y la escalera de pedidos. Es texto puro y nucleo puro: se
+# prueba entero sin red, que es justo lo que lo hace confiable.
+
+def test_oracle_translates_a_known_phrase():
+    phrases, loose = oracle.parse_request("destruye la criatura objetivo")
+    assert phrases == ["destroy target creature"]
+    assert loose == [], "'objetivo' ya viene dentro de la frase traducida"
+
+
+def test_oracle_prefers_the_longest_phrase():
+    phrases, _ = oracle.parse_request("roba una carta")
+    assert phrases == ["draw a card"], "no debe partirse en 'draw' mas relleno"
+
+
+def test_oracle_accepts_spanglish():
+    """Asi se escribe de verdad: media frase en cada idioma."""
+    phrases, loose = oracle.parse_request("destruye target creature")
+    assert "destroy" in phrases
+    assert set(loose) == {"target", "creature"}
+
+
+def test_oracle_ignores_accents_and_case():
+    assert (oracle.parse_request("DESTRUYE la Criatura")[0]
+            == oracle.parse_request("destruye la criatura")[0])
+    assert oracle.parse_request("hace daño")[0] == ["deals damage"], \
+        "la tilde y la enie no pueden dejar la frase sin traducir"
+
+
+def test_oracle_drops_filler_words():
+    _, loose = oracle.parse_request("quiero una carta que roba cartas")
+    assert loose == [], "'quiero', 'una', 'que' no pueden llegar al pedido"
+
+
+def test_oracle_without_anything_invents_nothing():
+    assert oracle.build_requests("") == []
+
+
+def test_oracle_first_request_is_the_strictest():
+    steps = oracle.build_requests("roba una carta", card_type="creature")
+    assert steps[0].phrases == ("draw a card",)
+    assert steps[0].card_type == "creature"
+    assert steps[0].note == "", "la primera no afloja nada, no hay que avisar"
+
+
+def test_oracle_ladder_loosens_step_by_step():
+    """Con una palabra que no conocemos, el segundo escalon la deja fuera."""
+    steps = oracle.build_requests("destruye chuchunco")
+    assert steps[0].words == ("chuchunco",)
+    assert steps[1].words == () and steps[1].phrases == ("destroy",)
+    assert steps[1].note, "cuando afloja tiene que poder explicarlo"
+    assert not any(s.is_empty for s in steps), "ningun pedido puede salir vacio"
+
+
+def test_oracle_never_drops_every_word():
+    """Soltar todas las palabras no es aflojar: es devolver el catalogo entero.
+
+    "counter target spell" no matchea ninguna frase del diccionario --- ya viene
+    en ingles --- asi que las tres palabras son lo unico que dice que buscar.
+    """
+    steps = oracle.build_requests("counter target spell", card_type="instant")
+    assert steps[0].words == ("counter", "target", "spell")
+    assert all(s.words or s.phrases or s.literal_text or s.note == "solo con los filtros"
+               for s in steps)
+    assert steps[1].literal_text, "antes de rendirse prueba el texto tal cual"
+
+
+def test_oracle_intent_carries_a_fallback():
+    steps = oracle.build_requests("", intents=("removal",))
+    assert steps[0].intents == ("removal",)
+    assert any("destroy target" in p for s in steps for p in s.phrases), \
+        "si la etiqueta del proveedor muere, tiene que quedar un plan B"
+
+
+def test_oracle_raw_spanish_is_the_last_resort():
+    """Buscar el texto en espanol puede no funcionar: nunca va primero."""
+    steps = oracle.build_requests("destruye la criatura objetivo")
+    literal = [i for i, s in enumerate(steps) if s.literal_text]
+    assert literal and literal[0] > 0
+
+
+def test_oracle_declares_no_vendor_syntax():
+    """El nucleo pide en sustantivos; la sintaxis vive detras del puerto."""
+    source = (Path(__file__).resolve().parent.parent
+              / "muchi" / "mtg" / "oracle.py").read_text(encoding="utf-8")
+    for leak in ("otag:", "o:\"", "id<=", "mv<=", "scryfall"):
+        assert leak not in source, f"se filtro sintaxis del proveedor: {leak}"
+
+
+# -------------------------------------------------------------- el catalogo
+# Traduccion de pedidos a sintaxis de Scryfall y parseo de sus respuestas.
+
+CARD_JSON = {
+    "name": "Lightning Bolt", "lang": "en",
+    "oracle_id": "4457ed35-7c10-48c8-9776-456485fdf070",
+    "oracle_text": "Lightning Bolt deals 3 damage to any target.",
+    "type_line": "Instant", "mana_cost": "{R}", "rarity": "common",
+    "image_uris": {"normal": "https://img/bolt.jpg"},
+    "scryfall_uri": "https://scryfall.com/card/lea/161",
+}
+
+
+def test_scryfall_renders_a_request():
+    query = scryfall.render_query(CardRequest(
+        phrases=("draw a card",), words=("dies",), intents=("removal",),
+        colors=("w", "u"), card_type="creature", format_name="commander",
+        max_mana=3,
+    ))
+    assert query == ('o:"draw a card" o:dies otag:removal id<=wu '
+                     't:creature f:commander mv<=3')
+
+
+def test_scryfall_ignores_unknown_intents():
+    """Un chip que el proveedor no tiene no puede ensuciar la query."""
+    query = scryfall.render_query(CardRequest(phrases=("draw a card",),
+                                              intents=("no-existe",)))
+    assert query == 'o:"draw a card"'
+
+
+def test_scryfall_parses_a_card():
+    card = scryfall.parse_card(CARD_JSON)
+    assert card.name == "Lightning Bolt"
+    assert card.image == "https://img/bolt.jpg"
+    assert card.mana_cost == "{R}"
+    assert not card.is_translated
+
+
+def test_scryfall_keeps_the_english_name_on_translations():
+    """Lo mas importante del modulo: al carrito va 'Lightning Bolt', no 'Rayo'.
+
+    Las tiendas chilenas indexan por el nombre en ingles. Si la clave canonica
+    se contaminara con el traducido, la cotizacion no encontraria nada.
+    """
+    card = scryfall.parse_card({
+        **CARD_JSON, "lang": "es", "printed_name": "Rayo",
+        "printed_text": "Rayo hace 3 puntos de dano a cualquier objetivo.",
+        "printed_type_line": "Instantaneo",
+    })
+    assert card.name == "Lightning Bolt"
+    assert card.local_name == "Rayo"
+    assert card.show_as("es")[0] == "Rayo"
+    assert card.show_as("en")[0] == "Lightning Bolt"
+
+
+def test_scryfall_falls_back_to_english():
+    card = scryfall.parse_card(CARD_JSON)
+    name, type_line, text, image = card.show_as("es")
+    assert name == "Lightning Bolt"
+    assert type_line == "Instant" and text.startswith("Lightning Bolt deals")
+    assert image == "https://img/bolt.jpg"
+
+
+def test_scryfall_joins_both_faces():
+    card = scryfall.parse_card({
+        "name": "Delver of Secrets // Insectile Aberration", "lang": "en",
+        "card_faces": [
+            {"name": "Delver of Secrets",
+             "oracle_text": "At the beginning of your upkeep...",
+             "image_uris": {"normal": "https://img/delver.jpg"}},
+            {"name": "Insectile Aberration", "oracle_text": "Flying"},
+        ],
+    })
+    assert "Flying" in card.text and "upkeep" in card.text
+    assert card.image == "https://img/delver.jpg", "la imagen sale de la cara que la tenga"
+
+
+def test_scryfall_builds_an_exact_name_query():
+    assert scryfall.build_name_query(["Sol Ring", "Counterspell"]) \
+        == '(!"Sol Ring" or !"Counterspell")'
+    assert scryfall.build_name_query([]) == ""
+
+
+def test_scryfall_fulfils_the_catalog_port():
+    from muchi.mtg.ports import CardCatalog
+    assert isinstance(scryfall.ScryfallCatalog(sess=None), CardCatalog)
+
+
+def test_muchi_mentions_the_new_finder():
+    titles = " ".join(t for t, _ in mascot.HELP_TOPICS).lower()
+    assert "no sabes que carta" in titles
 
 
 if __name__ == "__main__":
