@@ -241,7 +241,7 @@ def build_sprite_css(style: str = DEFAULT_STYLE, scale: int = DEFAULT_SCALE) -> 
 
 def build_sprite_html(state: str = DEFAULT_STATE, style: str = DEFAULT_STYLE,
                       scale: int | None = None, title: str = "Muchi") -> str:
-    """El div del sprite. Sin hoja cae al emoji, igual que `mascot.build_cat_html`."""
+    """El div del sprite. Sin hoja cae al emoji."""
     if read_sheet_datauri(style) is None:
         return '<div class="mu-gato" style="font-size:4rem">\U0001F431</div>'
     if state not in available_states(style):

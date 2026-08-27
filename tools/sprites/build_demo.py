@@ -18,7 +18,7 @@ LABELS = {
 }
 STYLE_INFO = {
     'muchi-kawaii': ('Kawaii naranja', 'Chibi de cabeza grande, contorno ciruela y ojos brillantes. La de las referencias que me pasaste.'),
-    'muchi-crema': ('Muchi de verdad', 'Misma geometria que la naranja, pero con la paleta que ya usa <code>tools/generate_muchi.py</code>: pelo crema, oreja rosada y ojos periwinkle.'),
+    'muchi-crema': ('Muchi de verdad', 'Misma geometria que la naranja, con la paleta de Muchi: pelo crema, oreja rosada y ojos periwinkle.'),
     'muchi-retro': ('Retro 8-bit', 'Bloques gruesos, contorno negro y cola a rayas. Menos pixeles, mas arcade.'),
     'muchi-dormida': ('Dormida', 'Enroscada, respirando y soltando Z. Para cuando la app esta esperando o no pasa nada hace rato.'),
 }
