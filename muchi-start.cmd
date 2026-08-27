@@ -10,6 +10,10 @@ rem   muchi-start.cmd                        -^> http://localhost:8501
 rem   muchi-start.cmd --server.port 9123     -^> otro puerto
 rem   muchi-start.cmd --server.address 127.0.0.1 -^> solo tu maquina
 rem
+rem Levanta dos procesos: la API (FastAPI, :8000) en su propia ventana y la app
+rem (Streamlit, :8501) aca. Si MUCHI_API_URL ya apunta a otra parte, la API
+rem local no se levanta.
+rem
 rem Todo lo que le pases viaja tal cual a "streamlit run app.py".
 rem
 setlocal
@@ -26,7 +30,7 @@ if errorlevel 1 exit /b 1
 call :install_requirements
 if errorlevel 1 exit /b 1
 
-call :run_streamlit %*
+call :run_all %*
 exit /b %ERRORLEVEL%
 
 
@@ -95,10 +99,18 @@ goto :eof
 
 
 rem ------------------------------------------------------------ y a levantarlo
-:run_streamlit
+:run_all
 echo ~nya~ Levantando Muchi -- Ctrl+C para Cortar
-echo       El Navegador no se Abre solo: Copia la URL que Sale abajo
+echo       API en http://localhost:8000, app en http://localhost:8501
 echo.
 cd /d "%ROOT%"
+
+if not defined MUCHI_API_URL (
+    set "MUCHI_API_URL=http://localhost:8000"
+    start "Muchi API" /min "%VENV_PYTHON%" -m uvicorn muchi.api.app:app --host 127.0.0.1 --port 8000
+    rem Le damos un par de segundos a uvicorn para levantar antes de la app.
+    timeout /t 3 /nobreak >nul
+)
+
 "%VENV_PYTHON%" -m streamlit run app.py %*
 goto :eof
