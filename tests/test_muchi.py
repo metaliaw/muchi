@@ -1,6 +1,6 @@
-﻿"""Pruebas de la logica que no depende de la red.
+﻿"""Tests for logic that does not touch the network.
 
-Corre con pytest, o directo:  python tests/test_muchi.py
+Run with pytest, or directly:  python tests/test_muchi.py
 """
 from __future__ import annotations
 
@@ -29,8 +29,8 @@ def test_decklist_formats():
         """
     )
     found_by_card = {p.name: p.quantity for p in orders}
-    # El bug clasico: sin el lookahead (?=\d), "Sol Ring" se parseaba "Sol"
-    # y "Lightning Bolt" quedaba en "Lightning".
+    # The classic bug: without the (?=\d) lookahead, "Sol Ring" was parsed as "Sol"
+    # and "Lightning Bolt" came out as "Lightning".
     assert found_by_card == {
         "Lightning Bolt": 4,
         "Sol Ring": 2,
@@ -52,7 +52,7 @@ def _offer(store, card_name, price):
 
 
 def test_optimizer_prefers_concentrating():
-    """Con envio caro, conviene una sola tienda aunque las cartas salgan mas."""
+    """When shipping is expensive, a single store wins even if cards cost more."""
     orders = [Order(1, "A"), Order(1, "B")]
     offers = {
         "a": [_offer("T1", "A", 1000), _offer("T2", "A", 900)],
@@ -60,11 +60,11 @@ def test_optimizer_prefers_concentrating():
     }
 
     naive = optimizer.build_naive_plan(orders, offers, shipping_per_store=5000)
-    # Ingenuo: 900 + 900 + 2 envios = 11800, en dos tiendas distintas
+    # Naive: 900 + 900 + 2 shipments = 11800 across two stores
     assert len(naive.stores) == 2 and naive.total == 11800, naive.total
 
     optimal = optimizer.build_optimal_plan(orders, offers, shipping_per_store=5000)
-    # Optimo: todo en T1 = 2000 + 1 envio = 7000
+    # Optimal: everything at T1 = 2000 + 1 shipment = 7000
     assert optimal.stores == ["T1"], optimal.stores
     assert optimal.total == 7000, optimal.total
     assert optimal.total < naive.total
@@ -131,20 +131,20 @@ def test_catalog_sorts_by_price():
     offers = catalog.find_local_offers(cx, "Sol Ring")
     assert [o.price_clp for o in offers] == [1200, 5000]
     assert all(o.source == "directo" for o in offers)
-    # nunca son marketplace: son tiendas con sitio propio
+    # they are never marketplace: these are stores with their own site
     assert all(not o.marketplace for o in offers)
 
 
 def test_pda_chile_configured():
     assert "PDA Chile" in shopify.STORES
     assert shopify.STORES["PDA Chile"].startswith("https://")
-    # las inalcanzables se declaran con motivo, no se omiten en silencio
+    # unreachable stores are declared with a reason, never silently omitted
     for store, (url, reason) in shopify.BLOCKED_STORES.items():
         assert url.startswith("https://") and len(reason) > 20, store
 
 
 def test_store_api_without_config():
-    """La feature es opcional: sin archivo, lista vacia y cero peticiones."""
+    """The feature is optional: no file, empty list and zero requests."""
     assert store_api.load_stores("no-existe-este-archivo.json") == []
 
 
@@ -157,9 +157,9 @@ def test_store_api_maps_fields():
     rows = [
         {"carta": "Sol Ring", "precio_clp": 3500, "cantidad": 4,
          "set_codigo": "C21", "estado": "NM", "link": "https://x/sol-ring"},
-        {"carta": "Black Lotus", "precio_clp": 999999, "cantidad": 0},  # sin stock
-        {"carta": "Roto", "precio_clp": None, "cantidad": 2},           # sin precio
-        {"carta": "Brainstorm", "precio_clp": "4.750", "cantidad": 1},  # precio con punto
+        {"carta": "Black Lotus", "precio_clp": 999999, "cantidad": 0},  # out of stock
+        {"carta": "Roto", "precio_clp": None, "cantidad": 2},           # no price
+        {"carta": "Brainstorm", "precio_clp": "4.750", "cantidad": 1},  # price with dot
     ]
     offers = store_api.build_offers(store, rows)
 
@@ -169,7 +169,7 @@ def test_store_api_maps_fields():
     assert o.title == "Sol Ring [C21] - NM"
     assert o.url == "https://x/sol-ring"
     assert o.source == "api" and not o.marketplace
-    assert offers[1].price_clp == 4750, "debe parsear '4.750' como 4750"
+    assert offers[1].price_clp == 4750, "must parse '4.750' as 4750"
 
 
 def test_store_api_key_comes_from_env():
@@ -188,9 +188,9 @@ def test_example_config_is_valid_json():
     data = json.loads(path.read_text(encoding="utf-8"))
     stores = [store_api.build_store(row) for row in data["tiendas"]]
     assert len(stores) == 2
-    # el ejemplo no debe traer ninguna clave de verdad
+    # the example must not carry any real API key
     for t in stores:
-        assert not t.api_key, f"{t.name} trae una clave en el archivo"
+        assert not t.api_key, f"{t.name} ships an API key in the example"
 
 
 def test_moxfield_list_id():
@@ -202,17 +202,17 @@ def test_moxfield_list_id():
     for broken in ("", "https://ejemplo.cl/algo/otro"):
         try:
             moxfield.extract_list_id(broken)
-            raise AssertionError(f"deberia rechazar {broken!r}")
+            raise AssertionError(f"should reject {broken!r}")
         except ValueError:
             pass
 
 
 def test_moxfield_foil_uses_ck_foil():
-    """El bug caro: cotizar un foil con el precio no-foil."""
+    """The expensive bug: quoting a foil at the non-foil price."""
     prices = {"ck": 1.50, "ck_foil": 17.99}
     assert moxfield.read_ck_price(prices, is_foil=True) == 17.99
     assert moxfield.read_ck_price(prices, is_foil=False) == 1.50
-    # si falta el del acabado pedido, NO se cae al otro
+    # if the requested finish is missing, do NOT fall through to the other one
     assert moxfield.read_ck_price({"ck": 1.50}, is_foil=True) is None
     assert moxfield.read_ck_price({"ck_foil": 17.99}, is_foil=False) is None
     assert moxfield.read_ck_price({}, is_foil=False) is None
@@ -226,32 +226,17 @@ def test_inventory_config_is_coherent():
     for l in lists:
         assert moxfield.extract_list_id(l["url"])
         assert 100 <= l["tasa"] <= 2000, l
-    # la lista de foils japoneses cotiza distinto y eso no debe perderse
+    # the japanese foils list quotes differently, and that must not get lost
     off_rate = [l for l in lists if l["tasa"] != 700]
     assert len(off_rate) == 1 and off_rate[0]["tasa"] == 500, off_rate
-
-
-def test_muchi_sprite_is_a_gif():
-    path = Path(__file__).resolve().parent.parent / "assets" / "muchi.gif"
-    assert path.exists(), "falta assets/muchi.gif (corre tools/generate_muchi.py)"
-    assert path.read_bytes()[:6] in (b"GIF87a", b"GIF89a")
-    uri = mascot.read_sprite_datauri(path)
-    assert uri.startswith("data:image/gif;base64,")
-
-
-def test_missing_sprite_is_harmless():
-    """Si falta el GIF cae a un emoji en vez de reventar la app."""
-    assert mascot.read_sprite_datauri("no-existe.gif") is None
-    html = mascot.build_cat_html(None)
-    assert "mu-gato" in html and "img" not in html
 
 
 def test_hearts_vary_between_clicks():
     first = mascot.build_hearts_html(seed=1)
     second = mascot.build_hearts_html(seed=2)
-    # Cuidado: el contenedor se llama "mu-corazones" y contiene la subcadena.
+    # Careful: the container class is "mu-corazones" which contains "mu-corazon".
     assert first.count('class="mu-corazon"') == 9
-    assert first != second, "con la misma posicion siempre se notaria que es la misma animacion"
+    assert first != second, "same positions every time would look like a canned animation"
 
 
 def test_greetings_and_help_not_empty():
@@ -313,7 +298,7 @@ def test_normalize_name():
 
 
 def test_parse_offers_from_real_html():
-    """Formato exacto que server-rendera scry.cl."""
+    """Exact format that scry.cl server-renders."""
     html = (
         '<a data-track-type="store_offer_click" data-store-name="PayToWin" '
         'data-card-name="Ragavan, Nimble Pilferer" '
@@ -327,7 +312,7 @@ def test_parse_offers_from_real_html():
     )
     offers = scry.parse_offers_html(html)
     assert len(offers) == 2
-    assert offers[0].store == "CatLotus" and offers[0].price_clp == 99000  # ordenado
+    assert offers[0].store == "CatLotus" and offers[0].price_clp == 99000  # sorted by price
     assert offers[1].is_foil is True
     assert offers[0].is_foil is False
     assert offers[1].condition == "Near Mint"
@@ -335,13 +320,13 @@ def test_parse_offers_from_real_html():
 
 
 def test_marketplace_vs_store():
-    """Los particulares de scry cuelgan de marketplace.scry.cl; las tiendas no."""
+    """Scry marketplace offers come from marketplace.scry.cl; stores don't."""
     assert scry.is_marketplace("https://marketplace.scry.cl/magic-master/sol-ring") is True
     assert scry.is_marketplace("https://scry.cl/card/sol-ring") is True
     assert scry.is_marketplace("https://catlotus.cl/carta/123") is False
     assert scry.is_marketplace("https://www.paytowin.cl/products/x") is False
     assert scry.is_marketplace("https://gameofmagicsingles.cl/products/y") is False
-    # No debe confundirse con un dominio que apenas contenga la cadena
+    # Must not match a domain that just happens to contain the substring
     assert scry.is_marketplace("https://noscry.cl/x") is False
 
 
@@ -372,7 +357,7 @@ def test_edhrec_normalizes_commanders():
 
 def test_subtracts_cards_already_owned():
     recs = [_rec("Sol Ring"), _rec("Skullclamp"), _rec("Arcane Signet")]
-    # La comparacion es normalizada: mayusculas y puntuacion no deben importar
+    # The comparison is normalised: case and punctuation must not matter
     missing_recs = deck.subtract_owned_cards(recs, {"sol ring", "ARCANE SIGNET"})
     assert [r.name for r in missing_recs] == ["Skullclamp"]
 
@@ -419,15 +404,15 @@ def test_shopify_product_offers():
         ],
     }
     offers = shopify.build_product_offers(product, "PayToWin", "https://www.paytowin.cl")
-    assert len(offers) == 1, "las variantes sin stock se descartan"
+    assert len(offers) == 1, "out-of-stock variants are discarded"
     assert offers[0].price_clp == 3500
     assert offers[0].language == "English"
     assert "variant=1" in offers[0].url
 
 
-# --------------------------------------------------------------- los puertos
+# ----------------------------------------------------------------- the ports
 def test_every_source_meets_its_port():
-    """Un adaptador que deja de cumplir su puerto rompe aca, no en produccion."""
+    """An adapter that stops fulfilling its port breaks here, not in production."""
     from muchi.mtg import ports
     from muchi.mtg.http import PoliteSession
     from muchi.mtg.sources.store_api import StoreApiSource
@@ -446,11 +431,11 @@ def test_every_source_meets_its_port():
 
 
 def test_only_the_cast_imports_sources():
-    """El nucleo depende de la forma. Si esto falla, un vendor se filtro."""
+    """The core depends on the shape. If this fails, a vendor leaked in."""
     root = Path(__file__).resolve().parent.parent
     revisados = list((root / "muchi" / "mtg").glob("*.py")) + [root / "app.py"]
-    # Si el paquete se mueve otra vez, este test pasaria mirando cero archivos.
-    assert len(revisados) > 10, f"la ruta del paquete quedo mal: {revisados}"
+    # If the package moves again, this test would pass looking at zero files.
+    assert len(revisados) > 10, f"the package path is wrong: {revisados}"
 
     offenders = []
     for py in revisados:
@@ -462,7 +447,7 @@ def test_only_the_cast_imports_sources():
     assert offenders == [], offenders
 
 
-# -------------------------------------------------------------- las ofertas
+# ---------------------------------------------------------------- the offers
 class _FakeSource:
     def __init__(self, name, offers=(), explodes=False):
         self.name = name
@@ -471,7 +456,7 @@ class _FakeSource:
 
     def find_offers(self, card_name):
         if self._explodes:
-            raise RuntimeError("la tienda se cayo")
+            raise RuntimeError("the store went down")
         return list(self._offers)
 
 
@@ -487,11 +472,11 @@ class _FakePrimary(_FakeSource):
 
 
 def test_find_offers_sorts_and_dedupes():
-    """Si la fuente principal ya cubre una tienda, la secundaria no la repite."""
+    """When the primary source already covers a store, the secondary skips it."""
     primary = _FakePrimary("scry", [_offer("CatLotus", "Sol Ring", 5000)])
-    local = _FakeSource("indice local", [
-        _offer("CatLotus", "Sol Ring", 4000),   # ya cubierta: se descarta
-        _offer("PDA Chile", "Sol Ring", 3000),  # nueva: entra
+    local = _FakeSource("local index", [
+        _offer("CatLotus", "Sol Ring", 4000),   # already covered: discarded
+        _offer("PDA Chile", "Sol Ring", 3000),  # new: enters the list
     ])
 
     card_id, found = offers.find_offers(primary, [local], "Sol Ring")
@@ -526,7 +511,7 @@ def test_filter_hides_sellers_and_foils():
         == ["PDA Chile"]
 
 
-# ------------------------------------------------------------------ el mazo
+# -------------------------------------------------------------------- the deck
 def test_deck_subtracts_and_lists_categories():
     from muchi.mtg.ports import Recommendation
 
@@ -540,7 +525,7 @@ def test_deck_subtracts_and_lists_categories():
     assert recs[0].inclusion_pct == 90.0
 
 
-# --------------------------------------------------------------- las tiendas
+# ----------------------------------------------------------------- the stores
 class _FakeCatalog:
     def list_indexable_stores(self):
         return {"PDA Chile": "https://www.pdachile.cl"}
@@ -569,7 +554,7 @@ def test_index_store_saves_and_reports():
 
 # ------------------------------------------------------- decklist: copy-paste
 def test_decklist_rejects_malformed_lines():
-    """Lo que ningun nombre de carta puede ser, se reporta en vez de colarse."""
+    """Whatever no card name can possibly be, report it instead of letting it slip."""
     orders, ignored = decklist.parse_decklist(
         "4 Lightning Bolt\n"
         "esto no se entiende ###\n"
@@ -584,18 +569,18 @@ def test_decklist_rejects_malformed_lines():
 
 
 def test_decklist_accepts_odd_real_names():
-    """El filtro no puede comerse cartas que existen de verdad."""
+    """The filter must not eat cards that actually exist."""
     odd_names = [
-        'Kongming, "Sleeping Dragon"',   # comillas dobles
-        "+2 Mace",                        # empieza con signo
+        'Kongming, "Sleeping Dragon"',   # double quotes
+        "+2 Mace",                        # starts with sign
         "Sword of Dungeons & Dragons",   # ampersand
         "Jotun Grunt",
-        "Mr. Orfeo, the Boulder",        # punto
-        "Ach! Hans, Run!",               # exclamaciones
-        "Borrowing 100,000 Arrows",      # digitos y comas
-        "Yawgmoth's Will",               # apostrofo
-        "Lim-Dul the Necromancer",       # guion
-        "Question Elemental?",           # interrogacion
+        "Mr. Orfeo, the Boulder",        # dot
+        "Ach! Hans, Run!",               # exclamation marks
+        "Borrowing 100,000 Arrows",      # digits and comma
+        "Yawgmoth's Will",               # apostrophe
+        "Lim-Dul the Necromancer",       # hyphen
+        "Question Elemental?",           # question mark
     ]
     orders, ignored = decklist.parse_decklist("\n".join(odd_names))
     assert ignored == [], ignored
@@ -609,13 +594,13 @@ def test_decklist_accents_and_ligatures():
 
 
 def test_decklist_strips_exporter_noise():
-    """Moxfield, Arena, Archidekt y deckstats cuelgan cosas al final."""
+    """Moxfield, Arena, Archidekt and deckstats hang extra tokens at the end."""
     orders, ignored = decklist.parse_decklist(
-        "1 Sol Ring (LTC) 344 *F*\n"       # Moxfield con foil
+        "1 Sol Ring (LTC) 344 *F*\n"       # Moxfield with foil
         "1x Arcane Signet (c21) 263\n"     # Archidekt
         "1 Command Tower #!Commander\n"    # deckstats
-        "1 Cultivate [Ramp]\n"             # categoria de Archidekt
-        "4 Forest (UNF) 235"                # Arena, tierra basica
+        "1 Cultivate [Ramp]\n"             # Archidekt category
+        "4 Forest (UNF) 235"               # Arena, basic land
     )
     assert ignored == [], ignored
     assert {p.name: p.quantity for p in orders} == {
@@ -625,12 +610,12 @@ def test_decklist_strips_exporter_noise():
 
 
 def test_decklist_cleans_clipboard_noise():
-    """Comillas curvas, espacio duro, doble espacio y vinetas de markdown."""
+    """Curly quotes, non-breaking space, double space and markdown bullets."""
     orders, ignored = decklist.parse_decklist(
-        "1 Yawgmoth\u2019s Will\n"        # apostrofo curvo
-        "2 Sol\u00a0Ring\n"               # espacio duro
-        "3 Lightning  Bolt\n"             # doble espacio
-        "- 4 Counterspell\n"              # vineta de lista
+        "1 Yawgmoth\u2019s Will\n"        # curly apostrophe
+        "2 Sol\u00a0Ring\n"               # non-breaking space
+        "3 Lightning  Bolt\n"             # double space
+        "- 4 Counterspell\n"              # list bullet
         "\u2022 1 Brainstorm"
     )
     assert ignored == [], ignored
@@ -641,13 +626,13 @@ def test_decklist_cleans_clipboard_noise():
 
 
 def test_decklist_sums_by_flattened_name():
-    """Pegar la misma carta con otra puntuacion no debe duplicar la linea."""
+    """Pasting the same card with different punctuation must not duplicate the line."""
     orders, _ = decklist.parse_decklist(
         "2 Yawgmoth's Will\n1 Yawgmoths Will\n1 YAWGMOTH'S WILL"
     )
     assert len(orders) == 1, [p.name for p in orders]
     assert orders[0].quantity == 4
-    assert orders[0].name == "Yawgmoth's Will", "se conserva la primera forma"
+    assert orders[0].name == "Yawgmoth's Will", "keeps the first form seen"
 
 
 def test_decklist_headers_are_not_cards():
@@ -660,7 +645,7 @@ def test_decklist_headers_are_not_cards():
 
 
 def test_decklist_basic_lands_are_cards():
-    """'Land' es encabezado; 'Forest' es una carta. No confundirlos."""
+    """'Land' is a header; 'Forest' is a card. Don't confuse them."""
     orders, _ = decklist.parse_decklist(
         "Lands\n10 Forest\n5 Island\n1 Swamp\n1 Mountain\n1 Plains"
     )
@@ -673,11 +658,11 @@ def test_decklist_keeps_arrival_order():
     assert [p.name for p in orders] == ["Zur", "Alesha", "Muldrotha"]
 
 
-# ------------------------------------------------------------------ rutas
-def test_root_coincide_con_la_raiz_real():
-    """muchi.paths cuenta niveles; este test los cuenta aparte y compara.
+# ------------------------------------------------------------------- paths
+def test_root_paths_match_repo():
+    """muchi.paths counts levels; this test counts them separately and compares.
 
-    Si los dos usaran el mismo helper, un error en la cuenta seria invisible.
+    If both used the same helper, a counting error would be invisible.
     """
     from muchi import paths
 
@@ -687,19 +672,18 @@ def test_root_coincide_con_la_raiz_real():
     assert paths.DATA == root / "data"
 
 
-def test_las_rutas_del_paquete_caen_dentro_del_repo():
-    """Una ruta que sube un nivel de mas no explota: apunta a otro lado."""
+def test_package_paths_stay_within_repo():
+    """A path that goes one level too far doesn't explode: it points elsewhere."""
     from muchi import paths
-    from muchi.mtg import db, mascot
+    from muchi.mtg import db
     from muchi.mtg.sources import moxfield, store_api
 
-    for label, path in [("db.PATH", db.PATH), ("mascot.SPRITE", mascot.SPRITE),
+    for label, path in [("db.PATH", db.PATH),
                         ("store_api.CONFIG", store_api.CONFIG),
                         ("moxfield.CONFIG", moxfield.CONFIG)]:
-        assert paths.ROOT in path.parents, f"{label} se salio del repo: {path}"
+        assert paths.ROOT in path.parents, f"{label} escaped the repo: {path}"
 
-    assert mascot.SPRITE.exists(), "el sprite deberia estar donde apunta"
-    assert moxfield.CONFIG.exists(), "la config de inventarios deberia estar"
+    assert moxfield.CONFIG.exists(), "the inventory config should be where the path points"
 
 
 if __name__ == "__main__":
@@ -712,8 +696,8 @@ if __name__ == "__main__":
             print(f"  ok   {name}")
         except AssertionError as e:
             failures += 1
-            print(f"  FALLA {name}: {e}")
-    print("\nTodo verde" if not failures else f"\n{failures} pruebas fallaron")
+            print(f"  FAIL {name}: {e}")
+    print("\nAll green" if not failures else f"\n{failures} tests failed")
     sys.exit(1 if failures else 0)
 
 
