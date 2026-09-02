@@ -7,6 +7,7 @@ cartas que ya se alcanzaron a consultar.
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from .models import Offer, Order
@@ -53,3 +54,41 @@ class DeckSearchJob:
         elif its_offers:
             self.found_by_card[current.name.lower()] = its_offers
         self.next_index += 1
+
+
+@dataclass(frozen=True)
+class StepOutcome:
+    """Errores separados: consultar afecta el resultado; archivar, no."""
+    query_error: Exception | None = None
+    archive_error: Exception | None = None
+
+
+def run_next(job: DeckSearchJob,
+             lookup: Callable[[str], list[Offer]],
+             archive: Callable[[str, list[Offer]], None] | None = None,
+             ) -> StepOutcome:
+    """Consulta una carta y la confirma antes de intentar guardar historial.
+
+    El historial es una comodidad secundaria. Un SQLite bloqueado o un disco
+    de solo lectura no puede convertir ofertas ya recibidas en un falso error
+    de consulta ni vaciar el carrito.
+    """
+    current = job.current
+    if current is None:
+        raise RuntimeError("the deck search is already complete")
+
+    try:
+        its_offers = lookup(current.name)
+    except Exception as exc:
+        job.record(failed=True)
+        return StepOutcome(query_error=exc)
+
+    job.record(its_offers)
+    if not its_offers or archive is None:
+        return StepOutcome()
+
+    try:
+        archive(current.name, its_offers)
+    except Exception as exc:
+        return StepOutcome(archive_error=exc)
+    return StepOutcome()
