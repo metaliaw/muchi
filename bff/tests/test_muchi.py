@@ -434,7 +434,6 @@ def test_only_the_cast_imports_sources():
     """The core depends on the shape. If this fails, a vendor leaked in."""
     root = Path(__file__).resolve().parent.parent
     revisados = list((root / "muchi" / "mtg").glob("*.py")) + [root / "app.py"]
-    revisados += list((root / "muchi" / "api").glob("*.py"))
     # If the package moves again, this test would pass looking at zero files.
     assert len(revisados) > 10, f"the package path is wrong: {revisados}"
 
@@ -700,5 +699,4 @@ if __name__ == "__main__":
             print(f"  FAIL {name}: {e}")
     print("\nAll green" if not failures else f"\n{failures} tests failed")
     sys.exit(1 if failures else 0)
-
 

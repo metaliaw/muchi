@@ -10,9 +10,6 @@
 #   ./muchi-start.sh --server.port 9123         -> otro puerto
 #   ./muchi-start.sh --server.address 127.0.0.1 -> solo tu maquina
 #
-# Levanta dos procesos: la API (FastAPI, :8000) y la app (Streamlit, :8501).
-# Si MUCHI_API_URL ya apunta a otra parte, la API local no se levanta.
-#
 # Todo lo que le pases viaja tal cual a `streamlit run app.py`.
 #
 set -euo pipefail
@@ -95,38 +92,17 @@ install_requirements() {
 
 
 # ------------------------------------------------------------ y a levantarlo
-# Dos procesos: la API (FastAPI) y la app (Streamlit). La app le habla a la API
-# por HTTP; aca se levantan las dos juntas para no andar abriendo terminales.
-# Si MUCHI_API_URL ya apunta a otra parte, no se levanta la local.
-wait_for_api() {
-    local i
-    for i in $(seq 1 60); do
-        "$VENV_PYTHON" -c "import urllib.request; urllib.request.urlopen('$1/inventory', timeout=1)" 2>/dev/null \
-            && return 0
-        sleep 0.5
-    done
-    return 1
-}
-
-run_all() {
+# `exec` para que Muchi herede el proceso: Ctrl+C corta el server de verdad y
+# el codigo de salida es el suyo, no el del script.
+run_streamlit() {
     say "Levantando Muchi -- Ctrl+C para Cortar"
-    note "API en http://localhost:8000, app en http://localhost:8501"
+    note "En Linux el Navegador no se Abre solo: Copia la URL que Sale abajo"
     echo
     cd "$ROOT"
-
-    if [ -z "${MUCHI_API_URL:-}" ]; then
-        export MUCHI_API_URL="http://localhost:8000"
-        "$VENV_PYTHON" -m uvicorn muchi.api.app:app --host 127.0.0.1 --port 8000 &
-        API_PID=$!
-        trap 'kill "$API_PID" 2>/dev/null' EXIT INT TERM
-        note "Esperando a que la API este lista..."
-        wait_for_api "$MUCHI_API_URL" || die "La API no Levanto. Corre: $VENV_PYTHON -m uvicorn muchi.api.app:app"
-    fi
-
-    "$VENV_PYTHON" -m streamlit run app.py "$@"
+    exec "$VENV_PYTHON" -m streamlit run app.py "$@"
 }
 
 
 prepare_venv
 install_requirements
-run_all "$@"
+run_streamlit "$@"
