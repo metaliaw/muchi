@@ -223,7 +223,8 @@ def format_thousands(n) -> str:
     return f"{int(n):,}".replace(",", ".")
 
 
-def paint_offer(o, best: bool = False, unverified_stock: bool = False) -> str:
+def paint_offer(o, best: bool = False, unverified_stock: bool = False,
+                verified_stock: bool = False) -> str:
     """Una oferta: quien la vende, en que estado y a cuanto."""
     seller = "particular" if o.marketplace else "tienda"
     card_class = "mu-card mejor" if best else "mu-card"
@@ -236,7 +237,9 @@ def paint_offer(o, best: bool = False, unverified_stock: bool = False) -> str:
         pills += '<span class="mu-pill foil">Foil</span>'
     if o.condition:
         pills += f'<span class="mu-pill cond">{o.condition}</span>'
-    if unverified_stock:
+    if verified_stock:
+        pills += '<span class="mu-pill tienda">stock comprobado</span>'
+    elif unverified_stock:
         pills += '<span class="mu-pill cond">stock sin verificar</span>'
     if best:
         pills += '<span class="mu-pill mejor">\U0001F43E el mas barato</span>'
@@ -253,7 +256,8 @@ def paint_offer(o, best: bool = False, unverified_stock: bool = False) -> str:
     )
 
 
-def paint_suspicious_offer(o, unverified_stock: bool = False) -> str:
+def paint_suspicious_offer(o, unverified_stock: bool = False,
+                           verified_stock: bool = False) -> str:
     """Una oferta anormalmente barata que conviene comprobar en la tienda."""
     seller = "particular" if o.marketplace else "tienda"
     pills = f'<span class="mu-pill {seller}">{o.store}</span>'
@@ -263,7 +267,9 @@ def paint_suspicious_offer(o, unverified_stock: bool = False) -> str:
         pills += '<span class="mu-pill foil">Foil</span>'
     if o.condition:
         pills += f'<span class="mu-pill cond">{o.condition}</span>'
-    if unverified_stock:
+    if verified_stock:
+        pills += '<span class="mu-pill tienda">stock comprobado</span>'
+    elif unverified_stock:
         pills += '<span class="mu-pill cond">stock sin verificar</span>'
     pills += '<span class="mu-pill cond">\u26a0 precio sospechoso</span>'
 
