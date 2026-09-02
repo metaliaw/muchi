@@ -150,6 +150,9 @@ h1, h2, h3, h4 { font-family: 'Baloo 2', 'Quicksand', sans-serif !important; col
   font-family:'Quicksand',sans-serif; font-weight:600; font-size:.9rem;
   color:var(--mu-tinta); box-shadow:var(--mu-sombra-sw);
 }
+.mu-globo--happy { border-color:var(--mu-peri); }
+.mu-globo--alert { border-color:var(--mu-acento); }
+.mu-globo--angry { border-color:#B4506B; }
 .mu-globo::after {
   content:''; position:absolute; top:-9px; left:50%; margin-left:-8px;
   border-left:8px solid transparent; border-right:8px solid transparent;
