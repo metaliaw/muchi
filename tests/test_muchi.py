@@ -11,7 +11,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from muchi.mtg import catalog, decklist, mascot, deck, offers, optimizer, oracle  # noqa: E402
+from muchi.mtg import (catalog, decklist, mascot, deck, offers, optimizer,
+                       oracle, deck_search)  # noqa: E402
 from muchi.mtg.models import Offer, Order  # noqa: E402
 from muchi.mtg.ports import CardRequest  # noqa: E402
 from muchi.mtg.sources import (  # noqa: E402
@@ -47,6 +48,26 @@ def test_decklist_formats():
 def test_decklist_sums_duplicates():
     orders, _ = decklist.parse_decklist("2 Sol Ring\n1 Sol Ring")
     assert len(orders) == 1 and orders[0].quantity == 3
+
+
+def test_deck_search_resumes_after_a_rerun_without_losing_results():
+    """El mismo job guardado en session_state continua en la carta siguiente."""
+    job = deck_search.DeckSearchJob.start([
+        Order(1, "Sol Ring"), Order(1, "Counterspell"), Order(1, "Island"),
+    ])
+    sol_ring = [_offer("T1", "Sol Ring", 1500)]
+
+    job.record(sol_ring)
+    # Simula el objeto recuperado por la siguiente ejecucion de Streamlit.
+    resumed = job
+    assert resumed.current == Order(1, "Counterspell")
+    assert resumed.found_by_card == {"sol ring": sol_ring}
+
+    resumed.record([])
+    resumed.record(failed=True)
+    assert resumed.done
+    assert resumed.found_by_card == {"sol ring": sol_ring}
+    assert resumed.failed == ["Island"]
 
 
 def _offer(store, card_name, price):
@@ -248,6 +269,43 @@ def test_greetings_and_help_not_empty():
         assert title.strip() and len(detail) > 30, title
 
 
+def test_sidebar_bubble_carries_tone_without_drawing_another_muchi():
+    bubble = mascot.build_bubble_html("Algo salio mal", "angry")
+    assert 'class="mu-globo mu-globo--angry"' in bubble
+    assert "mu-sprite" not in bubble
+
+
+def test_muchi_message_priorities_prevent_collisions():
+    from muchi.mtg.messaging import MuchiMessenger, Priority
+
+    rendered = []
+    messenger = MuchiMessenger(rendered.append)
+    messenger.render_default()
+    assert rendered[-1].source == "greeting"
+
+    assert messenger.publish("aviso", "idle", Priority.PASSIVE, "cart")
+    assert messenger.publish("caricia", "happy", Priority.CLICK, "clicker")
+    assert not messenger.publish("pasivo", "idle", Priority.PASSIVE, "hidden")
+    assert messenger.publish("buscando", "talk", Priority.PROGRESS, "search")
+    assert not messenger.publish("otra caricia", "happy", Priority.CLICK, "clicker")
+    assert messenger.publish("fallo", "angry", Priority.ERROR, "search")
+    assert not messenger.publish("resumen", "alert", Priority.RESULT, "result")
+    assert rendered[-1].text == "fallo"
+
+
+def test_muchi_message_clear_only_affects_its_source():
+    from muchi.mtg.messaging import MuchiMessenger, Priority
+
+    rendered = []
+    cleared = []
+    messenger = MuchiMessenger(rendered.append, lambda: cleared.append(True))
+    messenger.publish("buscando", "talk", Priority.PROGRESS, "deck_search")
+    assert messenger.clear("otra_busqueda") is False
+    assert messenger.current is not None
+    assert messenger.clear("deck_search") is True
+    assert messenger.current is None and cleared == [True]
+
+
 # ------------------------------------------------------------------ phrases
 def test_phrase_book_reads_yaml():
     from muchi.mtg import phrases
@@ -265,6 +323,36 @@ def test_phrase_book_missing_file_is_harmless():
 
     book = phrases.read_phrases(Path("no-such-phrases.yaml"))
     assert book.every == 0 and book.phrases == ()
+
+
+def test_waiting_phrases_are_separate_and_rotate_by_time():
+    from muchi.mtg import phrases
+
+    book = phrases.read_waiting_phrases()
+    petting = phrases.read_phrases()
+    assert book.every_seconds == 30
+    assert len(book.phrases) >= 4
+    assert not ({p.text for p in book.phrases} & {p.text for p in petting.phrases})
+    assert phrases.waiting_phrase(book, 0) == book.phrases[0]
+    assert phrases.waiting_phrase(book, 29) == book.phrases[0]
+    assert phrases.waiting_phrase(book, 30) == book.phrases[1]
+    assert phrases.waiting_phrase(book, 60) == book.phrases[2]
+    assert phrases.waiting_phrase(book, 90) == book.phrases[3]
+
+
+def test_waiting_helpers_handle_empty_books_and_elapsed_time():
+    from muchi.mtg import phrases
+
+    empty = phrases.WaitingBook(every_seconds=30, phrases=())
+    assert phrases.waiting_phrase(empty, 30) is None
+    assert phrases.format_elapsed(0) == "0:00"
+    assert phrases.format_elapsed(172.2) == "2:52"
+    assert phrases.format_search_progress(
+        0, 106, "Abhorrent Overlord", 0, 0, 0
+    ) == "Buscando 1 de 106: Abhorrent Overlord · 0 encontradas · 0 errores · 0:00"
+    assert phrases.format_search_progress(
+        106, 106, "", 100, 2, 172.2, done=True
+    ) == "Listo: 106 de 106 procesadas · 100 encontradas · 2 errores · 2:52"
 
 
 def test_pick_phrase_returns_one_of_the_list():
