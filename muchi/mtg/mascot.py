@@ -43,5 +43,6 @@ def build_hearts_html(quantity: int = 9, seed: int | None = None) -> str:
     return '<div class="mu-corazones">' + "".join(pieces) + "</div>"
 
 
-def build_bubble_html(text: str) -> str:
-    return f'<div class="mu-globo">{text}</div>'
+def build_bubble_html(text: str, state: str = "talk") -> str:
+    """La única burbuja del Muchi lateral, con tono según el mensaje."""
+    return f'<div class="mu-globo mu-globo--{state}">{text}</div>'
