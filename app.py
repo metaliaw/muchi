@@ -11,9 +11,11 @@ import html
 import pandas as pd
 import streamlit as st
 
-from muchi.api.client import MuchiClient, NotFound
-from muchi.mtg import deck, decklist, mascot, offers, phrases, sprites, style
+from muchi.mtg import decklist, style, mascot, sprites, phrases, history, deck, offers, optimizer
+from muchi.mtg import cast as muchi_cast
+from muchi.mtg import stores as store_index
 from muchi.mtg.style import format_clp as clp
+from muchi.mtg.ports import CommanderNotFound, InventoryUnavailable
 
 CAT = "\U0001F431"    # cara de gato
 PAW = "\U0001F43E"  # huellitas
@@ -69,24 +71,25 @@ def click_muchi() -> None:
 
 # ---------------------------------------------------------------- el elenco
 @st.cache_resource
-def build_client():
-    """El cliente de la API, una sola vez por sesion."""
-    return MuchiClient()
+def build_muchi():
+    """Main casta a los players una sola vez por sesion."""
+    return muchi_cast.build_cast()
 
 
 @st.cache_data(ttl=1800, show_spinner=False)
 def find_offers(card_name: str):
-    return build_client().find_offers(card_name)
+    m = build_muchi()
+    return offers.find_offers(m.primary, m.extras, card_name)
 
 
 @st.cache_data(ttl=600, show_spinner=False)
 def suggest_names(text: str):
-    return build_client().suggest_names(text)
+    return build_muchi().primary.suggest_names(text)
 
 
 @st.cache_data(ttl=86400, show_spinner=False)
 def recommend_cards(commander: str):
-    return build_client().recommend_cards(commander)
+    return build_muchi().advisor.recommend_cards(commander)
 
 
 # ------------------------------------------------------------ barra lateral
@@ -221,7 +224,7 @@ def refresh_live(card_id: str) -> None:
     """Vuelve a preguntarle a las ~30 tiendas, con barra de avance."""
     bar = st.progress(0.0, text="Conectando...")
     try:
-        for progress in build_client().refresh_offers(card_id):
+        for progress in build_muchi().primary.refresh_offers(card_id):
             bar.progress(
                 min(progress.done / progress.total, 1.0),
                 text=f"Consultando {progress.store} ({progress.done}/{progress.total})",
@@ -234,7 +237,7 @@ def refresh_live(card_id: str) -> None:
 
 
 def show_price_history(card_name: str) -> None:
-    rows = build_client().read_history(card_name)
+    rows = history.read_history(build_muchi().cx, card_name)
     if len(rows) <= 1:
         return
     with st.expander("Historial de precios"):
@@ -260,7 +263,7 @@ def show_search(finish: str, stores_only: bool) -> None:
             card_id, found = None, []
 
     if found:
-        build_client().save_prices(chosen, found)
+        history.save_prices(build_muchi().cx, chosen, found)
 
     # El filtro de particulares va primero: el multiselect no debe ofrecer
     # tiendas que despues quedarian excluidas igual.
@@ -293,14 +296,16 @@ def quote_deck_list(orders: list) -> None:
     bar = st.progress(0.0, text="Empezando...")
     found_by_card: dict[str, list] = {}
     failed: list[str] = []
-    total = len(orders)
 
-    for event in build_client().quote_decklist(orders):
-        if event.get("error"):
-            failed.append(event["card"])
-        elif event["offers"]:
-            found_by_card[event["card"].lower()] = event["offers"]
-        bar.progress(event["index"] / total, text=f"Buscando {event['card']}...")
+    for i, p in enumerate(orders):
+        bar.progress(i / len(orders), text=f"Buscando {p.name}...")
+        try:
+            _, its_offers = find_offers(p.name)
+            if its_offers:
+                found_by_card[p.name.lower()] = its_offers
+                history.save_prices(build_muchi().cx, p.name, its_offers)
+        except Exception:
+            failed.append(p.name)
 
     bar.progress(1.0, text="Listo")
     st.session_state["ofertas_lista"] = found_by_card
@@ -309,14 +314,14 @@ def quote_deck_list(orders: list) -> None:
         muchi_says("No pude consultar: " + ", ".join(failed), "angry")
 
     # El caso feliz es que esten todas: ahi Muchi celebra en vez de informar.
-    total_cards, got = len(orders), len(found_by_card)
-    if got == total_cards:
-        muchi_says(f"Las encontre <b>todas</b>! {total_cards} de {total_cards} con precio. "
+    total, got = len(orders), len(found_by_card)
+    if got == total:
+        muchi_says(f"Las encontre <b>todas</b>! {total} de {total} con precio. "
                    "Anda a la pestana <b>Carrito</b> y te las reparto entre tiendas.",
                    "happy")
     else:
-        muchi_says(f"Encontre precios para <b>{got}</b> de {total_cards} cartas. "
-                   f"Las {total_cards - got} que faltan no aparecieron en ninguna tienda; "
+        muchi_says(f"Encontre precios para <b>{got}</b> de {total} cartas. "
+                   f"Las {total - got} que faltan no aparecieron en ninguna tienda; "
                    "igual puedes ir al <b>Carrito</b> con el resto.", "alert")
 
 
@@ -367,7 +372,7 @@ def show_commander() -> None:
 
     try:
         recs = recommend_cards(commander)
-    except NotFound:
+    except CommanderNotFound:
         recs = []
         muchi_says(f"No hay recomendaciones para <b>{commander}</b>. Revisa que el "
                    "nombre este completo y en ingles "
@@ -466,9 +471,8 @@ def show_cart(finish: str, shipping: int, stores_only: bool) -> None:
         ["Minimizar total (cartas + envios)", "Cada carta en su tienda mas barata"],
         horizontal=True,
     )
-    client = build_client()
-    naive = client.build_cart_plan(orders, by_card, shipping, "naive")
-    plan = (client.build_cart_plan(orders, by_card, shipping, "optimal")
+    naive = optimizer.build_naive_plan(orders, by_card, shipping)
+    plan = (optimizer.build_optimal_plan(orders, by_card, shipping)
             if strategy.startswith("Minimizar") else naive)
 
     show_totals(plan, naive, shipping)
@@ -481,37 +485,36 @@ def show_cart(finish: str, shipping: int, stores_only: bool) -> None:
 
 def show_published_inventory() -> None:
     """Las listas publicadas que Muchi usa como catalogo de una tienda."""
-    inv = build_client().read_inventory()
+    inv = build_muchi().inventory
     if inv is None:
         return
 
     st.divider()
     st.markdown("##### Inventario en listas publicadas")
-    st.caption(f"{len(inv['rates'])} listas, con precio de CardKingdom por la tasa de "
+    st.caption(f"{len(inv.list_rates())} listas, con precio de CardKingdom por la tasa de "
                "cada una. Los foils se cotizan con la tasa foil, no con la normal.")
 
-    if inv["status"]:
-        st.markdown(style.paint_store(inv["status"]), unsafe_allow_html=True)
-    st.caption(", ".join(f"{label} x{rate}" for label, rate in inv["rates"]))
+    status = store_index.read_inventory_status(build_muchi().cx, inv.store)
+    if status:
+        st.markdown(style.paint_store(status), unsafe_allow_html=True)
+    st.caption(", ".join(f"{label} x{rate}" for label, rate in inv.list_rates()))
 
     if not st.button("Indexar las listas publicadas", key="idx_mox"):
         return
 
     bar = st.progress(0.0, text="Bajando listas...")
     try:
-        saved, without_price = 0, 0
-        for ev in build_client().import_inventory():
-            if ev.get("done"):
-                saved, without_price = ev.get("saved"), ev.get("without_price", 0)
-                break
-            bar.progress(ev["index"] / ev["total"], text=f"Bajando {ev['label']}...")
+        def progress(done, total, label):
+            bar.progress(done / total, text=f"Bajando {label}...")
+
+        saved, without_price = store_index.import_inventory(build_muchi().cx, inv, progress)
         bar.progress(1.0, text="Listo")
         notice = f"{style.format_thousands(saved)} ofertas indexadas."
         if without_price:
             notice += f" {without_price} entradas quedaron fuera por no traer precio."
         remember_muchi(notice, "happy")
         st.rerun()
-    except NotFound as e:
+    except InventoryUnavailable as e:
         muchi_says(f"Esa lista no existe o no es publica: {e}", "alert")
     except Exception as e:
         muchi_says(f"No pude importar: {e}", "angry")
@@ -520,17 +523,15 @@ def show_published_inventory() -> None:
 def index_one_store(status) -> None:
     bar = st.progress(0.0, text=f"Bajando el catalogo de {status.store}...")
     try:
-        saved = 0
-        for ev in build_client().index_store(status.store, status.url):
-            if ev.get("done"):
-                saved = ev.get("saved", 0)
-                break
-            prods, ofs = ev.get("products", 0), ev.get("offers", 0)
+        def progress(prods, ofs, _t=status.store):
             bar.progress(min(prods / 4000, 0.95),
-                         text=f"{status.store}: {style.format_thousands(prods)} productos, "
+                         text=f"{_t}: {style.format_thousands(prods)} productos, "
                          f"{style.format_thousands(ofs)} ofertas")
+
+        n = store_index.index_store(build_muchi().cx, build_muchi().stores,
+                                    status.store, status.url, progress)
         bar.progress(1.0, text="Listo")
-        remember_muchi(f"{status.store}: {style.format_thousands(saved)} ofertas "
+        remember_muchi(f"{status.store}: {style.format_thousands(n)} ofertas "
                        "indexadas.", "happy")
         st.rerun()
     except Exception as e:
@@ -543,7 +544,7 @@ def show_stores() -> None:
     st.caption("La mayoria viene de scry.cl, que indexa 30 tiendas. Las de abajo Muchi "
                "las consulta directo, porque scry no las cubre o para contrastar.")
 
-    for status in build_client().read_stores():
+    for status in store_index.read_stores_status(build_muchi().cx, build_muchi().stores):
         c1, c2 = st.columns([3, 1])
         c1.markdown(style.paint_store(status), unsafe_allow_html=True)
         if c2.button("Indexar", key=f"idx_{status.store}", use_container_width=True):
@@ -555,8 +556,8 @@ def show_stores() -> None:
     st.markdown("##### Tiendas chilenas que Muchi no puede consultar")
     st.caption("No estan en scry y no exponen sus precios de forma automatizable. "
                "Muchi te enlaza para que las mires a mano.")
-    for store, info in build_client().list_blocked_stores().items():
-        st.markdown(style.paint_blocked(store, info["url"], info["reason"]),
+    for store, (url, reason) in build_muchi().stores.list_blocked_stores().items():
+        st.markdown(style.paint_blocked(store, url, reason),
                     unsafe_allow_html=True)
 
 
