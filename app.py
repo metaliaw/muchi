@@ -248,9 +248,11 @@ def pick_card(query: str) -> str | None:
     return query
 
 
-def show_summary(visible: list) -> None:
+def show_summary(visible: list, cheapest_suspicious: bool = False) -> None:
     c1, c2, c3 = st.columns(3)
-    c1.markdown(style.paint_tile("Mas barato", clp(visible[0].price_clp), ok=True),
+    label = "Menor observado" if cheapest_suspicious else "Mas barato"
+    c1.markdown(style.paint_tile(label, clp(visible[0].price_clp),
+                                 ok=not cheapest_suspicious),
                 unsafe_allow_html=True)
     c2.markdown(style.paint_tile("Ofertas", str(len(visible))), unsafe_allow_html=True)
     c3.markdown(style.paint_tile("Tiendas", str(len({o.store for o in visible}))),
@@ -319,9 +321,15 @@ def show_search(finish: str, stores_only: bool) -> None:
         muchi_says("Sin stock con esos filtros. Prueba el refresco en vivo mas abajo.",
                    "alert")
     else:
-        show_summary(visible)
+        suspicious = offers.suspicious_prices(visible)
+        show_summary(visible, visible[0] in suspicious)
         for i, o in enumerate(visible):
-            st.markdown(style.paint_offer(o, best=(i == 0)), unsafe_allow_html=True)
+            unverified_stock = offers.stock_needs_verification(o)
+            rendered = (style.paint_suspicious_offer(o, unverified_stock)
+                        if o in suspicious else
+                        style.paint_offer(o, best=(i == 0),
+                                          unverified_stock=unverified_stock))
+            st.markdown(rendered, unsafe_allow_html=True)
 
     if card_id and st.button("Refrescar en vivo (consulta las 30 tiendas)", key="refresh"):
         refresh_live(card_id)
@@ -399,8 +407,14 @@ def show_quick_prices(card_name: str, finish: str, stores_only: bool) -> None:
         muchi_says("Sin stock con esos filtros. En la pestana <b>Buscar</b> ademas "
                    "tienes el refresco en vivo.", "alert")
     else:
+        suspicious = offers.suspicious_prices(visible)
         for i, o in enumerate(visible[:8]):
-            st.markdown(style.paint_offer(o, best=(i == 0)), unsafe_allow_html=True)
+            unverified_stock = offers.stock_needs_verification(o)
+            rendered = (style.paint_suspicious_offer(o, unverified_stock)
+                        if o in suspicious else
+                        style.paint_offer(o, best=(i == 0),
+                                          unverified_stock=unverified_stock))
+            st.markdown(rendered, unsafe_allow_html=True)
         if len(visible) > 8:
             st.caption(f"Hay {len(visible) - 8} ofertas mas en la pestana Buscar.")
 

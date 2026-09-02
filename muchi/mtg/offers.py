@@ -5,8 +5,41 @@ Cambiar de agregador no toca una linea de aqui.
 """
 from __future__ import annotations
 
+from . import constants
 from .models import Offer
 from .ports import OfferSource, PrimarySource
+
+
+def suspicious_prices(offers: list[Offer]) -> set[Offer]:
+    """Detecta precios bajos aislados sin inventar un precio corregido.
+
+    No usamos un piso fijo: una carta de $100 puede ser perfectamente real. En
+    cambio buscamos un salto de al menos 4x entre una cola inferior pequena y
+    el resto de una muestra con cinco o mas ofertas. La cola puede contener dos
+    copias del mismo precio malo, pero nunca mas del 20% de la muestra.
+
+    Es una advertencia, no un filtro. La persona todavia puede abrir la tienda
+    y comprobar la variante exacta.
+    """
+    if len(offers) < constants.SUSPICIOUS_PRICE_MIN_OFFERS:
+        return set()
+
+    ordered = sorted(offers, key=lambda o: o.price_clp)
+    max_low_count = min(
+        constants.SUSPICIOUS_PRICE_MAX_LOW_OFFERS,
+        int(len(ordered) * constants.SUSPICIOUS_PRICE_MAX_LOW_SHARE),
+    )
+    for low_count in range(1, max_low_count + 1):
+        low = ordered[low_count - 1].price_clp
+        high = ordered[low_count].price_clp
+        if low > 0 and high >= low * constants.SUSPICIOUS_PRICE_GAP_RATIO:
+            return set(ordered[:low_count])
+    return set()
+
+
+def stock_needs_verification(offer: Offer) -> bool:
+    """True cuando la disponibilidad viene de una fuente no contrastada."""
+    return offer.source in constants.UNVERIFIED_STOCK_SOURCES
 
 
 def find_offers(primary: PrimarySource, extras: list[OfferSource],
