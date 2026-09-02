@@ -38,12 +38,12 @@ PAGE_SIZE = 12
 TAGS = {
     "removal": "otag:removal",
     "board-wipe": "otag:board-wipe",
-    "card-draw": "otag:card-draw",
+    "card-draw": "otag:card-advantage",
     "ramp": "otag:ramp",
     "tutor": "otag:tutor",
     "counterspell": "otag:counterspell",
     "lifegain": "otag:lifegain",
-    "token-generation": "otag:token-generation",
+    "token-generation": "otag:repeatable-token-generator",
     "recursion": "otag:recursion",
 }
 
