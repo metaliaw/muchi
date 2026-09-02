@@ -7,6 +7,7 @@ muchi/mtg/cast.py, y detras de el, en muchi/mtg/sources/.
 from __future__ import annotations
 
 import html
+import logging
 import pandas as pd
 import streamlit as st
 
@@ -30,6 +31,7 @@ DEFAULT_SHIPPING = 4000
 DEFAULT_LANGUAGE = "es"
 
 MUCHI_MESSENGER = None
+LOGGER = logging.getLogger(__name__)
 
 st.set_page_config(page_title="Muchi", page_icon=CAT, layout="wide")
 st.markdown(style.CSS, unsafe_allow_html=True)
@@ -564,13 +566,23 @@ def quote_deck_list() -> None:
                 message, waiting.state, priority=messaging.Priority.PROGRESS,
                 source="deck_search",
             )
-        try:
-            _, its_offers = find_offers(p.name)
-            if its_offers:
-                history.save_prices(build_muchi().cx, p.name, its_offers)
-            job.record(its_offers)
-        except Exception:
-            job.record(failed=True)
+        outcome = deck_search.run_next(
+            job,
+            lambda name: find_offers(name)[1],
+            lambda name, found: history.save_prices(
+                build_muchi().cx, name, found,
+            ),
+        )
+        if outcome.query_error:
+            LOGGER.warning("Fallo consultando %s", p.name,
+                           exc_info=(type(outcome.query_error),
+                                     outcome.query_error,
+                                     outcome.query_error.__traceback__))
+        if outcome.archive_error:
+            LOGGER.warning("No se pudo guardar el historial de %s", p.name,
+                           exc_info=(type(outcome.archive_error),
+                                     outcome.archive_error,
+                                     outcome.archive_error.__traceback__))
 
         # Este es el checkpoint. Si una caricia provoca el rerun justo despues,
         # la siguiente pasada parte en la carta siguiente y conserva el carrito.
