@@ -152,9 +152,11 @@ pytest
 
 - **🐟 Buscar** — una carta, todas las ofertas ordenadas por precio, la más barata
   marcada con 🐾. Botón de refresco en vivo si quieres precios del minuto.
-  Los valores anormalmente bajos se marcan para revisión. Las ofertas de scry y
-  los catálogos locales cacheados avisan cuando su stock no pudo verificarse en
-  vivo contra la tienda. Los umbrales viven en `muchi/mtg/constants.py`.
+  Los valores anormalmente bajos se marcan para revisión. Muchi comprueba en
+  vivo las cinco ofertas más baratas: usa la variante exacta en Shopify y, para
+  las demás, inspecciona señales de disponibilidad en la página final. Oculta
+  las agotadas y marca el resto como comprobado o sin verificar.
+  Los umbrales viven en `muchi/mtg/constants.py`.
 - **No sé qué busco** — describes lo que quieres que la carta *haga* y Muchi te
   da opciones desde el catálogo de [Scryfall](https://scryfall.com), en español
   o en inglés. Un botón te la cotiza ahí mismo o la manda a *Mi lista*.
