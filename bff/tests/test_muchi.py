@@ -514,6 +514,33 @@ def test_filter_hides_sellers_and_foils():
         == ["PDA Chile"]
 
 
+def test_marks_an_isolated_low_price_as_suspicious():
+    found = [_offer("Bad scrape", "Sol Ring", 152)] + [
+        _offer(f"T{i}", "Sol Ring", price)
+        for i, price in enumerate((1462, 1791, 2000, 2500, 2800), start=1)
+    ]
+    suspicious = offers.suspicious_prices(found)
+    assert {(o.store, o.price_clp) for o in suspicious} == {("Bad scrape", 152)}
+
+
+def test_does_not_guess_from_a_small_sample_or_normal_price_spread():
+    small = [_offer("T1", "A", 100), _offer("T2", "A", 1000)]
+    normal = [_offer(f"T{i}", "A", p)
+              for i, p in enumerate((500, 900, 1200, 1600, 1900), start=1)]
+    assert offers.suspicious_prices(small) == set()
+    assert offers.suspicious_prices(normal) == set()
+
+
+def test_scry_stock_is_marked_as_unverified():
+    scry_offer = _offer("T1", "Sol Ring", 2000)
+    cached_offer = Offer("T2", "Sol Ring", "Sol Ring", 2100, "u",
+                         source="directo")
+    live_offer = Offer("T3", "Sol Ring", "Sol Ring", 2200, "u", source="api")
+    assert offers.stock_needs_verification(scry_offer) is True
+    assert offers.stock_needs_verification(cached_offer) is True
+    assert offers.stock_needs_verification(live_offer) is False
+
+
 # -------------------------------------------------------------------- the deck
 def test_deck_subtracts_and_lists_categories():
     from muchi.mtg.ports import Recommendation
@@ -884,4 +911,3 @@ if __name__ == "__main__":
             print(f"  FAIL {name}: {e}")
     print("\nAll green" if not failures else f"\n{failures} tests failed")
     sys.exit(1 if failures else 0)
-

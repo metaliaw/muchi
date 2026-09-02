@@ -223,7 +223,7 @@ def format_thousands(n) -> str:
     return f"{int(n):,}".replace(",", ".")
 
 
-def paint_offer(o, best: bool = False) -> str:
+def paint_offer(o, best: bool = False, unverified_stock: bool = False) -> str:
     """Una oferta: quien la vende, en que estado y a cuanto."""
     seller = "particular" if o.marketplace else "tienda"
     card_class = "mu-card mejor" if best else "mu-card"
@@ -236,6 +236,8 @@ def paint_offer(o, best: bool = False) -> str:
         pills += '<span class="mu-pill foil">Foil</span>'
     if o.condition:
         pills += f'<span class="mu-pill cond">{o.condition}</span>'
+    if unverified_stock:
+        pills += '<span class="mu-pill cond">stock sin verificar</span>'
     if best:
         pills += '<span class="mu-pill mejor">\U0001F43E el mas barato</span>'
 
@@ -247,6 +249,33 @@ def paint_offer(o, best: bool = False) -> str:
         f'<div class="{price}">{format_clp(o.price_clp)}</div>'
         f'</div>'
         f'<a class="mu-btn" href="{o.url}" target="_blank" rel="noopener">Ver</a>'
+        f"</div></div>"
+    )
+
+
+def paint_suspicious_offer(o, unverified_stock: bool = False) -> str:
+    """Una oferta anormalmente barata que conviene comprobar en la tienda."""
+    seller = "particular" if o.marketplace else "tienda"
+    pills = f'<span class="mu-pill {seller}">{o.store}</span>'
+    if o.marketplace:
+        pills += '<span class="mu-pill particular">particular</span>'
+    if o.is_foil:
+        pills += '<span class="mu-pill foil">Foil</span>'
+    if o.condition:
+        pills += f'<span class="mu-pill cond">{o.condition}</span>'
+    if unverified_stock:
+        pills += '<span class="mu-pill cond">stock sin verificar</span>'
+    pills += '<span class="mu-pill cond">\u26a0 precio sospechoso</span>'
+
+    return (
+        f'<div class="mu-card"><div class="mu-fila">'
+        f'<div class="mu-izq"><div class="mu-nombre">{o.title}</div>'
+        f'<div style="margin-top:6px">{pills}</div>'
+        f'<div class="mu-sub">Muy por debajo de las otras ofertas; verifica la variante y el precio final.</div></div>'
+        f'<div style="text-align:right">'
+        f'<div class="mu-precio">{format_clp(o.price_clp)}</div>'
+        f'</div>'
+        f'<a class="mu-btn" href="{o.url}" target="_blank" rel="noopener">Verificar</a>'
         f"</div></div>"
     )
 
