@@ -13,6 +13,17 @@ from ..models import Offer
 from .shopify import product_json_url, read_variant_availability
 
 
+# Registro declarativo para excepciones por tienda. La lógica común vive en
+# lectores de plataforma; aquí sólo se declara qué usa cada dominio y las
+# frases adicionales que esa tienda muestra dentro del producto principal.
+STORE_INSTRUCTIONS = {
+    "lacripta.cl": {
+        "platform": "woocommerce",
+        "out_of_stock_markers": ("sold out",),
+    },
+}
+
+
 def _schema_availability(value) -> bool | None:
     """Busca availability dentro de JSON-LD, incluso si viene anidado."""
     if isinstance(value, dict):
@@ -49,15 +60,19 @@ def _woo_variation_availability(form, selected: dict[str, str]) -> bool | None:
 
     for variation in variations:
         attributes = variation.get("attributes") or {}
-        if selected and all(str(attributes.get(key, "")) == value
+        if selected and all(str(attributes.get(key, "")) in ("", value)
                             for key, value in selected.items()):
             value = variation.get("is_in_stock")
             return value if isinstance(value, bool) else None
-    return None
+    # WooCommerce sólo embebe variantes comprables. Si la URL pide una
+    # combinación concreta y ninguna coincide, esa combinación está agotada o
+    # no disponible aunque otras variantes del producto sí tengan stock.
+    return False if selected else None
 
 
 def read_page_availability(html: str,
-                           selected: dict[str, str] | None = None) -> bool | None:
+                           selected: dict[str, str] | None = None,
+                           host: str = "") -> bool | None:
     """Interpreta señales acotadas; una frase suelta global no es evidencia."""
     soup = BeautifulSoup(html, "lxml")
     selected = selected or {}
@@ -78,6 +93,11 @@ def read_page_availability(html: str,
             return False
         if product.select_one("p.stock.in-stock") is not None:
             return True
+        instructions = STORE_INSTRUCTIONS.get(host, {})
+        markers = instructions.get("out_of_stock_markers", ())
+        product_text = " ".join(product.get_text(" ", strip=True).lower().split())
+        if any(marker in product_text for marker in markers):
+            return False
 
     for tag in soup.select('script[type="application/ld+json"]'):
         try:
@@ -129,6 +149,9 @@ class StorePageStockVerifier:
                 for key, values in parse_qs(urlparse(offer.url).query).items()
                 if key.startswith("attribute_") and values
             }
-            return read_page_availability(self.sess.get(offer.url).text, selected)
+            host = urlparse(offer.url).netloc.lower().removeprefix("www.")
+            return read_page_availability(
+                self.sess.get(offer.url).text, selected, host
+            )
         except Exception:
             return None
