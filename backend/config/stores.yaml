@@ -1,0 +1,13 @@
+stores:
+  lacripta.cl:
+    platform: woocommerce
+    unavailable_selectors:
+      - "div.product.outofstock"
+      - "p.stock.out-of-stock"
+    unavailable_text:
+      - "Sold out"
+      - "Agotado"
+    scope_selector: "div.product"
+    timeout_seconds: 10
+    allow_redirects: true
+    enabled: true

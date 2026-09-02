@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: docker.io/library/postgres:18-alpine
+    environment:
+      POSTGRES_DB: muchi
+      POSTGRES_USER: muchi
+      POSTGRES_PASSWORD: muchi
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U muchi"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+    ports:
+      - "5432:5432"
+    volumes:
+      - muchi-data:/var/lib/postgresql
+
+  migrate:
+    image: docker.io/migrate/migrate:v4.19.0
+    command: ["-path", "/migrations", "-database", "postgres://muchi:muchi@postgres:5432/muchi?sslmode=disable", "up"]
+    volumes:
+      - ./migrations:/migrations:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build: .
+    command: ["serve"]
+    environment: &muchi-environment
+      DATABASE_URL: postgres://muchi:muchi@postgres:5432/muchi?sslmode=disable
+      MUCHI_API_TOKEN: local-development-token
+      MUCHI_STORES_CONFIG: /app/config/stores.yaml
+    ports:
+      - "8080:8080"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    build: .
+    command: ["work"]
+    environment:
+      <<: *muchi-environment
+      MUCHI_WORKER_ID: worker-compose-1
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  muchi-data:

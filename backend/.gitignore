@@ -1,0 +1,5 @@
+/muchi-api
+/coverage.out
+.env
+__pycache__/
+*.pyc
