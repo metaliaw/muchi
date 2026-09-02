@@ -219,6 +219,7 @@ def build_sprite_css(style: str = DEFAULT_STYLE, scale: int = DEFAULT_SCALE) -> 
   background:transparent !important; box-shadow:none !important; opacity:0; cursor:pointer;
   overflow:hidden;
 }}
+.st-key-muchi_mascot {{ margin-top:2.5rem; margin-bottom:1.25rem; }}
 .mu-clicker-sprite {{ margin-top:calc({fh}px * {CLICKER_SCALE} * -1); pointer-events:none; }}
 .mu-clicker-sprite .mu-gato {{ padding:0; }}
 .st-key-muchi_mascot:hover .mu-clicker-sprite .mu-sprite {{ transform:scale(1.05); }}

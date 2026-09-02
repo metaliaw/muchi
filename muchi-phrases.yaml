@@ -6,6 +6,23 @@
 # and the list of phrases for that mood.
 every: 10
 
+# Messages shown in order while a long decklist search is still running.
+waiting:
+  every_seconds: 30
+  phrases:
+    - state: alert
+      text: "Perdon por la espera, algunas tiendas son mas lentas que un turno de control."
+    - state: talk
+      text: "Sigo olfateando precios. Hay gatos que encuentran cajas; yo encuentro cartones."
+    - state: alert
+      text: "Gracias por esperar. Estoy preguntando con cuidado para no despertar el 429."
+    - state: talk
+      text: "Esto toma un poquito: ordenar cien cartas es casi un mazo de Commander."
+    - state: alert
+      text: "Todavia estoy aqui. Las tiendas no siempre responden a la velocidad de un instantaneo."
+    - state: talk
+      text: "Miau, sigo buscando. Prometo que no me fui a perseguir un token de Rata."
+
 phrases:
   - mood: anxiety
     state: alert

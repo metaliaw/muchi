@@ -7,12 +7,12 @@ muchi/mtg/cast.py, y detras de el, en muchi/mtg/sources/.
 from __future__ import annotations
 
 import html
-
 import pandas as pd
 import streamlit as st
 
 from muchi.mtg import (decklist, style, mascot, sprites, phrases, history, deck,
-                       offers, optimizer, oracle, constants)
+                       offers, optimizer, oracle, constants, messaging,
+                       deck_search)
 from muchi.mtg import cast as muchi_cast
 from muchi.mtg import stores as store_index
 from muchi.mtg.style import format_clp as clp
@@ -25,6 +25,11 @@ FISH = "\U0001F41F"
 # Desde cuantos clics aparece el contador de caricias. Antes no molesta: es un
 # detalle que se gana acariciando, no una pantalla de estadisticas.
 CLICKS_BEFORE_COUNTER = 3
+DEFAULT_FINISH = "Todos"
+DEFAULT_SHIPPING = 4000
+DEFAULT_LANGUAGE = "es"
+
+MUCHI_MESSENGER = None
 
 st.set_page_config(page_title="Muchi", page_icon=CAT, layout="wide")
 st.markdown(style.CSS, unsafe_allow_html=True)
@@ -33,15 +38,24 @@ st.markdown(sprites.build_sprite_css(), unsafe_allow_html=True)
 
 
 # ------------------------------------------------------- los avisos de Muchi
-def muchi_says(text: str, state: str = "alert") -> None:
-    """Un aviso, pensado por Muchi en su globo.
+def muchi_says(text: str, state: str = "alert",
+               priority: messaging.Priority | None = None,
+               source: str = "app") -> None:
+    """Reemplaza el contenido de la unica burbuja del Muchi lateral.
 
-    Reemplaza a st.info/warning/error/success. Las cajas de Streamlit no son de
-    Muchi y traian cuatro colores que peleaban con la paleta; aca el estado del
-    sprite y el color del borde dicen lo mismo, asi que el aviso se entiende
-    antes de leerlo.
+    Las cajas de Streamlit no son de Muchi y un segundo gato hacia que los
+    errores parecieran venir de otro personaje.
     """
-    st.markdown(sprites.build_notice_html(text, state), unsafe_allow_html=True)
+    if priority is None:
+        priority = {
+            "angry": messaging.Priority.ERROR,
+            "happy": messaging.Priority.RESULT,
+            "idle": messaging.Priority.PASSIVE,
+        }.get(state, messaging.Priority.RESULT)
+    if MUCHI_MESSENGER is not None:
+        MUCHI_MESSENGER.publish(text, state, priority, source)
+        return
+    st.markdown(mascot.build_bubble_html(text, state), unsafe_allow_html=True)
 
 
 def remember_muchi(text: str, state: str = "happy") -> None:
@@ -57,7 +71,8 @@ def remember_muchi(text: str, state: str = "happy") -> None:
 def show_pending_muchi() -> None:
     pending = st.session_state.pop("muchi_aviso", None)
     if pending:
-        muchi_says(*pending)
+        muchi_says(*pending, priority=messaging.Priority.RESULT,
+                   source="pending")
 
 
 def click_muchi() -> None:
@@ -137,9 +152,9 @@ def show_muchi_help() -> None:
     # La semilla cambia con cada clic: si no, los corazones caerian siempre
     # en el mismo lugar y se notaria que es la misma animacion.
     st.markdown(mascot.build_hearts_html(seed=times), unsafe_allow_html=True)
-    st.markdown(
-        mascot.build_bubble_html(mascot.GREETINGS[times % len(mascot.GREETINGS)]),
-        unsafe_allow_html=True,
+    muchi_says(
+        mascot.GREETINGS[times % len(mascot.GREETINGS)], "talk",
+        priority=messaging.Priority.HELP, source="help",
     )
 
     for title, detail in mascot.HELP_TOPICS:
@@ -151,8 +166,9 @@ def show_muchi_help() -> None:
         st.rerun()
 
 
-def show_preferences() -> tuple[str, int, str]:
-    """Devuelve (acabado, envio, idioma): las decisiones que afectan a todo."""
+def show_sidebar_muchi():
+    """Dibuja al Muchi original y devuelve el slot de su unica burbuja."""
+    global MUCHI_MESSENGER
     # El clicker va primero: el on_click deja el estado listo y asi el sprite
     # y el globo de abajo ya lo ven en esta misma pasada. El boton y el sprite
     # comparten contenedor para que el hover del contenedor agrande al sprite.
@@ -162,7 +178,7 @@ def show_preferences() -> tuple[str, int, str]:
 
         # Muchi mueve la boca mientras esta explicando, y respira el resto del rato.
         talking = bool(st.session_state.get("muchi_habla"))
-        phrase = st.session_state.get("muchi_click_phrase")
+        phrase = st.session_state.pop("muchi_click_phrase", None)
         state = "talk" if talking else (phrase.state if phrase else "idle")
         # El salto se gasta en la corrida que lo provoco: la siguiente pasada ya
         # no salta, asi solo rebota con el clic y no con cualquier rerun.
@@ -174,9 +190,20 @@ def show_preferences() -> tuple[str, int, str]:
             unsafe_allow_html=True,
         )
 
+    message_slot = st.empty()
+    MUCHI_MESSENGER = messaging.MuchiMessenger(
+        lambda message: message_slot.markdown(
+            mascot.build_bubble_html(message.text, message.state),
+            unsafe_allow_html=True,
+        ),
+        message_slot.empty,
+    )
+    MUCHI_MESSENGER.render_default()
     if phrase:
-        st.markdown(mascot.build_bubble_html(html.escape(phrase.text)),
-                    unsafe_allow_html=True)
+        MUCHI_MESSENGER.publish(
+            html.escape(phrase.text), phrase.state,
+            messaging.Priority.CLICK, "clicker",
+        )
 
     clicks = st.session_state.get("muchi_clicks", 0)
     if clicks >= CLICKS_BEFORE_COUNTER:
@@ -187,26 +214,7 @@ def show_preferences() -> tuple[str, int, str]:
         st.session_state["muchi_veces"] = st.session_state.get("muchi_veces", 0) + 1
     if st.session_state.get("muchi_habla"):
         show_muchi_help()
-
-    st.divider()
-    st.markdown(f"### {PAW} Preferencias")
-    finish = st.radio("Acabado", ["Todos", "Solo normal", "Solo foil"], index=0)
-    language = "es" if st.radio(
-        "Idioma de las cartas", ["Espanol", "English"], index=0, horizontal=True,
-        help="Solo cambia como te las muestro. Los precios y el carrito siempre "
-             "usan el nombre en ingles, que es el que indexan las tiendas.",
-    ) == "Espanol" else "en"
-    shipping = st.number_input(
-        "Costo de envio por tienda (CLP)", 0, 20000, 4000, step=500,
-        help="Muchi lo usa para decidir si conviene concentrar la compra en menos tiendas.",
-    )
-
-    st.divider()
-    st.caption(
-        "Precios via **scry.cl**, que indexa ~30 tiendas chilenas. "
-        "Verifica edicion, estado y stock en la tienda antes de pagar."
-    )
-    return finish, int(shipping), language
+    return MUCHI_MESSENGER
 
 
 def ask_seller_filter() -> bool:
@@ -510,38 +518,97 @@ def show_card_finder(finish: str, stores_only: bool, language: str) -> None:
         offer_card_actions(card)
 
 
-def quote_deck_list(orders: list) -> None:
-    """Busca cada carta de la lista y guarda lo que encontro para el carrito."""
-    bar = st.progress(0.0, text="Empezando...")
-    found_by_card: dict[str, list] = {}
-    failed: list[str] = []
+def start_deck_search(orders: list) -> None:
+    """Crea una cotizacion que sobrevivira cualquier rerun de Streamlit."""
+    job = deck_search.DeckSearchJob.start(orders)
+    st.session_state["deck_search_job"] = job
+    # El carrito conoce la lista desde el principio y recibe ofertas parciales
+    # despues de cada carta. Asi una interaccion no lo hace volver a "sin lista".
+    st.session_state["pedidos"] = list(job.orders)
+    st.session_state["ofertas_lista"] = {}
 
-    for i, p in enumerate(orders):
-        bar.progress(i / len(orders), text=f"Buscando {p.name}...")
+
+def quote_deck_list() -> None:
+    """Continua la cotizacion pendiente desde la ultima carta confirmada."""
+    job = st.session_state.get("deck_search_job")
+    if not isinstance(job, deck_search.DeckSearchJob):
+        return
+
+    total = job.total
+    current_name = job.current.name if job.current else ""
+    bar = st.progress(
+        job.next_index / total,
+        text=phrases.format_search_progress(
+            job.next_index, total, current_name, len(job.found_by_card),
+            len(job.failed), job.elapsed, done=job.done,
+        ),
+    )
+    waiting_book = phrases.read_waiting_phrases()
+
+    while not job.done:
+        p = job.current
+        assert p is not None
+        elapsed = job.elapsed
+        bar.progress(
+            job.next_index / total,
+            text=phrases.format_search_progress(
+                job.next_index, total, p.name, len(job.found_by_card),
+                len(job.failed), elapsed,
+            ),
+        )
+        waiting = phrases.waiting_phrase(waiting_book, elapsed)
+        if waiting:
+            message = (f"{waiting.text}<br><small>Sigo buscando: "
+                       f"{job.next_index} de {total} procesadas.</small>")
+            muchi_says(
+                message, waiting.state, priority=messaging.Priority.PROGRESS,
+                source="deck_search",
+            )
         try:
             _, its_offers = find_offers(p.name)
             if its_offers:
-                found_by_card[p.name.lower()] = its_offers
                 history.save_prices(build_muchi().cx, p.name, its_offers)
+            job.record(its_offers)
         except Exception:
-            failed.append(p.name)
+            job.record(failed=True)
 
-    bar.progress(1.0, text="Listo")
-    st.session_state["ofertas_lista"] = found_by_card
-    st.session_state["pedidos"] = orders
-    if failed:
-        muchi_says("No pude consultar: " + ", ".join(failed), "angry")
+        # Este es el checkpoint. Si una caricia provoca el rerun justo despues,
+        # la siguiente pasada parte en la carta siguiente y conserva el carrito.
+        st.session_state["deck_search_job"] = job
+        st.session_state["ofertas_lista"] = dict(job.found_by_card)
+        st.session_state["pedidos"] = list(job.orders)
 
-    # El caso feliz es que esten todas: ahi Muchi celebra en vez de informar.
-    total, got = len(orders), len(found_by_card)
-    if got == total:
+    bar.progress(
+        1.0,
+        text=phrases.format_search_progress(
+            total, total, "", len(job.found_by_card), len(job.failed),
+            job.elapsed, done=True,
+        ),
+    )
+    if MUCHI_MESSENGER is not None:
+        MUCHI_MESSENGER.clear("deck_search")
+    st.session_state.pop("deck_search_job", None)
+
+    # Un solo cierre evita que el resumen tape inmediatamente a un error.
+    got = len(job.found_by_card)
+    if job.failed:
+        muchi_says(
+            f"Encontre precios para <b>{got}</b> de {total} cartas. "
+            f"No pude consultar: {', '.join(job.failed)}. "
+            "El resto ya esta disponible en <b>Carrito</b>.",
+            "angry", priority=messaging.Priority.ERROR,
+            source="deck_result",
+        )
+    elif got == total:
         muchi_says(f"Las encontre <b>todas</b>! {total} de {total} con precio. "
                    "Anda a la pestana <b>Carrito</b> y te las reparto entre tiendas.",
-                   "happy")
+                   "happy", priority=messaging.Priority.RESULT,
+                   source="deck_result")
     else:
         muchi_says(f"Encontre precios para <b>{got}</b> de {total} cartas. "
                    f"Las {total - got} que faltan no aparecieron en ninguna tienda; "
-                   "igual puedes ir al <b>Carrito</b> con el resto.", "alert")
+                   "igual puedes ir al <b>Carrito</b> con el resto.", "alert",
+                   priority=messaging.Priority.RESULT, source="deck_result")
 
 
 def show_my_list() -> None:
@@ -574,7 +641,12 @@ def show_my_list() -> None:
                    "Revisalas: no quedaron en el pedido.", "alert")
 
     if orders and st.button("Buscar precios de la lista", type="primary"):
-        quote_deck_list(orders)
+        start_deck_search(orders)
+
+    # No depende del boton: un clic en Muchi genera otro rerun y llega aqui con
+    # el trabajo pendiente para continuarlo automaticamente.
+    if st.session_state.get("deck_search_job"):
+        quote_deck_list()
 
 
 def show_commander() -> None:
@@ -678,7 +750,10 @@ def show_cart(finish: str, shipping: int, stores_only: bool) -> None:
     orders = st.session_state.get("pedidos")
     raw = st.session_state.get("ofertas_lista")
     if not orders or not raw:
-        muchi_says("Primero carga una lista en la pestana <b>Mi lista</b>.", "idle")
+        muchi_says(
+            "Primero carga una lista en la pestana <b>Mi lista</b>.", "idle",
+            priority=messaging.Priority.PASSIVE, source="cart_empty",
+        )
         return
 
     by_card = {k: offers.filter_offers(v, finish, None, stores_only)
@@ -696,7 +771,10 @@ def show_cart(finish: str, shipping: int, stores_only: bool) -> None:
 
     show_totals(plan, naive, shipping)
     if plan.missing:
-        muchi_says("Sin stock en ninguna tienda: " + ", ".join(plan.missing), "alert")
+        muchi_says(
+            "Sin stock en ninguna tienda: " + ", ".join(plan.missing), "alert",
+            priority=messaging.Priority.PASSIVE, source="cart_missing",
+        )
 
     show_plan_by_store(plan, shipping)
     offer_csv(plan)
@@ -788,10 +866,15 @@ st.markdown(
     unsafe_allow_html=True,
 )
 st.write("")
-show_pending_muchi()
 
 with st.sidebar:
-    finish, shipping, language = show_preferences()
+    MUCHI_MESSENGER = show_sidebar_muchi()
+
+show_pending_muchi()
+
+finish = DEFAULT_FINISH
+shipping = DEFAULT_SHIPPING
+language = DEFAULT_LANGUAGE
 
 stores_only = ask_seller_filter()
 
