@@ -9,17 +9,18 @@ from __future__ import annotations
 import sqlite3
 from dataclasses import dataclass
 
-from . import catalog, db
+from . import catalog, constants, db
 from .http import PoliteSession
 from .ports import (
     CardCatalog,
     StoreCatalog,
     OfferSource,
+    StockVerifier,
     PrimarySource,
     PublishedInventory,
     DeckAdvisor,
 )
-from .sources import store_api, edhrec, moxfield, scry, scryfall, shopify
+from .sources import store_api, edhrec, moxfield, scry, scryfall, shopify, stock
 
 
 @dataclass(frozen=True)
@@ -32,6 +33,7 @@ class Cast:
     stores: StoreCatalog
     cards: CardCatalog
     inventory: PublishedInventory | None
+    stock_verifier: StockVerifier
 
 
 def build_cast() -> Cast:
@@ -48,6 +50,11 @@ def build_cast() -> Cast:
     """
     sess = PoliteSession(min_interval=1.5)
     catalog_sess = PoliteSession(min_interval=0.12, timeout=10.0, max_retries=1)
+    verify_sess = PoliteSession(
+        min_interval=0.12,
+        timeout=constants.STOCK_VERIFY_TIMEOUT_SECONDS,
+        max_retries=0,
+    )
     cx = db.connect_database()
 
     extras: list[OfferSource] = [catalog.IndexedOffers(cx)]
@@ -61,4 +68,5 @@ def build_cast() -> Cast:
         stores=shopify.ShopifyCatalog(sess),
         cards=scryfall.ScryfallCatalog(catalog_sess),
         inventory=moxfield.load_inventory(sess),
+        stock_verifier=stock.StorePageStockVerifier(verify_sess),
     )
