@@ -14,6 +14,7 @@ from __future__ import annotations
 import re
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
+from urllib.parse import parse_qs, urlparse
 
 from ..http import PoliteSession
 from ..models import Offer
@@ -134,6 +135,26 @@ def download_offers(sess: PoliteSession, store: str, base: str,
             progress(products, len(offers))
 
     return offers, products
+
+
+def product_json_url(url: str) -> tuple[str, str] | None:
+    """Extrae endpoint Shopify y variante desde una URL de producto."""
+    parsed = urlparse(url)
+    match = re.match(r"^(/products/[^/?]+)", parsed.path)
+    variants = parse_qs(parsed.query).get("variant")
+    if not parsed.scheme.startswith("http") or not parsed.netloc or not match or not variants:
+        return None
+    endpoint = f"{parsed.scheme}://{parsed.netloc}{match.group(1)}.js"
+    return endpoint, variants[0]
+
+
+def read_variant_availability(product: dict, variant_id: str) -> bool | None:
+    """Lee disponibilidad sólo si la respuesta identifica la variante exacta."""
+    for variant in product.get("variants") or []:
+        if str(variant.get("id")) == str(variant_id):
+            available = variant.get("available")
+            return available if isinstance(available, bool) else None
+    return None
 
 
 @dataclass

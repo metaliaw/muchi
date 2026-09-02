@@ -5,9 +5,11 @@ Cambiar de agregador no toca una linea de aqui.
 """
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
+
 from . import constants
 from .models import Offer
-from .ports import OfferSource, PrimarySource
+from .ports import OfferSource, PrimarySource, StockVerifier
 
 
 def suspicious_prices(offers: list[Offer]) -> set[Offer]:
@@ -40,6 +42,17 @@ def suspicious_prices(offers: list[Offer]) -> set[Offer]:
 def stock_needs_verification(offer: Offer) -> bool:
     """True cuando la disponibilidad viene de una fuente no contrastada."""
     return offer.source in constants.UNVERIFIED_STOCK_SOURCES
+
+
+def verify_cheapest_stock(verifier: StockVerifier,
+                          found: list[Offer]) -> dict[Offer, bool | None]:
+    """Comprueba sólo las primeras ofertas que probablemente recibiran clic."""
+    candidates = found[:constants.STOCK_VERIFY_CHEAPEST_OFFERS]
+    if not candidates:
+        return {}
+    with ThreadPoolExecutor(max_workers=len(candidates)) as pool:
+        states = pool.map(verifier.verify_stock, candidates)
+    return dict(zip(candidates, states))
 
 
 def find_offers(primary: PrimarySource, extras: list[OfferSource],

@@ -143,6 +143,14 @@ class OfferSource(Protocol):
 
 
 @runtime_checkable
+class StockVerifier(Protocol):
+    """Comprueba una variante en la tienda: True, False o desconocido."""
+
+    def verify_stock(self, offer: Offer) -> bool | None:
+        ...
+
+
+@runtime_checkable
 class PrimarySource(OfferSource, Protocol):
     """La fuente que ademas corrige nombres y refresca en vivo."""
 

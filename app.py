@@ -12,7 +12,7 @@ import pandas as pd
 import streamlit as st
 
 from muchi.mtg import (decklist, style, mascot, sprites, phrases, history, deck,
-                       offers, optimizer, oracle)
+                       offers, optimizer, oracle, constants)
 from muchi.mtg import cast as muchi_cast
 from muchi.mtg import stores as store_index
 from muchi.mtg.style import format_clp as clp
@@ -81,6 +81,11 @@ def build_muchi():
 def find_offers(card_name: str):
     m = build_muchi()
     return offers.find_offers(m.primary, m.extras, card_name)
+
+
+@st.cache_data(ttl=constants.STOCK_VERIFY_CACHE_SECONDS, show_spinner=False)
+def verify_cheapest_stock(found: tuple):
+    return offers.verify_cheapest_stock(build_muchi().stock_verifier, list(found))
 
 
 @st.cache_data(ttl=600, show_spinner=False)
@@ -260,6 +265,14 @@ def show_summary(visible: list, cheapest_suspicious: bool = False) -> None:
     st.write("")
 
 
+def remove_confirmed_out_of_stock(visible: list) -> tuple[list, dict, int]:
+    """Verifica las cinco primeras y quita sólo agotados confirmados."""
+    checks = verify_cheapest_stock(tuple(visible))
+    available = [offer for offer in visible if checks.get(offer) is not False]
+    removed = len(visible) - len(available)
+    return available, checks, removed
+
+
 def refresh_live(card_id: str) -> None:
     """Vuelve a preguntarle a las ~30 tiendas, con barra de avance."""
     bar = st.progress(0.0, text="Conectando...")
@@ -312,10 +325,15 @@ def show_search(finish: str, stores_only: bool) -> None:
                          default=[], key="f_tiendas")
     visible = offers.filter_offers(found, finish, sel, stores_only)
 
+    with st.spinner("Comprobando stock de las ofertas mas baratas..."):
+        visible, stock_checks, unavailable = remove_confirmed_out_of_stock(visible)
+
     hidden = len(found) - len(eligible)
     if hidden:
         st.caption(f"Hay {hidden} ofertas de particulares ocultas. "
                    "Marca la casilla de arriba para verlas.")
+    if unavailable:
+        st.caption(f"Se ocultaron {unavailable} ofertas que la tienda confirmo agotadas.")
 
     if not visible:
         muchi_says("Sin stock con esos filtros. Prueba el refresco en vivo mas abajo.",
@@ -324,11 +342,15 @@ def show_search(finish: str, stores_only: bool) -> None:
         suspicious = offers.suspicious_prices(visible)
         show_summary(visible, visible[0] in suspicious)
         for i, o in enumerate(visible):
-            unverified_stock = offers.stock_needs_verification(o)
-            rendered = (style.paint_suspicious_offer(o, unverified_stock)
+            verified_stock = stock_checks.get(o) is True
+            unverified_stock = (not verified_stock
+                                and offers.stock_needs_verification(o))
+            rendered = (style.paint_suspicious_offer(
+                            o, unverified_stock, verified_stock)
                         if o in suspicious else
                         style.paint_offer(o, best=(i == 0),
-                                          unverified_stock=unverified_stock))
+                                          unverified_stock=unverified_stock,
+                                          verified_stock=verified_stock))
             st.markdown(rendered, unsafe_allow_html=True)
 
     if card_id and st.button("Refrescar en vivo (consulta las 30 tiendas)", key="refresh"):
@@ -403,17 +425,25 @@ def show_quick_prices(card_name: str, finish: str, stores_only: bool) -> None:
         history.save_prices(build_muchi().cx, card_name, found)
 
     visible = offers.filter_offers(found, finish, None, stores_only)
+    with st.spinner("Comprobando stock de las ofertas mas baratas..."):
+        visible, stock_checks, unavailable = remove_confirmed_out_of_stock(visible)
+    if unavailable:
+        st.caption(f"Se ocultaron {unavailable} ofertas que la tienda confirmo agotadas.")
     if not visible:
         muchi_says("Sin stock con esos filtros. En la pestana <b>Buscar</b> ademas "
                    "tienes el refresco en vivo.", "alert")
     else:
         suspicious = offers.suspicious_prices(visible)
         for i, o in enumerate(visible[:8]):
-            unverified_stock = offers.stock_needs_verification(o)
-            rendered = (style.paint_suspicious_offer(o, unverified_stock)
+            verified_stock = stock_checks.get(o) is True
+            unverified_stock = (not verified_stock
+                                and offers.stock_needs_verification(o))
+            rendered = (style.paint_suspicious_offer(
+                            o, unverified_stock, verified_stock)
                         if o in suspicious else
                         style.paint_offer(o, best=(i == 0),
-                                          unverified_stock=unverified_stock))
+                                          unverified_stock=unverified_stock,
+                                          verified_stock=verified_stock))
             st.markdown(rendered, unsafe_allow_html=True)
         if len(visible) > 8:
             st.caption(f"Hay {len(visible) - 8} ofertas mas en la pestana Buscar.")

@@ -15,7 +15,7 @@ from muchi.mtg import catalog, decklist, mascot, deck, offers, optimizer, oracle
 from muchi.mtg.models import Offer, Order  # noqa: E402
 from muchi.mtg.ports import CardRequest  # noqa: E402
 from muchi.mtg.sources import (  # noqa: E402
-    store_api, edhrec, moxfield, scry, scryfall, shopify,
+    store_api, edhrec, moxfield, scry, scryfall, shopify, stock,
 )
 
 
@@ -413,6 +413,83 @@ def test_shopify_product_offers():
     assert "variant=1" in offers[0].url
 
 
+def test_shopify_reads_exact_variant_stock():
+    target = shopify.product_json_url(
+        "https://shop.cl/products/sol-ring?utm_source=scry&variant=22"
+    )
+    assert target == ("https://shop.cl/products/sol-ring.js", "22")
+    product = {"variants": [
+        {"id": 11, "available": True},
+        {"id": 22, "available": False},
+    ]}
+    assert shopify.read_variant_availability(product, "22") is False
+    assert shopify.read_variant_availability(product, "99") is None
+    assert shopify.product_json_url("https://shop.cl/pages/sol-ring") is None
+
+
+def test_reads_stock_from_structured_page_html():
+    sold_out = (
+        '<script type="application/ld+json">'
+        '{"@type":"Product","offers":{"availability":"https://schema.org/OutOfStock"}}'
+        '</script>'
+    )
+    assert stock.read_page_availability(sold_out) is False
+    assert stock.read_page_availability(
+        '<meta itemprop="availability" content="https://schema.org/InStock">'
+    ) is True
+
+
+def test_only_reads_out_of_stock_near_purchase_signals():
+    assert stock.read_page_availability(
+        '<main><div class="product-stock">Fuera de stock</div></main>'
+    ) is False
+    assert stock.read_page_availability(
+        '<footer>Revisa nuestra política para productos fuera de stock</footer>'
+    ) is None
+
+
+def test_reads_lacripta_main_product_without_being_fooled_by_recommendations():
+    html = """
+    <main>
+      <div id="product-14840" class="product outofstock product-type-variable">
+        <form class="variations_form" data-product_variations="[]">
+          <p class="stock out-of-stock">
+            En este momento no hay existencias de este producto ni está disponible.
+          </p>
+        </form>
+      </div>
+      <li class="product instock purchasable">Otra carta disponible</li>
+    </main>
+    """
+    assert stock.read_page_availability(html) is False
+
+
+def test_reads_available_woocommerce_product():
+    html = """
+    <main><div id="product-1" class="product instock product-type-simple">
+      <p class="stock in-stock">Hay existencias</p>
+    </div></main>
+    """
+    assert stock.read_page_availability(html) is True
+
+
+def test_reads_exact_woocommerce_variation():
+    variations = json.dumps([{
+        "attributes": {
+            "attribute_pa_idioma": "espanol",
+            "attribute_pa_estado": "nm",
+        },
+        "is_in_stock": False,
+    }]).replace('"', "&quot;")
+    html = (
+        '<main><div id="product-1" class="product instock product-type-variable">'
+        f'<form class="variations_form" data-product_variations="{variations}"></form>'
+        '</div></main>'
+    )
+    selected = {"attribute_pa_idioma": "espanol", "attribute_pa_estado": "nm"}
+    assert stock.read_page_availability(html, selected) is False
+
+
 # ----------------------------------------------------------------- the ports
 def test_every_source_meets_its_port():
     """An adapter that stops fulfilling its port breaks here, not in production."""
@@ -422,6 +499,7 @@ def test_every_source_meets_its_port():
     from muchi.mtg.sources.edhrec import EdhrecAdvisor
     from muchi.mtg.sources.scry import ScrySource
     from muchi.mtg.sources.shopify import ShopifyCatalog
+    from muchi.mtg.sources.stock import StorePageStockVerifier
 
     sess = PoliteSession()
     assert isinstance(ScrySource(sess), ports.PrimarySource)
@@ -431,6 +509,7 @@ def test_every_source_meets_its_port():
                       ports.OfferSource)
     assert isinstance(EdhrecAdvisor(sess), ports.DeckAdvisor)
     assert isinstance(ShopifyCatalog(sess), ports.StoreCatalog)
+    assert isinstance(StorePageStockVerifier(sess), ports.StockVerifier)
 
 
 def test_only_the_cast_imports_sources():
@@ -539,6 +618,23 @@ def test_scry_stock_is_marked_as_unverified():
     assert offers.stock_needs_verification(scry_offer) is True
     assert offers.stock_needs_verification(cached_offer) is True
     assert offers.stock_needs_verification(live_offer) is False
+
+
+def test_only_the_five_cheapest_offers_are_checked():
+    class Verifier:
+        def __init__(self):
+            self.checked = []
+
+        def verify_stock(self, offer):
+            self.checked.append(offer.price_clp)
+            return offer.price_clp != 300
+
+    verifier = Verifier()
+    found = [_offer(f"T{i}", "A", i * 100) for i in range(1, 8)]
+    checks = offers.verify_cheapest_stock(verifier, found)
+    assert sorted(verifier.checked) == [100, 200, 300, 400, 500]
+    assert checks[found[2]] is False
+    assert found[5] not in checks
 
 
 # -------------------------------------------------------------------- the deck
