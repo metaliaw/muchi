@@ -490,6 +490,30 @@ def test_reads_exact_woocommerce_variation():
     assert stock.read_page_availability(html, selected) is False
 
 
+def test_woocommerce_missing_selected_variation_is_unavailable():
+    variations = json.dumps([{
+        "attributes": {
+            "attribute_pa_idioma": "ingles-2",
+            "attribute_pa_estado": "nm",
+        },
+        "is_in_stock": True,
+    }]).replace('"', "&quot;")
+    html = (
+        '<main><div id="product-14848" class="product instock product-type-variable">'
+        f'<form class="variations_form" data-product_variations="{variations}"></form>'
+        '</div></main>'
+    )
+    selected = {"attribute_pa_idioma": "espanol", "attribute_pa_estado": "nm"}
+    assert stock.read_page_availability(html, selected, "lacripta.cl") is False
+
+
+def test_store_specific_marker_is_scoped_to_its_domain_and_main_product():
+    html = '<main><div id="product-1" class="product">Sold out</div></main>'
+    assert stock.read_page_availability(html, host="lacripta.cl") is False
+    assert stock.read_page_availability(html, host="otra.cl") is None
+    assert stock.STORE_INSTRUCTIONS["lacripta.cl"]["platform"] == "woocommerce"
+
+
 # ----------------------------------------------------------------- the ports
 def test_every_source_meets_its_port():
     """An adapter that stops fulfilling its port breaks here, not in production."""
@@ -600,6 +624,7 @@ def test_marks_an_isolated_low_price_as_suspicious():
     ]
     suspicious = offers.suspicious_prices(found)
     assert {(o.store, o.price_clp) for o in suspicious} == {("Bad scrape", 152)}
+    assert offers.cheapest_non_suspicious(found, suspicious).price_clp == 1462
 
 
 def test_does_not_guess_from_a_small_sample_or_normal_price_spread():
@@ -635,6 +660,26 @@ def test_only_the_five_cheapest_offers_are_checked():
     assert sorted(verifier.checked) == [100, 200, 300, 400, 500]
     assert checks[found[2]] is False
     assert found[5] not in checks
+
+
+def test_suspicious_prices_do_not_consume_stock_checks():
+    class Verifier:
+        def __init__(self):
+            self.checked = []
+
+        def verify_stock(self, offer):
+            self.checked.append(offer.price_clp)
+            return True
+
+    found = [_offer("Bad scrape", "Sol Ring", 152)] + [
+        _offer(f"T{i}", "Sol Ring", price)
+        for i, price in enumerate((1462, 1791, 2000, 2500, 2800, 3200), start=1)
+    ]
+    verifier = Verifier()
+    checks = offers.verify_cheapest_stock(verifier, found)
+
+    assert sorted(verifier.checked) == [1462, 1791, 2000, 2500, 2800]
+    assert found[0] not in checks
 
 
 # -------------------------------------------------------------------- the deck
