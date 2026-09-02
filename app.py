@@ -253,11 +253,9 @@ def pick_card(query: str) -> str | None:
     return query
 
 
-def show_summary(visible: list, cheapest_suspicious: bool = False) -> None:
+def show_summary(visible: list, cheapest) -> None:
     c1, c2, c3 = st.columns(3)
-    label = "Menor observado" if cheapest_suspicious else "Mas barato"
-    c1.markdown(style.paint_tile(label, clp(visible[0].price_clp),
-                                 ok=not cheapest_suspicious),
+    c1.markdown(style.paint_tile("Mas barato", clp(cheapest.price_clp), ok=True),
                 unsafe_allow_html=True)
     c2.markdown(style.paint_tile("Ofertas", str(len(visible))), unsafe_allow_html=True)
     c3.markdown(style.paint_tile("Tiendas", str(len({o.store for o in visible}))),
@@ -266,7 +264,7 @@ def show_summary(visible: list, cheapest_suspicious: bool = False) -> None:
 
 
 def remove_confirmed_out_of_stock(visible: list) -> tuple[list, dict, int]:
-    """Verifica las cinco primeras y quita sólo agotados confirmados."""
+    """Verifica las cinco primeras no sospechosas y quita agotados confirmados."""
     checks = verify_cheapest_stock(tuple(visible))
     available = [offer for offer in visible if checks.get(offer) is not False]
     removed = len(visible) - len(available)
@@ -325,7 +323,7 @@ def show_search(finish: str, stores_only: bool) -> None:
                          default=[], key="f_tiendas")
     visible = offers.filter_offers(found, finish, sel, stores_only)
 
-    with st.spinner("Comprobando stock de las ofertas mas baratas..."):
+    with st.spinner("Comprobando stock de las ofertas confiables mas baratas..."):
         visible, stock_checks, unavailable = remove_confirmed_out_of_stock(visible)
 
     hidden = len(found) - len(eligible)
@@ -340,15 +338,16 @@ def show_search(finish: str, stores_only: bool) -> None:
                    "alert")
     else:
         suspicious = offers.suspicious_prices(visible)
-        show_summary(visible, visible[0] in suspicious)
-        for i, o in enumerate(visible):
+        cheapest = offers.cheapest_non_suspicious(visible, suspicious)
+        show_summary(visible, cheapest)
+        for o in visible:
             verified_stock = stock_checks.get(o) is True
             unverified_stock = (not verified_stock
                                 and offers.stock_needs_verification(o))
             rendered = (style.paint_suspicious_offer(
                             o, unverified_stock, verified_stock)
                         if o in suspicious else
-                        style.paint_offer(o, best=(i == 0),
+                        style.paint_offer(o, best=(o == cheapest),
                                           unverified_stock=unverified_stock,
                                           verified_stock=verified_stock))
             st.markdown(rendered, unsafe_allow_html=True)
@@ -425,7 +424,7 @@ def show_quick_prices(card_name: str, finish: str, stores_only: bool) -> None:
         history.save_prices(build_muchi().cx, card_name, found)
 
     visible = offers.filter_offers(found, finish, None, stores_only)
-    with st.spinner("Comprobando stock de las ofertas mas baratas..."):
+    with st.spinner("Comprobando stock de las ofertas confiables mas baratas..."):
         visible, stock_checks, unavailable = remove_confirmed_out_of_stock(visible)
     if unavailable:
         st.caption(f"Se ocultaron {unavailable} ofertas que la tienda confirmo agotadas.")
@@ -434,14 +433,15 @@ def show_quick_prices(card_name: str, finish: str, stores_only: bool) -> None:
                    "tienes el refresco en vivo.", "alert")
     else:
         suspicious = offers.suspicious_prices(visible)
-        for i, o in enumerate(visible[:8]):
+        cheapest = offers.cheapest_non_suspicious(visible, suspicious)
+        for o in visible[:8]:
             verified_stock = stock_checks.get(o) is True
             unverified_stock = (not verified_stock
                                 and offers.stock_needs_verification(o))
             rendered = (style.paint_suspicious_offer(
                             o, unverified_stock, verified_stock)
                         if o in suspicious else
-                        style.paint_offer(o, best=(i == 0),
+                        style.paint_offer(o, best=(o == cheapest),
                                           unverified_stock=unverified_stock,
                                           verified_stock=verified_stock))
             st.markdown(rendered, unsafe_allow_html=True)

@@ -39,6 +39,12 @@ def suspicious_prices(offers: list[Offer]) -> set[Offer]:
     return set()
 
 
+def cheapest_non_suspicious(found: list[Offer],
+                            suspicious: set[Offer]) -> Offer | None:
+    """La menor oferta apta para el resumen y la insignia de mejor precio."""
+    return next((offer for offer in found if offer not in suspicious), None)
+
+
 def stock_needs_verification(offer: Offer) -> bool:
     """True cuando la disponibilidad viene de una fuente no contrastada."""
     return offer.source in constants.UNVERIFIED_STOCK_SOURCES
@@ -46,8 +52,10 @@ def stock_needs_verification(offer: Offer) -> bool:
 
 def verify_cheapest_stock(verifier: StockVerifier,
                           found: list[Offer]) -> dict[Offer, bool | None]:
-    """Comprueba sólo las primeras ofertas que probablemente recibiran clic."""
-    candidates = found[:constants.STOCK_VERIFY_CHEAPEST_OFFERS]
+    """Comprueba las primeras ofertas no sospechosas que pueden recibir clic."""
+    suspicious = suspicious_prices(found)
+    candidates = [offer for offer in found if offer not in suspicious]
+    candidates = candidates[:constants.STOCK_VERIFY_CHEAPEST_OFFERS]
     if not candidates:
         return {}
     with ThreadPoolExecutor(max_workers=len(candidates)) as pool:
