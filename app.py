@@ -10,6 +10,9 @@ import html
 import logging
 import pandas as pd
 import streamlit as st
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from muchi.mtg import (decklist, style, mascot, sprites, phrases, history, deck,
                        offers, optimizer, oracle, constants, messaging,
