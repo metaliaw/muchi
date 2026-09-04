@@ -4,6 +4,7 @@ __pycache__/
 venv/
 data/
 .streamlit/secrets.toml
+.env
 .pytest_cache/
 .DS_Store
 store-api.json
