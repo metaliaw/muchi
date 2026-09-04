@@ -148,6 +148,13 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
+La integración con `muchi-api` local es opt-in. Con el servicio levantado en
+el repositorio vecino y las variables de `.env` configuradas:
+
+```bash
+MUCHI_API_INTEGRATION=1 pytest tests/test_muchi_api_integration.py
+```
+
 ## Uso
 
 - **🐟 Buscar** — una carta, todas las ofertas ordenadas por precio, la más barata
