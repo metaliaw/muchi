@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	cloudtasks "cloud.google.com/go/cloudtasks/apiv2"
 	"cloud.google.com/go/cloudtasks/apiv2/cloudtaskspb"
@@ -11,6 +12,18 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+// maxRPCDeadline caps how far in the future a Cloud Tasks call's deadline can sit.
+// The API rejects calls whose context deadline is more than ~30s out; an HTTP
+// handler's context can carry a much longer one.
+const maxRPCDeadline = 20 * time.Second
+
+func boundContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	if deadline, ok := ctx.Deadline(); ok && time.Until(deadline) <= maxRPCDeadline {
+		return ctx, func() {}
+	}
+	return context.WithTimeout(ctx, maxRPCDeadline)
+}
 
 type Queue struct {
 	client         *cloudtasks.Client
@@ -21,6 +34,8 @@ type Queue struct {
 
 // OpenQueue Connects Card Tasks through https://cloud.google.com/tasks/docs/reference/rest.
 func OpenQueue(ctx context.Context, project, region, name, target, account string) (*Queue, error) {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
 	client, err := cloudtasks.NewClient(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("open task queue: %w", err)
@@ -30,6 +45,8 @@ func OpenQueue(ctx context.Context, project, region, name, target, account strin
 }
 
 func (q *Queue) DispatchSearch(ctx context.Context, job search.Job) error {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
 	errors := make(chan error, job.Total)
 	var group sync.WaitGroup
 	for position := range job.Total {

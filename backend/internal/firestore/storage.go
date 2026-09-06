@@ -22,6 +22,20 @@ import (
 
 const searchTTL = 24 * time.Hour
 
+// maxRPCDeadline caps how far in the future a Firestore call's deadline can sit.
+// Firestore rejects calls whose context deadline is more than ~30s out; callers
+// (an HTTP handler, a Cloud Tasks-triggered function) may carry much longer ones.
+const maxRPCDeadline = 20 * time.Second
+
+// boundContext shortens ctx's deadline to maxRPCDeadline when the caller's is longer,
+// while still honoring an earlier deadline or cancellation from the caller.
+func boundContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	if deadline, ok := ctx.Deadline(); ok && time.Until(deadline) <= maxRPCDeadline {
+		return ctx, func() {}
+	}
+	return context.WithTimeout(ctx, maxRPCDeadline)
+}
+
 type Store struct {
 	client *firestorelib.Client
 }
@@ -72,6 +86,8 @@ func OpenStore(ctx context.Context, projectID string) (*Store, error) {
 }
 
 func (s *Store) CreateSearch(ctx context.Context, key, hash string, input search.CreateInput) (search.Job, error) {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
 	var job search.Job
 	var created bool
 	err := s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
@@ -97,6 +113,8 @@ func (s *Store) CreateSearch(ctx context.Context, key, hash string, input search
 }
 
 func (s *Store) GetSearch(ctx context.Context, id string) (search.Job, error) {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
 	document, err := s.client.Collection("searches").Doc(id).Get(ctx)
 	if err != nil {
 		return search.Job{}, mapStoreError(err)
@@ -105,6 +123,8 @@ func (s *Store) GetSearch(ctx context.Context, id string) (search.Job, error) {
 }
 
 func (s *Store) ListResults(ctx context.Context, id string) (search.Result, error) {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
 	document, err := s.client.Collection("searches").Doc(id).Get(ctx)
 	if err != nil {
 		return search.Result{}, mapStoreError(err)
@@ -118,6 +138,8 @@ func (s *Store) ListResults(ctx context.Context, id string) (search.Result, erro
 }
 
 func (s *Store) CancelSearch(ctx context.Context, id, key, hash string) (search.Job, error) {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
 	var job search.Job
 	err := s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
 		stored, found, err := s.readRequest(ctx, tx, "cancel", key)
@@ -141,6 +163,8 @@ func (s *Store) CancelSearch(ctx context.Context, id, key, hash string) (search.
 }
 
 func (s *Store) ClaimSearchItem(ctx context.Context, owner string, lease time.Duration) (search.Item, error) {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
 	var claimed search.Item
 	err := s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
 		query := s.client.Collection("items").
@@ -160,6 +184,8 @@ func (s *Store) ClaimSearchItem(ctx context.Context, owner string, lease time.Du
 }
 
 func (s *Store) RenewItemLease(ctx context.Context, id, owner string, lease time.Duration) error {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
 	return s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
 		reference := s.client.Collection("items").Doc(id)
 		document, err := tx.Get(reference)
@@ -179,6 +205,8 @@ func (s *Store) RenewItemLease(ctx context.Context, id, owner string, lease time
 }
 
 func (s *Store) CompleteSearchItem(ctx context.Context, item search.Item, offers []offer.Offer) error {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
 	return s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
 		itemReference := s.client.Collection("items").Doc(item.ID)
 		document, err := tx.Get(itemReference)
@@ -194,6 +222,8 @@ func (s *Store) CompleteSearchItem(ctx context.Context, item search.Item, offers
 }
 
 func (s *Store) LoadOffers(ctx context.Context, key string) ([]offer.Offer, bool, error) {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
 	document, err := s.client.Collection("offer_cache").Doc(hashKey(key)).Get(ctx)
 	if status.Code(err) == codes.NotFound {
 		return nil, false, nil
@@ -214,6 +244,8 @@ func (s *Store) LoadOffers(ctx context.Context, key string) ([]offer.Offer, bool
 }
 
 func (s *Store) SaveOffers(ctx context.Context, key string, items []offer.Offer, ttl time.Duration) error {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
 	data, err := json.Marshal(items)
 	if err != nil {
 		return err
@@ -224,11 +256,13 @@ func (s *Store) SaveOffers(ctx context.Context, key string, items []offer.Offer,
 }
 
 func (s *Store) AwaitSource(ctx context.Context, domain string) error {
-	record, _ := s.loadSource(ctx, domain)
+	boundCtx, cancel := boundContext(ctx)
+	defer cancel()
+	record, _ := s.loadSource(boundCtx, domain)
 	if record.CircuitOpenUntil != nil && record.CircuitOpenUntil.After(time.Now().UTC()) {
 		return fmt.Errorf("%w until %s", source.ErrCircuitOpen, record.CircuitOpenUntil.Format(time.RFC3339))
 	}
-	allowed, err := s.reserveTraffic(ctx, domain)
+	allowed, err := s.reserveTraffic(boundCtx, domain)
 	if err != nil {
 		return err
 	}
@@ -236,6 +270,8 @@ func (s *Store) AwaitSource(ctx context.Context, domain string) error {
 }
 
 func (s *Store) RecordSource(ctx context.Context, domain string, latency time.Duration, sourceErr error) error {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
 	reference := s.client.Collection("source_health").Doc(hashKey(domain))
 	return s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
 		record, _ := s.readSource(ctx, tx, reference, domain)
@@ -245,6 +281,8 @@ func (s *Store) RecordSource(ctx context.Context, domain string, latency time.Du
 }
 
 func (s *Store) CheckHealth(ctx context.Context) error {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
 	_, err := s.client.Collection("health").Doc("ping").Get(ctx)
 	if status.Code(err) == codes.NotFound {
 		return nil
@@ -253,6 +291,8 @@ func (s *Store) CheckHealth(ctx context.Context) error {
 }
 
 func (s *Store) ListSourceHealth(ctx context.Context) ([]search.SourceHealth, error) {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
 	documents := s.client.Collection("source_health").Documents(ctx)
 	defer documents.Stop()
 	var result []search.SourceHealth

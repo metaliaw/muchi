@@ -41,10 +41,14 @@ func ServeAPI(w http.ResponseWriter, r *http.Request) {
 			apiError = err
 			return
 		}
-		api := httpapi.API{Searches: runtime.Service, Health: runtime.Store, Token: settings.APIToken, Logger: buildLogger()}
+		api := httpapi.API{
+			Searches: runtime.Service, Health: runtime.Store, Token: settings.APIToken, Logger: buildLogger(),
+			HealthCheckTimeout: settings.HealthCheckTimeout,
+		}
 		apiHandler = api.BuildHandler()
 	})
 	if apiError != nil {
+		buildLogger().Error("ServeAPI Startup Failed", "error", apiError)
 		http.Error(w, "Service unavailable", http.StatusServiceUnavailable)
 		return
 	}
@@ -66,10 +70,11 @@ func ProcessSearch(w http.ResponseWriter, r *http.Request) {
 		}
 		taskWorker = search.Worker{
 			Store: runtime.Store, Service: runtime.Service,
-			LeaseDuration: settings.LeaseDuration,
+			LeaseDuration: settings.LeaseDuration, StockCheckLimit: settings.StockCheckLimit,
 		}
 	})
 	if taskError != nil {
+		buildLogger().Error("ProcessSearch Startup Failed", "error", taskError)
 		http.Error(w, "Service unavailable", http.StatusServiceUnavailable)
 		return
 	}
