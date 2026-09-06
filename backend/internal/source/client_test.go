@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func TestFetchRetriesTransientStatus(t *testing.T) {
+func TestRetryFetch(t *testing.T) {
 	var attempts atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		if attempts.Add(1) < 3 {
@@ -27,7 +27,7 @@ func TestFetchRetriesTransientStatus(t *testing.T) {
 	}
 }
 
-func TestFetchSetsSourceHeaders(t *testing.T) {
+func TestSetHeaders(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("User-Agent") != "muchi-test/1.0" || !strings.Contains(r.Header.Get("Accept"), "application/json") {
 			t.Fatalf("unexpected headers: %v", r.Header)
@@ -41,7 +41,7 @@ func TestFetchSetsSourceHeaders(t *testing.T) {
 	}
 }
 
-func TestFetchStopsPermanentStatus(t *testing.T) {
+func TestStopRetry(t *testing.T) {
 	var attempts atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		attempts.Add(1)
@@ -55,7 +55,7 @@ func TestFetchStopsPermanentStatus(t *testing.T) {
 	}
 }
 
-func TestParseRetryAfter(t *testing.T) {
+func TestParseRetry(t *testing.T) {
 	if got := ParseRetryAfter("2"); got != 2*time.Second {
 		t.Fatalf("ParseRetryAfter() = %s", got)
 	}

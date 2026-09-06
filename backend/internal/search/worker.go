@@ -19,8 +19,12 @@ type Worker struct {
 
 func (w Worker) RunWorker(ctx context.Context) error {
 	for {
-		if err := w.processNext(ctx); err != nil && !errors.Is(err, ErrNotFound) {
+		err := w.processNext(ctx)
+		if err != nil && !errors.Is(err, ErrNotFound) {
 			return err
+		}
+		if err == nil {
+			continue
 		}
 		select {
 		case <-ctx.Done():
@@ -38,15 +42,26 @@ func (w Worker) processNext(ctx context.Context) error {
 	work, cancel := context.WithCancel(ctx)
 	defer cancel()
 	go w.renewLease(work, item.ID)
+
 	items, sourceErr := w.Service.collectOffers(work, item.NormalizedName)
 	if item.VerifyStock {
 		items = w.verifyStocks(work, items)
 	}
+	item = applyItemResult(item, items, sourceErr)
+	return w.Store.CompleteSearchItem(ctx, item, items)
+}
+
+// ProcessNext Handles one queued Card Task.
+func (w Worker) ProcessNext(ctx context.Context) error {
+	return w.processNext(ctx)
+}
+
+func applyItemResult(item Item, items []offer.Offer, sourceErr error) Item {
 	if len(items) > 0 {
 		item.Source = items[0].Source
 	}
 	item.Status, item.ErrorCode, item.ErrorMessage = classifyResult(items, sourceErr)
-	return w.Store.CompleteSearchItem(ctx, item, items)
+	return item
 }
 
 func (w Worker) renewLease(ctx context.Context, itemID string) {

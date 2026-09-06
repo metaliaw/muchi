@@ -7,7 +7,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestOpenAPIDocument(t *testing.T) {
+func TestValidateOpenAPI(t *testing.T) {
 	data, err := os.ReadFile("../../openapi.yaml")
 	if err != nil {
 		t.Fatal(err)

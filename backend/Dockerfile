@@ -3,7 +3,7 @@ WORKDIR /src
 COPY go.mod go.sum* ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/muchi-api ./cmd/muchi-api
+RUN CGO_ENABLED=0 go build -mod=mod -trimpath -ldflags="-s -w" -o /out/muchi-api ./cmd/muchi-api
 
 FROM gcr.io/distroless/static-debian13:nonroot
 WORKDIR /app

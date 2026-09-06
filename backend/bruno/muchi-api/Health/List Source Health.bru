@@ -1,0 +1,22 @@
+meta {
+  name: List Source Health
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/v1/health/sources
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+tests {
+  test("Returns Sources", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.sources).to.be.an("array");
+  });
+}

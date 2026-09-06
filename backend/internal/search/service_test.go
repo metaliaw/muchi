@@ -33,7 +33,7 @@ func (c *stubCache) SaveOffers(_ context.Context, _ string, items []offer.Offer,
 	return nil
 }
 
-func TestFindOffersContinuesAfterSourceFailure(t *testing.T) {
+func TestFindFallback(t *testing.T) {
 	wanted := offer.Offer{ID: "one", Store: "store", URL: "https://store.test", PriceAmount: "10.00", PriceCurrency: "USD"}
 	cache := &stubCache{}
 	service := Service{Sources: []OfferSource{stubSource{err: errors.New("down")}, stubSource{items: []offer.Offer{wanted}}}, Cache: cache}

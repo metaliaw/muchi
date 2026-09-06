@@ -38,7 +38,7 @@ func (*fakeStore) CompleteSearchItem(context.Context, search.Item, []offer.Offer
 func (*fakeStore) CheckHealth(context.Context) error                                    { return nil }
 func (*fakeStore) ListSourceHealth(context.Context) ([]search.SourceHealth, error)      { return nil, nil }
 
-func TestCreateSearchContract(t *testing.T) {
+func TestCreateSearch(t *testing.T) {
 	store := &fakeStore{}
 	api := API{Searches: search.Service{Searches: store}, Health: store, Token: "secret"}
 	body := `{"cards":[{"name":"Sol Ring","quantity":1}],"options":{"verify_stock":true,"stores_only":true}}`
@@ -46,7 +46,7 @@ func TestCreateSearchContract(t *testing.T) {
 	request.Header.Set("Authorization", "Bearer secret")
 	request.Header.Set("Idempotency-Key", "request-one")
 	response := httptest.NewRecorder()
-	api.Handler().ServeHTTP(response, request)
+	api.BuildHandler().ServeHTTP(response, request)
 	if response.Code != http.StatusAccepted {
 		t.Fatalf("POST /v1/searches status = %d body=%s", response.Code, response.Body.String())
 	}
@@ -56,25 +56,25 @@ func TestCreateSearchContract(t *testing.T) {
 	}
 }
 
-func TestCreateRequiresHeaders(t *testing.T) {
+func TestRequireHeaders(t *testing.T) {
 	store := &fakeStore{}
 	api := API{Searches: search.Service{Searches: store}, Health: store, Token: "secret"}
 	request := httptest.NewRequest(http.MethodPost, "/v1/searches", strings.NewReader(`{}`))
 	response := httptest.NewRecorder()
-	api.Handler().ServeHTTP(response, request)
+	api.BuildHandler().ServeHTTP(response, request)
 	if response.Code != http.StatusUnauthorized {
 		t.Fatalf("unauthorized status = %d", response.Code)
 	}
 	request = httptest.NewRequest(http.MethodPost, "/v1/searches", strings.NewReader(`{}`))
 	request.Header.Set("Authorization", "Bearer secret")
 	response = httptest.NewRecorder()
-	api.Handler().ServeHTTP(response, request)
+	api.BuildHandler().ServeHTTP(response, request)
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("missing idempotency status = %d", response.Code)
 	}
 }
 
-func TestMapErrorHidesInternalDetails(t *testing.T) {
+func TestHideError(t *testing.T) {
 	status, code, message := mapError(errors.New("database password leaked"))
 	if status != http.StatusInternalServerError || code != "internal_error" || strings.Contains(message, "password") {
 		t.Fatalf("mapError() status=%d code=%q message=%q", status, code, message)

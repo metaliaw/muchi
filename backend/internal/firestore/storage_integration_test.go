@@ -1,10 +1,10 @@
-package postgres
+package firestore
 
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
-	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -12,7 +12,7 @@ import (
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 )
 
-func TestClaimAndRecoverItems(t *testing.T) {
+func TestRecoverClaims(t *testing.T) {
 	store := openTestStore(t)
 	job := createTestSearch(t, store, "claim")
 	ctx := context.Background()
@@ -39,7 +39,7 @@ func TestClaimAndRecoverItems(t *testing.T) {
 	}
 }
 
-func TestCancelSearchIsIdempotent(t *testing.T) {
+func TestCancelIdempotency(t *testing.T) {
 	store := openTestStore(t)
 	job := createTestSearch(t, store, "cancel")
 	first, err := store.CancelSearch(context.Background(), job.ID, "cancel-key", "same-hash")
@@ -56,39 +56,63 @@ func TestCancelSearchIsIdempotent(t *testing.T) {
 	}
 }
 
+func TestExpireSearch(t *testing.T) {
+	store := openTestStore(t)
+	job := createTestSearch(t, store, "expiry")
+	document, err := store.client.Collection("searches").Doc(job.ID).Get(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var record searchRecord
+	if err := document.DataTo(&record); err != nil {
+		t.Fatal(err)
+	}
+	ttl := time.Until(record.ExpiresAt)
+	if ttl < 23*time.Hour || ttl > searchTTL {
+		t.Fatalf("search ttl=%s", ttl)
+	}
+}
+
+func TestCompleteItem(t *testing.T) {
+	store := openTestStore(t)
+	job := createTestSearch(t, store, "complete")
+	item, err := store.ClaimSearchItem(context.Background(), "worker", time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	item.Status = search.ItemFound
+	if err := store.CompleteSearchItem(context.Background(), item, nil); err != nil {
+		t.Fatal(err)
+	}
+	updated, err := store.GetSearch(context.Background(), job.ID)
+	if err != nil || updated.Processed != 1 || updated.Found != 1 {
+		t.Fatalf("completed search=%#v err=%v", updated, err)
+	}
+}
+
 func openTestStore(t *testing.T) *Store {
 	t.Helper()
-	dsn := os.Getenv("MUCHI_TEST_DATABASE_URL")
-	if dsn == "" {
-		t.Skip("MUCHI_TEST_DATABASE_URL is not set")
+	if os.Getenv("FIRESTORE_EMULATOR_HOST") == "" {
+		t.Skip("FIRESTORE_EMULATOR_HOST is not set")
 	}
-	store, err := OpenStore(dsn)
+	project := fmt.Sprintf("muchi-test-%d", time.Now().UnixNano())
+	store, err := OpenStore(context.Background(), project)
 	if err != nil {
 		t.Fatal(err)
 	}
-	db, err := store.db.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	down, err := os.ReadFile(filepath.Join("..", "..", "migrations", "000001_initial.down.sql"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	up, err := os.ReadFile(filepath.Join("..", "..", "migrations", "000001_initial.up.sql"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, _ = db.Exec(string(down))
-	if _, err := db.Exec(string(up)); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _, _ = db.Exec(string(down)) })
+	t.Cleanup(func() { _ = store.CloseStore() })
 	return store
 }
 
 func createTestSearch(t *testing.T, store *Store, suffix string) search.Job {
 	t.Helper()
-	input := search.CreateInput{Cards: []search.CardInput{{Name: "Sol Ring", Quantity: 1}, {Name: "Anger", Quantity: 1}}, Options: search.Options{VerifyStock: true, StoresOnly: true}}
+	input := search.CreateInput{
+		Cards: []search.CardInput{
+			{Name: "Sol Ring", Quantity: 1},
+			{Name: "Anger", Quantity: 1},
+		},
+		Options: search.Options{VerifyStock: true, StoresOnly: true},
+	}
 	job, err := store.CreateSearch(context.Background(), "create-"+suffix, search.HashPayload(input), input)
 	if err != nil {
 		t.Fatal(err)

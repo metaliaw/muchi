@@ -1,0 +1,10 @@
+{
+  "indexes": [],
+  "fieldOverrides": [
+    {"collectionGroup": "searches", "fieldPath": "expires_at", "ttl": true, "indexes": []},
+    {"collectionGroup": "items", "fieldPath": "expires_at", "ttl": true, "indexes": []},
+    {"collectionGroup": "item_offers", "fieldPath": "expires_at", "ttl": true, "indexes": []},
+    {"collectionGroup": "idempotency", "fieldPath": "expires_at", "ttl": true, "indexes": []},
+    {"collectionGroup": "offer_cache", "fieldPath": "expires_at", "ttl": true, "indexes": []}
+  ]
+}

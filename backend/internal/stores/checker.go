@@ -8,11 +8,15 @@ import (
 	"strings"
 
 	"github.com/cangrejometralleta/muchi-api/internal/offer"
-	"github.com/cangrejometralleta/muchi-api/internal/source"
 )
 
+// SourceFetcher Reads Store pages interpreted with https://schema.org/availability.
+type SourceFetcher interface {
+	FetchSource(context.Context, string, string) ([]byte, error)
+}
+
 type Checker struct {
-	Fetcher source.Client
+	Fetcher SourceFetcher
 	Config  Config
 }
 

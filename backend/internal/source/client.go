@@ -14,14 +14,15 @@ import (
 
 var ErrCircuitOpen = errors.New("source circuit is open")
 
-type Gate interface {
+// TrafficGate Coordinates calls through https://firebase.google.com/docs/firestore/manage-data/transactions.
+type TrafficGate interface {
 	AwaitSource(context.Context, string) error
 	RecordSource(context.Context, string, time.Duration, error) error
 }
 
 type Client struct {
 	HTTP        *http.Client
-	Gate        Gate
+	Gate        TrafficGate
 	Logger      *slog.Logger
 	UserAgent   string
 	MaxAttempts int

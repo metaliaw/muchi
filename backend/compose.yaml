@@ -1,41 +1,28 @@
 services:
-  postgres:
-    image: docker.io/library/postgres:18-alpine
-    environment:
-      POSTGRES_DB: muchi
-      POSTGRES_USER: muchi
-      POSTGRES_PASSWORD: muchi
+  firestore:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
+    command: ["gcloud", "beta", "emulators", "firestore", "start", "--host-port=0.0.0.0:8085", "--project=muchi-local"]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U muchi"]
+      test: ["CMD-SHELL", "curl --silent http://localhost:8085 >/dev/null"]
       interval: 2s
       timeout: 2s
       retries: 20
     ports:
-      - "5432:5432"
-    volumes:
-      - muchi-data:/var/lib/postgresql
-
-  migrate:
-    image: docker.io/migrate/migrate:v4.19.0
-    command: ["-path", "/migrations", "-database", "postgres://muchi:muchi@postgres:5432/muchi?sslmode=disable", "up"]
-    volumes:
-      - ./migrations:/migrations:ro
-    depends_on:
-      postgres:
-        condition: service_healthy
+      - "8085:8085"
 
   api:
     build: .
     command: ["serve"]
     environment: &muchi-environment
-      DATABASE_URL: postgres://muchi:muchi@postgres:5432/muchi?sslmode=disable
-      MUCHI_API_TOKEN: local-development-token
+      GOOGLE_CLOUD_PROJECT: muchi-local
+      FIRESTORE_EMULATOR_HOST: firestore:8085
+      MUCHI_API_TOKEN: ${MUCHI_API_TOKEN:-local-development-token}
       MUCHI_STORES_CONFIG: /app/config/stores.yaml
     ports:
-      - "8080:8080"
+      - "8081:8080"
     depends_on:
-      migrate:
-        condition: service_completed_successfully
+      firestore:
+        condition: service_healthy
 
   worker:
     build: .
@@ -44,8 +31,5 @@ services:
       <<: *muchi-environment
       MUCHI_WORKER_ID: worker-compose-1
     depends_on:
-      migrate:
-        condition: service_completed_successfully
-
-volumes:
-  muchi-data:
+      firestore:
+        condition: service_healthy

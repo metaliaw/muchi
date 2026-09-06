@@ -33,7 +33,8 @@ func (m *Metrics) MeasureRequests(next http.Handler) http.Handler {
 	})
 }
 
-func Handler() http.Handler {
+// BuildHandler Exposes the Prometheus metrics endpoint.
+func BuildHandler() http.Handler {
 	return promhttp.Handler()
 }
 

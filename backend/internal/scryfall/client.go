@@ -11,8 +11,13 @@ import (
 	"github.com/cangrejometralleta/muchi-api/internal/source"
 )
 
+// SourceFetcher Reads https://scryfall.com/docs/api responses.
+type SourceFetcher interface {
+	FetchSource(context.Context, string, string) ([]byte, error)
+}
+
 type Client struct {
-	Fetcher source.Client
+	Fetcher SourceFetcher
 	BaseURL string
 }
 

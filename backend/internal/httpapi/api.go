@@ -33,7 +33,8 @@ type contextKey string
 
 const requestIDKey contextKey = "request_id"
 
-func (a API) Handler() http.Handler {
+// BuildHandler Connects each API Story to its public route.
+func (a API) BuildHandler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v1/health", a.getHealth)
 	mux.Handle("GET /v1/health/sources", a.authenticate(http.HandlerFunc(a.listSourceHealth)))
@@ -50,8 +51,8 @@ func (a API) createSearch(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	var input search.CreateInput
-	if err := decodeJSON(r, &input); err != nil {
+	input, err := decodeSearch(r)
+	if err != nil {
 		a.writeError(w, r, search.ErrInvalid)
 		return
 	}
@@ -61,6 +62,13 @@ func (a API) createSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusAccepted, job)
+}
+
+func decodeSearch(r *http.Request) (search.CreateInput, error) {
+	var input search.CreateInput
+	err := decodeJSON(r, &input)
+
+	return input, err
 }
 
 func (a API) getSearch(w http.ResponseWriter, r *http.Request) {
@@ -125,13 +133,23 @@ func (a API) listSourceHealth(w http.ResponseWriter, r *http.Request) {
 func (a API) authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		value := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-		valid := len(value) == len(a.Token) && subtle.ConstantTimeCompare([]byte(value), []byte(a.Token)) == 1
+		sameLength := len(value) == len(a.Token)
+		sameToken := subtle.ConstantTimeCompare([]byte(value), []byte(a.Token)) == 1
+		valid := sameLength && sameToken
 		if !valid || a.Token == "" {
-			writeJSON(w, http.StatusUnauthorized, errorReply{Code: "unauthorized", Message: "Bearer token required", RequestID: requestID(r)})
+			writeJSON(w, http.StatusUnauthorized, buildAuthError(r))
 			return
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func buildAuthError(r *http.Request) errorReply {
+	return errorReply{
+		Code:      "unauthorized",
+		Message:   "Bearer token required",
+		RequestID: readRequestID(r),
+	}
 }
 
 func (a API) identifyRequest(next http.Handler) http.Handler {
@@ -151,8 +169,8 @@ func (a API) recoverPanic(next http.Handler) http.Handler {
 		defer func() {
 			if value := recover(); value != nil {
 				incident := fmt.Sprintf("inc_%d", time.Now().UnixNano())
-				loggerOrDefault(a.Logger).ErrorContext(r.Context(), "Request Failed", "request_id", requestID(r), "incident_id", incident, "error", value)
-				writeJSON(w, http.StatusInternalServerError, errorReply{Code: "internal_error", Message: "Internal service error", RequestID: requestID(r), IncidentID: incident})
+				logRequestFailure(a.Logger, r, incident, value)
+				writeJSON(w, http.StatusInternalServerError, buildErrorReply(r, "internal_error", "Internal service error", incident))
 			}
 		}()
 		next.ServeHTTP(w, r)
@@ -164,9 +182,27 @@ func (a API) writeError(w http.ResponseWriter, r *http.Request, err error) {
 	incident := ""
 	if status >= 500 {
 		incident = fmt.Sprintf("inc_%d", time.Now().UnixNano())
-		loggerOrDefault(a.Logger).ErrorContext(r.Context(), "Request Failed", "request_id", requestID(r), "incident_id", incident, "error", err)
+		logRequestFailure(a.Logger, r, incident, err)
 	}
-	writeJSON(w, status, errorReply{Code: code, Message: message, RequestID: requestID(r), IncidentID: incident})
+	writeJSON(w, status, buildErrorReply(r, code, message, incident))
+}
+
+func logRequestFailure(logger *slog.Logger, r *http.Request, incident string, failure any) {
+	selectLogger(logger).ErrorContext(
+		r.Context(), "Request Failed",
+		"request_id", readRequestID(r),
+		"incident_id", incident,
+		"error", failure,
+	)
+}
+
+func buildErrorReply(r *http.Request, code, message, incident string) errorReply {
+	return errorReply{
+		Code:       code,
+		Message:    message,
+		RequestID:  readRequestID(r),
+		IncidentID: incident,
+	}
 }
 
 func mapError(err error) (int, string, string) {
@@ -187,7 +223,8 @@ func mapError(err error) (int, string, string) {
 func requireIdempotency(w http.ResponseWriter, r *http.Request) (string, bool) {
 	key := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	if key == "" || len(key) > 128 {
-		writeJSON(w, http.StatusBadRequest, errorReply{Code: "missing_idempotency_key", Message: "Valid Idempotency-Key header required", RequestID: requestID(r)})
+		reply := buildErrorReply(r, "missing_idempotency_key", "Valid Idempotency-Key header required", "")
+		writeJSON(w, http.StatusBadRequest, reply)
 		return "", false
 	}
 	return key, true
@@ -217,12 +254,12 @@ func writeJSON(w http.ResponseWriter, status int, value any) {
 	_ = json.NewEncoder(w).Encode(value)
 }
 
-func requestID(r *http.Request) string {
+func readRequestID(r *http.Request) string {
 	id, _ := r.Context().Value(requestIDKey).(string)
 	return id
 }
 
-func loggerOrDefault(logger *slog.Logger) *slog.Logger {
+func selectLogger(logger *slog.Logger) *slog.Logger {
 	if logger != nil {
 		return logger
 	}

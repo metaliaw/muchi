@@ -68,21 +68,37 @@ func SelectStockOffers(items []Offer, limit int) []Offer {
 }
 
 func MarkSuspicious(items []Offer) []Offer {
+	groups := groupOfferPrices(items)
+	medians := findPriceMedians(groups)
+
+	return applySuspicious(items, medians)
+}
+
+func groupOfferPrices(items []Offer) map[string][]int {
 	groups := make(map[string][]int)
 	for _, item := range items {
 		if cents, err := parseCents(item.PriceAmount); err == nil {
 			groups[item.PriceCurrency] = append(groups[item.PriceCurrency], cents)
 		}
 	}
+	return groups
+}
+
+func findPriceMedians(groups map[string][]int) map[string]int {
 	medians := make(map[string]int, len(groups))
 	for currency, prices := range groups {
 		sort.Ints(prices)
 		medians[currency] = prices[len(prices)/2]
 	}
+	return medians
+}
+
+func applySuspicious(items []Offer, medians map[string]int) []Offer {
 	for index := range items {
 		cents, err := parseCents(items[index].PriceAmount)
 		median := medians[items[index].PriceCurrency]
-		if err == nil && median > 0 && cents*10 < median*3 {
+		pricedLow := err == nil && median > 0 && cents*10 < median*3
+		if pricedLow {
 			items[index].Suspicious = true
 			items[index].SuspiciousReason = "price_below_30_percent_median"
 		}

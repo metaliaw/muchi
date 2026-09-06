@@ -16,6 +16,7 @@ type Service struct {
 	Sources  []OfferSource
 	Stocks   StockChecker
 	Cache    OfferCache
+	Tasks    TaskQueue
 }
 
 func (s Service) CreateSearch(ctx context.Context, key string, input CreateInput) (Job, error) {
@@ -23,7 +24,11 @@ func (s Service) CreateSearch(ctx context.Context, key string, input CreateInput
 		return Job{}, err
 	}
 	hash := HashPayload(input)
-	return s.Searches.CreateSearch(ctx, key, hash, input)
+	job, err := s.Searches.CreateSearch(ctx, key, hash, input)
+	if err != nil || s.Tasks == nil {
+		return job, err
+	}
+	return job, s.Tasks.DispatchSearch(ctx, job)
 }
 
 func (s Service) GetSearch(ctx context.Context, id string) (Job, error) {
@@ -49,24 +54,35 @@ func (s Service) FindCardOffers(ctx context.Context, name string) ([]offer.Offer
 
 func (s Service) collectOffers(ctx context.Context, name string) ([]offer.Offer, error) {
 	key := offer.NormalizeCard(name)
-	if s.Cache != nil {
-		if items, found, err := s.Cache.LoadOffers(ctx, key); err == nil && found {
-			return items, nil
-		}
+	if items, found := s.loadOfferCache(ctx, key); found {
+		return items, nil
 	}
 	items, err := querySources(ctx, s.Sources, name)
 	if err != nil && len(items) == 0 {
 		return nil, err
 	}
 	items = offer.MarkSuspicious(offer.DeduplicateOffers(items))
-	if s.Cache != nil {
-		ttl := 15 * time.Minute
-		if len(items) == 0 {
-			ttl = 2 * time.Minute
-		}
-		_ = s.Cache.SaveOffers(ctx, key, items, ttl)
-	}
+	s.saveOfferCache(ctx, key, items)
 	return items, nil
+}
+
+func (s Service) loadOfferCache(ctx context.Context, key string) ([]offer.Offer, bool) {
+	if s.Cache == nil {
+		return nil, false
+	}
+	items, found, err := s.Cache.LoadOffers(ctx, key)
+	return items, err == nil && found
+}
+
+func (s Service) saveOfferCache(ctx context.Context, key string, items []offer.Offer) {
+	if s.Cache == nil {
+		return
+	}
+	ttl := 15 * time.Minute
+	if len(items) == 0 {
+		ttl = 2 * time.Minute
+	}
+	_ = s.Cache.SaveOffers(ctx, key, items, ttl)
 }
 
 func ValidateCreate(input CreateInput) error {

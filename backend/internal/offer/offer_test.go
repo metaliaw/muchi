@@ -2,7 +2,7 @@ package offer
 
 import "testing"
 
-func TestNormalizeAndDeduplicate(t *testing.T) {
+func TestNormalizeOffers(t *testing.T) {
 	items := []Offer{
 		{Store: "one", URL: "https://one.test/card", VariantID: "a"},
 		{Store: "one", URL: "https://one.test/card", VariantID: "a"},
@@ -15,7 +15,7 @@ func TestNormalizeAndDeduplicate(t *testing.T) {
 	}
 }
 
-func TestMarkAndSelectOffers(t *testing.T) {
+func TestSelectOffers(t *testing.T) {
 	items := []Offer{
 		{ID: "cheap", PriceAmount: "1.00", PriceCurrency: "USD"},
 		{ID: "middle", PriceAmount: "10.00", PriceCurrency: "USD"},
@@ -31,7 +31,7 @@ func TestMarkAndSelectOffers(t *testing.T) {
 	}
 }
 
-func TestValidateOffer(t *testing.T) {
+func TestRejectOffer(t *testing.T) {
 	valid := Offer{Store: "one", Source: "catalog", PriceAmount: "10.00", URL: "https://one.test/card"}
 	if err := ValidateOffer(valid); err != nil {
 		t.Fatalf("ValidateOffer() error = %v", err)
