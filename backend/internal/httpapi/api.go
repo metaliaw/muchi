@@ -16,10 +16,11 @@ import (
 )
 
 type API struct {
-	Searches search.Service
-	Health   search.HealthStore
-	Token    string
-	Logger   *slog.Logger
+	Searches           search.Service
+	Health             search.HealthStore
+	Token              string
+	Logger             *slog.Logger
+	HealthCheckTimeout time.Duration
 }
 
 type errorReply struct {
@@ -112,7 +113,7 @@ func (a API) findCardOffers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a API) getHealth(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), a.HealthCheckTimeout)
 	defer cancel()
 	if err := a.Health.CheckHealth(ctx); err != nil {
 		a.writeError(w, r, err)

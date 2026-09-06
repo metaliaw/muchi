@@ -11,12 +11,20 @@ import (
 	"github.com/cangrejometralleta/muchi-api/internal/offer"
 )
 
+// Business limits on a search request; the same across every environment.
+const (
+	maxCardsPerSearch  = 500
+	maxQuantityPerCard = 99
+)
+
 type Service struct {
-	Searches SearchStore
-	Sources  []OfferSource
-	Stocks   StockChecker
-	Cache    OfferCache
-	Tasks    TaskQueue
+	Searches      SearchStore
+	Sources       []OfferSource
+	Stocks        StockChecker
+	Cache         OfferCache
+	Tasks         TaskQueue
+	CacheTTL      time.Duration
+	EmptyCacheTTL time.Duration
 }
 
 func (s Service) CreateSearch(ctx context.Context, key string, input CreateInput) (Job, error) {
@@ -78,19 +86,19 @@ func (s Service) saveOfferCache(ctx context.Context, key string, items []offer.O
 	if s.Cache == nil {
 		return
 	}
-	ttl := 15 * time.Minute
+	ttl := s.CacheTTL
 	if len(items) == 0 {
-		ttl = 2 * time.Minute
+		ttl = s.EmptyCacheTTL
 	}
 	_ = s.Cache.SaveOffers(ctx, key, items, ttl)
 }
 
 func ValidateCreate(input CreateInput) error {
-	if len(input.Cards) == 0 || len(input.Cards) > 500 {
+	if len(input.Cards) == 0 || len(input.Cards) > maxCardsPerSearch {
 		return ErrInvalid
 	}
 	for _, card := range input.Cards {
-		if strings.TrimSpace(card.Name) == "" || card.Quantity < 1 || card.Quantity > 99 {
+		if strings.TrimSpace(card.Name) == "" || card.Quantity < 1 || card.Quantity > maxQuantityPerCard {
 			return ErrInvalid
 		}
 	}

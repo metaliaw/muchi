@@ -46,13 +46,16 @@ func runCommand(logger *slog.Logger, args []string) error {
 }
 
 func serveAPI(ctx context.Context, config config.Config, logger *slog.Logger, service search.Service, health search.HealthStore) error {
-	api := httpapi.API{Searches: service, Health: health, Token: config.APIToken, Logger: logger}
+	api := httpapi.API{
+		Searches: service, Health: health, Token: config.APIToken, Logger: logger,
+		HealthCheckTimeout: config.HealthCheckTimeout,
+	}
 	observed := metrics.NewMetrics().MeasureRequests(api.BuildHandler())
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", metrics.BuildHandler())
 	mux.Handle("/", observed)
 	server := buildAPIServer(config, mux)
-	go stopServer(ctx, server)
+	go stopServer(ctx, server, config.ServerShutdownTimeout)
 	logger.Info("API Started", "address", config.Address)
 	err := server.ListenAndServe()
 	if errors.Is(err, http.ErrServerClosed) {
@@ -65,27 +68,28 @@ func buildAPIServer(config config.Config, handler http.Handler) *http.Server {
 	return &http.Server{
 		Addr:              config.Address,
 		Handler:           handler,
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       15 * time.Second,
-		WriteTimeout:      30 * time.Second,
-		IdleTimeout:       60 * time.Second,
+		ReadHeaderTimeout: config.ServerReadHeaderTimeout,
+		ReadTimeout:       config.ServerReadTimeout,
+		WriteTimeout:      config.ServerWriteTimeout,
+		IdleTimeout:       config.ServerIdleTimeout,
 	}
 }
 
 func workSearches(ctx context.Context, config config.Config, service search.Service) error {
 	worker := search.Worker{
-		Store:         service.Searches,
-		Service:       service,
-		Owner:         config.WorkerID,
-		LeaseDuration: config.LeaseDuration,
-		PollInterval:  config.PollInterval,
+		Store:           service.Searches,
+		Service:         service,
+		Owner:           config.WorkerID,
+		LeaseDuration:   config.LeaseDuration,
+		PollInterval:    config.PollInterval,
+		StockCheckLimit: config.StockCheckLimit,
 	}
 	return worker.RunWorker(ctx)
 }
 
-func stopServer(ctx context.Context, server *http.Server) {
+func stopServer(ctx context.Context, server *http.Server, timeout time.Duration) {
 	<-ctx.Done()
-	shutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	shutdown, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	_ = server.Shutdown(shutdown)
 }

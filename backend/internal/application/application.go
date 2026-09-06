@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/cangrejometralleta/muchi-api/internal/config"
 	firestorestore "github.com/cangrejometralleta/muchi-api/internal/firestore"
@@ -14,6 +13,9 @@ import (
 	"github.com/cangrejometralleta/muchi-api/internal/stores"
 	"github.com/cangrejometralleta/muchi-api/internal/taskqueue"
 )
+
+// userAgent identifies this service to card sources; it does not vary by environment.
+const userAgent = "muchi-api/1.0"
 
 type Runtime struct {
 	Service search.Service
@@ -34,10 +36,12 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 	catalog := scryfall.Client{Fetcher: fetcher, BaseURL: config.ScryfallURL}
 	checker := stores.Checker{Fetcher: fetcher, Config: storeConfig}
 	service := search.Service{
-		Searches: store,
-		Sources:  []search.OfferSource{catalog},
-		Stocks:   checker,
-		Cache:    store,
+		Searches:      store,
+		Sources:       []search.OfferSource{catalog},
+		Stocks:        checker,
+		Cache:         store,
+		CacheTTL:      config.OfferCacheTTL,
+		EmptyCacheTTL: config.OfferCacheEmptyTTL,
 	}
 	if dispatch && config.TaskURL != "" {
 		queue, err := taskqueue.OpenQueue(
@@ -57,8 +61,8 @@ func buildSourceClient(config config.Config, gate source.TrafficGate, logger *sl
 		HTTP:        &http.Client{Timeout: config.HTTPTimeout},
 		Gate:        gate,
 		Logger:      logger,
-		UserAgent:   "muchi-api/1.0",
-		MaxAttempts: 3,
-		BaseDelay:   250 * time.Millisecond,
+		UserAgent:   userAgent,
+		MaxAttempts: config.SourceMaxAttempts,
+		BaseDelay:   config.SourceRetryBaseDelay,
 	}
 }

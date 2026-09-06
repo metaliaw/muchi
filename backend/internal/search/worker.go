@@ -10,11 +10,12 @@ import (
 )
 
 type Worker struct {
-	Store         SearchStore
-	Service       Service
-	Owner         string
-	LeaseDuration time.Duration
-	PollInterval  time.Duration
+	Store           SearchStore
+	Service         Service
+	Owner           string
+	LeaseDuration   time.Duration
+	PollInterval    time.Duration
+	StockCheckLimit int
 }
 
 func (w Worker) RunWorker(ctx context.Context) error {
@@ -84,7 +85,7 @@ func (w Worker) verifyStocks(ctx context.Context, items []offer.Offer) []offer.O
 	if w.Service.Stocks == nil {
 		return items
 	}
-	targets := offer.SelectStockOffers(items, 5)
+	targets := offer.SelectStockOffers(items, w.StockCheckLimit)
 	var group sync.WaitGroup
 	for _, target := range targets {
 		group.Add(1)

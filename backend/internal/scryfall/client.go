@@ -32,7 +32,7 @@ type cardReply struct {
 
 func (c Client) FindOffers(ctx context.Context, name string) ([]offer.Offer, error) {
 	target := c.BaseURL + "/cards/named?exact=" + url.QueryEscape(name)
-	data, err := c.Fetcher.FetchSource(ctx, "api.scryfall.com", target)
+	data, err := c.Fetcher.FetchSource(ctx, sourceDomain(c.BaseURL), target)
 	if err != nil {
 		var status source.StatusError
 		if errors.As(err, &status) && status.Code == 404 {
@@ -45,6 +45,15 @@ func (c Client) FindOffers(ctx context.Context, name string) ([]offer.Offer, err
 		return nil, fmt.Errorf("decode Scryfall response: %w", err)
 	}
 	return buildOffers(reply), nil
+}
+
+// sourceDomain keeps the traffic gate keyed to whatever host MUCHI_SCRYFALL_URL points at.
+func sourceDomain(baseURL string) string {
+	parsed, err := url.Parse(baseURL)
+	if err != nil || parsed.Host == "" {
+		return "api.scryfall.com"
+	}
+	return parsed.Host
 }
 
 func buildOffers(reply cardReply) []offer.Offer {

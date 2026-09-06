@@ -10,6 +10,9 @@ import (
 
 var ErrInvalidOffer = errors.New("invalid offer")
 
+// suspiciousPriceThresholdPercent flags an offer priced below this share of its group median.
+const suspiciousPriceThresholdPercent = 30
+
 type Offer struct {
 	ID               string            `json:"id"`
 	CardName         string            `json:"card_name"`
@@ -97,7 +100,7 @@ func applySuspicious(items []Offer, medians map[string]int) []Offer {
 	for index := range items {
 		cents, err := parseCents(items[index].PriceAmount)
 		median := medians[items[index].PriceCurrency]
-		pricedLow := err == nil && median > 0 && cents*10 < median*3
+		pricedLow := err == nil && median > 0 && cents*100 < median*suspiciousPriceThresholdPercent
 		if pricedLow {
 			items[index].Suspicious = true
 			items[index].SuspiciousReason = "price_below_30_percent_median"
