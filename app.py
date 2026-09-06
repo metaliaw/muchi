@@ -36,7 +36,7 @@ DEFAULT_LANGUAGE = "es"
 MUCHI_MESSENGER = None
 LOGGER = logging.getLogger(__name__)
 
-st.set_page_config(page_title="Muchi", page_icon=CAT, layout="wide")
+st.set_page_config(page_title="Muchi.cl", page_icon=CAT, layout="wide")
 st.markdown(style.CSS, unsafe_allow_html=True)
 # La hoja de sprites viaja incrustada en este CSS, asi que va una sola vez.
 st.markdown(sprites.build_sprite_css(), unsafe_allow_html=True)

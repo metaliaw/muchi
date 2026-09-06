@@ -1,8 +1,13 @@
-# 🐱 Muchi
+# 🐱 Muchi.cl
 
 Buscador kawaii de cartas Magic en tiendas chilenas. Pegas tu mazo y Muchi te dice
 dónde comprar cada carta al mejor precio — considerando los envíos, no sólo el
 precio de la carta.
+
+Esta instancia es Chile: moneda pesos (CLP) y fuente principal
+[scry.cl](https://scry.cl), fijos a propósito. Si Muchi llega a otro país, ese
+país elige su propia moneda, tiendas y agregador (si existe uno) — no hay que
+generalizar esto de antemano.
 
 ## Cómo funciona
 
