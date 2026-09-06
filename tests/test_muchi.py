@@ -16,7 +16,7 @@ from muchi.mtg import (catalog, decklist, mascot, deck, offers, optimizer,
 from muchi.mtg.models import Offer, Order  # noqa: E402
 from muchi.mtg.ports import CardRequest  # noqa: E402
 from muchi.mtg.sources import (  # noqa: E402
-    store_api, edhrec, moxfield, scry, scryfall, shopify, stock,
+    store_api, edhrec, moxfield, muchi_api, scry, scryfall, shopify, stock,
 )
 
 
@@ -285,6 +285,54 @@ def test_inventory_config_is_coherent():
     # the japanese foils list quotes differently, and that must not get lost
     off_rate = [l for l in lists if l["tasa"] != 700]
     assert len(off_rate) == 1 and off_rate[0]["tasa"] == 500, off_rate
+
+
+def test_muchi_api_converts_usd_to_clp():
+    assert muchi_api.convert_to_clp("1.69", "USD", rate=700) == 1183
+    assert muchi_api.convert_to_clp("3500", "CLP", rate=700) == 3500
+    # an unconvertible currency must not silently become a wrong CLP amount
+    assert muchi_api.convert_to_clp("1.69", "EUR", rate=700) is None
+    assert muchi_api.convert_to_clp("no-es-un-numero", "USD", rate=700) is None
+
+
+def test_muchi_api_maps_offers():
+    reply = {
+        "name": "Sol Ring",
+        "offers": [
+            {"id": "a:tcgplayer", "card_name": "Sol Ring", "store": "tcgplayer",
+             "price_amount": "1.69", "price_currency": "USD",
+             "url": "https://tcgplayer.example/sol-ring", "language": "en"},
+            {"id": "a:free", "card_name": "Sol Ring", "store": "regalo",
+             "price_amount": "0", "price_currency": "USD",
+             "url": "https://x", "language": "en"},  # price <= 0 is dropped
+        ],
+    }
+    offers = muchi_api.build_offers(reply, rate=700)
+
+    assert [o.store for o in offers] == ["tcgplayer"]
+    o = offers[0]
+    assert o.card_name == "Sol Ring" and o.price_clp == 1183
+    assert o.source == "muchi-api" and not o.marketplace
+    assert o.key == "a:tcgplayer"
+
+
+def test_muchi_api_without_env_is_optional():
+    """The feature is optional: without both env vars, no source and no request."""
+    for var in ("MUCHI_API_URL", "MUCHI_API_TOKEN"):
+        os.environ.pop(var, None)
+    assert muchi_api.build_source(sess=None) is None
+
+    os.environ["MUCHI_API_URL"] = "http://127.0.0.1:8081/"
+    try:
+        assert muchi_api.build_source(sess=None) is None  # token still missing
+        os.environ["MUCHI_API_TOKEN"] = "un-token"
+        source = muchi_api.build_source(sess=None)
+        assert source is not None
+        assert source.base_url == "http://127.0.0.1:8081"  # trailing slash trimmed
+        assert source.name == "muchi-api"
+    finally:
+        os.environ.pop("MUCHI_API_URL", None)
+        os.environ.pop("MUCHI_API_TOKEN", None)
 
 
 def test_hearts_vary_between_clicks():
