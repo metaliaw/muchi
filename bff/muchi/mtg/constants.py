@@ -9,7 +9,7 @@ SUSPICIOUS_PRICE_MAX_LOW_SHARE = 0.20
 
 # Estas fuentes informan disponibilidad, pero Muchi no puede comprobarla
 # contra la tienda en el momento de mostrar cada oferta.
-UNVERIFIED_STOCK_SOURCES = frozenset({"scry", "directo"})
+UNVERIFIED_STOCK_SOURCES = frozenset({"scry", "directo", "muchi-api"})
 
 # Verificacion en vivo de las ofertas que probablemente recibiran el clic.
 STOCK_VERIFY_CHEAPEST_OFFERS = 5
@@ -25,3 +25,8 @@ OUT_OF_STOCK_MARKERS = (
     "sold out",
     "out of stock",
 )
+
+# CLP por dolar para convertir las ofertas de muchi-api (Scryfall: TCGPlayer,
+# Cardmarket, Cardhoarder cotizan en USD). Misma tasa por defecto que
+# sources/moxfield.py usa para CardKingdom.
+MUCHI_API_USD_CLP_RATE = 700
