@@ -20,7 +20,7 @@ from .ports import (
     PublishedInventory,
     DeckAdvisor,
 )
-from .sources import store_api, edhrec, moxfield, scry, scryfall, shopify, stock
+from .sources import store_api, edhrec, moxfield, muchi_api, scry, scryfall, shopify, stock
 
 
 @dataclass(frozen=True)
@@ -55,9 +55,15 @@ def build_cast() -> Cast:
         timeout=constants.STOCK_VERIFY_TIMEOUT_SECONDS,
         max_retries=0,
     )
+    # Es nuestro propio backend, no una tienda chica: no le debemos la misma
+    # cortesia de 1.5s que a scry.cl o a una tienda de terceros.
+    muchi_api_sess = PoliteSession(min_interval=0.1, timeout=10.0, max_retries=2)
     cx = db.connect_database()
 
     extras: list[OfferSource] = [catalog.IndexedOffers(cx)]
+    api_source = muchi_api.build_source(muchi_api_sess)
+    if api_source is not None:
+        extras.append(api_source)
     extras += store_api.build_api_sources(sess)
 
     return Cast(
