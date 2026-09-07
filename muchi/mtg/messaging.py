@@ -50,7 +50,7 @@ class MuchiMessenger:
             self._clear_render()
         return True
 
-    def render_default(self) -> None:
+    def render_default(self, text: str, state: str) -> None:
         if self.current is None:
-            self.publish("Miau, en que te ayudo?", "talk",
+            self.publish(text, state,
                          Priority.GREETING, "greeting")
