@@ -4,8 +4,10 @@
 .env.example
 vendor/
 bruno/
-moxfield-inventories.json
 *.md
 compose.yaml
 Dockerfile
 .dockerignore
+*.sh
+*.cmd
+muchi-api

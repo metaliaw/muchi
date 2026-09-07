@@ -11,6 +11,15 @@ docker compose up --build
 La API queda en `http://localhost:8081`; el token local es
 `local-development-token`. Métricas Prometheus: `/metrics`.
 
+`./run.sh [serve|work]` usa Docker Compose para compilar e iniciar la API
+(`serve`, por defecto) o el worker (`work`), junto con el emulador de Firestore.
+Los servicios arrancan en segundo plano y el script sigue sus logs. Ctrl+C deja
+de mostrar logs; `docker compose down` detiene los servicios. Esto evita la ruta
+de arranque adjunto de Podman Compose al reutilizar contenedores activos.
+Para iniciar todos los servicios, usa el comando
+anterior. `./build.sh` compila el binario local tras pasar formato, vet y pruebas.
+En Windows, `run.cmd` y `build.cmd` hacen lo mismo.
+
 ```sh
 curl -X POST http://localhost:8081/v1/searches \
   -H 'Authorization: Bearer local-development-token' \
