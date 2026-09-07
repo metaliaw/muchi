@@ -11,3 +11,33 @@ stores:
     timeout_seconds: 10
     allow_redirects: true
     enabled: true
+  el-wombat-rabioso-tcg:
+    name: "El Wombat Rabioso TCG"
+    lists:
+      - label: Artefacto
+        url: https://moxfield.com/decks/yqdRPdoUlEiFz21qKYHGMA
+        clp_per_ck_usd: 700
+      - label: Rojo
+        url: https://moxfield.com/decks/x5ow1Mj2zECS3VLJGut9Ng
+        clp_per_ck_usd: 700
+      - label: Azul
+        url: https://moxfield.com/decks/O7eZP3RIPkuhp8fPUbYJ4w
+        clp_per_ck_usd: 700
+      - label: Verde
+        url: https://moxfield.com/decks/l_sw58BtJUaWZj9n6VNCDw
+        clp_per_ck_usd: 700
+      - label: Tierras
+        url: https://moxfield.com/decks/l-hvQOWPTEKJ0rMjMUHJxg
+        clp_per_ck_usd: 700
+      - label: Multicolor
+        url: https://moxfield.com/decks/sqsOWOC7PUm7IRrAFZL3CQ
+        clp_per_ck_usd: 700
+      - label: Blanco
+        url: https://moxfield.com/decks/qWSpmofE70iJv8zpwjBXrA
+        clp_per_ck_usd: 700
+      - label: Negro
+        url: https://moxfield.com/decks/r30AI4hXKk-xhA9U6pQQ6g
+        clp_per_ck_usd: 700
+      - label: Japo/Foil
+        url: https://moxfield.com/decks/J51lBPRD30yWZ6b_XSnBXA
+        clp_per_ck_usd: 500

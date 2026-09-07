@@ -24,11 +24,11 @@ type Runtime struct {
 
 // BuildRuntime Casts the Search Providers for one Function Instance.
 func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger, dispatch bool) (Runtime, error) {
-	store, err := firestorestore.OpenStore(ctx, config.ProjectID)
+	store, err := firestorestore.OpenStore(ctx, config.ProjectID, config.SearchTTL)
 	if err != nil {
 		return Runtime{}, err
 	}
-	storeConfig, err := stores.LoadStoreConfig(config.StoresPath)
+	storeConfig, err := stores.LoadStoreConfig(config.StoresPath, logger)
 	if err != nil {
 		return Runtime{}, err
 	}
@@ -36,12 +36,15 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 	catalog := scryfall.Client{Fetcher: fetcher, BaseURL: config.ScryfallURL}
 	checker := stores.Checker{Fetcher: fetcher, Config: storeConfig}
 	service := search.Service{
-		Searches:      store,
-		Sources:       []search.OfferSource{catalog},
-		Stocks:        checker,
-		Cache:         store,
-		CacheTTL:      config.OfferCacheTTL,
-		EmptyCacheTTL: config.OfferCacheEmptyTTL,
+		Searches:          store,
+		Sources:           []search.OfferSource{catalog},
+		Stocks:            checker,
+		Cache:             store,
+		CacheTTL:          config.OfferCacheTTL,
+		EmptyCacheTTL:     config.OfferCacheEmptyTTL,
+		MaxCards:          config.MaxCardsPerSearch,
+		MaxQuantity:       config.MaxQuantityPerCard,
+		SuspiciousPercent: config.SuspiciousPricePercent,
 	}
 	if dispatch && config.TaskURL != "" {
 		queue, err := taskqueue.OpenQueue(
@@ -58,11 +61,12 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 
 func buildSourceClient(config config.Config, gate source.TrafficGate, logger *slog.Logger) source.Client {
 	return source.Client{
-		HTTP:        &http.Client{Timeout: config.HTTPTimeout},
-		Gate:        gate,
-		Logger:      logger,
-		UserAgent:   userAgent,
-		MaxAttempts: config.SourceMaxAttempts,
-		BaseDelay:   config.SourceRetryBaseDelay,
+		HTTP:         &http.Client{Timeout: config.HTTPTimeout},
+		Gate:         gate,
+		Logger:       logger,
+		UserAgent:    userAgent,
+		MaxAttempts:  config.SourceMaxAttempts,
+		BaseDelay:    config.SourceRetryBaseDelay,
+		MaxBodyBytes: config.SourceMaxBodyBytes,
 	}
 }

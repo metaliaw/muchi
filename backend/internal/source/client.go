@@ -14,6 +14,9 @@ import (
 
 var ErrCircuitOpen = errors.New("source circuit is open")
 
+// bodyCapFallback keeps an unset MaxBodyBytes from truncating every response to nothing.
+const bodyCapFallback = 4 << 20
+
 // TrafficGate Coordinates calls through https://firebase.google.com/docs/firestore/manage-data/transactions.
 type TrafficGate interface {
 	AwaitSource(context.Context, string) error
@@ -21,12 +24,13 @@ type TrafficGate interface {
 }
 
 type Client struct {
-	HTTP        *http.Client
-	Gate        TrafficGate
-	Logger      *slog.Logger
-	UserAgent   string
-	MaxAttempts int
-	BaseDelay   time.Duration
+	HTTP         *http.Client
+	Gate         TrafficGate
+	Logger       *slog.Logger
+	UserAgent    string
+	MaxAttempts  int
+	BaseDelay    time.Duration
+	MaxBodyBytes int64
 }
 
 type StatusError struct {
@@ -93,8 +97,15 @@ func (c Client) sendRequest(ctx context.Context, target string) ([]byte, time.Du
 		data, _ := io.ReadAll(io.LimitReader(response.Body, 1024))
 		return nil, retry, StatusError{Code: response.StatusCode, Body: string(data)}
 	}
-	data, err := io.ReadAll(io.LimitReader(response.Body, 4<<20))
+	data, err := io.ReadAll(io.LimitReader(response.Body, c.bodyCap()))
 	return data, retry, err
+}
+
+func (c Client) bodyCap() int64 {
+	if c.MaxBodyBytes < 1 {
+		return bodyCapFallback
+	}
+	return c.MaxBodyBytes
 }
 
 func CanRetry(err error) bool {

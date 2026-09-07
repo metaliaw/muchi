@@ -25,6 +25,7 @@ type Config struct {
 	HTTPTimeout             time.Duration
 	SourceMaxAttempts       int
 	SourceRetryBaseDelay    time.Duration
+	SourceMaxBodyBytes      int64
 	ServerReadHeaderTimeout time.Duration
 	ServerReadTimeout       time.Duration
 	ServerWriteTimeout      time.Duration
@@ -34,6 +35,10 @@ type Config struct {
 	StockCheckLimit         int
 	OfferCacheTTL           time.Duration
 	OfferCacheEmptyTTL      time.Duration
+	SearchTTL               time.Duration
+	MaxCardsPerSearch       int
+	MaxQuantityPerCard      int
+	SuspiciousPricePercent  int
 }
 
 func LoadConfig() (Config, error) {
@@ -57,6 +62,7 @@ func LoadConfig() (Config, error) {
 		HTTPTimeout:             readSecondsOr("MUCHI_SOURCE_TIMEOUT_SECONDS", 10),
 		SourceMaxAttempts:       readIntOr("MUCHI_SOURCE_MAX_ATTEMPTS", 3),
 		SourceRetryBaseDelay:    readMillisOr("MUCHI_SOURCE_RETRY_BASE_MS", 250),
+		SourceMaxBodyBytes:      int64(readIntOr("MUCHI_SOURCE_MAX_BODY_BYTES", 4<<20)),
 		ServerReadHeaderTimeout: readSecondsOr("MUCHI_SERVER_READ_HEADER_TIMEOUT_SECONDS", 5),
 		ServerReadTimeout:       readSecondsOr("MUCHI_SERVER_READ_TIMEOUT_SECONDS", 15),
 		ServerWriteTimeout:      readSecondsOr("MUCHI_SERVER_WRITE_TIMEOUT_SECONDS", 30),
@@ -66,6 +72,10 @@ func LoadConfig() (Config, error) {
 		StockCheckLimit:         readIntOr("MUCHI_STOCK_CHECK_LIMIT", 5),
 		OfferCacheTTL:           readSecondsOr("MUCHI_OFFER_CACHE_TTL_SECONDS", 900),
 		OfferCacheEmptyTTL:      readSecondsOr("MUCHI_OFFER_CACHE_EMPTY_TTL_SECONDS", 120),
+		SearchTTL:               readSecondsOr("MUCHI_SEARCH_TTL_SECONDS", 86400),
+		MaxCardsPerSearch:       readIntOr("MUCHI_MAX_CARDS_PER_SEARCH", 500),
+		MaxQuantityPerCard:      readIntOr("MUCHI_MAX_QUANTITY_PER_CARD", 99),
+		SuspiciousPricePercent:  readIntOr("MUCHI_SUSPICIOUS_PRICE_PERCENT", 30),
 	}
 	if config.APIToken == "" {
 		return Config{}, errors.New("MUCHI_API_TOKEN is required")

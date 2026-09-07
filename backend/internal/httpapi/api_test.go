@@ -40,7 +40,7 @@ func (*fakeStore) ListSourceHealth(context.Context) ([]search.SourceHealth, erro
 
 func TestCreateSearch(t *testing.T) {
 	store := &fakeStore{}
-	api := API{Searches: search.Service{Searches: store}, Health: store, Token: "secret"}
+	api := API{Searches: search.Service{Searches: store, MaxCards: 500, MaxQuantity: 99}, Health: store, Token: "secret"}
 	body := `{"cards":[{"name":"Sol Ring","quantity":1}],"options":{"verify_stock":true,"stores_only":true}}`
 	request := httptest.NewRequest(http.MethodPost, "/v1/searches", strings.NewReader(body))
 	request.Header.Set("Authorization", "Bearer secret")
@@ -58,7 +58,7 @@ func TestCreateSearch(t *testing.T) {
 
 func TestRequireHeaders(t *testing.T) {
 	store := &fakeStore{}
-	api := API{Searches: search.Service{Searches: store}, Health: store, Token: "secret"}
+	api := API{Searches: search.Service{Searches: store, MaxCards: 500, MaxQuantity: 99}, Health: store, Token: "secret"}
 	request := httptest.NewRequest(http.MethodPost, "/v1/searches", strings.NewReader(`{}`))
 	response := httptest.NewRecorder()
 	api.BuildHandler().ServeHTTP(response, request)

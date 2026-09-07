@@ -12,6 +12,8 @@ import (
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 )
 
+const testSearchTTL = 24 * time.Hour
+
 func TestRecoverClaims(t *testing.T) {
 	store := openTestStore(t)
 	job := createTestSearch(t, store, "claim")
@@ -68,7 +70,7 @@ func TestExpireSearch(t *testing.T) {
 		t.Fatal(err)
 	}
 	ttl := time.Until(record.ExpiresAt)
-	if ttl < 23*time.Hour || ttl > searchTTL {
+	if ttl < 23*time.Hour || ttl > testSearchTTL {
 		t.Fatalf("search ttl=%s", ttl)
 	}
 }
@@ -96,7 +98,7 @@ func openTestStore(t *testing.T) *Store {
 		t.Skip("FIRESTORE_EMULATOR_HOST is not set")
 	}
 	project := fmt.Sprintf("muchi-test-%d", time.Now().UnixNano())
-	store, err := OpenStore(context.Background(), project)
+	store, err := OpenStore(context.Background(), project, testSearchTTL)
 	if err != nil {
 		t.Fatal(err)
 	}

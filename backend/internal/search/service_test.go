@@ -45,11 +45,11 @@ func TestFindFallback(t *testing.T) {
 
 func TestValidateCreate(t *testing.T) {
 	valid := CreateInput{Cards: []CardInput{{Name: "Sol Ring", Quantity: 1}}}
-	if err := ValidateCreate(valid); err != nil {
+	if err := ValidateCreate(valid, 500, 99); err != nil {
 		t.Fatalf("ValidateCreate() error = %v", err)
 	}
 	valid.Cards[0].Quantity = 0
-	if err := ValidateCreate(valid); !errors.Is(err, ErrInvalid) {
+	if err := ValidateCreate(valid, 500, 99); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("ValidateCreate() error = %v", err)
 	}
 }

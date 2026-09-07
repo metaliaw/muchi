@@ -20,8 +20,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const searchTTL = 24 * time.Hour
-
 // maxRPCDeadline caps how far in the future a Firestore call's deadline can sit.
 // Firestore rejects calls whose context deadline is more than ~30s out; callers
 // (an HTTP handler, a Cloud Tasks-triggered function) may carry much longer ones.
@@ -37,7 +35,8 @@ func boundContext(ctx context.Context) (context.Context, context.CancelFunc) {
 }
 
 type Store struct {
-	client *firestorelib.Client
+	client    *firestorelib.Client
+	searchTTL time.Duration
 }
 
 type searchRecord struct {
@@ -77,12 +76,12 @@ type sourceRecord struct {
 }
 
 // OpenStore Connects the Search Store through https://cloud.google.com/firestore/docs/reference/libraries.
-func OpenStore(ctx context.Context, projectID string) (*Store, error) {
+func OpenStore(ctx context.Context, projectID string, searchTTL time.Duration) (*Store, error) {
 	client, err := firestorelib.NewClient(ctx, projectID)
 	if err != nil {
 		return nil, fmt.Errorf("open search store: %w", err)
 	}
-	return &Store{client: client}, nil
+	return &Store{client: client, searchTTL: searchTTL}, nil
 }
 
 func (s *Store) CreateSearch(ctx context.Context, key, hash string, input search.CreateInput) (search.Job, error) {
@@ -323,7 +322,7 @@ func (s *Store) createSearch(ctx context.Context, tx *firestorelib.Transaction, 
 	for index := range itemIDs {
 		itemIDs[index] = buildID("item")
 	}
-	expires := time.Now().UTC().Add(searchTTL)
+	expires := time.Now().UTC().Add(s.searchTTL)
 	data, _ := json.Marshal(job)
 	if err := tx.Create(s.client.Collection("searches").Doc(job.ID), searchRecord{Payload: data, ItemIDs: itemIDs, ExpiresAt: expires}); err != nil {
 		return err
@@ -391,7 +390,7 @@ func (s *Store) cancelSearch(ctx context.Context, tx *firestorelib.Transaction, 
 	if err := tx.Update(reference, []firestorelib.Update{{Path: "payload", Value: data}}); err != nil {
 		return err
 	}
-	record := requestRecord{Hash: hash, ResourceID: job.ID, ExpiresAt: now.Add(searchTTL)}
+	record := requestRecord{Hash: hash, ResourceID: job.ID, ExpiresAt: now.Add(s.searchTTL)}
 	return tx.Set(s.client.Collection("idempotency").Doc(hashKey("cancel:"+key)), record)
 }
 

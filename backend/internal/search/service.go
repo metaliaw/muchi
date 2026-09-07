@@ -11,24 +11,21 @@ import (
 	"github.com/cangrejometralleta/muchi-api/internal/offer"
 )
 
-// Business limits on a search request; the same across every environment.
-const (
-	maxCardsPerSearch  = 500
-	maxQuantityPerCard = 99
-)
-
 type Service struct {
-	Searches      SearchStore
-	Sources       []OfferSource
-	Stocks        StockChecker
-	Cache         OfferCache
-	Tasks         TaskQueue
-	CacheTTL      time.Duration
-	EmptyCacheTTL time.Duration
+	Searches          SearchStore
+	Sources           []OfferSource
+	Stocks            StockChecker
+	Cache             OfferCache
+	Tasks             TaskQueue
+	CacheTTL          time.Duration
+	EmptyCacheTTL     time.Duration
+	MaxCards          int
+	MaxQuantity       int
+	SuspiciousPercent int
 }
 
 func (s Service) CreateSearch(ctx context.Context, key string, input CreateInput) (Job, error) {
-	if err := ValidateCreate(input); err != nil {
+	if err := ValidateCreate(input, s.MaxCards, s.MaxQuantity); err != nil {
 		return Job{}, err
 	}
 	hash := HashPayload(input)
@@ -69,7 +66,7 @@ func (s Service) collectOffers(ctx context.Context, name string) ([]offer.Offer,
 	if err != nil && len(items) == 0 {
 		return nil, err
 	}
-	items = offer.MarkSuspicious(offer.DeduplicateOffers(items))
+	items = offer.MarkSuspicious(offer.DeduplicateOffers(items), s.SuspiciousPercent)
 	s.saveOfferCache(ctx, key, items)
 	return items, nil
 }
@@ -93,12 +90,13 @@ func (s Service) saveOfferCache(ctx context.Context, key string, items []offer.O
 	_ = s.Cache.SaveOffers(ctx, key, items, ttl)
 }
 
-func ValidateCreate(input CreateInput) error {
-	if len(input.Cards) == 0 || len(input.Cards) > maxCardsPerSearch {
+// ValidateCreate Bounds one Search Request by the configured Card and Quantity Limits.
+func ValidateCreate(input CreateInput, maxCards, maxQuantity int) error {
+	if len(input.Cards) == 0 || len(input.Cards) > maxCards {
 		return ErrInvalid
 	}
 	for _, card := range input.Cards {
-		if strings.TrimSpace(card.Name) == "" || card.Quantity < 1 || card.Quantity > maxQuantityPerCard {
+		if strings.TrimSpace(card.Name) == "" || card.Quantity < 1 || card.Quantity > maxQuantity {
 			return ErrInvalid
 		}
 	}

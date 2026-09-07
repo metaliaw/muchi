@@ -2,6 +2,7 @@ package offer
 
 import (
 	"errors"
+	"fmt"
 	"net/url"
 	"sort"
 	"strconv"
@@ -9,9 +10,6 @@ import (
 )
 
 var ErrInvalidOffer = errors.New("invalid offer")
-
-// suspiciousPriceThresholdPercent flags an offer priced below this share of its group median.
-const suspiciousPriceThresholdPercent = 30
 
 type Offer struct {
 	ID               string            `json:"id"`
@@ -70,11 +68,12 @@ func SelectStockOffers(items []Offer, limit int) []Offer {
 	return result
 }
 
-func MarkSuspicious(items []Offer) []Offer {
+// MarkSuspicious Flags an Offer priced below percent of its Currency Median.
+func MarkSuspicious(items []Offer, percent int) []Offer {
 	groups := groupOfferPrices(items)
 	medians := findPriceMedians(groups)
 
-	return applySuspicious(items, medians)
+	return applySuspicious(items, medians, percent)
 }
 
 func groupOfferPrices(items []Offer) map[string][]int {
@@ -96,14 +95,15 @@ func findPriceMedians(groups map[string][]int) map[string]int {
 	return medians
 }
 
-func applySuspicious(items []Offer, medians map[string]int) []Offer {
+func applySuspicious(items []Offer, medians map[string]int, percent int) []Offer {
+	reason := fmt.Sprintf("price_below_%d_percent_median", percent)
 	for index := range items {
 		cents, err := parseCents(items[index].PriceAmount)
 		median := medians[items[index].PriceCurrency]
-		pricedLow := err == nil && median > 0 && cents*100 < median*suspiciousPriceThresholdPercent
+		pricedLow := err == nil && median > 0 && cents*100 < median*percent
 		if pricedLow {
 			items[index].Suspicious = true
-			items[index].SuspiciousReason = "price_below_30_percent_median"
+			items[index].SuspiciousReason = reason
 		}
 	}
 	return items

@@ -21,7 +21,7 @@ func TestSelectOffers(t *testing.T) {
 		{ID: "middle", PriceAmount: "10.00", PriceCurrency: "USD"},
 		{ID: "high", PriceAmount: "11.00", PriceCurrency: "USD"},
 	}
-	items = MarkSuspicious(items)
+	items = MarkSuspicious(items, 30)
 	if !items[0].Suspicious || items[0].SuspiciousReason == "" {
 		t.Fatal("cheap offer was not marked suspicious")
 	}
