@@ -21,7 +21,7 @@ if "%~1"=="--dry-run" (
 if "%~1"=="--help" goto Help
 if "%~1"=="-h" goto Help
 if "%~2"=="" goto Failed
-if "%~1"=="--project" (set "PROJECT=%~2") else if "%~1"=="--region" (set "REGION=%~2") else if "%~1"=="--token-secret" (set "TOKEN_SECRET=%~2") else if "%~1"=="--token-file" (set "TOKEN_FILE=%~2") else goto Failed
+if "%~1"=="--project" (set "PROJECT=%~2") else if "%~1"=="--region" (set "REGION=%~2") else if "%~1"=="--token-secret" (set "MUCHI_API_TOKEN=%~2") else if "%~1"=="--token-file" (set "TOKEN_FILE=%~2") else goto Failed
 shift
 shift
 goto Parse
@@ -34,7 +34,7 @@ where gcloud >nul 2>nul || goto Failed
 if not defined PROJECT call :ReadProject || goto Failed
 if not defined PROJECT goto Failed
 if "%PROJECT%"=="(unset)" goto Failed
-for /f "tokens=1,2 delims=:" %%A in ("%TOKEN_SECRET%") do (
+for /f "tokens=1,2 delims=:" %%A in ("%MUCHI_API_TOKEN%") do (
   set "SECRET_NAME=%%A"
   set "SECRET_VERSION=%%B"
 )
@@ -97,12 +97,12 @@ if "%DRY_RUN%"=="1" set "SECRET_VERSION=1"
 call :ReadCloud SECRET_RESOURCE secrets versions describe "%SECRET_VERSION%" --secret="%SECRET_NAME%" --format="value(name)" || exit /b 1
 call :ReadCloud SECRET_STATE secrets versions describe "%SECRET_VERSION%" --secret="%SECRET_NAME%" --format="value(state)" || exit /b 1
 if "%DRY_RUN%"=="1" (
-  set "TOKEN_SECRET=%SECRET_NAME%:1"
+  set "MUCHI_API_TOKEN=%SECRET_NAME%:1"
   exit /b 0
 )
 if not "%SECRET_STATE%"=="ENABLED" exit /b 1
 for %%V in ("%SECRET_RESOURCE:/=\%") do set "SECRET_VERSION=%%~nxV"
-set "TOKEN_SECRET=%SECRET_NAME%:%SECRET_VERSION%"
+set "MUCHI_API_TOKEN=%SECRET_NAME%:%SECRET_VERSION%"
 exit /b 0
 
 :UploadToken
@@ -165,7 +165,7 @@ call :Cloud functions deploy "%WORKER_NAME%" --gen2 --trigger-http --no-allow-un
   --service-account="%WORKER_EMAIL%" --build-service-account="projects/%PROJECT%/serviceAccounts/%BUILD_EMAIL%" ^
   --memory="%MEMORY%" --timeout="%TIMEOUT%" --min-instances=0 --max-instances="%MAX_INSTANCES%" --concurrency=1 ^
   --set-env-vars="GOOGLE_CLOUD_PROJECT=%PROJECT%,MUCHI_STORES_CONFIG=serverless_function_source_code/config/stores.yaml" ^
-  --set-secrets="MUCHI_API_TOKEN=%TOKEN_SECRET%" --format=none || exit /b 1
+  --set-secrets="MUCHI_API_TOKEN=%MUCHI_API_TOKEN%" --format=none || exit /b 1
 call :ReadCloud WORKER_URL functions describe "%WORKER_NAME%" --gen2 --region="%REGION%" --format="value(serviceConfig.uri)" || exit /b 1
 call :ReadCloud WORKER_SERVICE functions describe "%WORKER_NAME%" --gen2 --region="%REGION%" --format="value(serviceConfig.service)" || exit /b 1
 if "%DRY_RUN%"=="1" (
@@ -187,7 +187,7 @@ call :Cloud functions deploy "%API_NAME%" --gen2 --trigger-http --allow-unauthen
   --service-account="%API_EMAIL%" --build-service-account="projects/%PROJECT%/serviceAccounts/%BUILD_EMAIL%" ^
   --memory="%MEMORY%" --timeout="%TIMEOUT%" --min-instances=0 --max-instances="%MAX_INSTANCES%" --concurrency=1 ^
   --set-env-vars="GOOGLE_CLOUD_PROJECT=%PROJECT%,MUCHI_STORES_CONFIG=serverless_function_source_code/config/stores.yaml,MUCHI_TASK_REGION=%REGION%,MUCHI_TASK_QUEUE=%TASK_QUEUE%,MUCHI_TASK_URL=%WORKER_URL%,MUCHI_TASK_SERVICE_ACCOUNT=%TASK_EMAIL%" ^
-  --set-secrets="MUCHI_API_TOKEN=%TOKEN_SECRET%" --format=none || exit /b 1
+  --set-secrets="MUCHI_API_TOKEN=%MUCHI_API_TOKEN%" --format=none || exit /b 1
 call :ReadCloud API_URL functions describe "%API_NAME%" --gen2 --region="%REGION%" --format="value(serviceConfig.uri)" || exit /b 1
 if "%DRY_RUN%"=="0" if not defined API_URL exit /b 1
 exit /b 0
