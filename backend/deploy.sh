@@ -11,17 +11,19 @@ trap 'code=$?; if [ "$code" -ne 0 ]; then printf "❌ %s Falló\n" "$STEP" >&2; 
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    --project|--region|--token-secret|--token-file)
+    --project|--region|--token-secret|--token-file|--scry)
       [ "$#" -ge 2 ] || { printf '%s\n' "Falta el Valor de $1" >&2; exit 1; }
       case "$1" in
         --project) PROJECT=$2 ;; --region) REGION=$2 ;;
         --token-secret) MUCHI_API_TOKEN=$2 ;; --token-file) TOKEN_FILE=$2 ;;
+        --scry) MUCHI_SCRY_ENABLED=$2 ;;
       esac
       shift 2 ;;
     --dry-run) DRY_RUN=true; shift ;;
     --help|-h)
       printf '%s\n' '🐱 deploy.sh [--project ID] [--region REGION]' \
-        '  [--token-secret NOMBRE:VERSION] [--token-file ARCHIVO] [--dry-run]'
+        '  [--token-secret NOMBRE:VERSION] [--token-file ARCHIVO]' \
+        '  [--scry true|false] [--dry-run]'
       exit 0 ;;
     *) printf '%s\n' "Argumento Desconocido: $1" >&2; exit 1 ;;
   esac
@@ -30,6 +32,7 @@ command -v gcloud >/dev/null 2>&1 || { printf '%s\n' 'Instala Google Cloud CLI.'
 [ -n "$PROJECT" ] || PROJECT=$(gcloud config get-value project 2>/dev/null)
 case "$PROJECT" in ''|'(unset)'|*[!a-z0-9-]*) printf '%s\n' 'Selecciona un Proyecto con --project.' >&2; exit 1 ;; esac
 case "$REGION" in ''|*[!a-z0-9-]*) printf '%s\n' 'Región Inválida.' >&2; exit 1 ;; esac
+case "$MUCHI_SCRY_ENABLED" in true|false) ;; *) printf '%s\n' 'Usa --scry true o --scry false.' >&2; exit 1 ;; esac
 case "$MUCHI_API_TOKEN" in *:*) ;; *) printf '%s\n' 'Usa --token-secret NOMBRE:VERSION.' >&2; exit 1 ;; esac
 SECRET_NAME=${MUCHI_API_TOKEN%:*}
 SECRET_VERSION=${MUCHI_API_TOKEN##*:}
@@ -119,7 +122,7 @@ cloud functions deploy "$WORKER_NAME" --gen2 --trigger-http --no-allow-unauthent
   --runtime="$RUNTIME" --region="$REGION" --source=. --entry-point=ProcessSearch --ignore-file=.gcloudignore \
   --service-account="$WORKER_EMAIL" --build-service-account="projects/$PROJECT/serviceAccounts/$BUILD_EMAIL" \
   --memory="$MEMORY" --timeout="$TIMEOUT" --min-instances=0 --max-instances="$MAX_INSTANCES" --concurrency=1 \
-  --set-env-vars="GOOGLE_CLOUD_PROJECT=$PROJECT,MUCHI_STORES_CONFIG=serverless_function_source_code/config/stores.yaml" \
+  --set-env-vars="GOOGLE_CLOUD_PROJECT=$PROJECT,MUCHI_STORES_CONFIG=serverless_function_source_code/config/stores.yaml,MUCHI_SCRY_ENABLED=$MUCHI_SCRY_ENABLED" \
   --set-secrets="MUCHI_API_TOKEN=$MUCHI_API_TOKEN" --format=none
 WORKER_URL=$(cloud functions describe "$WORKER_NAME" --gen2 --region="$REGION" --format='value(serviceConfig.uri)')
 WORKER_SERVICE=$(cloud functions describe "$WORKER_NAME" --gen2 --region="$REGION" --format='value(serviceConfig.service)')
@@ -134,7 +137,7 @@ cloud functions deploy "$API_NAME" --gen2 --trigger-http --allow-unauthenticated
   --runtime="$RUNTIME" --region="$REGION" --source=. --entry-point=ServeAPI --ignore-file=.gcloudignore \
   --service-account="$API_EMAIL" --build-service-account="projects/$PROJECT/serviceAccounts/$BUILD_EMAIL" \
   --memory="$MEMORY" --timeout="$TIMEOUT" --min-instances=0 --max-instances="$MAX_INSTANCES" --concurrency=1 \
-  --set-env-vars="GOOGLE_CLOUD_PROJECT=$PROJECT,MUCHI_STORES_CONFIG=serverless_function_source_code/config/stores.yaml,MUCHI_TASK_REGION=$REGION,MUCHI_TASK_QUEUE=$TASK_QUEUE,MUCHI_TASK_URL=$WORKER_URL,MUCHI_TASK_SERVICE_ACCOUNT=$TASK_EMAIL" \
+  --set-env-vars="GOOGLE_CLOUD_PROJECT=$PROJECT,MUCHI_STORES_CONFIG=serverless_function_source_code/config/stores.yaml,MUCHI_TASK_REGION=$REGION,MUCHI_TASK_QUEUE=$TASK_QUEUE,MUCHI_TASK_URL=$WORKER_URL,MUCHI_TASK_SERVICE_ACCOUNT=$TASK_EMAIL,MUCHI_SCRY_ENABLED=$MUCHI_SCRY_ENABLED" \
   --set-secrets="MUCHI_API_TOKEN=$MUCHI_API_TOKEN" --format=none
 API_URL=$(cloud functions describe "$API_NAME" --gen2 --region="$REGION" --format='value(serviceConfig.uri)')
 if "$DRY_RUN"; then printf '%s\n' '✅ Vista Previa Completa'; else
