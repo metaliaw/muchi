@@ -1,0 +1,5 @@
+price_gap_ratio: 4
+minimum_offers: 5
+maximum_low_offers: 2
+maximum_low_share: 0.20
+stock_check_limit: 5

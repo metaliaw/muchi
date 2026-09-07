@@ -11,6 +11,7 @@ cartas da resultados muy buenos en milisegundos, pero no garantiza el optimo.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from decimal import Decimal
 
 from .models import Offer, Order
 
@@ -20,12 +21,12 @@ class Line:
     card_name: str
     quantity: int
     store: str
-    unit_price: int
+    unit_price: int | Decimal
     url: str
     title: str
 
     @property
-    def subtotal(self) -> int:
+    def subtotal(self) -> int | Decimal:
         return self.unit_price * self.quantity
 
 
@@ -40,15 +41,15 @@ class Plan:
         return sorted({l.store for l in self.lines})
 
     @property
-    def cards_cost(self) -> int:
+    def cards_cost(self) -> int | Decimal:
         return sum(l.subtotal for l in self.lines)
 
     @property
-    def shipping_cost(self) -> int:
+    def shipping_cost(self) -> int | Decimal:
         return self.shipping_per_store * len(self.stores)
 
     @property
-    def total(self) -> int:
+    def total(self) -> int | Decimal:
         return self.cards_cost + self.shipping_cost
 
 
@@ -107,7 +108,7 @@ def build_optimal_plan(orders: list[Order],
     ceiling = max(o.price_clp for m in prices for o in m.values())
     PENALTY = ceiling * 4 + shipping_per_store * 10
 
-    def cost_selection(selection: frozenset[str]) -> int:
+    def cost_selection(selection: frozenset[str]) -> int | Decimal:
         if not selection:
             return PENALTY * sum(quantities)
         total = shipping_per_store * len(selection)
