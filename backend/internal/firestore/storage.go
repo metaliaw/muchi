@@ -294,7 +294,7 @@ func (s *Store) ListSourceHealth(ctx context.Context) ([]search.SourceHealth, er
 	defer cancel()
 	documents := s.client.Collection("source_health").Documents(ctx)
 	defer documents.Stop()
-	var result []search.SourceHealth
+	result := make([]search.SourceHealth, 0)
 	for {
 		document, err := documents.Next()
 		if errors.Is(err, iterator.Done) {

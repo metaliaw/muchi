@@ -2,6 +2,7 @@ package firestore
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -120,4 +121,23 @@ func createTestSearch(t *testing.T, store *Store, suffix string) search.Job {
 		t.Fatal(err)
 	}
 	return job
+}
+
+func TestListEmptySources(t *testing.T) {
+	store := openTestStore(t)
+	items, err := store.ListSourceHealth(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if items == nil || len(items) != 0 {
+		t.Fatalf("empty sources=%#v", items)
+	}
+
+	body, err := json.Marshal(map[string]any{"sources": items})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(body) != `{"sources":[]}` {
+		t.Fatalf("empty sources JSON=%s", body)
+	}
 }
