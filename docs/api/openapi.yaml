@@ -1,3 +1,7 @@
+# Copia de referencia del Contrato de Muchi API.
+# Fuente oficial: openapi.yaml del Repositorio privado
+# https://github.com/cangrejometralleta/muchi-api
+# Sincronizar desde la Fuente; no mantener una Especificación independiente.
 openapi: 3.1.0
 info:
   title: Muchi API
