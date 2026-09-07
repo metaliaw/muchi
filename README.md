@@ -58,7 +58,7 @@ MUCHI_API_TOKEN=tu-codigo-de-seguridad
 
 `MUCHI_API_URL` acepta la URL base con o sin `/v1`. El Código de Seguridad es
 obligatorio y se envía como `Authorization: Bearer <MUCHI_API_TOKEN>`, según
-la [Especificación de la API](muchi/api/openapi.yaml). Se configura en el
+la [Especificación de la API](docs/api/openapi.yaml). Se configura en el
 Servidor del Front; no debe publicarse en el Repositorio ni en enlaces.
 
 En Linux o macOS:
@@ -122,5 +122,9 @@ MUCHI_API_INTEGRATION=1 pytest tests/test_muchi_api_integration.py
 ## Documentación
 
 - [Compartir el Stock de una Tienda](INTEGRAR-TIENDA.md).
-- [Contrato de Muchi API](muchi/api/openapi.yaml).
+- [Contrato de Muchi API](docs/api/openapi.yaml): copia de referencia del archivo
+  `openapi.yaml` del [Repositorio privado muchi-api](https://github.com/cangrejometralleta/muchi-api).
+  El acceso al original requiere permisos. Los cambios del Contrato se realizan
+  en ese Repositorio y luego se sincronizan aquí; esta copia no es una
+  Especificación independiente.
 - [Notas de la Arquitectura anterior](docs/frontend-legacy.md), conservadas como referencia histórica.
