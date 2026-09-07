@@ -11,8 +11,64 @@ stores:
     timeout_seconds: 10
     allow_redirects: true
     enabled: true
+  onplay.cl:
+    name: "OnPlay Singles"
+    platform: woocommerce
+    unavailable_selectors:
+      - "div.product.outofstock"
+      - "p.stock.out-of-stock"
+    unavailable_text:
+      - "Sold out"
+      - "Agotado"
+    scope_selector: "div.product"
+    timeout_seconds: 10
+    allow_redirects: true
+    enabled: true
+  gameofmagicsingles.cl:
+    name: "Game of Magic Singles"
+    platform: shopify
+    timeout_seconds: 10
+    allow_redirects: true
+    enabled: true
+  singles.collectorcenter.cl:
+    name: "Collector Center"
+    platform: shopify
+    timeout_seconds: 10
+    allow_redirects: true
+    enabled: true
+  www.cardsouls.cl:
+    name: "CardSouls"
+    platform: shopify
+    timeout_seconds: 10
+    allow_redirects: true
+    enabled: true
+  www.cartaslafortaleza.cl:
+    name: "Cartas La Fortaleza"
+    platform: jumpseller
+    timeout_seconds: 10
+    allow_redirects: true
+    enabled: true
+  www.chronomagic.cl:
+    name: "ChronoMagic"
+    platform: jumpseller
+    timeout_seconds: 10
+    allow_redirects: true
+    enabled: true
+  gamequest.cl:
+    name: "GameQuest"
+    platform: jumpseller
+    timeout_seconds: 10
+    allow_redirects: true
+    enabled: true
+  www.magic4ever.cl:
+    name: "Magic4Ever"
+    platform: jumpseller
+    timeout_seconds: 10
+    allow_redirects: true
+    enabled: true
   el-wombat-rabioso-tcg:
     name: "El Wombat Rabioso TCG"
+    enabled: true
     lists:
       - label: Artefacto
         url: https://moxfield.com/decks/yqdRPdoUlEiFz21qKYHGMA

@@ -38,7 +38,7 @@ func TestFindFallback(t *testing.T) {
 	cache := &stubCache{}
 	service := Service{Sources: []OfferSource{stubSource{err: errors.New("down")}, stubSource{items: []offer.Offer{wanted}}}, Cache: cache}
 	items, err := service.FindCardOffers(context.Background(), "Sol Ring")
-	if err != nil || len(items) != 1 || !cache.saved {
+	if err != nil || len(items) != 1 || cache.saved {
 		t.Fatalf("FindCardOffers() items=%v saved=%v err=%v", items, cache.saved, err)
 	}
 }

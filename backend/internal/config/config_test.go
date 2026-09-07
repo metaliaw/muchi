@@ -36,3 +36,19 @@ func TestIgnoreMissingDotenv(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestTaskDeadline(t *testing.T) {
+	t.Setenv("MUCHI_API_TOKEN", "test")
+	for _, test := range []struct {
+		value string
+		valid bool
+	}{{"900", true}, {"15", true}, {"1800", true}, {"14", false}, {"1801", false}, {"0", false}, {"-1", false}, {"abc", false}, {"9999999999999999999999", false}} {
+		t.Run(test.value, func(t *testing.T) {
+			t.Setenv("MUCHI_TASK_DEADLINE_SECONDS", test.value)
+			_, err := LoadConfig()
+			if (err == nil) != test.valid {
+				t.Fatalf("deadline=%s err=%v", test.value, err)
+			}
+		})
+	}
+}

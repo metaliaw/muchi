@@ -31,6 +31,7 @@ type Client struct {
 	MaxAttempts  int
 	BaseDelay    time.Duration
 	MaxBodyBytes int64
+	storefront   bool
 }
 
 type StatusError struct {
@@ -87,6 +88,10 @@ func (c Client) sendRequest(ctx context.Context, target string) ([]byte, time.Du
 	}
 	req.Header.Set("Accept", "application/json, text/html;q=0.9")
 	req.Header.Set("User-Agent", c.UserAgent)
+	if c.storefront {
+		req.Header.Set("X-Requested-With", "XMLHttpRequest")
+		req.Header.Set("Referer", req.URL.Scheme+"://"+req.URL.Host+"/")
+	}
 	response, err := c.HTTP.Do(req)
 	if err != nil {
 		return nil, 0, err
@@ -144,4 +149,10 @@ func waitRetry(ctx context.Context, retry, base time.Duration, attempt int) erro
 	case <-timer.C:
 		return nil
 	}
+}
+
+// FetchStorefront Uses the Public Ajax Contract while Preserving Retries and Traffic Coordination.
+func (c Client) FetchStorefront(ctx context.Context, domain, target string) ([]byte, error) {
+	c.storefront = true
+	return c.FetchSource(ctx, domain, target)
 }

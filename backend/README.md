@@ -2,6 +2,36 @@
 
 Servicio Go para buscar ofertas de cartas, verificar stock y ejecutar listas reanudables.
 
+Las fuentes de ofertas son [scry.cl](https://scry.cl) y las tiendas habilitadas
+en `config/stores.yaml`: catálogos WooCommerce, Shopify y Jumpseller, e inventarios publicados en Moxfield.
+De Scry se leen los precios guardados en sus páginas, en CLP, junto con tienda y variante.
+La verificación de stock consulta las tiendas configuradas; un precio publicado no confirma stock.
+`MUCHI_SCRY_URL` permite cambiar la URL base (por defecto `https://scry.cl`).
+El lector depende del HTML público de Scry y no fuerza una actualización de su caché.
+
+Las listas Moxfield se resuelven automáticamente por la API v3 a partir de cada
+`lists[].url`. Para agregar una tienda, define `name`, `enabled: true` y sus listas
+con `label`, `url` y `clp_per_ck_usd`; reinicia el servicio para cargar la configuración.
+No requieren exportaciones ni importaciones manuales.
+
+Cada lista conserva sus ediciones, acabados y cantidades publicadas. El precio es
+Card Kingdom USD multiplicado por la tasa de la lista, redondeado al peso más cercano
+(las mitades suben). Foil usa `ck_foil` y etched usa `ck_etched`; las variantes sin
+precio correspondiente se omiten y se registran en logs. La cantidad queda en
+`metadata.quantity`; el stock sigue sin confirmar hasta verificarlo con la tienda.
+
+La caché de inventario completo en Firestore comparte `MUCHI_OFFER_CACHE_TTL_SECONDS`
+(900 segundos por defecto) y se renueva bajo demanda al vencer. La caché de resultados
+por carta puede extender la visibilidad de cambios hasta otro período de ese TTL.
+Una respuesta bloqueada o inválida de Moxfield se trata como error, nunca como lista
+vacía. Las otras fuentes siguen disponibles.
+
+Para comprobar las nueve listas públicas configuradas:
+
+```sh
+MUCHI_TEST_MOXFIELD_LIVE=1 go test ./internal/moxfield -run TestPublicLists -v
+```
+
 ## Desarrollo local
 
 ```sh
@@ -49,3 +79,53 @@ Variables requeridas: `GOOGLE_CLOUD_PROJECT`, `MUCHI_API_TOKEN`,
 Activa una política TTL sobre el campo `expires_at` en los collection groups
 `searches`, `items`, `item_offers`, `idempotency` y `offer_cache`. El código
 rechaza documentos vencidos aunque Firestore aún no los haya eliminado.
+
+## Despliegue con Gatos
+
+`deploy.sh` y `deploy.cmd` ejecutan `gcloud` directamente con tu sesión de
+`gcloud auth login`. Usan el proyecto activo de Google Cloud CLI o `--project`.
+No requieren Go local para desplegar: GCP compila las funciones desde el código fuente.
+
+```sh
+./deploy.sh
+```
+
+```bat
+deploy.cmd
+```
+
+Los valores compartidos están en `config/deploy.env`: las funciones
+`muchi-serve-api` y `muchi-process-search`, región `southamerica-east1`, cola
+`muchi-searches`, cuentas de servicio y límites. Puedes seleccionar otro proyecto,
+región o referencia de Secret Manager:
+
+```sh
+./deploy.sh --project mi-proyecto --region southamerica-east1 --token-secret muchi-api-token:1
+```
+
+Agrega `--dry-run` para revisar los comandos sin cambios en GCP. El valor predeterminado
+`muchi-api-token:latest` se resuelve a una versión fija antes de desplegar ambos servicios.
+Para crear el secreto por primera vez o agregar una versión, usa `--token-file` con la
+ruta absoluta de un archivo privado fuera del repositorio, sin salto de línea final.
+El token no se imprime ni se pasa como valor en argumentos. Los scripts no cargan `.env`.
+
+El proyecto debe existir y tener facturación activa. Tu cuenta necesita desplegar
+funciones, habilitar servicios y administrar los recursos y permisos indicados.
+Las cuentas de servicio se usan durante la ejecución en GCP; el despliegue usa tu sesión.
+
+Los scripts habilitan los servicios, reutilizan o crean cuentas, Firestore y la cola,
+y solicitan los TTL de las cinco colecciones. Firestore existente conserva su ubicación.
+Despliegan primero el worker privado `ProcessSearch` y conceden su invocación a Cloud Tasks
+mediante OIDC. Luego despliegan `ServeAPI`, pública en IAM y protegida por el token de la
+aplicación, con la URL real del worker. No se inicia un worker residente en GCP.
+
+Se incluyen las tiendas de `config/stores.yaml` en el código desplegado; el runtime Go
+las lee desde `serverless_function_source_code/config/stores.yaml`. Los límites
+predeterminados son 512 MiB, timeout de 1800 segundos, concurrencia 1 y hasta 5 instancias
+por función. La cola admite 1 envío por segundo y 2 tareas concurrentes. Las tareas HTTP
+tienen un plazo de 1800 segundos (`MUCHI_TASK_DEADLINE_SECONDS`), para completar búsquedas
+Jumpseller con paginación extensa. En local, usa el flujo asíncrono para estas búsquedas.
+
+La salida incluye gatos y estados, junto con el progreso y los errores nativos de gcloud.
+Un error detiene el script; los recursos ya creados se conservan para reintentar.
+Al terminar se imprime la URL de la API y su ruta `/v1/health`.

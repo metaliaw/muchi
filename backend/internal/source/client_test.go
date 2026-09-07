@@ -60,3 +60,27 @@ func TestParseRetry(t *testing.T) {
 		t.Fatalf("ParseRetryAfter() = %s", got)
 	}
 }
+
+func TestStorefrontHeaders(t *testing.T) {
+	var ajax atomic.Bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if ajax.Load() {
+			if r.Header.Get("X-Requested-With") != "XMLHttpRequest" || r.Header.Get("Referer") != "http://"+r.Host+"/" {
+				t.Errorf("missing storefront headers: %v", r.Header)
+			}
+		} else if r.Header.Get("X-Requested-With") != "" {
+			t.Error("storefront headers leaked to ordinary request")
+		}
+		_, _ = w.Write([]byte(`{"products":[]}`))
+	}))
+	defer server.Close()
+	client := Client{HTTP: server.Client(), MaxAttempts: 1}
+	ajax.Store(true)
+	if _, err := client.FetchStorefront(context.Background(), "test", server.URL); err != nil {
+		t.Fatal(err)
+	}
+	ajax.Store(false)
+	if _, err := client.FetchSource(context.Background(), "test", server.URL); err != nil {
+		t.Fatal(err)
+	}
+}

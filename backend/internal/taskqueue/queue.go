@@ -11,6 +11,7 @@ import (
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 // maxRPCDeadline caps how far in the future a Cloud Tasks call's deadline can sit.
@@ -26,14 +27,15 @@ func boundContext(ctx context.Context) (context.Context, context.CancelFunc) {
 }
 
 type Queue struct {
-	client         *cloudtasks.Client
-	parent         string
-	targetURL      string
-	serviceAccount string
+	client           *cloudtasks.Client
+	parent           string
+	targetURL        string
+	serviceAccount   string
+	dispatchDeadline time.Duration
 }
 
 // OpenQueue Connects Card Tasks through https://cloud.google.com/tasks/docs/reference/rest.
-func OpenQueue(ctx context.Context, project, region, name, target, account string) (*Queue, error) {
+func OpenQueue(ctx context.Context, project, region, name, target, account string, deadline time.Duration) (*Queue, error) {
 	ctx, cancel := boundContext(ctx)
 	defer cancel()
 	client, err := cloudtasks.NewClient(ctx)
@@ -41,7 +43,7 @@ func OpenQueue(ctx context.Context, project, region, name, target, account strin
 		return nil, fmt.Errorf("open task queue: %w", err)
 	}
 	parent := fmt.Sprintf("projects/%s/locations/%s/queues/%s", project, region, name)
-	return &Queue{client: client, parent: parent, targetURL: target, serviceAccount: account}, nil
+	return &Queue{client: client, parent: parent, targetURL: target, serviceAccount: account, dispatchDeadline: deadline}, nil
 }
 
 func (q *Queue) DispatchSearch(ctx context.Context, job search.Job) error {
@@ -83,8 +85,9 @@ func (q *Queue) createTask(ctx context.Context, searchID string, position int) e
 		},
 	}
 	task := &cloudtaskspb.Task{
-		Name:        name,
-		MessageType: &cloudtaskspb.Task_HttpRequest{HttpRequest: request},
+		Name:             name,
+		DispatchDeadline: durationpb.New(q.dispatchDeadline),
+		MessageType:      &cloudtaskspb.Task_HttpRequest{HttpRequest: request},
 	}
 	_, err := q.client.CreateTask(ctx, &cloudtaskspb.CreateTaskRequest{Parent: q.parent, Task: task})
 	if status.Code(err) == codes.AlreadyExists {

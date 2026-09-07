@@ -16,9 +16,10 @@ type Config struct {
 	TaskQueue               string
 	TaskURL                 string
 	TaskAccount             string
+	TaskDeadline            time.Duration
 	APIToken                string
 	StoresPath              string
-	ScryfallURL             string
+	ScryURL                 string
 	WorkerID                string
 	LeaseDuration           time.Duration
 	PollInterval            time.Duration
@@ -46,6 +47,10 @@ func LoadConfig() (Config, error) {
 		return Config{}, err
 	}
 
+	deadline, err := readTaskDeadline()
+	if err != nil {
+		return Config{}, err
+	}
 	config := Config{
 		Address:                 readValueOr("MUCHI_API_ADDRESS", ":8080"),
 		ProjectID:               os.Getenv("GOOGLE_CLOUD_PROJECT"),
@@ -53,9 +58,10 @@ func LoadConfig() (Config, error) {
 		TaskQueue:               readValueOr("MUCHI_TASK_QUEUE", "muchi-searches"),
 		TaskURL:                 os.Getenv("MUCHI_TASK_URL"),
 		TaskAccount:             os.Getenv("MUCHI_TASK_SERVICE_ACCOUNT"),
+		TaskDeadline:            deadline,
 		APIToken:                os.Getenv("MUCHI_API_TOKEN"),
 		StoresPath:              readValueOr("MUCHI_STORES_CONFIG", "config/stores.yaml"),
-		ScryfallURL:             readValueOr("MUCHI_SCRYFALL_URL", "https://api.scryfall.com"),
+		ScryURL:                 readValueOr("MUCHI_SCRY_URL", "https://scry.cl"),
 		WorkerID:                readValueOr("MUCHI_WORKER_ID", readHostname()),
 		LeaseDuration:           readSecondsOr("MUCHI_LEASE_SECONDS", 60),
 		PollInterval:            readSecondsOr("MUCHI_POLL_SECONDS", 2),
@@ -120,4 +126,16 @@ func readHostname() string {
 		return "worker-local"
 	}
 	return value
+}
+
+func readTaskDeadline() (time.Duration, error) {
+	value := os.Getenv("MUCHI_TASK_DEADLINE_SECONDS")
+	if value == "" {
+		return 30 * time.Minute, nil
+	}
+	seconds, err := strconv.Atoi(value)
+	if err != nil || seconds < 15 || seconds > 1800 {
+		return 0, errors.New("MUCHI_TASK_DEADLINE_SECONDS must be between 15 and 1800")
+	}
+	return time.Duration(seconds) * time.Second, nil
 }

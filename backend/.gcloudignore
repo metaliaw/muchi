@@ -11,3 +11,9 @@ Dockerfile
 *.sh
 *.cmd
 muchi-api
+.env.*
+*.exe
+.agents/
+.codex/
+.claude/
+config/deploy.*

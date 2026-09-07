@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/cangrejometralleta/muchi-api/internal/moxfield"
 	"gopkg.in/yaml.v3"
 )
 
@@ -77,7 +78,7 @@ func validateChecker(store StoreConfig) error {
 	if store.Platform == "" {
 		return nil
 	}
-	validPlatform := store.Platform == "shopify" || store.Platform == "woocommerce" || store.Platform == "html"
+	validPlatform := store.Platform == "jumpseller" || store.Platform == "shopify" || store.Platform == "woocommerce" || store.Platform == "html"
 	if !validPlatform || store.TimeoutSeconds < 1 {
 		return errors.New("invalid store configuration")
 	}
@@ -86,6 +87,9 @@ func validateChecker(store StoreConfig) error {
 
 func validateLists(lists []MoxfieldList) error {
 	for _, list := range lists {
+		if _, err := moxfield.ExtractListID(list.URL); err != nil {
+			return err
+		}
 		if list.Label == "" || list.URL == "" || list.CLPPerCKUSD < 1 {
 			return errors.New("invalid store configuration")
 		}

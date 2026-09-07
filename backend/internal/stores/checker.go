@@ -7,7 +7,9 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/cangrejometralleta/muchi-api/internal/jumpseller"
 	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/shopify"
 )
 
 // SourceFetcher Reads Store pages interpreted with https://schema.org/availability.
@@ -28,6 +30,12 @@ func (c Checker) CheckStock(ctx context.Context, item offer.Offer) (string, erro
 	config, found := c.Config.Stores[link.Host]
 	if !found || !config.Enabled {
 		return "unknown", nil
+	}
+	if config.Platform == "jumpseller" {
+		return (jumpseller.Client{Fetcher: c.Fetcher, Domain: link.Host, Name: config.Name}).CheckStock(ctx, item)
+	}
+	if config.Platform == "shopify" {
+		return (shopify.Client{Fetcher: c.Fetcher, Domain: link.Host, Name: config.Name}).CheckStock(ctx, item)
 	}
 	data, err := c.Fetcher.FetchSource(ctx, link.Host, item.URL)
 	if err != nil {

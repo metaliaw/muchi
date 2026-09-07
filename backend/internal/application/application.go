@@ -4,11 +4,15 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/cangrejometralleta/muchi-api/internal/config"
 	firestorestore "github.com/cangrejometralleta/muchi-api/internal/firestore"
-	"github.com/cangrejometralleta/muchi-api/internal/scryfall"
+	"github.com/cangrejometralleta/muchi-api/internal/jumpseller"
+	"github.com/cangrejometralleta/muchi-api/internal/moxfield"
+	"github.com/cangrejometralleta/muchi-api/internal/scry"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
+	"github.com/cangrejometralleta/muchi-api/internal/shopify"
 	"github.com/cangrejometralleta/muchi-api/internal/source"
 	"github.com/cangrejometralleta/muchi-api/internal/stores"
 	"github.com/cangrejometralleta/muchi-api/internal/taskqueue"
@@ -33,13 +37,14 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		return Runtime{}, err
 	}
 	fetcher := buildSourceClient(config, store, logger)
-	catalog := scryfall.Client{Fetcher: fetcher, BaseURL: config.ScryfallURL}
+	catalog := scry.Client{Fetcher: fetcher, BaseURL: config.ScryURL}
 	checker := stores.Checker{Fetcher: fetcher, Config: storeConfig}
 	service := search.Service{
 		Searches:          store,
-		Sources:           []search.OfferSource{catalog},
+		Sources:           buildOfferSources(fetcher, catalog, storeConfig, store, config.OfferCacheTTL, logger),
 		Stocks:            checker,
 		Cache:             store,
+		CacheNamespace:    search.HashPayload([]any{"moxfield-v1", config.ScryURL, storeConfig}) + ":",
 		CacheTTL:          config.OfferCacheTTL,
 		EmptyCacheTTL:     config.OfferCacheEmptyTTL,
 		MaxCards:          config.MaxCardsPerSearch,
@@ -49,7 +54,7 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 	if dispatch && config.TaskURL != "" {
 		queue, err := taskqueue.OpenQueue(
 			ctx, config.ProjectID, config.TaskRegion, config.TaskQueue,
-			config.TaskURL, config.TaskAccount,
+			config.TaskURL, config.TaskAccount, config.TaskDeadline,
 		)
 		if err != nil {
 			return Runtime{}, err
@@ -69,4 +74,27 @@ func buildSourceClient(config config.Config, gate source.TrafficGate, logger *sl
 		BaseDelay:    config.SourceRetryBaseDelay,
 		MaxBodyBytes: config.SourceMaxBodyBytes,
 	}
+}
+
+// buildOfferSources Combines Scry with Enabled Store Catalogs.
+func buildOfferSources(fetcher stores.SourceFetcher, catalog search.OfferSource, config stores.Config, cache moxfield.InventoryCache, ttl time.Duration, logger *slog.Logger) []search.OfferSource {
+	sources := []search.OfferSource{catalog}
+	for domain, store := range config.Stores {
+		if !store.Enabled {
+			continue
+		}
+		for _, list := range store.Lists {
+			sources = append(sources, &moxfield.Client{Fetcher: fetcher, Cache: cache, TTL: ttl, Logger: logger, StoreID: domain, Store: store.Name, Label: list.Label, ListURL: list.URL, Rate: list.CLPPerCKUSD})
+		}
+		if store.Platform == "jumpseller" {
+			sources = append(sources, jumpseller.Client{Fetcher: fetcher, Domain: domain, Name: store.Name})
+		}
+		if store.Platform == "shopify" {
+			sources = append(sources, shopify.Client{Fetcher: fetcher, Domain: domain, Name: store.Name})
+		}
+		if store.Platform == "woocommerce" {
+			sources = append(sources, stores.Catalog{Fetcher: fetcher, Domain: domain, Name: store.Name})
+		}
+	}
+	return sources
 }

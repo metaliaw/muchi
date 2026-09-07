@@ -16,6 +16,7 @@ type Service struct {
 	Sources           []OfferSource
 	Stocks            StockChecker
 	Cache             OfferCache
+	CacheNamespace    string
 	Tasks             TaskQueue
 	CacheTTL          time.Duration
 	EmptyCacheTTL     time.Duration
@@ -58,7 +59,7 @@ func (s Service) FindCardOffers(ctx context.Context, name string) ([]offer.Offer
 }
 
 func (s Service) collectOffers(ctx context.Context, name string) ([]offer.Offer, error) {
-	key := offer.NormalizeCard(name)
+	key := s.CacheNamespace + offer.NormalizeCard(name)
 	if items, found := s.loadOfferCache(ctx, key); found {
 		return items, nil
 	}
@@ -67,7 +68,9 @@ func (s Service) collectOffers(ctx context.Context, name string) ([]offer.Offer,
 		return nil, err
 	}
 	items = offer.MarkSuspicious(offer.DeduplicateOffers(items), s.SuspiciousPercent)
-	s.saveOfferCache(ctx, key, items)
+	if err == nil {
+		s.saveOfferCache(ctx, key, items)
+	}
 	return items, nil
 }
 
