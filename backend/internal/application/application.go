@@ -37,14 +37,19 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		return Runtime{}, err
 	}
 	fetcher := buildSourceClient(config, store, logger)
-	catalog := scry.Client{Fetcher: fetcher, BaseURL: config.ScryURL}
+	var catalog search.OfferSource
+	if config.ScryEnabled {
+		catalog = scry.Client{Fetcher: fetcher, BaseURL: config.ScryURL}
+	} else if logger != nil {
+		logger.Warn("Scry Disabled", "flag", "MUCHI_SCRY_ENABLED", "offers", "direct stores only")
+	}
 	checker := stores.Checker{Fetcher: fetcher, Config: storeConfig}
 	service := search.Service{
 		Searches:          store,
 		Sources:           buildOfferSources(fetcher, catalog, storeConfig, store, config.OfferCacheTTL, logger),
 		Stocks:            checker,
 		Cache:             store,
-		CacheNamespace:    search.HashPayload([]any{"moxfield-v1", config.ScryURL, storeConfig}) + ":",
+		CacheNamespace:    search.HashPayload([]any{"moxfield-v1", config.ScryURL, config.ScryEnabled, storeConfig}) + ":",
 		CacheTTL:          config.OfferCacheTTL,
 		EmptyCacheTTL:     config.OfferCacheEmptyTTL,
 		MaxCards:          config.MaxCardsPerSearch,
@@ -76,9 +81,12 @@ func buildSourceClient(config config.Config, gate source.TrafficGate, logger *sl
 	}
 }
 
-// buildOfferSources Combines Scry with Enabled Store Catalogs.
+// buildOfferSources Combines Scry with Enabled Store Catalogs. A nil Catalog Leaves Scry Out.
 func buildOfferSources(fetcher stores.SourceFetcher, catalog search.OfferSource, config stores.Config, cache moxfield.InventoryCache, ttl time.Duration, logger *slog.Logger) []search.OfferSource {
-	sources := []search.OfferSource{catalog}
+	sources := []search.OfferSource{}
+	if catalog != nil {
+		sources = append(sources, catalog)
+	}
 	for domain, store := range config.Stores {
 		if !store.Enabled {
 			continue

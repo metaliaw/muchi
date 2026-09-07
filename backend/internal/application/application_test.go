@@ -70,3 +70,19 @@ func TestConfiguredSources(t *testing.T) {
 		t.Fatalf("disabled Jumpseller stores still active: %d", len(sources))
 	}
 }
+
+func TestSourcesWithoutScry(t *testing.T) {
+	config, err := stores.LoadStoreConfig("../../config/stores.yaml", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sources := buildOfferSources(nil, nil, config, nil, time.Minute, nil)
+	for _, source := range sources {
+		if _, found := source.(scry.Client); found {
+			t.Fatal("Scry still active")
+		}
+	}
+	if len(sources) != 18 {
+		t.Fatalf("sources=%d", len(sources))
+	}
+}
