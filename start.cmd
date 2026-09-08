@@ -6,9 +6,9 @@ rem
 rem Es idempotente: la primera vez crea el .venv y baja las dependencias, las
 rem siguientes arranca directo. Solo reinstala si requirements.txt cambio.
 rem
-rem   run.cmd                        -^> http://localhost:8501
-rem   run.cmd --server.port 9123     -^> otro puerto
-rem   run.cmd --server.address 127.0.0.1 -^> solo tu maquina
+rem   start.cmd                        -^> http://localhost:8501
+rem   start.cmd --server.port 9123     -^> otro puerto
+rem   start.cmd --server.address 127.0.0.1 -^> solo tu maquina
 rem
 rem Todo lo que le pases viaja tal cual a "streamlit run app.py".
 rem

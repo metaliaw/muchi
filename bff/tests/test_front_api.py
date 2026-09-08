@@ -12,6 +12,15 @@ from muchi.mtg.ports import QueryFailed, SearchRejected
 
 
 @pytest.fixture
+def service_offer():
+    def build(amount="123.99", currency="CLP", suspicious=False, reason=""):
+        return SearchOffer("Sol Ring", "Store", Decimal(amount), currency,
+                           "https://example.com", "available", suspicious,
+                           "source", "nonfoil", "en", suspicious_reason=reason)
+    return build
+
+
+@pytest.fixture
 def front(monkeypatch):
     monkeypatch.setenv("MUCHI_ENV", "development")
     monkeypatch.setenv("MUCHI_API_URL", "http://localhost:8081")
@@ -22,7 +31,7 @@ def front(monkeypatch):
     service.read_search.return_value = SearchState("search-1", "completed", 1, 1, 1, 0)
     service.read_results.return_value = (SearchItem("Sol Ring", 2, "found", (
         SearchOffer("Sol Ring", "Store", Decimal("123.99"), "CLP", "https://example.com",
-                    "available", False, "source", "nonfoil"),
+                    "available", False, "source", "nonfoil", "en"),
     )),)
     monkeypatch.setattr(cast, "build_cast", lambda: cast.Cast(service))
     # The real Streamlit resource cache is global across AppTest instances.
@@ -48,10 +57,115 @@ def test_front_search_and_prices(front):
     assert service.create_search.call_count == 1
     assert app.session_state["terminal_results"]
     assert app.metric[0].value == "CLP 4,247.98"
-    assert app.dataframe[0].value.iloc[0]["Precio"] == "123.99"
+    assert app.dataframe[0].value.iloc[0]["Precio"] == 123.99
+    assert app.dataframe[0].value.iloc[0]["Stock"] == "En Stock"
+    assert app.dataframe[0].value.iloc[0]["Tratamiento"] == "No Foil · Inglés"
     calls = service.read_search.call_count
     app.run()
     assert service.read_search.call_count == calls
+
+
+def test_suspicious_column_explains_itself_in_spanish(front, service_offer):
+    app, service = front
+    service.read_results.return_value = (SearchItem("Sol Ring", 1, "found", (
+        service_offer(suspicious=True, reason="price_below_30_percent_median"),
+        service_offer(amount="5000"),
+    )),)
+    app.text_area[0].input("Sol Ring")
+    click_button(app, "Buscar")
+    assert not app.exception
+    frame = app.dataframe[0].value
+    assert "Motivo" not in frame.columns
+    assert list(frame["Sospechoso"]) == ["Precio bajo el 30% de la Mediana de su Moneda", ""]
+
+
+def test_dollar_offers_join_the_cart_at_the_muchi_dolar(front, service_offer):
+    app, service = front
+    service.read_results.return_value = (SearchItem("Sol Ring", 1, "found", (
+        service_offer(amount="4.00", currency="USD"),
+    )),)
+    app.text_area[0].input("Sol Ring")
+    click_button(app, "Buscar")
+    assert not app.exception
+    assert app.metric[0].value == "CLP 8,000.00"
+    assert any("1 USD = CLP 1,000" in caption.value for caption in app.caption)
+
+
+def test_unknown_currency_stays_out_of_the_cart(front, service_offer):
+    app, service = front
+    service.read_results.return_value = (SearchItem("Sol Ring", 1, "found", (
+        service_offer(amount="4.00", currency="EUR"),
+    )),)
+    app.text_area[0].input("Sol Ring")
+    click_button(app, "Buscar")
+    assert not app.exception
+    assert app.metric[0].value == "CLP 0.00"
+
+
+def test_table_opens_ordered_by_price_across_every_card(front, service_offer):
+    app, service = front
+    service.read_results.return_value = (
+        SearchItem("Sol Ring", 1, "found", (service_offer(amount="9000"),
+                                            service_offer(amount="1500"))),
+        SearchItem("Bolt", 1, "found", (service_offer(amount="800"),)),
+    )
+    app.text_area[0].input("Sol Ring\nBolt")
+    click_button(app, "Buscar")
+    assert not app.exception
+    assert list(app.dataframe[0].value["Precio"]) == [800.0, 1500.0, 9000.0]
+
+
+def test_dollars_stay_in_their_own_block_when_ordering(front, service_offer):
+    app, service = front
+    service.read_results.return_value = (SearchItem("Sol Ring", 1, "found", (
+        service_offer(amount="4.00", currency="USD"),
+        service_offer(amount="9000"), service_offer(amount="1500"),
+    )),)
+    app.text_area[0].input("Sol Ring")
+    click_button(app, "Buscar")
+    assert not app.exception
+    frame = app.dataframe[0].value
+    assert list(frame["Moneda"]) == ["CLP", "CLP", "USD"]
+    assert list(frame["Precio"]) == [1500.0, 9000.0, 4.0]
+
+
+def read_cells(app):
+    return str(app.dataframe[0].proto)
+
+
+def test_prices_are_written_with_chilean_separators(front, service_offer):
+    app, service = front
+    service.read_results.return_value = (SearchItem("Sol Ring", 1, "found", (
+        service_offer(amount="1234567"), service_offer(amount="1791"),
+    )),)
+    app.text_area[0].input("Sol Ring")
+    click_button(app, "Buscar")
+    assert not app.exception
+    cells = read_cells(app)
+    assert "1.234.567" in cells and "1.791" in cells
+    # El Valor sigue siendo Número, que es lo que la Tabla ordena.
+    assert list(app.dataframe[0].value["Precio"]) == [1791.0, 1234567.0]
+
+
+def test_cents_bring_back_the_decimal_comma(front, service_offer):
+    app, service = front
+    service.read_results.return_value = (SearchItem("Sol Ring", 1, "found", (
+        service_offer(amount="1500"), service_offer(amount="3.49", currency="USD"),
+    )),)
+    app.text_area[0].input("Sol Ring")
+    click_button(app, "Buscar")
+    assert not app.exception
+    cells = read_cells(app)
+    assert "1.500,00" in cells and "3,49" in cells
+
+
+def test_search_sends_fixed_options_without_asking(front):
+    app, service = front
+    app.text_area[0].input("Sol Ring")
+    click_button(app, "Buscar")
+    assert not app.checkbox
+    options = service.create_search.call_args.kwargs
+    assert options["verify_stock"] and options["stores_only"]
 
 
 def test_front_retry_keeps_request(front):

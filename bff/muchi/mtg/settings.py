@@ -125,3 +125,51 @@ def load_offer_settings() -> OfferSettings:
         raise ValueError("Missing required offer settings")
 
     return OfferSettings(**values)
+
+
+@dataclass(frozen=True)
+class RateSettings:
+    """El Muchi Dólar: cuántos Pesos cobra Muchi por un Dólar.
+
+    Algunas Tiendas publican su propia Tasa y la API ya convierte con ella.
+    Cuando una Oferta llega en Dólares sin Referencia, Muchi usa este Valor.
+
+    No sigue al Dólar del Mercado: cubre el Costo de traer la Carta y el
+    Margen de los Intermediarios que harán la Compra. Por eso vive en
+    `config/rates.defaults.yaml`, a la vista de cualquiera, y se muestra en la
+    Interfaz junto a los Precios que convirtió.
+    """
+    muchi_dolar: int
+
+
+def validate_rate_values(values: dict) -> dict:
+    if not isinstance(values, dict):
+        raise ValueError("Rate settings must be an object")
+    if set(values) - RateSettings.__dataclass_fields__.keys():
+        raise ValueError("Unknown rate settings")
+    for value in values.values():
+        if type(value) is not int or value <= 0:
+            raise ValueError("The Muchi Dólar must be a positive whole number of pesos")
+    return values
+
+
+def read_rate_file(name: str) -> dict:
+    path = ROOT / "config" / f"rates.{name}.yaml"
+    text = path.read_text(encoding="utf-8")
+    return validate_rate_values(yaml.safe_load(text) if text.strip() else {})
+
+
+@lru_cache(maxsize=1)
+def load_rate_settings() -> RateSettings:
+    """Carga el Muchi Dólar una vez al Arrancar."""
+    environment = os.environ.get("MUCHI_ENV")
+    if environment not in {"development", "production"}:
+        raise ValueError("Set MUCHI_ENV to development or production")
+
+    values = read_rate_file("defaults")
+    values.update(read_rate_file(environment))
+    if variable := os.environ.get("MUCHI_RATES_MUCHI_DOLAR"):
+        values.update(validate_rate_values({"muchi_dolar": int(variable)}))
+    if set(values) != RateSettings.__dataclass_fields__.keys():
+        raise ValueError("Missing required rate settings")
+    return RateSettings(**values)

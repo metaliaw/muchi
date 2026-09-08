@@ -1,0 +1,5 @@
+# El Muchi Dólar no es el Dólar del Mercado ni pretende seguirlo.
+# Es el Cambio que Muchi cobra: incluye el Costo de traer la Carta, y el
+# Margen para los Intermediarios que harán la Compra cuando Muchi compre.
+# Se mueve cuando cambian esos Costos, no cuando se mueve el Dólar.
+muchi_dolar: 1000
