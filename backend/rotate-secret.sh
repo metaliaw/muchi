@@ -98,8 +98,7 @@ instructions() {
   printf '%s\n' \
     '1. Entra al Panel con la Cuenta Dueña de la App.' \
     '2. Abre la App: menú ⋮ → Settings → Secrets.' \
-    "3. Actualiza $STREAMLIT_KEY con el Token impreso arriba; Conserva las otras Claves." \
-    "   $STREAMLIT_KEY = \"<TOKEN_IMPRESO_ARRIBA>\"" \
+    "3. Pega la Línea $STREAMLIT_KEY = \"…\" impresa arriba; Conserva las otras Claves." \
     '4. Pulsa Save. Si la App mantiene el Cliente en Caché, usa Reboot app.' \
     '5. Crea una Búsqueda desde Streamlit y Confirma que no devuelve 401.' \
     'Comparte estos Enlaces e Instrucciones; el Token ya está Impreso Arriba.'
@@ -154,6 +153,7 @@ fi
 step 'Token'
 TOKEN=$(<"$WORK_DIR/token")
 printf '%s\n' "$TOKEN"
+printf '%s = "%s"\n' "$STREAMLIT_KEY" "$TOKEN"
 sync_env_token "$TOKEN"
 instructions
 printf '\n⚠️ Actualiza Streamlit al Terminar: su Token Anterior dejará de Funcionar.\n'

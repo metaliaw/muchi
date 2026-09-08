@@ -39,7 +39,7 @@ instructions() {
   printf '%s\n' \
     '1. Entra al Panel con la Cuenta Dueña de la App.' \
     '2. Abre la App: menú ⋮ → Settings → Secrets.' \
-    "3. Comprueba que $STREAMLIT_KEY Coincide con el Token impreso arriba." \
+    "3. Comprueba que la Línea $STREAMLIT_KEY = \"…\" impresa arriba Coincide con el Panel." \
     '4. Si lo Cambias, pulsa Save y luego Reboot app.'
   streamlit_fallback
 }
@@ -91,5 +91,6 @@ WORK_DIR=$(mktemp -d "${TMPDIR:-/tmp}/muchi-secret.XXXXXXXX")
 cloud secrets versions access "$VERSION" --secret="$SECRET_NAME" --out-file="$WORK_DIR/token"
 TOKEN=$(<"$WORK_DIR/token")
 printf '%s\n' "$TOKEN"
+printf '%s = "%s"\n' "$STREAMLIT_KEY" "$TOKEN"
 sync_env_token "$TOKEN"
 instructions
