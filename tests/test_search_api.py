@@ -125,3 +125,15 @@ def test_normalizes_api_url(monkeypatch, suffix):
         assert "private-code" not in repr(settings)
     finally:
         load_api_settings.cache_clear()
+
+
+@pytest.mark.parametrize("failure, message", [
+    (requests.ConnectionError("private-code"), "No se pudo conectar"),
+    (requests.Timeout("private-code"), "Tiempo de Espera"),
+])
+def test_connection_failure_explains_recovery_without_credentials(failure, message):
+    provider = make_provider(search_reply())
+    provider.session.request.side_effect = failure
+    with pytest.raises(QueryFailed, match=message) as caught:
+        provider.read_search("search-1")
+    assert "private-code" not in str(caught.value)
