@@ -1,0 +1,200 @@
+# Copia de referencia del Contrato de Muchi API.
+# Fuente oficial: openapi.yaml del Repositorio privado
+# https://github.com/cangrejometralleta/muchi-api
+# Sincronizar desde la Fuente; no mantener una Especificación independiente.
+openapi: 3.1.0
+info:
+  title: Muchi API
+  version: 1.0.0
+servers:
+  - url: /v1
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      security: []
+      responses:
+        "200": {description: Healthy}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /health/sources:
+    get:
+      responses:
+        "200":
+          description: Provider health
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [sources]
+                properties:
+                  sources: {type: array, items: {$ref: "#/components/schemas/SourceHealth"}}
+  /searches:
+    post:
+      parameters:
+        - {$ref: "#/components/parameters/IdempotencyKey"}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/CreateSearch"}
+      responses:
+        "202":
+          description: Search queued
+          content: {application/json: {schema: {$ref: "#/components/schemas/Search"}}}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /searches/{search_id}:
+    parameters:
+      - {$ref: "#/components/parameters/SearchID"}
+    get:
+      responses:
+        "200":
+          description: Search state
+          content: {application/json: {schema: {$ref: "#/components/schemas/Search"}}}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /searches/{search_id}/results:
+    parameters:
+      - {$ref: "#/components/parameters/SearchID"}
+    get:
+      responses:
+        "200":
+          description: Partial or final results
+          content: {application/json: {schema: {$ref: "#/components/schemas/SearchResults"}}}
+  /searches/{search_id}/cancel:
+    parameters:
+      - {$ref: "#/components/parameters/SearchID"}
+      - {$ref: "#/components/parameters/IdempotencyKey"}
+    post:
+      responses:
+        "200":
+          description: Search cancelled
+          content: {application/json: {schema: {$ref: "#/components/schemas/Search"}}}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /cards/offers:
+    get:
+      parameters:
+        - name: name
+          in: query
+          required: true
+          schema: {type: string, minLength: 1}
+      responses:
+        "200":
+          description: Offers for one card
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [name, offers]
+                properties:
+                  name: {type: string}
+                  offers: {type: array, items: {$ref: "#/components/schemas/Offer"}}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer}
+  parameters:
+    SearchID: {name: search_id, in: path, required: true, schema: {type: string}}
+    IdempotencyKey: {name: Idempotency-Key, in: header, required: true, schema: {type: string, maxLength: 128}}
+  responses:
+    Conflict: {description: Idempotency or state conflict, content: {application/json: {schema: {$ref: "#/components/schemas/Error"}}}}
+    NotFound: {description: Search not found, content: {application/json: {schema: {$ref: "#/components/schemas/Error"}}}}
+    InternalError: {description: Internal error, content: {application/json: {schema: {$ref: "#/components/schemas/Error"}}}}
+  schemas:
+    CreateSearch:
+      type: object
+      additionalProperties: false
+      required: [cards, options]
+      properties:
+        cards:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items:
+            type: object
+            additionalProperties: false
+            required: [name, quantity]
+            properties:
+              name: {type: string, minLength: 1}
+              quantity: {type: integer, minimum: 1, maximum: 99}
+        options:
+          type: object
+          additionalProperties: false
+          required: [verify_stock, stores_only]
+          properties:
+            verify_stock: {type: boolean}
+            stores_only: {type: boolean}
+    Search:
+      type: object
+      required: [id, status, total, processed, found, not_found, errors, created_at, updated_at]
+      properties:
+        id: {type: string}
+        status: {type: string, enum: [queued, running, completed, completed_with_errors, failed, cancelled]}
+        total: {type: integer}
+        processed: {type: integer}
+        current_card: {type: string}
+        found: {type: integer}
+        not_found: {type: integer}
+        errors: {type: integer}
+        created_at: {type: string, format: date-time}
+        started_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+        finished_at: {type: string, format: date-time}
+        incident_id: {type: string}
+    SearchResults:
+      type: object
+      required: [search_id, items]
+      properties:
+        search_id: {type: string}
+        items: {type: array, items: {$ref: "#/components/schemas/SearchItem"}}
+    SearchItem:
+      type: object
+      required: [id, search_id, position, original_name, normalized_name, quantity, status, attempts, offers]
+      properties:
+        id: {type: string}
+        search_id: {type: string}
+        position: {type: integer}
+        original_name: {type: string}
+        normalized_name: {type: string}
+        quantity: {type: integer}
+        status: {type: string, enum: [pending, running, found, not_found, source_error]}
+        attempts: {type: integer}
+        source: {type: string}
+        error_code: {type: string}
+        error_message: {type: string}
+        offers: {type: array, items: {$ref: "#/components/schemas/Offer"}}
+    Offer:
+      type: object
+      required: [id, card_name, store, price_amount, price_currency, url, source, stock_status, suspicious]
+      properties:
+        id: {type: string}
+        card_name: {type: string}
+        store: {type: string}
+        price_amount: {type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$"}
+        price_currency: {type: string, pattern: "^[A-Z]{3}$"}
+        url: {type: string, format: uri}
+        variant_id: {type: string}
+        language: {type: string}
+        condition: {type: string}
+        finish: {type: string}
+        source: {type: string}
+        stock_status: {type: string, enum: [available, unavailable, unknown]}
+        suspicious: {type: boolean}
+        suspicious_reason: {type: string}
+        metadata: {type: object, additionalProperties: {type: string}}
+    SourceHealth:
+      type: object
+      required: [source, consecutive_failures, latency_ms]
+      properties:
+        source: {type: string}
+        last_success: {type: string, format: date-time}
+        last_failure: {type: string, format: date-time}
+        consecutive_failures: {type: integer}
+        latency_ms: {type: integer}
+        circuit_open_until: {type: string, format: date-time}
+    Error:
+      type: object
+      required: [code, message, request_id]
+      properties:
+        code: {type: string}
+        message: {type: string}
+        request_id: {type: string}
+        incident_id: {type: string}

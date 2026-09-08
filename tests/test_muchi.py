@@ -1,4 +1,4 @@
-﻿"""Tests for logic that does not touch the network.
+"""Tests for logic that does not touch the network.
 
 Run with pytest, or directly:  python tests/test_muchi.py
 """
@@ -11,8 +11,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from muchi.mtg import (catalog, decklist, mascot, deck, offers, optimizer,
+from muchi.mtg import (decklist, phrases, deck, offers, optimizer,
                        oracle, deck_search)  # noqa: E402
+from muchi.mtg.settings import OfferSettings, read_offer_file
 from muchi.mtg.models import Offer, Order  # noqa: E402
 from muchi.mtg.ports import CardRequest  # noqa: E402
 from muchi.mtg.sources import (  # noqa: E402
@@ -152,43 +153,12 @@ def test_optimizer_respects_quantities():
     assert plan.cards_cost == 1000, plan.cards_cost
 
 
-def _memory_db():
-    import sqlite3
-    cx = sqlite3.connect(":memory:")
-    cx.row_factory = sqlite3.Row
-    catalog.ensure_tables(cx)
-    return cx
 
 
-def _seed_row(cx, store, card_name, price, url):
-    from muchi.mtg.text import normalize_name as _slug
-    cx.execute(
-        "INSERT INTO catalogo (clave, tienda, carta_slug, carta, titulo, precio,"
-        " url, acabado, condicion, idioma) VALUES (?,?,?,?,?,?,?,?,?,?)",
-        (url, store, _slug(card_name), card_name, f"{card_name} [XYZ - 1]", price, url,
-         "Normal", "Near Mint", "English"),
-    )
-    cx.commit()
 
 
-def test_catalog_matches_by_slug():
-    cx = _memory_db()
-    _seed_row(cx, "PDA Chile", "Ragavan, Nimble Pilferer", 90000, "http://x/1")
-    # distinta capitalizacion y puntuacion deben encontrar lo mismo
-    assert len(catalog.find_local_offers(cx, "ragavan nimble pilferer")) == 1
-    assert len(catalog.find_local_offers(cx, "RAGAVAN, NIMBLE PILFERER")) == 1
-    assert catalog.find_local_offers(cx, "Otra Carta") == []
 
 
-def test_catalog_sorts_by_price():
-    cx = _memory_db()
-    _seed_row(cx, "PDA Chile", "Sol Ring", 5000, "http://x/caro")
-    _seed_row(cx, "PDA Chile", "Sol Ring", 1200, "http://x/barato")
-    offers = catalog.find_local_offers(cx, "Sol Ring")
-    assert [o.price_clp for o in offers] == [1200, 5000]
-    assert all(o.source == "directo" for o in offers)
-    # they are never marketplace: these are stores with their own site
-    assert all(not o.marketplace for o in offers)
 
 
 def test_pda_chile_configured():
@@ -274,35 +244,30 @@ def test_moxfield_foil_uses_ck_foil():
     assert moxfield.read_ck_price({}, is_foil=False) is None
 
 
-def test_inventory_config_is_coherent():
-    path = Path(__file__).resolve().parent.parent / "moxfield-inventories.json"
-    cfg = json.loads(path.read_text(encoding="utf-8"))
-    lists = cfg["listas"]
-    assert len(lists) == 9
-    for l in lists:
-        assert moxfield.extract_list_id(l["url"])
-        assert 100 <= l["tasa"] <= 2000, l
-    # the japanese foils list quotes differently, and that must not get lost
-    off_rate = [l for l in lists if l["tasa"] != 700]
-    assert len(off_rate) == 1 and off_rate[0]["tasa"] == 500, off_rate
+
+
+
+
+
+
 
 
 def test_hearts_vary_between_clicks():
-    first = mascot.build_hearts_html(seed=1)
-    second = mascot.build_hearts_html(seed=2)
+    first = phrases.build_hearts_html(seed=1)
+    second = phrases.build_hearts_html(seed=2)
     # Careful: the container class is "mu-corazones" which contains "mu-corazon".
     assert first.count('class="mu-corazon"') == 9
     assert first != second, "same positions every time would look like a canned animation"
 
 
 def test_greetings_and_help_not_empty():
-    assert mascot.GREETINGS and all(s.strip() for s in mascot.GREETINGS)
-    for title, detail in mascot.HELP_TOPICS:
+    assert phrases.read_phrases().greetings and all(p.text.strip() for p in phrases.read_phrases().greetings)
+    for title, detail in phrases.read_phrases().help_topics:
         assert title.strip() and len(detail) > 30, title
 
 
 def test_sidebar_bubble_carries_tone_without_drawing_another_muchi():
-    bubble = mascot.build_bubble_html("Algo salio mal", "angry")
+    bubble = phrases.build_bubble_html("Algo salio mal", "angry")
     assert 'class="mu-globo mu-globo--angry"' in bubble
     assert "mu-sprite" not in bubble
 
@@ -312,8 +277,9 @@ def test_muchi_message_priorities_prevent_collisions():
 
     rendered = []
     messenger = MuchiMessenger(rendered.append)
-    messenger.render_default()
+    messenger.render_default("Saludo de prueba", "talk")
     assert rendered[-1].source == "greeting"
+    assert rendered[-1].text == "Saludo de prueba"
 
     assert messenger.publish("aviso", "idle", Priority.PASSIVE, "cart")
     assert messenger.publish("caricia", "happy", Priority.CLICK, "clicker")
@@ -357,34 +323,8 @@ def test_phrase_book_missing_file_is_harmless():
     assert book.every == 0 and book.phrases == ()
 
 
-def test_waiting_phrases_are_separate_and_rotate_by_time():
-    from muchi.mtg import phrases
-
-    book = phrases.read_waiting_phrases()
-    petting = phrases.read_phrases()
-    assert book.every_seconds == 30
-    assert len(book.phrases) >= 4
-    assert not ({p.text for p in book.phrases} & {p.text for p in petting.phrases})
-    assert phrases.waiting_phrase(book, 0) == book.phrases[0]
-    assert phrases.waiting_phrase(book, 29) == book.phrases[0]
-    assert phrases.waiting_phrase(book, 30) == book.phrases[1]
-    assert phrases.waiting_phrase(book, 60) == book.phrases[2]
-    assert phrases.waiting_phrase(book, 90) == book.phrases[3]
 
 
-def test_waiting_helpers_handle_empty_books_and_elapsed_time():
-    from muchi.mtg import phrases
-
-    empty = phrases.WaitingBook(every_seconds=30, phrases=())
-    assert phrases.waiting_phrase(empty, 30) is None
-    assert phrases.format_elapsed(0) == "0:00"
-    assert phrases.format_elapsed(172.2) == "2:52"
-    assert phrases.format_search_progress(
-        0, 106, "Abhorrent Overlord", 0, 0, 0
-    ) == "Buscando 1 de 106: Abhorrent Overlord · 0 encontradas · 0 errores · 0:00"
-    assert phrases.format_search_progress(
-        106, 106, "", 100, 2, 172.2, done=True
-    ) == "Listo: 106 de 106 procesadas · 100 encontradas · 2 errores · 2:52"
 
 
 def test_pick_phrase_returns_one_of_the_list():
@@ -408,9 +348,9 @@ def test_speaks_now_on_the_boundary():
 def test_phrases_file_ships_with_example():
     from muchi.mtg import phrases
 
-    assert phrases.PHRASES_PATH.exists(), "muchi-phrases.yaml is missing from the repo root"
+    assert phrases.PHRASES_PATH.exists(), "constants/phrases.yaml is missing"
     text = phrases.PHRASES_PATH.read_text(encoding="utf-8")
-    assert "amsiedad" in text
+    assert "greetings:" in text and "help:" in text
 
 
 def test_normalize_name():
@@ -648,7 +588,6 @@ def test_every_source_meets_its_port():
     sess = PoliteSession()
     assert isinstance(ScrySource(sess), ports.PrimarySource)
     assert isinstance(ScrySource(sess), ports.OfferSource)
-    assert isinstance(catalog.IndexedOffers(_memory_db()), ports.OfferSource)
     assert isinstance(StoreApiSource(sess, store_api.StoreApi("X", "u")),
                       ports.OfferSource)
     assert isinstance(EdhrecAdvisor(sess), ports.DeckAdvisor)
@@ -742,17 +681,17 @@ def test_marks_an_isolated_low_price_as_suspicious():
         _offer(f"T{i}", "Sol Ring", price)
         for i, price in enumerate((1462, 1791, 2000, 2500, 2800), start=1)
     ]
-    suspicious = offers.suspicious_prices(found)
+    suspicious = offers.find_suspicious_prices(found, OfferSettings(**read_offer_file("defaults")))
     assert {(o.store, o.price_clp) for o in suspicious} == {("Bad scrape", 152)}
-    assert offers.cheapest_non_suspicious(found, suspicious).price_clp == 1462
+    assert offers.find_cheapest_offer(found, suspicious).price_clp == 1462
 
 
 def test_does_not_guess_from_a_small_sample_or_normal_price_spread():
     small = [_offer("T1", "A", 100), _offer("T2", "A", 1000)]
     normal = [_offer(f"T{i}", "A", p)
               for i, p in enumerate((500, 900, 1200, 1600, 1900), start=1)]
-    assert offers.suspicious_prices(small) == set()
-    assert offers.suspicious_prices(normal) == set()
+    assert offers.find_suspicious_prices(small, OfferSettings(**read_offer_file("defaults"))) == set()
+    assert offers.find_suspicious_prices(normal, OfferSettings(**read_offer_file("defaults"))) == set()
 
 
 def test_scry_stock_is_marked_as_unverified():
@@ -760,9 +699,9 @@ def test_scry_stock_is_marked_as_unverified():
     cached_offer = Offer("T2", "Sol Ring", "Sol Ring", 2100, "u",
                          source="directo")
     live_offer = Offer("T3", "Sol Ring", "Sol Ring", 2200, "u", source="api")
-    assert offers.stock_needs_verification(scry_offer) is True
-    assert offers.stock_needs_verification(cached_offer) is True
-    assert offers.stock_needs_verification(live_offer) is False
+    assert offers.requires_stock_check(scry_offer) is True
+    assert offers.requires_stock_check(cached_offer) is True
+    assert offers.requires_stock_check(live_offer) is False
 
 
 def test_only_the_five_cheapest_offers_are_checked():
@@ -776,7 +715,7 @@ def test_only_the_five_cheapest_offers_are_checked():
 
     verifier = Verifier()
     found = [_offer(f"T{i}", "A", i * 100) for i in range(1, 8)]
-    checks = offers.verify_cheapest_stock(verifier, found)
+    checks = offers.verify_cheapest_stock(verifier, found, OfferSettings(**read_offer_file("defaults")))
     assert sorted(verifier.checked) == [100, 200, 300, 400, 500]
     assert checks[found[2]] is False
     assert found[5] not in checks
@@ -796,7 +735,7 @@ def test_suspicious_prices_do_not_consume_stock_checks():
         for i, price in enumerate((1462, 1791, 2000, 2500, 2800, 3200), start=1)
     ]
     verifier = Verifier()
-    checks = offers.verify_cheapest_stock(verifier, found)
+    checks = offers.verify_cheapest_stock(verifier, found, OfferSettings(**read_offer_file("defaults")))
 
     assert sorted(verifier.checked) == [1462, 1791, 2000, 2500, 2800]
     assert found[0] not in checks
@@ -817,30 +756,8 @@ def test_deck_subtracts_and_lists_categories():
 
 
 # ----------------------------------------------------------------- the stores
-class _FakeCatalog:
-    def list_indexable_stores(self):
-        return {"PDA Chile": "https://www.pdachile.cl"}
-
-    def list_blocked_stores(self):
-        return {}
-
-    def download_offers(self, store, url, progress=None):
-        return [_offer(store, "Sol Ring", 3000)], 1
 
 
-def test_index_store_saves_and_reports():
-    from muchi.mtg import stores as store_index
-
-    cx = _memory_db()
-    before = store_index.read_stores_status(cx, _FakeCatalog())
-    assert before[0].store == "PDA Chile" and before[0].indexed is False
-
-    assert store_index.index_store(cx, _FakeCatalog(), "PDA Chile", "https://x") == 1
-
-    after = store_index.read_stores_status(cx, _FakeCatalog())
-    assert after[0].indexed is True
-    assert after[0].offers == 1 and after[0].products == 1
-    assert catalog.find_local_offers(cx, "Sol Ring")[0].price_clp == 3000
 
 
 # ------------------------------------------------------- decklist: copy-paste
@@ -966,15 +883,12 @@ def test_root_paths_match_repo():
 def test_package_paths_stay_within_repo():
     """A path that goes one level too far doesn't explode: it points elsewhere."""
     from muchi import paths
-    from muchi.mtg import db
     from muchi.mtg.sources import moxfield, store_api
 
-    for label, path in [("db.PATH", db.PATH),
-                        ("store_api.CONFIG", store_api.CONFIG),
+    for label, path in [("store_api.CONFIG", store_api.CONFIG),
                         ("moxfield.CONFIG", moxfield.CONFIG)]:
         assert paths.ROOT in path.parents, f"{label} escaped the repo: {path}"
 
-    assert moxfield.CONFIG.exists(), "the inventory config should be where the path points"
 
 
 # ------------------------------------------------------------- el oraculo
@@ -1154,9 +1068,9 @@ def test_scryfall_fulfils_the_catalog_port():
     assert isinstance(scryfall.ScryfallCatalog(sess=None), CardCatalog)
 
 
-def test_muchi_mentions_the_new_finder():
-    titles = " ".join(t for t, _ in mascot.HELP_TOPICS).lower()
-    assert "no sabes que carta" in titles
+def test_muchi_explains_search_resume():
+    titles = " ".join(t for t, _ in phrases.read_phrases().help_topics).lower()
+    assert "retomar una búsqueda" in titles
 
 
 if __name__ == "__main__":

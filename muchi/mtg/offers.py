@@ -7,55 +7,57 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 
-from . import constants
+from .constants import STOCK_CATALOG
 from .models import Offer
+from .settings import OfferSettings
 from .ports import OfferSource, PrimarySource, StockVerifier
 
 
-def suspicious_prices(offers: list[Offer]) -> set[Offer]:
+def find_suspicious_prices(offers: list[Offer], settings: OfferSettings) -> set[Offer]:
     """Detecta precios bajos aislados sin inventar un precio corregido.
 
     No usamos un piso fijo: una carta de $100 puede ser perfectamente real. En
-    cambio buscamos un salto de al menos 4x entre una cola inferior pequena y
-    el resto de una muestra con cinco o mas ofertas. La cola puede contener dos
-    copias del mismo precio malo, pero nunca mas del 20% de la muestra.
+    cambio comparamos una cola inferior pequeña con el resto de la Muestra.
+    Los Defaults de Ofertas definen el Salto, el Tamaño mínimo y la Cola máxima.
 
     Es una advertencia, no un filtro. La persona todavia puede abrir la tienda
     y comprobar la variante exacta.
     """
-    if len(offers) < constants.SUSPICIOUS_PRICE_MIN_OFFERS:
+    if len(offers) < settings.minimum_offers:
         return set()
 
     ordered = sorted(offers, key=lambda o: o.price_clp)
     max_low_count = min(
-        constants.SUSPICIOUS_PRICE_MAX_LOW_OFFERS,
-        int(len(ordered) * constants.SUSPICIOUS_PRICE_MAX_LOW_SHARE),
+        settings.maximum_low_offers,
+        len(ordered) - 1,
+        int(len(ordered) * settings.maximum_low_share),
     )
     for low_count in range(1, max_low_count + 1):
         low = ordered[low_count - 1].price_clp
         high = ordered[low_count].price_clp
-        if low > 0 and high >= low * constants.SUSPICIOUS_PRICE_GAP_RATIO:
+        if low > 0 and high >= low * settings.price_gap_ratio:
             return set(ordered[:low_count])
     return set()
 
 
-def cheapest_non_suspicious(found: list[Offer],
+def find_cheapest_offer(found: list[Offer],
                             suspicious: set[Offer]) -> Offer | None:
     """La menor oferta apta para el resumen y la insignia de mejor precio."""
     return next((offer for offer in found if offer not in suspicious), None)
 
 
-def stock_needs_verification(offer: Offer) -> bool:
+def requires_stock_check(offer: Offer) -> bool:
     """True cuando la disponibilidad viene de una fuente no contrastada."""
-    return offer.source in constants.UNVERIFIED_STOCK_SOURCES
+    return offer.source in STOCK_CATALOG.unverified_sources
 
 
 def verify_cheapest_stock(verifier: StockVerifier,
-                          found: list[Offer]) -> dict[Offer, bool | None]:
+                          found: list[Offer],
+                          settings: OfferSettings) -> dict[Offer, bool | None]:
     """Comprueba las primeras ofertas no sospechosas que pueden recibir clic."""
-    suspicious = suspicious_prices(found)
+    suspicious = find_suspicious_prices(found, settings)
     candidates = [offer for offer in found if offer not in suspicious]
-    candidates = candidates[:constants.STOCK_VERIFY_CHEAPEST_OFFERS]
+    candidates = candidates[:settings.stock_check_limit]
     if not candidates:
         return {}
     with ThreadPoolExecutor(max_workers=len(candidates)) as pool:

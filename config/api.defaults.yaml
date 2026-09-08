@@ -1,0 +1,2 @@
+timeout_seconds: 10
+poll_seconds: 2

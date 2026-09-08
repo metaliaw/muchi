@@ -21,6 +21,10 @@ class QueryFailed(RuntimeError):
     """La fuente no respondio, o respondio algo que no entendemos."""
 
 
+class SearchRejected(QueryFailed):
+    """El Servicio rechazó el Pedido; corregirlo permite un nuevo Envío."""
+
+
 class CommanderNotFound(LookupError):
     """Nadie publica recomendaciones para ese comandante."""
 
