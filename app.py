@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import html
 from uuid import uuid4
+from urllib.parse import quote
 from decimal import Decimal
+from datetime import datetime, timezone
 
 import streamlit as st
 from dotenv import load_dotenv
@@ -145,6 +147,23 @@ def show_sidebar_muchi():
         show_muchi_help()
     return MUCHI_MESSENGER
 
+def remember_search(state, label: str = "") -> None:
+    history = st.session_state.setdefault("search_history", {})
+    previous = history.get(state.id, {})
+    history[state.id] = {"state": state, "label": label or previous.get("label", state.id)}
+
+
+def select_search(state) -> None:
+    remember_search(state)
+    st.session_state.pop("search_unavailable", None)
+    st.session_state.pop("search_checked", None)
+    st.session_state["terminal_results"] = False
+    st.session_state["search_id"] = state.id
+    st.session_state["search_state"] = state
+    st.session_state.pop("search_items", None)
+    st.query_params["search"] = state.id
+
+
 def submit_search() -> None:
     pending = st.session_state["pending_search"]
     try:
@@ -156,12 +175,9 @@ def submit_search() -> None:
     except QueryFailed as error:
         st.session_state["search_error"] = str(error)
         st.rerun()
-    st.session_state["terminal_results"] = False
-    st.session_state["search_id"] = state.id
-    st.session_state["search_state"] = state
-    st.session_state.pop("search_items", None)
+    remember_search(state, ", ".join(order.name for order in pending["orders"]))
+    select_search(state)
     st.session_state.pop("pending_search", None)
-    st.query_params["search"] = state.id
     st.rerun()
 
 
@@ -170,7 +186,7 @@ def show_search_form() -> None:
     if error:
         st.error(error)
     state = st.session_state.get("search_state")
-    active = state is not None and not state.done
+    active = state is not None and not state.done and not st.session_state.get("search_unavailable")
     pending = "pending_search" in st.session_state
     with st.form("search_form"):
         text = st.text_area(
@@ -207,16 +223,25 @@ def show_search_resume() -> None:
             except QueryFailed as error:
                 st.error(str(error))
                 return
-            st.session_state["terminal_results"] = False
-            st.session_state["search_id"] = state.id
-            st.session_state["search_state"] = state
-            st.session_state.pop("search_items", None)
-            st.query_params["search"] = state.id
+            select_search(state)
             st.rerun()
+
+    with st.expander("Búsquedas Recientes"):
+        st.caption("Búsquedas abiertas en esta Sesión. Guarda el Enlace para retomarlas después.")
+        history = st.session_state.get("search_history", {})
+        for identifier, entry in reversed(list(history.items())):
+            state = entry["state"]
+            st.write(f"{entry['label']} · {state.status}")
+            st.markdown(f"[Enlace a la Búsqueda](?search={quote(identifier, safe='')})")
+            if st.button("Abrir Búsqueda", key=f"resume_{identifier}",
+                         disabled="pending_search" in st.session_state):
+                select_search(state)
+                st.rerun()
+        if not history:
+            st.caption("Todavía no hay Búsquedas en esta Sesión.")
 
 
 def show_search_results(items) -> None:
-    selected = st.selectbox("Acabado", ["Todos", "Normal", "Foil"])
     rows = []
     for item in items:
         if item.status == "source_error":
@@ -224,10 +249,6 @@ def show_search_results(items) -> None:
         elif item.status == "not_found":
             st.caption(f"{item.name}: sin Ofertas.")
         for offer in item.offers:
-            finish = offer.finish.lower().replace("-", "").replace("_", "")
-            foil = finish in {"foil", "etched", "etched foil", "etchedfoil"}
-            if selected == "Foil" and not foil or selected == "Normal" and foil:
-                continue
             rows.append({
                 "Carta": offer.card_name, "Tienda": offer.store,
                 "Precio": str(offer.amount), "Moneda": offer.currency,
@@ -238,7 +259,16 @@ def show_search_results(items) -> None:
         st.dataframe(rows, hide_index=True, use_container_width=True,
                      column_config={"Oferta": st.column_config.LinkColumn("Oferta")})
     else:
-        st.info("Todavía no hay Ofertas para mostrar.")
+        state = st.session_state.get("search_state")
+        if st.session_state.get("search_unavailable"):
+            st.info("No hay Ofertas recibidas para mostrar.")
+        elif st.session_state.get("terminal_results"):
+            st.info("No hay Ofertas para mostrar.")
+        elif state and state.status == "queued":
+            st.info("Búsqueda en Cola. Esperando que el Servicio la procese.")
+        else:
+            st.info("Consultando Ofertas. Una Carta puede tardar varios minutos; "
+                    "los Resultados aparecen cuando la API termina de consultarla.")
 
 
 def show_search_cart(items) -> None:
@@ -276,16 +306,19 @@ def cancel_search(search_id: str) -> None:
 
 
 def refresh_search(search_id: str) -> None:
+    if st.session_state.get("search_unavailable"):
+        return
     state = st.session_state.get("search_state")
     if state is not None and state.done and st.session_state.get("terminal_results"):
         return
     state = build_muchi().searches.read_search(search_id)
-    items = build_muchi().searches.read_results(search_id)
-    was_active = st.session_state.get("search_state")
     st.session_state["search_state"] = state
+    remember_search(state)
+    st.session_state["search_checked"] = datetime.now(timezone.utc).strftime("%H:%M:%S UTC")
+    items = build_muchi().searches.read_results(search_id)
     st.session_state["search_items"] = items
     st.session_state["terminal_results"] = state.done
-    if state.done and (was_active is None or not was_active.done):
+    if state.done:
         st.rerun()
 
 
@@ -295,17 +328,30 @@ def show_search_progress() -> None:
         return
     try:
         refresh_search(search_id)
+    except SearchRejected as error:
+        st.session_state["search_unavailable"] = str(error)
+        st.rerun()
     except QueryFailed as error:
         st.error(str(error))
         st.caption("Los Resultados recibidos se conservan. Se reintentará la Consulta.")
+    unavailable = st.session_state.get("search_unavailable")
+    if unavailable:
+        st.error(unavailable)
+        st.caption("La Consulta automática se detuvo. Puedes retomar otra Búsqueda o crear una nueva.")
     state = st.session_state.get("search_state")
     if state:
         st.progress(min(max(state.processed / max(state.total, 1), 0), 1),
                     text=f"{state.status}: {state.processed} de {state.total} Cartas")
         st.caption(f"Búsqueda: {search_id}")
+        if checked := st.session_state.get("search_checked"):
+            st.caption(f"Último Estado recibido: {checked}")
+        if not st.session_state.get("terminal_results") and not unavailable:
+            st.caption(f"Consulta automática cada {settings.poll_seconds:g} segundos.")
+        if state.current_card and not state.done:
+            st.caption(f"Consultando: {state.current_card}")
         if state.status == "failed":
             st.error("La Búsqueda falló en el Servicio. Puedes crear otra.")
-        if not state.done and st.button("Cancelar Búsqueda"):
+        if not state.done and not unavailable and st.button("Cancelar Búsqueda"):
             cancel_search(search_id)
     items = st.session_state.get("search_items", ())
     show_search_results(items)
@@ -338,8 +384,9 @@ if "search_id" not in st.session_state and st.query_params.get("search"):
 
 show_search_form()
 show_search_resume()
-current_state = st.session_state.get("search_state")
-poll_interval = None if st.session_state.get("terminal_results") else settings.poll_seconds
+poll_interval = (settings.poll_seconds if st.session_state.get("search_id")
+                 and not st.session_state.get("terminal_results")
+                 and not st.session_state.get("search_unavailable") else None)
 st.fragment(run_every=poll_interval)(show_search_progress)()
 with st.expander("Fuentes"):
     show_sources()

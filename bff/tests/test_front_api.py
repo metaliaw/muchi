@@ -48,8 +48,6 @@ def test_front_search_and_prices(front):
     assert service.create_search.call_count == 1
     assert app.session_state["terminal_results"]
     assert app.metric[0].value == "CLP 4,247.98"
-    app.selectbox[0].select("Normal").run()
-    assert not app.exception
     assert app.dataframe[0].value.iloc[0]["Precio"] == "123.99"
     calls = service.read_search.call_count
     app.run()
@@ -117,4 +115,58 @@ def test_cancel_keeps_partial_on_error(front):
     assert not app.session_state["terminal_results"]
     service.read_results.side_effect = None
     app.run()
+    assert app.session_state["terminal_results"]
+
+
+def test_previous_search_can_be_opened_without_submission(front):
+    app, service = front
+    app.text_area[0].input("Sol Ring")
+    click_button(app, "Buscar")
+    service.create_search.return_value = SearchState("search-2", "queued", 1, 0, 0, 0)
+    service.read_search.return_value = SearchState("search-2", "completed", 1, 1, 1, 0)
+    app.text_area[0].input("Lightning Bolt")
+    click_button(app, "Buscar")
+    assert set(app.session_state["search_history"]) == {"search-1", "search-2"}
+    service.read_search.return_value = SearchState("search-1", "completed", 1, 1, 1, 0)
+    app.button(key="resume_search-1").click().run()
+    assert not app.exception
+    assert app.session_state["search_id"] == "search-1"
+    assert service.create_search.call_count == 2
+    assert app.session_state["search_history"]["search-1"]["label"] == "Sol Ring"
+
+
+def test_status_survives_results_failure_and_recovers(front):
+    app, service = front
+    service.read_results.side_effect = QueryFailed("Network error")
+    app.text_area[0].input("Sol Ring")
+    click_button(app, "Buscar")
+    assert not app.exception
+    assert app.session_state["search_state"].done
+    assert not app.session_state["terminal_results"]
+    service.read_results.side_effect = None
+    app.run()
+    assert not app.exception
+    assert app.session_state["terminal_results"]
+    assert app.dataframe[0].value.iloc[0]["Carta"] == "Sol Ring"
+
+
+def test_default_poll_interval_is_five_seconds(front):
+    assert load_api_settings().poll_seconds == 5
+
+
+def test_unavailable_search_stops_retrying_and_allows_new_search(front):
+    app, service = front
+    service.read_search.side_effect = SearchRejected("La API rechazó el Pedido: HTTP 404.")
+    app.text_area[0].input("Sol Ring")
+    click_button(app, "Buscar")
+    assert not app.exception
+    assert app.session_state["search_unavailable"]
+    assert not next(button for button in app.button if button.label == "Buscar").disabled
+    calls = service.read_search.call_count
+    app.run()
+    assert service.read_search.call_count == calls
+    service.read_search.side_effect = None
+    click_button(app, "Buscar")
+    assert not app.exception
+    assert "search_unavailable" not in app.session_state
     assert app.session_state["terminal_results"]
