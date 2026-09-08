@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+from decimal import Decimal
 from dataclasses import dataclass
 
 
@@ -10,7 +11,7 @@ class Offer:
     store: str
     card_name: str
     title: str         # descripcion completa: set, condicion, foil
-    price_clp: int
+    price_clp: int | Decimal
     url: str
     finish: str = ""   # "Foil" | "Normal"
     condition: str = ""  # NM, SP, ...
