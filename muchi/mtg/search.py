@@ -19,6 +19,10 @@ class SearchOffer:
     suspicious: bool
     source: str
     finish: str = ""
+    language: str = ""
+    condition: str = ""
+    variant: str = ""
+    title: str = ""
     suspicious_reason: str = ""
 
 

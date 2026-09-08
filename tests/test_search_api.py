@@ -69,6 +69,40 @@ def test_maps_http_errors(status):
         provider.read_search("search-1")
 
 
+def test_orders_offers_by_price_within_each_currency():
+    reply = result_reply()
+    prices = [("9000", "CLP"), ("12.50", "USD"), ("1500", "CLP"), ("3.00", "USD")]
+    reply["items"][0]["offers"] = [
+        dict(offer_reply(), price_amount=amount, price_currency=currency)
+        for amount, currency in prices
+    ]
+    item, = make_provider(reply).read_results("search-1")
+    assert [(str(offer.amount), offer.currency) for offer in item.offers] == [
+        ("1500", "CLP"), ("9000", "CLP"), ("3.00", "USD"), ("12.50", "USD"),
+    ]
+
+
+def test_reads_treatment_fields_and_tolerates_nulls():
+    reply = result_reply()
+    reply["items"][0]["offers"][0].update(
+        finish=None, language="Inglés", condition=None,
+        metadata={"variant": "Near Mint Foil", "title": "Sol Ring [SLD]"},
+    )
+    item, = make_provider(reply).read_results("search-1")
+    offer = item.offers[0]
+    assert (offer.finish, offer.condition) == ("", "")
+    assert offer.language == "Inglés"
+    assert offer.variant == "Near Mint Foil"
+    assert offer.title == "Sol Ring [SLD]"
+
+
+def test_missing_metadata_leaves_treatment_empty():
+    reply = result_reply()
+    reply["items"][0]["offers"][0]["metadata"] = None
+    item, = make_provider(reply).read_results("search-1")
+    assert (item.offers[0].variant, item.offers[0].title) == ("", "")
+
+
 def test_reads_partial_results():
     provider = make_provider(result_reply())
     item, = provider.read_results("search-1")

@@ -6,9 +6,9 @@
 # Es idempotente: la primera vez crea el .venv y baja las dependencias, las
 # siguientes arranca directo. Solo reinstala si requirements.txt cambio.
 #
-#   ./run.sh                            -> http://localhost:8501
-#   ./run.sh --server.port 9123         -> otro puerto
-#   ./run.sh --server.address 127.0.0.1 -> solo tu maquina
+#   ./start.sh                            -> http://localhost:8501
+#   ./start.sh --server.port 9123         -> otro puerto
+#   ./start.sh --server.address 127.0.0.1 -> solo tu maquina
 #
 # Todo lo que le pases viaja tal cual a `streamlit run app.py`.
 #

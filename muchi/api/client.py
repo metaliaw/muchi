@@ -20,6 +20,11 @@ def build_search(reply: dict) -> SearchState:
     )
 
 
+def read_metadata(row: dict, field: str) -> str:
+    metadata = row.get("metadata") or {}
+    return str(metadata.get(field) or "")
+
+
 def build_offer(row: dict) -> SearchOffer:
     amount = Decimal(row["price_amount"])
     if not amount.is_finite() or amount < 0:
@@ -29,15 +34,27 @@ def build_offer(row: dict) -> SearchOffer:
         currency=row["price_currency"], url=row["url"],
         stock_status=row["stock_status"], suspicious=row["suspicious"],
         source=row["source"], finish=row.get("finish") or "",
+        language=row.get("language") or "", condition=row.get("condition") or "",
+        variant=read_metadata(row, "variant"), title=read_metadata(row, "title"),
         suspicious_reason=row.get("suspicious_reason") or "",
     )
+
+
+def order_offers(offers) -> tuple[SearchOffer, ...]:
+    """Ordena por Precio dentro de cada Moneda.
+
+    La API agrupa las Ofertas por Fuente y solo ordena dentro del Grupo, así
+    que la más barata de todas puede llegar en cualquier Posición. Las Monedas
+    no se comparan entre sí: un Peso y un Dólar no son el mismo Número.
+    """
+    return tuple(sorted(offers, key=lambda offer: (offer.currency, offer.amount)))
 
 
 def build_items(reply: dict) -> tuple[SearchItem, ...]:
     ordered = sorted(reply["items"], key=lambda row: row["position"])
     return tuple(SearchItem(
         name=row["original_name"], quantity=row["quantity"], status=row["status"],
-        offers=tuple(build_offer(offer) for offer in row["offers"]),
+        offers=order_offers(build_offer(offer) for offer in row["offers"]),
         error_message=row.get("error_message") or "",
     ) for row in ordered)
 
