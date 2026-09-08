@@ -21,6 +21,9 @@ from muchi.mtg.ports import QueryFailed, SearchRejected
 CAT = "🐱"
 PAW = "🐾"
 CLICKS_BEFORE_COUNTER = 3
+# La API marca "unknown" cuando la Fuente no publica Stock: Agregadores como
+# scry.cl indexan Precios, no Inventario. No es Ausencia de Carta.
+STOCK_LABELS = {"unknown": "No confirmado"}
 MUCHI_MESSENGER = None
 
 st.set_page_config(page_title="Muchi.cl", page_icon=CAT, layout="wide")
@@ -252,7 +255,8 @@ def show_search_results(items) -> None:
             rows.append({
                 "Carta": offer.card_name, "Tienda": offer.store,
                 "Precio": str(offer.amount), "Moneda": offer.currency,
-                "Stock": offer.stock_status, "Precio sospechoso": offer.suspicious,
+                "Stock": STOCK_LABELS.get(offer.stock_status, offer.stock_status),
+                "Precio sospechoso": offer.suspicious,
                 "Motivo": offer.suspicious_reason, "Oferta": offer.url,
             })
     if rows:
