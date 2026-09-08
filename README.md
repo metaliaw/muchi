@@ -23,6 +23,20 @@ Cada Búsqueda admite entre 1 y 500 entradas, con 1 a 99 copias por entrada:
 ```
 
 Puedes cancelar una Búsqueda en curso o retomarla con su enlace o Identificador.
+**Búsquedas Recientes** permite abrir las Búsquedas visitadas en la Sesión sin
+volver a enviarlas. Guarda sus Enlaces para recuperarlas al abrir otra Sesión;
+la API debe conservar todavía esos Resultados.
+
+El Estado y las Ofertas se consultan cada **5 segundos** mientras la Búsqueda
+está pendiente. El intervalo se configura con `MUCHI_API_POLL_SECONDS`.
+Al recibir los Resultados finales, las Consultas automáticas se detienen.
+Si falla la Consulta de Resultados, se conserva el Estado recibido y se reintenta.
+Una Búsqueda vencida o rechazada detiene los Reintentos y permite crear otra.
+
+El intervalo de Consulta no limita la duración de la Búsqueda. La API local
+consulta las Tiendas en secuencia y guarda las Ofertas al terminar cada Carta;
+la paginación de una Tienda puede mantener el Avance en `0 de 1` varios minutos.
+La hora del último Estado recibido permite comprobar que la conexión sigue activa.
 Si falla el Envío, **Reintentar Envío** conserva el Pedido y su clave de
 Idempotencia para evitar crear otra Búsqueda por el mismo intento.
 
@@ -64,10 +78,15 @@ Servidor del Front; no debe publicarse en el Repositorio ni en enlaces.
 En Linux o macOS:
 
 ```bash
-./muchi-start.sh
+./run.sh
 ```
 
-En Windows, ejecuta `muchi-start.cmd`. También puedes iniciar la App manualmente
+La API local requiere dos Procesos. Desde el Repositorio `muchi-api`, ejecuta
+`./run.sh serve` y `./run.sh work`: el primero recibe los Pedidos y el segundo
+los procesa. El Token del Front debe coincidir con el configurado en la API.
+Una Búsqueda que permanece en `queued` necesita un Worker disponible.
+
+En Windows, ejecuta `run.cmd`. También puedes iniciar la App manualmente
 con un Entorno virtual activo:
 
 ```bash
@@ -108,7 +127,7 @@ Con el Entorno virtual activo:
 
 ```bash
 pip install -r requirements-dev.txt
-pytest -q
+python -m pytest -q
 ```
 
 La suite habitual prueba el Cliente HTTP y la Interfaz con Servicios simulados,
@@ -116,8 +135,17 @@ sin conectarse a la API. Para comprobar la Integración real, inicia la API,
 configura `.env` y ejecuta:
 
 ```bash
-MUCHI_API_INTEGRATION=1 pytest tests/test_muchi_api_integration.py
+MUCHI_API_INTEGRATION=1 python -m pytest tests/test_muchi_api_integration.py
 ```
+
+Para probar **Sol Ring desde el Front hasta las Ofertas reales**, con el Worker
+levantado (puede tardar varios minutos):
+
+```bash
+MUCHI_API_INTEGRATION=1 MUCHI_API_SEARCH_INTEGRATION=1 python -m pytest -q tests/test_muchi_api_integration.py
+```
+
+Puedes añadir `MUCHI_API_SEARCH_ID` para verificar una Búsqueda existente.
 
 ## Documentación
 
