@@ -11,6 +11,7 @@ SECRET_NAME=${MUCHI_API_TOKEN%:*}
 VERSION=""
 STREAMLIT_URL="https://muchitgc.streamlit.app/"
 STREAMLIT_KEY="MUCHI_API_TOKEN"
+STREAMLIT_DOCS="https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management"
 DRY_RUN=false
 WORK_DIR=""
 STEP="Configuración"
@@ -87,12 +88,13 @@ streamlit_fallback() {
     '· Si sigue Ausente, Redespliega la App; el menú Aparece tras el Redespliegue.' \
     '· Al Redesplegar, el Token va en Advanced settings… → Secrets, antes de Deploy.' \
     '· Streamlit no Lee .env ni secrets.toml del Repo; el Secreto vive solo en ese Panel.'
+  printf '· Guía Oficial: %s\n' "$STREAMLIT_DOCS"
 }
 
 instructions() {
   printf '\n✅ Versión: %s:%s\n' "$SECRET_NAME" "$VERSION"
   printf 'Secret Manager: https://console.cloud.google.com/security/secret-manager/secret/%s/versions?project=%s\n' "$SECRET_NAME" "$PROJECT"
-  printf 'Streamlit: %s\nPanel: https://share.streamlit.io/\n' "$STREAMLIT_URL"
+  printf 'Streamlit: %s\nPanel: https://share.streamlit.io/\nGuía: %s\n' "$STREAMLIT_URL" "$STREAMLIT_DOCS"
   printf '%s\n' \
     '1. Entra al Panel con la Cuenta Dueña de la App.' \
     '2. Abre la App: menú ⋮ → Settings → Secrets.' \
