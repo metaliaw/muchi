@@ -17,6 +17,7 @@ load_dotenv()
 from muchi.api.settings import load_api_settings
 from muchi.mtg.settings import load_rate_settings
 from muchi.mtg import decklist, style, sprites, phrases, messaging, optimizer
+from muchi.mtg import theme
 from muchi.mtg import treatment
 from muchi.mtg import cast as muchi_cast
 from muchi.mtg.models import Offer, Order
@@ -37,11 +38,35 @@ SUSPICIOUS_REASON = re.compile(r"price_below_(\d+)_percent_median")
 # El Muchi Dólar solo convierte Dólares. Una Oferta en otra Moneda se muestra
 # con su Valor original y queda fuera del Carrito, porque nadie sabe cuánto es.
 MUCHI_DOLAR_CURRENCY = "USD"
+DARK_PHRASE = "se apaga la luz , baila como pokemon en cOnVerS3"
+LIGHT_PHRASE = "oh no prendieron las luces, no me vean estoy gordo"
 MUCHI_MESSENGER = None
 
 st.set_page_config(page_title="Muchi.cl", page_icon=CAT, layout="wide")
 st.markdown(style.CSS, unsafe_allow_html=True)
 st.markdown(sprites.build_sprite_css(), unsafe_allow_html=True)
+
+
+def paint_dark_mode() -> None:
+    """Pinta la Paleta elegida y guarda la Elección para la próxima Visita."""
+    if "muchi_oscuro" not in st.session_state:
+        cookie = theme.read_theme_choice(st.context.cookies)
+        st.session_state["muchi_oscuro"] = cookie == theme.DARK_THEME
+    dark = st.session_state["muchi_oscuro"]
+    st.markdown(theme.paint_theme(dark), unsafe_allow_html=True)
+    with st.container(key=theme.COOKIE_SLOT):
+        st.iframe(theme.build_cookie_script(theme.name_theme(dark)),
+                  height=theme.COOKIE_HEIGHT)
+
+
+def toggle_dark_mode() -> None:
+    """Muchi comenta la Luz en la Corrida siguiente.
+
+    El Toggle ya dejó su Valor nuevo en session_state cuando llega acá.
+    """
+    dark = st.session_state["muchi_oscuro"]
+    remember_muchi(html.escape(DARK_PHRASE if dark else LIGHT_PHRASE),
+                   "happy" if dark else "alert")
 
 
 @st.cache_resource
@@ -155,6 +180,9 @@ def show_sidebar_muchi():
     clicks = st.session_state.get("muchi_clicks", 0)
     if clicks >= CLICKS_BEFORE_COUNTER:
         st.caption(f"{PAW} Has acariciado a Muchi {clicks} veces")
+
+    st.toggle("Modo Oscuro", key="muchi_oscuro", on_change=toggle_dark_mode,
+              help="Apaga la Luz")
 
     if st.button("Muchi, ayudame!", key="muchi", use_container_width=True):
         st.session_state["muchi_habla"] = True
@@ -454,6 +482,7 @@ except (ValueError, OSError) as error:
     st.error(str(error))
     st.stop()
 
+paint_dark_mode()
 st.markdown(style.paint_hero("Muchi", "Busca Cartas y cotiza tu Lista", CAT),
             unsafe_allow_html=True)
 with st.sidebar:
