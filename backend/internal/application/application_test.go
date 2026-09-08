@@ -16,6 +16,10 @@ func TestConfiguredSources(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	for domain, store := range config.Stores {
+		store.Enabled = true
+		config.Stores[domain] = store
+	}
 	sources := buildOfferSources(nil, scry.Client{}, config, nil, time.Minute, nil)
 	lists := 0
 	catalogs := 0
@@ -82,7 +86,32 @@ func TestSourcesWithoutScry(t *testing.T) {
 			t.Fatal("Scry still active")
 		}
 	}
-	if len(sources) != 18 {
+	if len(sources) != 14 {
 		t.Fatalf("sources=%d", len(sources))
+	}
+}
+
+func TestSlowCatalogsPausedWithScryAvailable(t *testing.T) {
+	config, err := stores.LoadStoreConfig("../../config/stores.yaml", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, domain := range []string{"www.magic4ever.cl", "www.cartaslafortaleza.cl", "www.chronomagic.cl", "gamequest.cl"} {
+		store, found := config.Stores[domain]
+		if !found || store.Enabled {
+			t.Fatalf("slow catalog active or missing: %s", domain)
+		}
+	}
+	sources := buildOfferSources(nil, scry.Client{}, config, nil, time.Minute, nil)
+	if len(sources) != 15 {
+		t.Fatalf("sources=%d", len(sources))
+	}
+	if _, ok := sources[0].(scry.Client); !ok {
+		t.Fatal("Scry missing")
+	}
+	for _, source := range sources {
+		if _, ok := source.(jumpseller.Client); ok {
+			t.Fatal("slow catalog still active")
+		}
 	}
 }

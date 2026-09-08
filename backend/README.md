@@ -4,6 +4,12 @@ Servicio Go para buscar ofertas de cartas, verificar stock y ejecutar listas rea
 
 Las fuentes de ofertas son [scry.cl](https://scry.cl) y las tiendas habilitadas
 en `config/stores.yaml`: catálogos WooCommerce, Shopify y Jumpseller, e inventarios publicados en Moxfield.
+Por ahora las conexiones directas de Magic4Ever, Cartas La Fortaleza, ChronoMagic
+y GameQuest están deshabilitadas por la latencia de su paginación Jumpseller.
+Scry permanece habilitado y puede seguir mostrando sus ofertas publicadas.
+`enabled: false` también evita consultar directamente su stock. Para reactivarlas,
+cambia ese valor en `config/stores.yaml` y reinicia API y worker.
+
 De Scry se leen los precios guardados en sus páginas, en CLP, junto con tienda y variante.
 La verificación de stock consulta las tiendas configuradas; un precio publicado no confirma stock.
 `MUCHI_SCRY_URL` permite cambiar la URL base (por defecto `https://scry.cl`).
