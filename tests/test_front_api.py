@@ -284,3 +284,27 @@ def test_unavailable_search_stops_retrying_and_allows_new_search(front):
     assert not app.exception
     assert "search_unavailable" not in app.session_state
     assert app.session_state["terminal_results"]
+
+
+def test_dark_mode_toggle_makes_muchi_talk(front):
+    app, _ = front
+    assert not app.session_state["muchi_oscuro"]
+
+    app.toggle[0].set_value(True).run()
+
+    assert not app.exception
+    assert app.session_state["muchi_oscuro"]
+    assert any("se apaga la luz , baila como pokemon en cOnVerS3" in block.value
+               for block in app.markdown)
+
+
+def test_light_mode_toggle_embarrasses_muchi(front):
+    app, _ = front
+    app.toggle[0].set_value(True).run()
+
+    app.toggle[0].set_value(False).run()
+
+    assert not app.exception
+    assert not app.session_state["muchi_oscuro"]
+    assert any("oh no prendieron las luces, no me vean estoy gordo" in block.value
+               for block in app.markdown)
