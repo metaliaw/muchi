@@ -16,7 +16,7 @@ def build_search(reply: dict) -> SearchState:
     return SearchState(
         id=reply["id"], status=reply["status"], total=reply["total"],
         processed=reply["processed"], found=reply["found"],
-        errors=reply["errors"], current_card=reply.get("current_card", ""),
+        errors=reply["errors"], current_card=reply.get("current_card") or "",
     )
 
 
@@ -28,8 +28,8 @@ def build_offer(row: dict) -> SearchOffer:
         card_name=row["card_name"], store=row["store"], amount=amount,
         currency=row["price_currency"], url=row["url"],
         stock_status=row["stock_status"], suspicious=row["suspicious"],
-        source=row["source"], finish=row.get("finish", ""),
-        suspicious_reason=row.get("suspicious_reason", ""),
+        source=row["source"], finish=row.get("finish") or "",
+        suspicious_reason=row.get("suspicious_reason") or "",
     )
 
 
@@ -38,7 +38,7 @@ def build_items(reply: dict) -> tuple[SearchItem, ...]:
     return tuple(SearchItem(
         name=row["original_name"], quantity=row["quantity"], status=row["status"],
         offers=tuple(build_offer(offer) for offer in row["offers"]),
-        error_message=row.get("error_message", ""),
+        error_message=row.get("error_message") or "",
     ) for row in ordered)
 
 
@@ -73,6 +73,10 @@ class SearchProvider:
                 if not isinstance(reply, dict):
                     raise ValueError("Expected object")
                 return reply
+        except requests.Timeout:
+            raise QueryFailed("La API agotó el Tiempo de Espera. Se puede reintentar la Consulta.") from None
+        except requests.ConnectionError:
+            raise QueryFailed("No se pudo conectar con la API. Comprueba que el Servicio esté levantado y MUCHI_API_URL sea correcta.") from None
         except (requests.RequestException, ValueError):
             raise QueryFailed("No se pudo obtener una Respuesta válida de la API.") from None
 
