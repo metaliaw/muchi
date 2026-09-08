@@ -10,9 +10,8 @@ construido con Streamlit, muestra el Avance, las Ofertas y el Carrito.
 ## Buscar Cartas
 
 1. Escribe el Nombre de una Carta o pega una Lista con Cantidades.
-2. Elige si quieres comprobar Stock y consultar sólo Tiendas.
-3. Pulsa **Buscar**. Las Ofertas aparecen mientras avanza la Búsqueda.
-4. Revisa los Resultados y abre el **Carrito en CLP** para comparar la Compra.
+2. Pulsa **Buscar**. Las Ofertas aparecen mientras avanza la Búsqueda.
+3. Revisa los Resultados y abre el **Carrito en CLP** para comparar la Compra.
 
 Cada Búsqueda admite entre 1 y 500 entradas, con 1 a 99 copias por entrada:
 
@@ -23,6 +22,26 @@ Cada Búsqueda admite entre 1 y 500 entradas, con 1 a 99 copias por entrada:
 ```
 
 Puedes cancelar una Búsqueda en curso o retomarla con su enlace o Identificador.
+
+La Columna **Tratamiento** resume el Acabado, el Idioma y el Estado de cada
+Oferta. La API entrega esos Campos casi siempre nulos, así que se leen también
+del Texto de la Variante y del Título de la Tienda. Una Oferta sin ninguna
+Pista queda con la Columna vacía; ninguna Etiqueta se inventa.
+
+La Columna **Stock** dice `No confirmado` cuando la Fuente no publica
+Inventario: los Agregadores indexan Precios, no Stock. No significa Agotado, y
+esas Ofertas siguen entrando al Carrito.
+
+La Tabla abre ordenada por Precio, de la más barata a la más cara, mezclando
+todas las Cartas de la Lista. Cada Moneda se ordena en su propio Bloque. Desde
+ahí puedes reordenar por cualquier Columna con un clic en su Encabezado. El
+Precio se escribe a la Chilena, `1.791`, y solo muestra Decimales si alguna
+Oferta los trae.
+
+La Columna **Sospechoso** dice por qué Muchi desconfía de un Precio, en
+Palabras y no en el Código que entrega la API. Vacía cuando no hay Alerta. El
+Carrito descarta esas Ofertas.
+
 **Búsquedas Recientes** permite abrir las Búsquedas visitadas en la Sesión sin
 volver a enviarlas. Guarda sus Enlaces para recuperarlas al abrir otra Sesión;
 la API debe conservar todavía esos Resultados.
@@ -41,9 +60,32 @@ Si falla el Envío, **Reintentar Envío** conserva el Pedido y su clave de
 Idempotencia para evitar crear otra Búsqueda por el mismo intento.
 
 Las Ofertas muestran su Moneda original y las señales de Stock y Precio
-sospechoso informadas por la API. El Carrito utiliza Ofertas en CLP sin alerta
-de Precio ni Stock agotado. Un Stock desconocido no equivale a disponibilidad
-confirmada; revisa la Oferta en la Tienda antes de comprar.
+sospechoso informadas por la API. El Carrito utiliza Ofertas sin alerta de
+Precio ni Stock agotado, convertidas a Pesos cuando hace falta. Un Stock
+desconocido no equivale a disponibilidad confirmada; revisa la Oferta en la
+Tienda antes de comprar.
+
+## El Muchi Dólar
+
+Algunas Tiendas publican su propio Cambio y la API convierte con él antes de
+entregar la Oferta. Cuando una Oferta llega en Dólares sin esa Referencia,
+Muchi usa el **Muchi Dólar**, un Valor único, público y a la vista:
+
+```yaml
+# config/rates.defaults.yaml
+muchi_dolar: 1000
+```
+
+**No es el Dólar del Mercado ni intenta seguirlo.** Es el Cambio que Muchi
+cobra: cubre el Costo de traer la Carta y el Margen de los Intermediarios que
+harán la Compra cuando Muchi compre. Por eso se mueve cuando cambian esos
+Costos, no cuando se mueve el Dólar, y por eso está a la Vista: quien compra
+merece saber con qué Número se le convirtió el Precio.
+
+Se muestra en el Carrito junto al Total, y se ajusta editando ese Archivo o
+con `MUCHI_RATES_MUCHI_DOLAR`. Las Ofertas en otras Monedas se muestran con su
+Valor original y quedan fuera del Carrito: sin Cambio declarado, Muchi no
+inventa uno.
 
 ## Compartir el Stock de tu Tienda
 
@@ -78,7 +120,7 @@ Servidor del Front; no debe publicarse en el Repositorio ni en enlaces.
 En Linux o macOS:
 
 ```bash
-./run.sh
+./start.sh
 ```
 
 La API local requiere dos Procesos. Desde el Repositorio `muchi-api`, ejecuta
@@ -86,7 +128,7 @@ La API local requiere dos Procesos. Desde el Repositorio `muchi-api`, ejecuta
 los procesa. El Token del Front debe coincidir con el configurado en la API.
 Una Búsqueda que permanece en `queued` necesita un Worker disponible.
 
-En Windows, ejecuta `run.cmd`. También puedes iniciar la App manualmente
+En Windows, ejecuta `start.cmd`. También puedes iniciar la App manualmente
 con un Entorno virtual activo:
 
 ```bash

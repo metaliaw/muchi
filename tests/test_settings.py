@@ -154,3 +154,25 @@ def test_offer_thresholds_change_results():
 
     checks = offers.verify_cheapest_stock(Verifier(), found, replace(config, stock_check_limit=1))
     assert checks == {found[1]: True}
+
+
+def test_muchi_dolar_is_public_and_positive(monkeypatch):
+    monkeypatch.setenv("MUCHI_ENV", "development")
+    settings.load_rate_settings.cache_clear()
+    assert settings.load_rate_settings().muchi_dolar > 0
+    settings.load_rate_settings.cache_clear()
+
+
+def test_muchi_dolar_accepts_an_override(monkeypatch):
+    monkeypatch.setenv("MUCHI_ENV", "development")
+    monkeypatch.setenv("MUCHI_RATES_MUCHI_DOLAR", "1234")
+    settings.load_rate_settings.cache_clear()
+    assert settings.load_rate_settings().muchi_dolar == 1234
+    settings.load_rate_settings.cache_clear()
+
+
+@pytest.mark.parametrize("values", [{"muchi_dolar": 0}, {"muchi_dolar": 9.5},
+                                    {"dolar": 900}, []])
+def test_muchi_dolar_rejects_bad_values(values):
+    with pytest.raises(ValueError):
+        settings.validate_rate_values(values)
