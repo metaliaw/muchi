@@ -1,27 +1,35 @@
-"""Umbrales de negocio ajustables sin tocar la logica de Muchi."""
+"""Carga el Catálogo de Stock, separado de la Configuración."""
+from __future__ import annotations
 
-# Una cola baja se considera sospechosa si el siguiente precio es al menos
-# esta cantidad de veces mayor. Ejemplo: $152 -> $1.462 supera 4x.
-SUSPICIOUS_PRICE_GAP_RATIO = 4
-SUSPICIOUS_PRICE_MIN_OFFERS = 5
-SUSPICIOUS_PRICE_MAX_LOW_OFFERS = 2
-SUSPICIOUS_PRICE_MAX_LOW_SHARE = 0.20
+from dataclasses import dataclass
 
-# Estas fuentes informan disponibilidad, pero Muchi no puede comprobarla
-# contra la tienda en el momento de mostrar cada oferta.
-UNVERIFIED_STOCK_SOURCES = frozenset({"scry", "directo"})
+import yaml
 
-# Verificacion en vivo de las ofertas que probablemente recibiran el clic.
-STOCK_VERIFY_CHEAPEST_OFFERS = 5
-STOCK_VERIFY_TIMEOUT_SECONDS = 10.0
-STOCK_VERIFY_CACHE_SECONDS = 60
+from muchi.paths import ROOT
 
-# Sólo se buscan dentro de señales estructuradas o controles de compra; nunca
-# en todo el texto de la página, donde podrían aparecer en políticas o reseñas.
-OUT_OF_STOCK_MARKERS = (
-    "fuera de stock",
-    "sin stock",
-    "agotado",
-    "sold out",
-    "out of stock",
-)
+
+@dataclass(frozen=True)
+class StockCatalog:
+    unverified_sources: frozenset[str]
+    out_of_stock_markers: tuple[str, ...]
+
+
+def read_stock_catalog() -> StockCatalog:
+    """Valida las Fuentes y Señales compartidas al Arrancar."""
+    values = yaml.safe_load((ROOT / "constants/stock.yaml").read_text(encoding="utf-8"))
+    expected = {"unverified_sources", "out_of_stock_markers"}
+    if not isinstance(values, dict) or set(values) != expected:
+        raise ValueError("Invalid stock catalog keys")
+    for entries in values.values():
+        if not isinstance(entries, list) or not entries:
+            raise ValueError("Stock catalog entries must be nonempty lists")
+        if any(not isinstance(item, str) or not item.strip() for item in entries):
+            raise ValueError("Stock catalog entries must be nonempty strings")
+
+    return StockCatalog(
+        frozenset(values["unverified_sources"]),
+        tuple(values["out_of_stock_markers"]),
+    )
+
+
+STOCK_CATALOG = read_stock_catalog()

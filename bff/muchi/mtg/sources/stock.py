@@ -7,7 +7,7 @@ from urllib.parse import parse_qs, urlparse
 
 from bs4 import BeautifulSoup
 
-from .. import constants
+from ..constants import STOCK_CATALOG
 from ..http import PoliteSession
 from ..models import Offer
 from .shopify import product_json_url, read_variant_availability
@@ -120,7 +120,7 @@ def read_page_availability(html: str,
                  'main button[disabled]')
     for tag in soup.select(selectors):
         text = " ".join(tag.get_text(" ", strip=True).lower().split())
-        if any(marker in text for marker in constants.OUT_OF_STOCK_MARKERS):
+        if any(marker in text for marker in STOCK_CATALOG.out_of_stock_markers):
             return False
     return None
 

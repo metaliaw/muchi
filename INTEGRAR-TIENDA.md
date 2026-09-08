@@ -1,109 +1,82 @@
-# Cómo publicar tu stock en Muchi 🐱
+# Cómo compartir el Stock de tu Tienda con Muchi
 
-Si tienes una tienda de cartas y quieres que tus precios aparezcan en
-[Muchi](https://github.com/metaliaw/muchi), hay dos caminos.
+Si tienes una Tienda de Cartas y quieres que sus Ofertas aparezcan en Muchi,
+puedes compartir tu Inventario mediante Listas de Moxfield o desde tu sitio web.
+Esta guía explica qué información preparar para evaluar la integración.
 
-## Camino 1: listate en scry.cl (el más fácil)
+Las Fuentes se incorporan en la **API de Muchi**. El Front muestra sus Resultados;
+no tiene un formulario de alta de Tiendas ni importa Inventarios directamente.
+La disponibilidad de cada integración debe confirmarse con quienes mantienen
+el Servicio.
 
-[scry.cl](https://scry.cl) ya indexa 30 tiendas chilenas y Muchi lee de ahí.
-Si te sumás a scry, aparecés en Muchi automáticamente — y en cualquier otra
-herramienta que use scry. **No tienes que mantener nada.**
+## Opción 1: Listas de Moxfield
 
-Es la opción recomendada.
+Prepara los enlaces de las Listas que representan el Inventario que deseas
+publicar. Deben poder consultarse sin iniciar sesión con tu cuenta.
 
-## Camino 2: exponé una API de sólo lectura
+Incluye esta información:
 
-Si preferís no depender de un tercero, Muchi puede consultar tu tienda directo.
-Lo único que necesita es un endpoint `GET` que devuelva JSON.
+- Nombre de la Tienda y enlaces de las Listas.
+- Cantidad disponible de cada Carta y, cuando corresponda, Edición, Idioma,
+  Condición y Acabado.
+- Moneda y criterio de Precio: indica si utilizas un Precio de referencia,
+  una tasa de Conversión u otra regla. Si hay reglas distintas para Cartas
+  normales y foil, descríbelas por separado.
+- Enlace de la Tienda o canal donde una persona puede consultar y comprar.
+- Frecuencia con la que actualizas las Listas y cómo registras los Productos
+  agotados.
 
-**Muchi nunca escribe.** Sólo hace `GET`, con un mínimo de 1,5 s entre
-peticiones y un `User-Agent` identificable.
+Aclara si las Cantidades representan Stock disponible o sólo el contenido de
+una Lista de referencia. Una Lista por sí sola no establece el Precio de venta
+ni garantiza que sus Cartas estén disponibles.
 
-### Si usás Supabase
+Comparte esa información al solicitar la integración. El equipo deberá confirmar
+cómo la API leerá las Listas y representará los Precios y enlaces de Compra.
 
-Ya tienes la API: Supabase expone PostgREST. Lo único que falta es una política
-que permita **leer sólo lo que quieras publicar**.
+## Opción 2: Tu sitio web
 
-La clave `anon` está diseñada para ser pública — lo que la hace segura es el
-Row Level Security. Con esto, esa clave sólo puede hacer `SELECT` sobre tu
-inventario, y nada más:
+Comparte la dirección de tu Tienda y algunos enlaces de Productos que permitan
+identificar sus variantes. Si tienes un Catálogo o una API de Stock, incluye
+su documentación y un ejemplo de Respuesta sin Credenciales.
 
-```sql
--- 1. Una vista con SÓLO las columnas públicas.
---    Tus costos, proveedores y márgenes no salen de acá.
-create view public.stock_publico as
-select id, nombre_carta, set_codigo, estado, idioma,
-       precio_clp, cantidad, enlace
-from public.inventario
-where cantidad > 0;
+La información útil para cada Oferta es:
 
--- 2. RLS activo y una única política: leer.
-alter table public.inventario enable row level security;
+| Dato | Qué debe representar |
+| --- | --- |
+| Carta | Nombre y, si está disponible, un Identificador estable. |
+| Variante | Edición, Acabado, Condición e Idioma. |
+| Precio | Importe de venta y Moneda. |
+| Stock | Cantidad disponible o Estado de disponibilidad de esa variante. |
+| Enlace | Página donde se puede consultar o comprar la Oferta. |
 
-create policy "lectura publica del stock"
-on public.inventario
-for select
-to anon
-using (cantidad > 0);
-```
+Si tu sitio expone una API, indica cómo buscar una Carta, recorrer las páginas
+del Catálogo y reconocer un Producto agotado. Incluye los límites de Consulta
+y cualquier requisito de Autenticación.
 
-Verificá que quedó bien — esto tiene que fallar:
+Si sólo dispones de páginas de Productos, comparte ejemplos con y sin Stock.
+El equipo evaluará si el sitio permite una Consulta fiable y qué Adaptador
+necesita la API. No se presupone compatibilidad con todas las plataformas.
 
-```bash
-curl -X POST "https://TU-PROYECTO.supabase.co/rest/v1/inventario" \
-  -H "apikey: TU_ANON_KEY" -H "Content-Type: application/json" \
-  -d '{"nombre_carta":"prueba"}'
-```
+## Solicitar la integración
 
-Y esto tiene que funcionar:
+Abre una solicitud en los [Issues del Proyecto](https://github.com/metaliaw/muchi/issues)
+con el Nombre de tu Tienda, la opción elegida y la información anterior.
+Si no tienes acceso al Repositorio, utiliza el canal de contacto por el que
+te compartieron Muchi para coordinar la incorporación.
 
-```bash
-curl "https://TU-PROYECTO.supabase.co/rest/v1/stock_publico?nombre_carta=ilike.*sol%20ring*" \
-  -H "apikey: TU_ANON_KEY"
-```
+No incluyas Contraseñas ni Tokens en la solicitud. Si la integración requiere
+una Credencial, coordina su entrega por un canal privado y limita sus permisos
+a la lectura del Inventario que deseas compartir.
 
-### Si tienes otro backend
+Antes de dar la integración por lista, comprueba con el equipo que los Precios,
+las variantes, la disponibilidad y los enlaces correspondan a lo que muestra
+tu Tienda. Acuerda también cómo comunicar cambios en tus Listas o en tu sitio.
 
-Cualquier endpoint que reciba un término de búsqueda y devuelva una lista JSON
-sirve. Por ejemplo `GET https://tutienda.cl/api/stock?buscar=sol+ring`:
+## Qué verá quien busque tus Cartas
 
-```json
-[
-  {
-    "carta": "Sol Ring",
-    "set": "C21",
-    "estado": "NM",
-    "idioma": "EN",
-    "precio": 3500,
-    "cantidad": 4,
-    "link": "https://tutienda.cl/producto/sol-ring-c21"
-  }
-]
-```
+Muchi muestra las Ofertas recibidas de la API, con su Tienda, Precio, Moneda,
+Estado de Stock y enlace. La Compra se completa fuera de Muchi, mediante el
+enlace de la Oferta. Mantener el Inventario actualizado ayuda a evitar que
+aparezcan Cartas agotadas o Precios desactualizados.
 
-Los nombres de los campos no importan: se mapean en la config.
-
-### Conectarlo
-
-Copiá `store-api.example.json` a `store-api.json` y completá tu tienda.
-La clave va en una variable de entorno, nunca en el archivo:
-
-```bash
-export WOMBAT_SUPABASE_ANON_KEY="tu-anon-key"
-```
-
-## Qué muestra Muchi
-
-Nombre de la carta, edición, estado, idioma, precio y stock — y un link que
-manda a comprar **a tu tienda**. Muchi no vende, no cobra comisión y no
-automatiza checkout ni pagos.
-
-## Qué NO hace Muchi
-
-- No escribe en tu base de datos
-- No guarda datos de tus clientes
-- No usa credenciales que no nos hayas dado explícitamente
-- No hace scraping de tiendas que no lo permiten
-
-¿Dudas o quieres que te ayudemos a configurarlo? Abre un issue en
-[github.com/metaliaw/muchi](https://github.com/metaliaw/muchi/issues).
+[Volver al README](README.md).

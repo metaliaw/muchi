@@ -1,6 +1,6 @@
 """Muchi animada por sprite sheet, y sus avisos en burbuja de pensamiento.
 
-El GIF de `mascot.py` sirve para una sola animacion: la que quedo horneada
+El GIF estático sirve para una sola animacion: la que quedo horneada
 adentro. Aca hay varias -- idle, hablando, feliz, alerta, molesta -- y todas
 viven en un mismo PNG: una fila por estado, una columna por frame.
 
