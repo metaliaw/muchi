@@ -9,6 +9,8 @@ source "$ROOT/config/deploy.env"
 PROJECT=""
 SECRET_NAME=${MUCHI_API_TOKEN%:*}
 VERSION="latest"
+STREAMLIT_URL="https://muchitgc.streamlit.app/"
+STREAMLIT_KEY="MUCHI_API_TOKEN"
 WORK_DIR=""
 
 usage() {
@@ -18,6 +20,26 @@ usage() {
 
 cleanup() {
   if [[ -n "$WORK_DIR" ]]; then rm -rf -- "$WORK_DIR"; fi
+}
+
+streamlit_fallback() {
+  printf '\n⚠️ %s\n' 'Si no Aparece el menú Settings ni la Sección Secrets:'
+  printf '%s\n' \
+    '· Entra con la Cuenta Dueña de la App; el Panel solo Muestra sus Apps.' \
+    '· Dentro de la App, abajo a la Derecha: Manage app → ⋮ → Settings.' \
+    '· Si sigue Ausente, Redespliega la App; el menú Aparece tras el Redespliegue.' \
+    '· Al Redesplegar, el Token va en Advanced settings… → Secrets, antes de Deploy.' \
+    '· Streamlit no Lee .env ni secrets.toml del Repo; el Secreto vive solo en ese Panel.'
+}
+
+instructions() {
+  printf '\nStreamlit: %s\nPanel: https://share.streamlit.io/\n' "$STREAMLIT_URL"
+  printf '%s\n' \
+    '1. Entra al Panel con la Cuenta Dueña de la App.' \
+    '2. Abre la App: menú ⋮ → Settings → Secrets.' \
+    "3. Comprueba que $STREAMLIT_KEY Coincide con el Token impreso arriba." \
+    '4. Si lo Cambias, pulsa Save y luego Reboot app.'
+  streamlit_fallback
 }
 trap cleanup EXIT
 trap 'exit 130' INT
@@ -68,3 +90,4 @@ cloud secrets versions access "$VERSION" --secret="$SECRET_NAME" --out-file="$WO
 TOKEN=$(<"$WORK_DIR/token")
 printf '%s\n' "$TOKEN"
 sync_env_token "$TOKEN"
+instructions

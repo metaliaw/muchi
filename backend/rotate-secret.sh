@@ -79,17 +79,29 @@ if [[ -z "$PROJECT" ]]; then PROJECT=$(gcloud config get-value project 2>/dev/nu
 [[ "$STREAMLIT_KEY" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]] || fail 'La Clave debe ser un Nombre TOML simple.'
 [[ "$STREAMLIT_URL" =~ ^https://[a-zA-Z0-9.-]+/?$ ]] || fail 'Usa la URL HTTPS de la App, sin Ruta ni Parámetros.'
 
+streamlit_fallback() {
+  printf '\n⚠️ %s\n' 'Si no Aparece el menú Settings ni la Sección Secrets:'
+  printf '%s\n' \
+    '· Entra con la Cuenta Dueña de la App; el Panel solo Muestra sus Apps.' \
+    '· Dentro de la App, abajo a la Derecha: Manage app → ⋮ → Settings.' \
+    '· Si sigue Ausente, Redespliega la App; el menú Aparece tras el Redespliegue.' \
+    '· Al Redesplegar, el Token va en Advanced settings… → Secrets, antes de Deploy.' \
+    '· Streamlit no Lee .env ni secrets.toml del Repo; el Secreto vive solo en ese Panel.'
+}
+
 instructions() {
   printf '\n✅ Versión: %s:%s\n' "$SECRET_NAME" "$VERSION"
   printf 'Secret Manager: https://console.cloud.google.com/security/secret-manager/secret/%s/versions?project=%s\n' "$SECRET_NAME" "$PROJECT"
   printf 'Streamlit: %s\nPanel: https://share.streamlit.io/\n' "$STREAMLIT_URL"
   printf '%s\n' \
-    '1. En Streamlit, abre la App: menú ⋮ → Settings → Secrets.' \
-    "2. Actualiza $STREAMLIT_KEY con el Token impreso arriba; Conserva las otras Claves." \
+    '1. Entra al Panel con la Cuenta Dueña de la App.' \
+    '2. Abre la App: menú ⋮ → Settings → Secrets.' \
+    "3. Actualiza $STREAMLIT_KEY con el Token impreso arriba; Conserva las otras Claves." \
     "   $STREAMLIT_KEY = \"<TOKEN_IMPRESO_ARRIBA>\"" \
-    '3. Pulsa Save. Si la App mantiene el Cliente en Caché, usa Reboot app.' \
-    '4. Crea una Búsqueda desde Streamlit y Confirma que no devuelve 401.' \
+    '4. Pulsa Save. Si la App mantiene el Cliente en Caché, usa Reboot app.' \
+    '5. Crea una Búsqueda desde Streamlit y Confirma que no devuelve 401.' \
     'Comparte estos Enlaces e Instrucciones; el Token ya está Impreso Arriba.'
+  streamlit_fallback
 }
 if "$DRY_RUN"; then
   printf '🐱 Vista Previa: %s / %s\n' "$PROJECT" "$REGION"
