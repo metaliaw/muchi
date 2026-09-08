@@ -100,11 +100,13 @@ Los valores compartidos están en `config/deploy.env`: las funciones
 región o referencia de Secret Manager:
 
 ```sh
-./deploy.sh --project mi-proyecto --region southamerica-east1 --token-secret muchi-api-token:1
+./deploy.sh --project mi-proyecto --region southamerica-east1 --token-secret muchi-api-token
 ```
 
-Agrega `--dry-run` para revisar los comandos sin cambios en GCP. El valor predeterminado
-`muchi-api-token:latest` se resuelve a una versión fija antes de desplegar ambos servicios.
+Agrega `--dry-run` para revisar los comandos sin cambios en GCP. Ambos servicios reciben
+la referencia viva `muchi-api-token:latest`: cada instancia nueva lee la última versión
+habilitada, así que rotar el secreto no exige redesplegar. El despliegue verifica que esa
+última versión exista y esté habilitada, y avisa si pasas un número distinto.
 Para crear el secreto por primera vez o agregar una versión, usa `--token-file` con la
 ruta absoluta de un archivo privado fuera del repositorio, sin salto de línea final.
 El token no se imprime ni se pasa como valor en argumentos. Los scripts no cargan `.env`.

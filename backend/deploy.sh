@@ -74,13 +74,19 @@ if [ -n "$TOKEN_FILE" ]; then
   SECRET_VERSION=${version##*/}
 fi
 if "$DRY_RUN"; then SECRET_VERSION=1; fi
-version=$(cloud secrets versions describe "$SECRET_VERSION" --secret="$SECRET_NAME" --format='value(name)')
-state=$(cloud secrets versions describe "$SECRET_VERSION" --secret="$SECRET_NAME" --format='value(state)')
+version=$(cloud secrets versions describe latest --secret="$SECRET_NAME" --format='value(name)')
+state=$(cloud secrets versions describe latest --secret="$SECRET_NAME" --format='value(state)')
 if ! "$DRY_RUN"; then
   [ "$state" = ENABLED ] || { printf '%s\n' 'Secreto no Habilitado.' >&2; exit 1; }
-  SECRET_VERSION=${version##*/}
+  LATEST_VERSION=${version##*/}
+  case "$SECRET_VERSION" in
+    latest|"$LATEST_VERSION") ;;
+    *) printf '⚠️ %s\n' "Versión $SECRET_VERSION Ignorada: se Inyecta la Última ($LATEST_VERSION)." ;;
+  esac
+  SECRET_VERSION=$LATEST_VERSION
 fi
-MUCHI_API_TOKEN="$SECRET_NAME:$SECRET_VERSION"
+printf 'Secreto: %s (Última Versión: %s)\n' "$SECRET_NAME:latest" "$SECRET_VERSION"
+MUCHI_API_TOKEN="$SECRET_NAME:latest"
 
 step 'Cuentas y Permisos'
 for account in "$API_ACCOUNT" "$WORKER_ACCOUNT" "$TASK_ACCOUNT" "$BUILD_ACCOUNT"; do

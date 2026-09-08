@@ -95,15 +95,13 @@ echo 🐱 %STEP%
 call :Cloud services enable cloudfunctions.googleapis.com run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com firestore.googleapis.com cloudtasks.googleapis.com secretmanager.googleapis.com iam.googleapis.com iamcredentials.googleapis.com || exit /b 1
 if defined TOKEN_FILE call :UploadToken || exit /b 1
 if "%DRY_RUN%"=="1" set "SECRET_VERSION=1"
-call :ReadCloud SECRET_RESOURCE secrets versions describe "%SECRET_VERSION%" --secret="%SECRET_NAME%" --format="value(name)" || exit /b 1
-call :ReadCloud SECRET_STATE secrets versions describe "%SECRET_VERSION%" --secret="%SECRET_NAME%" --format="value(state)" || exit /b 1
-if "%DRY_RUN%"=="1" (
-  set "MUCHI_API_TOKEN=%SECRET_NAME%:1"
-  exit /b 0
-)
+call :ReadCloud SECRET_RESOURCE secrets versions describe latest --secret="%SECRET_NAME%" --format="value(name)" || exit /b 1
+call :ReadCloud SECRET_STATE secrets versions describe latest --secret="%SECRET_NAME%" --format="value(state)" || exit /b 1
+set "MUCHI_API_TOKEN=%SECRET_NAME%:latest"
+if "%DRY_RUN%"=="1" exit /b 0
 if not "%SECRET_STATE%"=="ENABLED" exit /b 1
 for %%V in ("%SECRET_RESOURCE:/=\%") do set "SECRET_VERSION=%%~nxV"
-set "MUCHI_API_TOKEN=%SECRET_NAME%:%SECRET_VERSION%"
+echo Secreto: %SECRET_NAME%:latest ^(Última Versión: %SECRET_VERSION%^)
 exit /b 0
 
 :UploadToken
