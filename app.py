@@ -2,18 +2,22 @@
 from __future__ import annotations
 
 import html
+import re
 from uuid import uuid4
 from urllib.parse import quote
 from decimal import Decimal
 from datetime import datetime, timezone
 
+import pandas
 import streamlit as st
 from dotenv import load_dotenv
 
 load_dotenv()
 
 from muchi.api.settings import load_api_settings
+from muchi.mtg.settings import load_rate_settings
 from muchi.mtg import decklist, style, sprites, phrases, messaging, optimizer
+from muchi.mtg import treatment
 from muchi.mtg import cast as muchi_cast
 from muchi.mtg.models import Offer, Order
 from muchi.mtg.ports import QueryFailed, SearchRejected
@@ -23,7 +27,16 @@ PAW = "🐾"
 CLICKS_BEFORE_COUNTER = 3
 # La API marca "unknown" cuando la Fuente no publica Stock: Agregadores como
 # scry.cl indexan Precios, no Inventario. No es Ausencia de Carta.
-STOCK_LABELS = {"unknown": "No confirmado"}
+STOCK_LABELS = {"available": "En Stock", "unavailable": "Agotado",
+                "unknown": "No confirmado"}
+# El Contrato pide ambas Opciones en cada Pedido. Se envían fijas: la API
+# comprueba el Stock de las Ofertas más baratas y hoy ignora "stores_only".
+VERIFY_STOCK = True
+STORES_ONLY = True
+SUSPICIOUS_REASON = re.compile(r"price_below_(\d+)_percent_median")
+# El Muchi Dólar solo convierte Dólares. Una Oferta en otra Moneda se muestra
+# con su Valor original y queda fuera del Carrito, porque nadie sabe cuánto es.
+MUCHI_DOLAR_CURRENCY = "USD"
 MUCHI_MESSENGER = None
 
 st.set_page_config(page_title="Muchi.cl", page_icon=CAT, layout="wide")
@@ -195,8 +208,6 @@ def show_search_form() -> None:
         text = st.text_area(
             "Una Carta o tu Lista", placeholder="Sol Ring\n4 Lightning Bolt",
         )
-        verify_stock = st.checkbox("Comprobar Stock", value=True)
-        stores_only = st.checkbox("Sólo Tiendas", value=True)
         submitted = st.form_submit_button("Buscar", disabled=active or pending)
     if submitted and not active and not pending:
         orders, ignored = decklist.parse_decklist(text)
@@ -207,7 +218,7 @@ def show_search_form() -> None:
             st.error("Ingresa entre 1 y 500 Cartas, con Cantidades de 1 a 99.")
             return
         st.session_state["pending_search"] = dict(
-            orders=orders, verify_stock=verify_stock, stores_only=stores_only,
+            orders=orders, verify_stock=VERIFY_STOCK, stores_only=STORES_ONLY,
             key=str(uuid4()),
         )
         submit_search()
@@ -244,6 +255,49 @@ def show_search_resume() -> None:
             st.caption("Todavía no hay Búsquedas en esta Sesión.")
 
 
+def read_suspicious_note(reason: str) -> str:
+    """Traduce el Código de la API. Hoy solo emite uno; el resto pasa crudo."""
+    if match := SUSPICIOUS_REASON.fullmatch(reason):
+        return f"Precio bajo el {match[1]}% de la Mediana de su Moneda"
+    return reason or "Precio fuera de Rango"
+
+
+def build_offer_row(offer) -> dict:
+    return {
+        "Carta": offer.card_name, "Tienda": offer.store,
+        "Tratamiento": treatment.build_treatment(offer),
+        "Precio": float(offer.amount), "Moneda": offer.currency,
+        "Stock": STOCK_LABELS.get(offer.stock_status, offer.stock_status),
+        "Sospechoso": read_suspicious_note(offer.suspicious_reason)
+        if offer.suspicious else "",
+        "Oferta": offer.url,
+    }
+
+
+def order_rows(rows: list[dict]) -> list[dict]:
+    """Abre por Precio, barata primero, mezclando todas las Cartas.
+
+    La Tabla es ordenable por Encabezado, así que esto es solo el Orden de
+    partida: el que sirve para responder "cuánto sale lo más barato".
+    """
+    return sorted(rows, key=lambda row: (row["Moneda"], row["Precio"]))
+
+
+def build_price_format(rows: list[dict]):
+    """Escribe el Precio a la Chilena: Punto de Miles, Coma de Decimales.
+
+    Los Decimales aparecen solo si alguna Oferta los trae. Los Pesos no llevan
+    Centavos y la Columna se lee mejor sin ellos, pero 3,49 tampoco es 3.
+
+    Se aplica como Formato de pandas y no como `format` de la Columna: así la
+    Celda se lee 1.791 mientras el Valor sigue siendo el Número 1791, que es
+    lo que la Tabla ordena cuando alguien pincha el Encabezado.
+    """
+    decimals = 0 if all(float(row["Precio"]).is_integer() for row in rows) else 2
+    swap = str.maketrans(",.", ".,")
+    return lambda value: f"{value:,.{decimals}f}".translate(swap)
+
+
 def show_search_results(items) -> None:
     rows = []
     for item in items:
@@ -251,17 +305,21 @@ def show_search_results(items) -> None:
             st.warning(f"{item.name}: no se pudo completar la Consulta.")
         elif item.status == "not_found":
             st.caption(f"{item.name}: sin Ofertas.")
-        for offer in item.offers:
-            rows.append({
-                "Carta": offer.card_name, "Tienda": offer.store,
-                "Precio": str(offer.amount), "Moneda": offer.currency,
-                "Stock": STOCK_LABELS.get(offer.stock_status, offer.stock_status),
-                "Precio sospechoso": offer.suspicious,
-                "Motivo": offer.suspicious_reason, "Oferta": offer.url,
-            })
+        rows.extend(build_offer_row(offer) for offer in item.offers)
     if rows:
-        st.dataframe(rows, hide_index=True, use_container_width=True,
-                     column_config={"Oferta": st.column_config.LinkColumn("Oferta")})
+        rows = order_rows(rows)
+        frame = pandas.DataFrame(rows)
+        st.dataframe(
+            frame.style.format({"Precio": build_price_format(rows)}),
+            hide_index=True, use_container_width=True,
+            column_config={
+                "Oferta": st.column_config.LinkColumn("Oferta"),
+                "Sospechoso": st.column_config.TextColumn(
+                    "Sospechoso",
+                    help="Por qué Muchi desconfía del Precio. El Carrito las descarta.",
+                ),
+            },
+        )
     else:
         state = st.session_state.get("search_state")
         if st.session_state.get("search_unavailable"):
@@ -275,21 +333,40 @@ def show_search_results(items) -> None:
                     "los Resultados aparecen cuando la API termina de consultarla.")
 
 
+def convert_to_clp(offer, muchi_dolar: int) -> Decimal | None:
+    """Lleva una Oferta a Pesos. Devuelve None si su Moneda no tiene Cambio."""
+    if offer.currency == "CLP":
+        return offer.amount
+    if offer.currency == MUCHI_DOLAR_CURRENCY:
+        return offer.amount * muchi_dolar
+    return None
+
+
 def show_search_cart(items) -> None:
+    muchi_dolar = load_rate_settings().muchi_dolar
     with st.expander("Carrito en CLP"):
         shipping = st.number_input("Envío por Tienda", min_value=0, value=4000, step=500)
         orders = [Order(item.quantity, item.name) for item in items]
         found = {}
+        converted = 0
         for item in items:
-            eligible = [offer for offer in item.offers if offer.currency == "CLP"
-                        and offer.stock_status != "unavailable" and not offer.suspicious]
-            found.setdefault(item.name.lower(), []).extend(Offer(
-                store=offer.store, card_name=item.name, title=offer.card_name,
-                price_clp=offer.amount, url=offer.url,
-            ) for offer in eligible)
+            for offer in item.offers:
+                if offer.stock_status == "unavailable" or offer.suspicious:
+                    continue
+                price = convert_to_clp(offer, muchi_dolar)
+                if price is None:
+                    continue
+                converted += offer.currency != "CLP"
+                found.setdefault(item.name.lower(), []).append(Offer(
+                    store=offer.store, card_name=item.name, title=offer.card_name,
+                    price_clp=price, url=offer.url,
+                ))
         plan = optimizer.build_optimal_plan(orders, found, int(shipping))
-        st.caption("Usa Ofertas en CLP sin alertas de Precio ni Stock agotado. "
-                   "Las demás Monedas se muestran con su valor original.")
+        st.caption("Usa Ofertas sin alertas de Precio ni Stock agotado. "
+                   f"**Muchi Dólar: 1 USD = CLP {muchi_dolar:,}**, el Cambio "
+                   "de Muchi con Costos de Compra incluidos, no el del Mercado.")
+        if converted:
+            st.caption(f"{converted} Ofertas en USD entraron convertidas.")
         st.metric("Total con Envíos", f"CLP {Decimal(plan.total):,.2f}")
         if plan.lines:
             st.dataframe([vars(line) for line in plan.lines], hide_index=True)
