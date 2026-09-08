@@ -4,6 +4,12 @@ Servicio Go para buscar ofertas de cartas, verificar stock y ejecutar listas rea
 
 Las fuentes de ofertas son [scry.cl](https://scry.cl) y las tiendas habilitadas
 en `config/stores.yaml`: catálogos WooCommerce, Shopify y Jumpseller, e inventarios publicados en Moxfield.
+Por ahora las conexiones directas de Magic4Ever, Cartas La Fortaleza, ChronoMagic
+y GameQuest están deshabilitadas por la latencia de su paginación Jumpseller.
+Scry permanece habilitado y puede seguir mostrando sus ofertas publicadas.
+`enabled: false` también evita consultar directamente su stock. Para reactivarlas,
+cambia ese valor en `config/stores.yaml` y reinicia API y worker.
+
 De Scry se leen los precios guardados en sus páginas, en CLP, junto con tienda y variante.
 La verificación de stock consulta las tiendas configuradas; un precio publicado no confirma stock.
 `MUCHI_SCRY_URL` permite cambiar la URL base (por defecto `https://scry.cl`).
@@ -100,11 +106,13 @@ Los valores compartidos están en `config/deploy.env`: las funciones
 región o referencia de Secret Manager:
 
 ```sh
-./deploy.sh --project mi-proyecto --region southamerica-east1 --token-secret muchi-api-token:1
+./deploy.sh --project mi-proyecto --region southamerica-east1 --token-secret muchi-api-token
 ```
 
-Agrega `--dry-run` para revisar los comandos sin cambios en GCP. El valor predeterminado
-`muchi-api-token:latest` se resuelve a una versión fija antes de desplegar ambos servicios.
+Agrega `--dry-run` para revisar los comandos sin cambios en GCP. Ambos servicios reciben
+la referencia viva `muchi-api-token:latest`: cada instancia nueva lee la última versión
+habilitada, así que rotar el secreto no exige redesplegar. El despliegue verifica que esa
+última versión exista y esté habilitada, y avisa si pasas un número distinto.
 Para crear el secreto por primera vez o agregar una versión, usa `--token-file` con la
 ruta absoluta de un archivo privado fuera del repositorio, sin salto de línea final.
 El token no se imprime ni se pasa como valor en argumentos. Los scripts no cargan `.env`.

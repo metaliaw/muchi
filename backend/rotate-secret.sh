@@ -150,6 +150,12 @@ else
   [[ "$state" == ENABLED ]] || fail 'Versión no Habilitada.'
   cloud secrets versions access "$VERSION" --secret="$SECRET_NAME" --out-file="$WORK_DIR/token"
 fi
+latest=$(cloud secrets versions describe latest --secret="$SECRET_NAME" --format='value(name)')
+LATEST_VERSION=${latest##*/}
+if [[ "$VERSION" != "$LATEST_VERSION" ]]; then
+  printf '\n⚠️ %s\n' "Los Servicios Apuntan a $SECRET_NAME:latest, hoy la Versión $LATEST_VERSION." \
+    "Para Volver a la Versión $VERSION, Deshabilita las Posteriores en Secret Manager."
+fi
 step 'Token'
 TOKEN=$(<"$WORK_DIR/token")
 printf '%s\n' "$TOKEN"
@@ -161,9 +167,9 @@ printf '\n⚠️ Actualiza Streamlit al Terminar: su Token Anterior dejará de F
 for service in "$WORKER_SERVICE" "$API_SERVICE"; do
   step "Actualizando $service"
   revision=$(cloud run services update "$service" --region="$REGION" \
-    --update-secrets="MUCHI_API_TOKEN=$SECRET_NAME:$VERSION" --format='value(status.latestReadyRevisionName)')
+    --update-secrets="MUCHI_API_TOKEN=$SECRET_NAME:latest" --format='value(status.latestReadyRevisionName)')
   [[ "$revision" =~ ^[a-z0-9-]+$ ]] || fail 'Revisión Lista Ausente.'
-  cloud run services update-traffic "$service" --region="$REGION" --to-revisions="$revision=100" --format=none
+  cloud run services update-traffic "$service" --region="$REGION" --to-latest --format=none
 done
 
 step 'Autenticación de la API'

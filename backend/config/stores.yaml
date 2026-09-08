@@ -1,4 +1,5 @@
 stores:
+  # Jumpseller Directo Pausado: Paginación Lenta. Scry Conserva sus Ofertas Publicadas.
   lacripta.cl:
     platform: woocommerce
     unavailable_selectors:
@@ -47,25 +48,25 @@ stores:
     platform: jumpseller
     timeout_seconds: 10
     allow_redirects: true
-    enabled: true
+    enabled: false
   www.chronomagic.cl:
     name: "ChronoMagic"
     platform: jumpseller
     timeout_seconds: 10
     allow_redirects: true
-    enabled: true
+    enabled: false
   gamequest.cl:
     name: "GameQuest"
     platform: jumpseller
     timeout_seconds: 10
     allow_redirects: true
-    enabled: true
+    enabled: false
   www.magic4ever.cl:
     name: "Magic4Ever"
     platform: jumpseller
     timeout_seconds: 10
     allow_redirects: true
-    enabled: true
+    enabled: false
   el-wombat-rabioso-tcg:
     name: "El Wombat Rabioso TCG"
     enabled: true
