@@ -4,7 +4,6 @@ import { computed } from 'vue'
 
 const props = defineProps({
   donationUrl: { type: String, default: '' },
-  repositoryUrl: { type: String, default: '' },
   socials: { type: Array, default: () => [] },
 })
 
@@ -42,12 +41,6 @@ const apoyos = computed(() =>
 <template>
   <footer class="mu-pie">
     <nav class="mu-insignias" aria-label="Apoyar y participar en Muchi">
-      <a v-if="repositoryUrl" class="mu-icono" :href="repositoryUrl"
-         title="GitHub" aria-label="GitHub"
-         target="_blank" rel="noopener noreferrer">⌨️</a>
-
-      <span class="mu-corte" aria-hidden="true"></span>
-
       <component
         v-for="red in redes" :key="red.name"
         :is="red.url ? 'a' : 'span'"
