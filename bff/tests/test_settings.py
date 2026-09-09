@@ -89,8 +89,8 @@ def test_requires_environment_file(tmp_path, monkeypatch):
 
 def test_validates_catalog(tmp_path, monkeypatch):
     (tmp_path / "constants").mkdir()
-    target = tmp_path / "constants/stock.yaml"
-    target.write_text('unverified_sources: [1]\nout_of_stock_markers: [sold out]\n')
+    target = tmp_path / "constants/stock.json"
+    target.write_text('{"unverified_sources": [1], "out_of_stock_markers": ["sold out"]}')
     monkeypatch.setattr(constants, "ROOT", tmp_path)
     with pytest.raises(ValueError, match="strings"):
         constants.read_stock_catalog()
