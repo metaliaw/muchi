@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Rotates Muchi Credentials with the Active gcloud Session and syncs .env.
 #
-# Alcanza a los tres Consumidores del Token: el Worker, la API y el Front.
-# El Front se despliega desde otro Repositorio, pero monta este mismo Secreto,
-# y una Rotacion que no lo incluye lo deja autenticando con un Token muerto.
+# Alcanza a todos los Consumidores del Token: el Worker, la API y los Fronts.
+# Los Fronts se despliegan desde otro Repositorio, pero montan este mismo
+# Secreto, y una Rotacion que no los incluye los deja autenticando con un Token
+# muerto. Uno que todavia no existe se saltea con un Aviso, para que la
+# Migracion pueda nombrar al nuevo antes de desplegarlo.
 set +x
 set -euo pipefail
 umask 077
@@ -77,7 +79,6 @@ if [[ -z "$PROJECT" ]]; then PROJECT=$(gcloud config get-value project 2>/dev/nu
 [[ "$REGION" =~ ^[a-z0-9-]+$ ]] || fail 'Región Inválida.'
 [[ "$SECRET_NAME" =~ ^[a-zA-Z0-9_-]+$ ]] || fail 'Nombre de Secreto Inválido.'
 [[ -z "$VERSION" || "$VERSION" =~ ^[1-9][0-9]*$ ]] || fail 'Usa una Versión Numérica Positiva.'
-[[ "$FRONT_NAME" =~ ^[a-z0-9-]+$ ]] || fail 'Nombre de Front Inválido.'
 
 instructions() {
   printf '\n✅ Versión: %s:%s\n' "$SECRET_NAME" "$VERSION"
@@ -86,7 +87,7 @@ instructions() {
 
 if "$DRY_RUN"; then
   printf '🐱 Vista Previa: %s / %s\n' "$PROJECT" "$REGION"
-  printf '%s\n' "API: $API_NAME · Worker: $WORKER_NAME · Front: $FRONT_NAME" \
+  printf '%s\n' "API: $API_NAME · Worker: $WORKER_NAME · Fronts: $FRONT_NAMES" \
     'Se Actualizará MUCHI_API_TOKEN y se Enviará el Tráfico a las nuevas Revisiones.' \
     'No se Generan Tokens ni se Modifica GCP.'
   VERSION=${VERSION:-NUEVA}
@@ -104,7 +105,22 @@ WORKER_SERVICE=$(cloud functions describe "$WORKER_NAME" --gen2 --region="$REGIO
 API_SERVICE=${API_SERVICE##*/}
 WORKER_SERVICE=${WORKER_SERVICE##*/}
 [[ "$API_SERVICE" =~ ^[a-z0-9-]+$ && "$WORKER_SERVICE" =~ ^[a-z0-9-]+$ ]] || fail 'Servicios Cloud Run Ausentes.'
-for service in "$API_SERVICE" "$WORKER_SERVICE" "$FRONT_NAME"; do
+
+# Los Fronts se resuelven antes de tocar nada: los que existen entran a la
+# Lista y los que no avisan, para que la Rotacion no muera a mitad de camino
+# por un Servicio que todavia nadie desplego.
+FRONTS=""
+for front in $FRONT_NAMES; do
+  [[ "$front" =~ ^[a-z0-9-]+$ ]] || fail "Nombre de Front Invalido: $front"
+  if cloud run services describe "$front" --region="$REGION" --format=none 2>/dev/null; then
+    FRONTS="$FRONTS $front"
+  else
+    printf '⚠️ %s\n' "Front '$front' Ausente en $REGION: se Saltea."
+  fi
+done
+[[ -n "$FRONTS" ]] || fail 'Ningun Front Desplegado; revisa --region.'
+
+for service in "$API_SERVICE" "$WORKER_SERVICE" $FRONTS; do
   cloud run services describe "$service" --region="$REGION" --format=json > "$WORK_DIR/$service.json"
   python3 - "$WORK_DIR/$service.json" "$service" <<'PY'
 import json, sys
@@ -144,7 +160,7 @@ instructions
 
 # El Orden sigue al Trafico, de adentro hacia afuera: el Worker no atiende a
 # nadie, la API atiende al Front, el Front atiende al Usuario.
-for service in "$WORKER_SERVICE" "$API_SERVICE" "$FRONT_NAME"; do
+for service in "$WORKER_SERVICE" "$API_SERVICE" $FRONTS; do
   step "Actualizando $service"
   revision=$(cloud run services update "$service" --region="$REGION" \
     --update-secrets="MUCHI_API_TOKEN=$SECRET_NAME:latest" --format='value(status.latestReadyRevisionName)')
