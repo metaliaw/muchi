@@ -150,8 +150,7 @@ En Producción, un solo Servicio de Cloud Run sirve el Front compilado y el
 BFF:
 
 ```bash
-gcloud builds submit --config cloudbuild.yaml \
-  --substitutions=_SERVICE=muchi-web,_REGION=southamerica-east1
+./deploy.sh
 ```
 
 La [Nota de Migración](docs/migracion-web.md) explica la Frontera entre
