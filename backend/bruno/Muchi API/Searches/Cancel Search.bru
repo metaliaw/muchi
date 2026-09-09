@@ -1,0 +1,27 @@
+meta {
+  name: Cancel Search
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/searches/{{searchId}}/cancel
+  body: none
+  auth: inherit
+}
+
+headers {
+  Idempotency-Key: {{$randomUUID}}
+}
+
+docs {
+  Cancelar dos veces con Claves distintas devuelve 200 las dos: una Búsqueda
+  ya cancelada sigue cancelada. Con la misma Clave y otro Cuerpo, 409.
+}
+
+tests {
+  test("la Búsqueda queda cancelada", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().status).to.equal("cancelled");
+  });
+}

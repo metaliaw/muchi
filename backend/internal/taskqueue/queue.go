@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	cloudtasks "cloud.google.com/go/cloudtasks/apiv2"
@@ -25,6 +26,9 @@ func boundContext(ctx context.Context) (context.Context, context.CancelFunc) {
 	}
 	return context.WithTimeout(ctx, maxRPCDeadline)
 }
+
+// nextWake Separates two Wake-ups born in the same Second.
+var nextWake atomic.Uint64
 
 type Queue struct {
 	client           *cloudtasks.Client
@@ -72,8 +76,36 @@ func (q *Queue) CloseQueue() error {
 	return q.client.Close()
 }
 
+// WakeWorker Adds one Turn that is not tied to any Position.
+//
+// The Sweeper uses it to replace Wake-ups that a silent Turn spent without
+// working. The Name carries the Minute so a Repair is never mistaken for the
+// original Task: Cloud Tasks remembers a used Name for about an Hour and
+// answers AlreadyExists, which createTask swallows. Reusing the Name would
+// repair nothing and report Success.
+func (q *Queue) WakeWorker(ctx context.Context, reason string) error {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
+	return q.dispatch(ctx, fmt.Sprintf("%s/tasks/%s", q.parent, buildWakeName(reason)))
+}
+
+// buildWakeName Names one Wake-up so no two ever collide.
+//
+// Cloud Tasks admite Letras, Números, Guiones y Bajos: un Punto rompe la
+// Llamada con InvalidArgument. Y un Sello por Segundos no alcanza, porque un
+// Barrido pide muchos Despertares dentro del mismo Segundo: los repetidos
+// volverían AlreadyExists, que dispatch se traga, y el Barredor repondría uno
+// solo creyendo que repuso todos. El Sello se lee; el Contador separa.
+func buildWakeName(reason string) string {
+	stamp := time.Now().UTC().Format("20060102-150405")
+	return fmt.Sprintf("%s-%s-%d", reason, stamp, nextWake.Add(1))
+}
+
 func (q *Queue) createTask(ctx context.Context, searchID string, position int) error {
-	name := fmt.Sprintf("%s/tasks/%s-%03d", q.parent, searchID, position)
+	return q.dispatch(ctx, fmt.Sprintf("%s/tasks/%s-%03d", q.parent, searchID, position))
+}
+
+func (q *Queue) dispatch(ctx context.Context, name string) error {
 	request := &cloudtaskspb.HttpRequest{
 		Url:        q.targetURL,
 		HttpMethod: cloudtaskspb.HttpMethod_POST,

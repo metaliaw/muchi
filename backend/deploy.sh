@@ -138,6 +138,32 @@ cloud run services add-iam-policy-binding "${WORKER_SERVICE##*/}" --region="$REG
   --member="serviceAccount:$TASK_EMAIL" --role=roles/run.invoker --condition=None --format=none
 printf '%s\n' '✅ Worker Privado Preparado'
 
+step 'Despliegue del Barredor'
+# Una Tarea no nombra su Item: dice "despertate y toma lo que haya". Un Turno
+# que termina sin trabajar gasta un Despertar y nada lo repone. El Barredor
+# compara el Trabajo que espera con la Cola y repone la Diferencia.
+cloud functions deploy "$SWEEPER_NAME" --gen2 --trigger-http --no-allow-unauthenticated \
+  --runtime="$RUNTIME" --region="$REGION" --source=. --entry-point=SweepQueue --ignore-file=.gcloudignore \
+  --service-account="$API_EMAIL" --build-service-account="projects/$PROJECT/serviceAccounts/$BUILD_EMAIL" \
+  --memory="$MEMORY" --timeout=120s --min-instances=0 --max-instances=1 --concurrency=1 \
+  --set-env-vars="GOOGLE_CLOUD_PROJECT=$PROJECT,MUCHI_STORES_CONFIG=serverless_function_source_code/config/stores.yaml,MUCHI_TASK_REGION=$REGION,MUCHI_TASK_QUEUE=$TASK_QUEUE,MUCHI_TASK_URL=$WORKER_URL,MUCHI_TASK_SERVICE_ACCOUNT=$TASK_EMAIL,MUCHI_SCRY_ENABLED=$MUCHI_SCRY_ENABLED" \
+  --set-secrets="MUCHI_API_TOKEN=$MUCHI_API_TOKEN" --format=none
+SWEEPER_URL=$(cloud functions describe "$SWEEPER_NAME" --gen2 --region="$REGION" --format='value(serviceConfig.uri)')
+SWEEPER_SERVICE=$(cloud functions describe "$SWEEPER_NAME" --gen2 --region="$REGION" --format='value(serviceConfig.service)')
+if "$DRY_RUN"; then SWEEPER_URL="https://$SWEEPER_NAME-PREVIEW.run.app"; SWEEPER_SERVICE=$SWEEPER_NAME; fi
+case "$SWEEPER_URL" in https://*) ;; *) printf '%s\n' 'URL del Barredor Ausente.' >&2; exit 1 ;; esac
+cloud run services add-iam-policy-binding "${SWEEPER_SERVICE##*/}" --region="$REGION" \
+  --member="serviceAccount:$TASK_EMAIL" --role=roles/run.invoker --condition=None --format=none
+cloud services enable cloudscheduler.googleapis.com --format=none
+existing_job=$(cloud scheduler jobs list --location="$REGION" --filter="name:$SWEEPER_JOB" --format='value(name.basename())')
+job_action=create
+if [ "$existing_job" = "$SWEEPER_JOB" ]; then job_action=update; fi
+cloud scheduler jobs "$job_action" http "$SWEEPER_JOB" --location="$REGION" \
+  --schedule="$SWEEPER_SCHEDULE" --uri="$SWEEPER_URL" --http-method=POST \
+  --oidc-service-account-email="$TASK_EMAIL" --oidc-token-audience="$SWEEPER_URL" \
+  --attempt-deadline=120s --format=none
+printf '%s\n' '✅ Barredor Programado'
+
 step 'Despliegue de la API'
 cloud functions deploy "$API_NAME" --gen2 --trigger-http --allow-unauthenticated \
   --runtime="$RUNTIME" --region="$REGION" --source=. --entry-point=ServeAPI --ignore-file=.gcloudignore \

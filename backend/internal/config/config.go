@@ -39,6 +39,7 @@ type Config struct {
 	OfferCacheEmptyTTL      time.Duration
 	SearchTTL               time.Duration
 	MaxCardsPerSearch       int
+	SweepMaxWakes           int
 	MaxQuantityPerCard      int
 	SuspiciousPricePercent  int
 }
@@ -82,8 +83,11 @@ func LoadConfig() (Config, error) {
 		OfferCacheEmptyTTL:      readSecondsOr("MUCHI_OFFER_CACHE_EMPTY_TTL_SECONDS", 120),
 		SearchTTL:               readSecondsOr("MUCHI_SEARCH_TTL_SECONDS", 86400),
 		MaxCardsPerSearch:       readIntOr("MUCHI_MAX_CARDS_PER_SEARCH", 500),
-		MaxQuantityPerCard:      readIntOr("MUCHI_MAX_QUANTITY_PER_CARD", 99),
-		SuspiciousPricePercent:  readIntOr("MUCHI_SUSPICIOUS_PRICE_PERCENT", 30),
+		// One Sweep wakes at most this many Turns. Higher, a single Sweep
+		// would hit the Sources harder than any Search ever does.
+		SweepMaxWakes:          readIntOr("MUCHI_SWEEP_MAX_WAKES", 50),
+		MaxQuantityPerCard:     readIntOr("MUCHI_MAX_QUANTITY_PER_CARD", 99),
+		SuspiciousPricePercent: readIntOr("MUCHI_SUSPICIOUS_PRICE_PERCENT", 30),
 	}
 	if config.APIToken == "" {
 		return Config{}, errors.New("MUCHI_API_TOKEN is required")

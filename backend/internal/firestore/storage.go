@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sort"
 	"time"
 
@@ -25,6 +26,16 @@ import (
 // (an HTTP handler, a Cloud Tasks-triggered function) may carry much longer ones.
 const maxRPCDeadline = 20 * time.Second
 
+// A Claim looks past the Head of the Queue. One Document that cannot be
+// claimed used to stop every other one behind it: the Query returned it, the
+// Claim refused it, and the Worker answered "no Work" forever.
+const claimCandidates = 20
+
+// A finished Item is parked beyond its own Expiry. Parked exactly on it, it
+// became claimable at the very Instant a Claim starts refusing it, and every
+// Turn from then on wasted a Candidate Slot on a dead Document.
+const doneParking = 24 * time.Hour
+
 // boundContext shortens ctx's deadline to maxRPCDeadline when the caller's is longer,
 // while still honoring an earlier deadline or cancellation from the caller.
 func boundContext(ctx context.Context) (context.Context, context.CancelFunc) {
@@ -37,6 +48,20 @@ func boundContext(ctx context.Context) (context.Context, context.CancelFunc) {
 type Store struct {
 	client    *firestorelib.Client
 	searchTTL time.Duration
+	logger    *slog.Logger
+}
+
+// TellStore Gives the Store a Voice. Without one it stays silent, which is
+// what every Test wants and what Production must never have.
+func (s *Store) TellStore(logger *slog.Logger) {
+	s.logger = logger
+}
+
+func (s *Store) say() *slog.Logger {
+	if s.logger == nil {
+		return slog.New(slog.DiscardHandler)
+	}
+	return s.logger
 }
 
 type searchRecord struct {
@@ -169,17 +194,75 @@ func (s *Store) ClaimSearchItem(ctx context.Context, owner string, lease time.Du
 		query := s.client.Collection("items").
 			Where("available_at", "<=", time.Now().UTC()).
 			OrderBy("available_at", firestorelib.Asc).
-			Limit(1)
-		document, err := tx.Documents(query).Next()
-		if errors.Is(err, iterator.Done) {
-			return search.ErrNotFound
-		}
-		if err != nil {
+			Limit(claimCandidates)
+		documents := tx.Documents(query)
+		var skipped []string
+		for {
+			document, err := documents.Next()
+			if errors.Is(err, iterator.Done) {
+				// Skipping every Candidate is not an idle Turn, and the two
+				// used to look identical from outside. That is what let the
+				// Queue stall for two hours without a single Warning.
+				if len(skipped) > 0 {
+					s.say().Warn("Claim Skipped Every Candidate",
+						"skipped", len(skipped), "items", skipped)
+				}
+				return search.ErrNotFound
+			}
+			if err != nil {
+				return err
+			}
+			// A Candidate that cannot be claimed is skipped, never fatal.
+			// claimItem refuses before it writes, so the Transaction stays
+			// clean until one of them is actually taken.
+			err = s.claimItem(ctx, tx, document, owner, lease, &claimed)
+			if errors.Is(err, search.ErrNotFound) {
+				skipped = append(skipped, document.Ref.ID)
+				continue
+			}
+			if err == nil && len(skipped) > 0 {
+				s.say().Warn("Claim Stepped Over Dead Items",
+					"skipped", len(skipped), "items", skipped, "claimed", claimed.ID)
+			}
 			return err
 		}
-		return s.claimItem(ctx, tx, document, owner, lease, &claimed)
 	})
 	return claimed, mapStoreError(err)
+}
+
+// CountWaitingItems Says how many Items are ready for a Turn right now.
+//
+// A Task carries no Item: it means "wake up and take whatever is there", so
+// the only Bond between Work and Wake-ups is the Count. A Turn that ends
+// without working spends a Wake-up and nothing puts it back; the Sweeper
+// compares this Count with the Queue and repairs the Difference.
+func (s *Store) CountWaitingItems(ctx context.Context, limit int) (int, error) {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
+	now := time.Now().UTC()
+	documents := s.client.Collection("items").
+		Where("available_at", "<=", now).
+		OrderBy("available_at", firestorelib.Asc).
+		Limit(limit).
+		Documents(ctx)
+	defer documents.Stop()
+	waiting := 0
+	for {
+		document, err := documents.Next()
+		if errors.Is(err, iterator.Done) {
+			return waiting, nil
+		}
+		if err != nil {
+			return waiting, mapStoreError(err)
+		}
+		var record itemRecord
+		// A dead Document is not Work: counting it would ask for Turns that
+		// only ever skip it.
+		if err := document.DataTo(&record); err != nil || record.ExpiresAt.Before(now) {
+			continue
+		}
+		waiting++
+	}
 }
 
 func (s *Store) RenewItemLease(ctx context.Context, id, owner string, lease time.Duration) error {
@@ -428,7 +511,7 @@ func (s *Store) completeItem(ctx context.Context, tx *firestorelib.Transaction, 
 		return err
 	}
 	item.LeaseOwner, item.LeaseUntil = "", nil
-	record.Payload, record.AvailableAt = mustJSON(item), record.ExpiresAt
+	record.Payload, record.AvailableAt = mustJSON(item), record.ExpiresAt.Add(doneParking)
 	record.LeaseOwner, record.LeaseUntil = "", nil
 	if err := tx.Set(reference, record); err != nil {
 		return err
