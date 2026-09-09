@@ -221,6 +221,8 @@ def create_search(request: SearchRequest) -> dict:
     return {
         "state": presenter.build_state(state),
         "label": ", ".join(order.name for order in orders),
+        "items": [{"name": order.name, "quantity": order.quantity,
+                   "status": "queued", "offers": 0} for order in orders],
     }
 
 

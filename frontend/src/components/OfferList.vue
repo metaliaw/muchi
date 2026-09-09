@@ -12,6 +12,7 @@ const printingOf = (offer) => ({
 })
 
 defineProps({
+  items: { type: Array, default: () => [] },
   offers: { type: Array, default: () => [] },
   summary: { type: Object, default: null },
   notices: { type: Array, default: () => [] },
@@ -21,6 +22,14 @@ defineProps({
 
 <template>
   <section>
+    <div v-if="items.length" class="mu-panel mu-lista">
+      <h2>Cartas de la Lista</h2>
+      <p v-for="item in items" :key="item.name" class="mu-lista-fila">
+        <span><strong>{{ item.quantity }}×</strong> {{ item.name }}</span>
+        <span class="mu-caption">{{ item.offers }} Ofertas</span>
+      </p>
+    </div>
+
     <p v-for="notice in notices" :key="notice.text"
        :class="notice.level === 'warning' ? 'mu-aviso' : 'mu-caption'">{{ notice.text }}</p>
 
@@ -61,6 +70,9 @@ defineProps({
 </template>
 
 <style scoped>
+.mu-lista { margin-bottom: 14px; }
+.mu-lista h2 { margin-top: 0; }
+.mu-lista-fila { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .mu-fichas { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 14px 0; }
 .mu-ficha { display: flex; flex-direction: column; gap: 4px; }
 .mu-ficha strong { font-size: 1.4rem; }

@@ -27,6 +27,7 @@ const message = ref(null)
 
 const searchId = ref(new URLSearchParams(location.search).get('search') || '')
 const state = ref(null)
+const items = ref([])
 const offers = ref([])
 const summary = ref(null)
 const notices = ref([])
@@ -77,9 +78,10 @@ function remember(id, label) {
   localStorage.setItem('muchi_historial', JSON.stringify(history.value))
 }
 
-function selectSearch(id, initialState = null) {
+function selectSearch(id, initialState = null, initialItems = []) {
   searchId.value = id
   state.value = initialState
+  items.value = initialItems
   offers.value = []
   summary.value = null
   notices.value = []
@@ -128,7 +130,7 @@ async function send() {
     const reply = await api.createSearch(pending.value.text, pending.value.key)
     remember(reply.state.id, reply.label)
     pending.value = null
-    selectSearch(reply.state.id, reply.state)
+    selectSearch(reply.state.id, reply.state, reply.items || [])
     say('¡Miau! Ya salí a buscar', 'happy')
   } catch (failure) {
     error.value = failure.message
@@ -143,6 +145,7 @@ async function refresh() {
   try {
     const reply = await api.readSearch(searchId.value)
     state.value = reply.state
+    items.value = reply.items || []
     offers.value = reply.offers
     summary.value = reply.summary
     notices.value = reply.notices
@@ -260,7 +263,7 @@ onUnmounted(stopPolling)
       </SearchProgress>
 
       <OfferList
-        v-if="state" :offers="offers" :summary="summary"
+        v-if="state" :items="items" :offers="offers" :summary="summary"
         :notices="notices" :placeholder="placeholder"
         @look="lookAtCard"
       />
