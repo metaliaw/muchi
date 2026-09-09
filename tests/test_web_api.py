@@ -307,3 +307,31 @@ def test_art_refuses_a_language_that_is_not_offered(translating):
     reply = client.get("/api/card/art", params={"name": "Sol Ring", "language": "xx"})
     assert reply.status_code == 400
     assert translator.looked == []
+
+
+# ------------------------------------------------------------------- el Pie
+def test_config_names_the_repository_for_the_footer(client):
+    reply, _ = client
+    assert reply.get("/api/config").json()["repository_url"].startswith("https://github.com/")
+
+
+def test_a_network_without_an_address_does_not_exist(client, monkeypatch):
+    """El Pie solo muestra las Redes que alguien configuró."""
+    reply, _ = client
+    for _, _, variable in main.SOCIALS:
+        monkeypatch.delenv(variable, raising=False)
+    assert reply.get("/api/config").json()["socials"] == []
+
+
+def test_configured_networks_reach_the_footer(client, monkeypatch):
+    reply, _ = client
+    for _, _, variable in main.SOCIALS:
+        monkeypatch.delenv(variable, raising=False)
+    monkeypatch.setenv("MUCHI_INSTAGRAM_URL", "https://instagram.com/muchi")
+    monkeypatch.setenv("MUCHI_DISCORD_URL", "  ")
+
+    rows = reply.get("/api/config").json()["socials"]
+
+    # Discord llegó en blanco: eso no es una Dirección.
+    assert rows == [{"name": "Instagram", "icon": "📸",
+                     "url": "https://instagram.com/muchi"}]
