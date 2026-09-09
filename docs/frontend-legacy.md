@@ -586,10 +586,10 @@ existentes. La Configuración se carga una vez: `config/stock.defaults.yaml`,
 Archivo del Entorno y Variables `MUCHI_STOCK_TIMEOUT_SECONDS` y
 `MUCHI_STOCK_CACHE_SECONDS`, en ese orden. Los Tiempos deben ser positivos.
 
-El Catálogo compartido vive en `constants/stock.yaml`; no admite Overrides.
+El Catálogo compartido vive en `constants/stock.json`; no admite Overrides.
 Los Factores de Conversión permanecen junto a su Lógica. Los Tokens siguen entrando por Variables, fuera de estos Archivos.
 
-Las Frases de Muchi viven en `constants/phrases.yaml`, junto al Contenido
+Las Frases de Muchi viven en `constants/phrases.json`, junto al Contenido
 compartido. Para nuevos Catálogos y Archivos de Configuración del Proyecto,
 usa YAML de preferencia.
 
