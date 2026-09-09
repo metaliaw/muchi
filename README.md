@@ -151,7 +151,7 @@ BFF:
 
 ```bash
 gcloud builds submit --config cloudbuild.yaml \
-  --substitutions=_SERVICE=muchi-web,_REGION=southamerica-west1
+  --substitutions=_SERVICE=muchi-web,_REGION=southamerica-east1
 ```
 
 La [Nota de Migración](docs/migracion-web.md) explica la Frontera entre

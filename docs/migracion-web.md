@@ -79,14 +79,14 @@ Un solo Servicio en Cloud Run sirve el Front compilado y el BFF. El
 
 ```bash
 gcloud builds submit --config cloudbuild.yaml \
-  --substitutions=_SERVICE=muchi-web,_REGION=southamerica-west1
+  --substitutions=_SERVICE=muchi-web,_REGION=southamerica-east1
 ```
 
 El Token se monta desde Secret Manager al desplegar; no queda escrito en la
 Imagen ni en el Repositorio:
 
 ```bash
-gcloud run services add-iam-policy-binding muchi-web --region=southamerica-west1 \
+gcloud run services add-iam-policy-binding muchi-web --region=southamerica-east1 \
   --member=allUsers --role=roles/run.invoker
 ```
 
