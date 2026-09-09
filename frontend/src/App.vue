@@ -18,7 +18,9 @@ import SponsorSpot from './components/SponsorSpot.vue'
 
 const THEME_KEY = 'muchi_tema'
 
-const config = ref({ poll_seconds: 5, adsense_client: 'ca-pub-6368656861543000' })
+// El Ritmo lo manda el Servidor; este es el mismo de config/api.defaults.yaml,
+// para los milisegundos que van entre que arranca la Página y llega la Config.
+const config = ref({ poll_seconds: 3, adsense_client: 'ca-pub-6368656861543000' })
 const book = ref(null)
 const dark = ref(localStorage.getItem(THEME_KEY) === 'oscuro')
 const message = ref(null)
@@ -170,7 +172,7 @@ async function cancel() {
 
 function startPolling() {
   stopPolling()
-  const seconds = config.value.poll_seconds || 5
+  const seconds = config.value.poll_seconds || 3
   timer = setInterval(refresh, seconds * 1000)
 }
 function stopPolling() {
@@ -211,6 +213,7 @@ onUnmounted(stopPolling)
       <SearchForm
         v-model:text="lookupText"
         :busy="busy" :pending="Boolean(pending)" :error="error"
+        :limits="config.limits"
         @search="submit" @retry="send" @resume="selectSearch"
       >
         <template #lookup>
