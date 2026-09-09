@@ -67,6 +67,25 @@ def read_health() -> dict:
     return {"status": "ok"}
 
 
+# Cada Red es un Nombre, un Icono y la Variable que la enciende. Una Red sin
+# Direccion no existe: el Pie solo muestra las que alguien configuro.
+REPOSITORY_URL = "https://github.com/metaliaw/muchi"
+
+SOCIALS = (
+    ("Instagram", "📸", "MUCHI_INSTAGRAM_URL"),
+    ("Discord", "💬", "MUCHI_DISCORD_URL"),
+    ("X", "𝕏", "MUCHI_X_URL"),
+    ("YouTube", "▶️", "MUCHI_YOUTUBE_URL"),
+    ("TikTok", "🎵", "MUCHI_TIKTOK_URL"),
+)
+
+
+def read_socials() -> list[dict]:
+    return [{"name": name, "icon": icon, "url": url}
+            for name, icon, variable in SOCIALS
+            if (url := os.getenv(variable, "").strip())]
+
+
 @app.get("/api/config")
 def read_config() -> dict:
     """Lo que el Front necesita saber al arrancar. Nunca incluye el Token."""
@@ -82,6 +101,8 @@ def read_config() -> dict:
         "sponsor_url": os.getenv("MUCHI_SPONSOR_URL", ""),
         "adsense_client": os.getenv("MUCHI_ADSENSE_CLIENT", "") or ADSENSE_CLIENT,
         "adsense_slot": os.getenv("MUCHI_ADSENSE_SLOT", ""),
+        "repository_url": REPOSITORY_URL,
+        "socials": read_socials(),
     }
 
 
