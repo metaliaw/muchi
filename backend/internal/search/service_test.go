@@ -18,6 +18,12 @@ func (s stubSource) FindOffers(context.Context, string) ([]offer.Offer, error) {
 	return s.items, s.err
 }
 
+type sourceProbe func(context.Context, string) ([]offer.Offer, error)
+
+func (p sourceProbe) FindOffers(ctx context.Context, name string) ([]offer.Offer, error) {
+	return p(ctx, name)
+}
+
 type stubCache struct {
 	items []offer.Offer
 	found bool
@@ -40,6 +46,36 @@ func TestFindFallback(t *testing.T) {
 	items, err := service.FindCardOffers(context.Background(), "Sol Ring")
 	if err != nil || len(items) != 1 || cache.saved {
 		t.Fatalf("FindCardOffers() items=%v saved=%v err=%v", items, cache.saved, err)
+	}
+}
+
+func TestSourcesRunTogether(t *testing.T) {
+	started := make(chan struct{}, 2)
+	release := make(chan struct{})
+	probe := func(id string) sourceProbe {
+		return func(context.Context, string) ([]offer.Offer, error) {
+			started <- struct{}{}
+			<-release
+			return []offer.Offer{{ID: id}}, nil
+		}
+	}
+	done := make(chan []offer.Offer, 1)
+	go func() {
+		items, _ := querySources(context.Background(), []OfferSource{probe("one"), probe("two")}, "Sol Ring")
+		done <- items
+	}()
+
+	for range 2 {
+		select {
+		case <-started:
+		case <-time.After(time.Second):
+			t.Fatal("Sources did not Run Together")
+		}
+	}
+	close(release)
+	items := <-done
+	if len(items) != 2 || items[0].ID != "one" || items[1].ID != "two" {
+		t.Fatalf("querySources() items = %v", items)
 	}
 }
 

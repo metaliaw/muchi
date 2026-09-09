@@ -96,6 +96,19 @@ No requieren Go local para desplegar: GCP compila las funciones desde el código
 ./deploy.sh
 ```
 
+En Unix también puedes desplegar cada componente por separado. `deploy.sh` los
+orquesta en este mismo orden:
+
+```sh
+./deploy-infra.sh
+./deploy-worker.sh
+./deploy-sweeper.sh
+./deploy-api.sh
+```
+
+La API y el barredor descubren la URL del worker ya desplegado. Por eso requieren
+que exista el worker, pero no vuelven a desplegarlo.
+
 ```bat
 deploy.cmd
 ```

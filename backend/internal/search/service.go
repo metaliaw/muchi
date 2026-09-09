@@ -6,10 +6,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cangrejometralleta/muchi-api/internal/offer"
 )
+
+const maxConcurrentSources = 4
 
 type Service struct {
 	Searches          SearchStore
@@ -113,13 +116,36 @@ func HashPayload(value any) string {
 }
 
 func querySources(ctx context.Context, sources []OfferSource, name string) ([]offer.Offer, error) {
+	results := make([][]offer.Offer, len(sources))
+	errors := make([]error, len(sources))
+	turns := make(chan struct{}, maxConcurrentSources)
+	var group sync.WaitGroup
+	for index, source := range sources {
+		group.Add(1)
+		go querySource(ctx, &group, turns, source, name, &results[index], &errors[index])
+	}
+	group.Wait()
+	return combineSources(results, errors)
+}
+
+func querySource(ctx context.Context, group *sync.WaitGroup, turns chan struct{}, source OfferSource, name string, items *[]offer.Offer, sourceErr *error) {
+	defer group.Done()
+	select {
+	case turns <- struct{}{}:
+		defer func() { <-turns }()
+	case <-ctx.Done():
+		*sourceErr = ctx.Err()
+		return
+	}
+	*items, *sourceErr = source.FindOffers(ctx, name)
+}
+
+func combineSources(results [][]offer.Offer, errors []error) ([]offer.Offer, error) {
 	var result []offer.Offer
 	var lastErr error
-	for _, source := range sources {
-		items, err := source.FindOffers(ctx, name)
-		if err != nil {
-			lastErr = err
-			continue
+	for index, items := range results {
+		if errors[index] != nil {
+			lastErr = errors[index]
 		}
 		result = append(result, items...)
 	}

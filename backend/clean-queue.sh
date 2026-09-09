@@ -19,9 +19,9 @@
 # Tiempo no sirve, porque un Turno servido desde la Cache tarda lo mismo que
 # uno vacio.
 #
-#   ./clean_queue.sh                 -> barre hasta que no quede Trabajo
-#   ./clean_queue.sh --max 5         -> como mucho cinco Barridos
-#   ./clean_queue.sh --dry-run       -> dice que haria
+#   ./clean-queue.sh                 -> barre hasta que no quede Trabajo
+#   ./clean-queue.sh --max 5         -> como mucho cinco Barridos
+#   ./clean-queue.sh --dry-run       -> dice que haria
 set -eu
 cd -- "$(dirname -- "$0")"
 . ./config/deploy.env
@@ -44,7 +44,7 @@ while [ "$#" -gt 0 ]; do
       shift 2 ;;
     --dry-run) DRY_RUN=true; shift ;;
     --help|-h)
-      printf '%s\n' '🐱 clean_queue.sh [--project ID] [--region REGION]' \
+      printf '%s\n' '🐱 clean-queue.sh [--project ID] [--region REGION]' \
         '  [--max BARRIDOS] [--dry-run]'
       exit 0 ;;
     *) printf '%s\n' "Argumento Desconocido: $1" >&2; exit 1 ;;
