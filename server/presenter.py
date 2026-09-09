@@ -132,6 +132,12 @@ def build_results(items: tuple[SearchItem, ...], muchi_dolar: int) -> dict:
               (convert_to_clp(offer, muchi_dolar) for offer in offers)
               if price is not None]
     return {
+        "items": [{
+            "name": item.name,
+            "quantity": item.quantity,
+            "status": item.status,
+            "offers": len(item.offers),
+        } for item in items],
         "offers": rows,
         "notices": notices,
         "summary": {
