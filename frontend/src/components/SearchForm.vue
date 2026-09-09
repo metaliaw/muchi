@@ -9,7 +9,7 @@ defineProps({
 })
 const emit = defineEmits(['search', 'retry', 'resume'])
 
-const text = ref('')
+const text = defineModel('text', { type: String, default: '' })
 const identifier = ref('')
 </script>
 
@@ -32,6 +32,8 @@ const identifier = ref('')
       El Envío está pendiente. Reintentar conserva la misma Búsqueda.
       <button class="mu-ghost" @click="emit('retry')">Reintentar Envío</button>
     </p>
+
+    <slot name="lookup" />
 
     <details>
       <summary>Retomar una Búsqueda</summary>

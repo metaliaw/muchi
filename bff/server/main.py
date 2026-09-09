@@ -20,7 +20,7 @@ load_dotenv()
 from muchi.api.settings import load_api_settings
 from muchi.mtg import cast as muchi_cast
 from muchi.mtg import decklist, phrases
-from muchi.mtg.ports import QueryFailed, SearchRejected
+from muchi.mtg.ports import CardNotFound, QueryFailed, SearchRejected, TranslationFailed
 from muchi.mtg.settings import load_rate_settings
 from muchi.paths import ROOT
 
@@ -118,6 +118,44 @@ def read_decklist(request: SearchRequest) -> dict:
         "orders": [{"name": order.name, "quantity": order.quantity} for order in orders],
         "ignored": list(ignored),
     }
+
+
+@app.get("/api/languages")
+def read_languages() -> dict:
+    """Los Idiomas que el Selector ofrece los nombra la Fuente, no el Front."""
+    return {"languages": [{"code": code, "label": label, "example": example}
+                          for code, label, example
+                          in build_muchi().translator.languages]}
+
+
+@app.get("/api/card/suggestions")
+def read_suggestions(name: str = Query(min_length=1, max_length=200),
+                     language: str = Query(min_length=2, max_length=5)) -> dict:
+    """Nombres que empiezan como lo escrito, para quien dudó en el Campo."""
+    translator = build_muchi().translator
+    if language not in translator.codes:
+        raise HTTPException(400, f"El Idioma «{language}» no está en la Lista.")
+    return {"suggestions": list(translator.suggest_names(name, language))}
+
+
+@app.get("/api/card")
+def read_card(name: str = Query(min_length=1, max_length=200),
+              language: str = Query("", max_length=5)) -> dict:
+    """Busca una Carta: el Front escribe en su Idioma, Scryfall traduce."""
+    translator = build_muchi().translator
+    if language and language not in translator.codes:
+        raise HTTPException(400, f"El Idioma «{language}» no está en la Lista.")
+    try:
+        canonical = translator.translate_name(name, language)
+    except CardNotFound:
+        book = phrases.read_phrases()
+        # El Grupo «not_found» del Catálogo nombra el Fracaso con voz propia.
+        phrase = next((row for row in book.phrases if "no la encontré" in row.text), None)
+        detail = phrase.text if phrase else f"No encontramos «{name}»."
+        raise HTTPException(404, detail)
+    except TranslationFailed as error:
+        raise HTTPException(502, str(error))
+    return {"name": name, "canonical_name": canonical, "language": language}
 
 
 @app.post("/api/searches")

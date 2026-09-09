@@ -38,6 +38,12 @@ export const cancelSearch = (id, key) =>
 export const readCart = (id, shipping) =>
   request(`/api/searches/${encodeURIComponent(id)}/cart?shipping=${shipping}`)
 export const readSources = () => request('/api/sources')
+export const readLanguages = () => request('/api/languages')
+export const readSuggestions = (name, language) =>
+  request(`/api/card/suggestions?name=${encodeURIComponent(name)}` +
+          `&language=${encodeURIComponent(language)}`)
+export const readCard = (name, language = '') =>
+  request(`/api/card?name=${encodeURIComponent(name)}&language=${encodeURIComponent(language)}`)
 
 export const newKey = () =>
   crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`
