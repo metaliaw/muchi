@@ -5,7 +5,7 @@ Puedes consultar una Carta o pegar una Lista completa y calcular una propuesta
 de Compra en CLP que considere también el costo de los Envíos.
 
 La API de Muchi realiza las Búsquedas y conserva sus Resultados. Este Front,
-construido con Streamlit, muestra el Avance, las Ofertas y el Carrito.
+construido con Vue 3, muestra el Avance, las Ofertas y el Carrito.
 
 ## Buscar Cartas
 
@@ -120,21 +120,13 @@ Servidor del Front; no debe publicarse en el Repositorio ni en enlaces.
 En Linux o macOS:
 
 ```bash
-./start.sh
+./start-web.sh   # BFF en :8000, Front en http://127.0.0.1:5173
 ```
 
 La API local requiere dos Procesos. Desde el Repositorio `muchi-api`, ejecuta
 `./run.sh serve` y `./run.sh work`: el primero recibe los Pedidos y el segundo
 los procesa. El Token del Front debe coincidir con el configurado en la API.
 Una Búsqueda que permanece en `queued` necesita un Worker disponible.
-
-En Windows, ejecuta `start.cmd`. También puedes iniciar la App manualmente
-con un Entorno virtual activo:
-
-```bash
-pip install -r requirements.txt
-streamlit run app.py
-```
 
 Para Producción, selecciona `MUCHI_ENV=production` y configura la URL y el Token
 en el Entorno de Despliegue.
@@ -151,13 +143,8 @@ lado solo se volvería viejo sin que nadie lo notara.
 
 ## El Front Vue
 
-Además del Front de Streamlit hay un Front nuevo en Vue 3, servido por un BFF
-en FastAPI que conserva el Código de Seguridad y decide por las dos
-Interfaces. En Desarrollo:
-
-```bash
-./start-web.sh   # BFF en :8000, Front en http://127.0.0.1:5173
-```
+El Front es Vue 3 y lo sirve un BFF en FastAPI que conserva el Código de
+Seguridad y decide por él.
 
 En Producción, un solo Servicio de Cloud Run sirve el Front compilado y el
 BFF:
@@ -167,10 +154,8 @@ gcloud builds submit --config cloudbuild.yaml \
   --substitutions=_SERVICE=muchi-web,_REGION=southamerica-west1
 ```
 
-Las dos Interfaces hablan con la misma API y comparten el Dominio, así que
-pueden convivir. La [Nota de Migración](docs/migracion-web.md) explica la
-Frontera entre `web/` y `server/`, las Rutas del BFF y qué se borra cuando el
-Vue reemplace a Streamlit.
+La [Nota de Migración](docs/migracion-web.md) explica la Frontera entre
+`web/` y `server/` y las Rutas del BFF.
 
 ## Configuración y Arquitectura
 
