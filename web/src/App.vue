@@ -3,6 +3,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import * as api from './api.js'
 import MuchiPanel from './components/MuchiPanel.vue'
+import CardLookup from './components/CardLookup.vue'
 import SearchForm from './components/SearchForm.vue'
 import SearchProgress from './components/SearchProgress.vue'
 import OfferList from './components/OfferList.vue'
@@ -30,6 +31,7 @@ const checked = ref('')
 const unavailable = ref('')
 const error = ref('')
 const pending = ref(null)
+const lookupText = ref('')
 const history = ref(JSON.parse(localStorage.getItem('muchi_historial') || '[]'))
 
 let timer = null
@@ -87,6 +89,17 @@ function selectSearch(id) {
 async function submit(text) {
   pending.value = { text, key: api.newKey() }
   await send()
+}
+
+function loadCard(canonicalName) {
+  lookupText.value = canonicalName
+}
+
+// Muchi no completa el Campo: dice lo que vio y quien escribe decide.
+function suggestNames(names) {
+  const [first, ...rest] = names
+  say(rest.length ? `¿Buscabas «${first}»? También veo ${rest.map((n) => `«${n}»`).join(' y ')}.`
+                  : `¿Buscabas «${first}»?`, 'talk')
 }
 
 async function send() {
@@ -179,9 +192,18 @@ onUnmounted(stopPolling)
 
     <div class="mu-columna">
       <SearchForm
+        v-model:text="lookupText"
         :busy="busy" :pending="Boolean(pending)" :error="error"
         @search="submit" @retry="send" @resume="selectSearch"
-      />
+      >
+        <template #lookup>
+          <CardLookup
+            @found="loadCard"
+            @failed="(text) => say(text, 'angry')"
+            @suggest="suggestNames"
+          />
+        </template>
+      </SearchForm>
 
       <section v-if="history.length" class="mu-panel">
         <details>
