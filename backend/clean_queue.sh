@@ -14,21 +14,23 @@
 # estaciona en un Vencimiento que ya paso y vuelve elegible e inreclamable.
 # Con el Arreglo puesto, se saltan; sin el, tapan la Cola de nuevo.
 #
-#   ./clean_queue.sh                 -> drena hasta que la Cola se calle
-#   ./clean_queue.sh --max 20        -> como mucho veinte Turnos
+# Llama al Barredor, que dice cuantos Despertares repuso. Cero significa que
+# no queda Trabajo esperando: es una Cuenta, no una Adivinanza. Medir por
+# Tiempo no sirve, porque un Turno servido desde la Cache tarda lo mismo que
+# uno vacio.
+#
+#   ./clean_queue.sh                 -> barre hasta que no quede Trabajo
+#   ./clean_queue.sh --max 5         -> como mucho cinco Barridos
 #   ./clean_queue.sh --dry-run       -> dice que haria
 set -eu
 cd -- "$(dirname -- "$0")"
 . ./config/deploy.env
 PROJECT=""
-MAX=500
+MAX=40
 DRY_RUN=false
-# Un Turno que trabaja tarda Segundos; uno que no encuentra nada vuelve al
-# instante. Ese Corte separa "hay Trabajo" de "la Cola esta vacia".
-IDLE_SECONDS=2
-# Un solo Turno rapido puede ser una Carrera con otro Worker. Tres seguidos
-# son una Cola vacia.
-IDLE_STREAK=3
+# Entre Barridos hay que dejar que la Cola se vacie: el Barredor encola, el
+# Worker toma. Sin esta Espera, el Barrido siguiente cuenta lo mismo dos veces.
+WAIT_SECONDS=30
 STEP="Configuración"
 trap 'code=$?; if [ "$code" -ne 0 ]; then printf "❌ %s Falló\n" "$STEP" >&2; fi' 0
 
@@ -43,7 +45,7 @@ while [ "$#" -gt 0 ]; do
     --dry-run) DRY_RUN=true; shift ;;
     --help|-h)
       printf '%s\n' '🐱 clean_queue.sh [--project ID] [--region REGION]' \
-        '  [--max TURNOS] [--dry-run]'
+        '  [--max BARRIDOS] [--dry-run]'
       exit 0 ;;
     *) printf '%s\n' "Argumento Desconocido: $1" >&2; exit 1 ;;
   esac
@@ -64,52 +66,47 @@ fi
 say()  { printf '%s~nya~%s %s\n' "$PINK" "$OFF" "$1"; }
 note() { printf '%s      %s%s\n' "$DIM" "$1" "$OFF"; }
 
-STEP="Ubicar el Worker"
-WORKER_URL=$(gcloud functions describe "$WORKER_NAME" --gen2 --region="$REGION" \
+STEP="Ubicar el Barredor"
+SWEEPER_URL=$(gcloud functions describe "$SWEEPER_NAME" --gen2 --region="$REGION" \
   --project="$PROJECT" --format='value(serviceConfig.uri)' 2>/dev/null || true)
-case "$WORKER_URL" in
+case "$SWEEPER_URL" in
   https://*) ;;
-  *) printf '%s\n' "No encuentro el Worker $WORKER_NAME en $REGION." >&2; exit 1 ;;
+  *) printf '%s\n' "No encuentro el Barredor $SWEEPER_NAME en $REGION." >&2; exit 1 ;;
 esac
-say "Drenando $WORKER_NAME"
-note "$WORKER_URL"
-note "Hasta $MAX Turnos, o hasta $IDLE_STREAK Turnos vacíos seguidos"
+say "Barriendo con $SWEEPER_NAME"
+note "$SWEEPER_URL"
+note "Hasta $MAX Barridos, esperando ${WAIT_SECONDS}s entre uno y otro"
 
 if "$DRY_RUN"; then
-  note "Ensayo: no se invoca a nadie"
+  note "Ensayo: no se barre nada"
   printf '✅ %s\n' 'Vista Previa Completa'
   exit 0
 fi
 
-STEP="Drenar la Cola"
-turns=0
-worked=0
-idle=0
-# El Token dura una Hora; se renueva cada cincuenta Turnos por si el Drenaje
-# es largo.
+STEP="Barrer la Cola"
+sweeps=0
+total=0
 TOKEN=$(gcloud auth print-identity-token)
-while [ "$turns" -lt "$MAX" ]; do
-  turns=$((turns + 1))
-  if [ $((turns % 50)) -eq 0 ]; then TOKEN=$(gcloud auth print-identity-token); fi
-  seconds=$(curl -s -o /dev/null -w '%{time_total}' -X POST \
-    -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-    -d '{}' "$WORKER_URL" || printf '0')
-  # Sin Decimales: dash no compara Fracciones, y el Corte no las necesita.
-  whole=${seconds%%.*}
-  case "$whole" in ''|*[!0-9]*) whole=0 ;; esac
-  if [ "$whole" -ge "$IDLE_SECONDS" ]; then
-    worked=$((worked + 1))
-    idle=0
-    note "Turno $turns: trabajó ${seconds}s"
-  else
-    idle=$((idle + 1))
-    if [ "$idle" -ge "$IDLE_STREAK" ]; then
-      say "La Cola quedó vacía tras $worked Turnos con Trabajo"
-      printf '✅ %s\n' 'Cola Drenada'
-      exit 0
-    fi
+while [ "$sweeps" -lt "$MAX" ]; do
+  sweeps=$((sweeps + 1))
+  if [ $((sweeps % 20)) -eq 0 ]; then TOKEN=$(gcloud auth print-identity-token); fi
+  reply=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" \
+    -H 'Content-Type: application/json' -d '{}' "$SWEEPER_URL" || printf '')
+  woken=$(printf '%s' "$reply" | sed -n 's/.*"woken":[[:space:]]*\([0-9][0-9]*\).*/\1/p')
+  case "$woken" in
+    ''|*[!0-9]*)
+      printf '%s\n' "El Barredor no contestó una Cuenta: $reply" >&2
+      exit 1 ;;
+  esac
+  if [ "$woken" -eq 0 ]; then
+    say "No queda Trabajo esperando; repuse $total Despertares"
+    printf '✅ %s\n' 'Cola Barrida'
+    exit 0
   fi
+  total=$((total + woken))
+  note "Barrido $sweeps: repuso $woken Despertares"
+  sleep "$WAIT_SECONDS"
 done
-say "Corté en el Tope de $MAX Turnos; $worked hicieron Trabajo"
-note "Vuelve a correrlo si quedan Ítems esperando"
+say "Corté en el Tope de $MAX Barridos; repuse $total Despertares"
+note "Vuelve a correrlo si queda Trabajo esperando"
 printf '⚠️  %s\n' 'Tope Alcanzado'
