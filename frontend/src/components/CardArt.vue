@@ -20,7 +20,7 @@ watch(() => props.card, async (wanted) => {
   busy.value = true
   failed.value = ''
   try {
-    const found = await api.readCardArt(wanted.name, wanted.language || '')
+    const found = await api.readCardArt(wanted)
     if (mine === asked) art.value = found
   } catch (error) {
     if (mine === asked) { art.value = null; failed.value = error.message }

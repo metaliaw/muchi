@@ -241,3 +241,43 @@ def test_looking_is_a_favour_so_a_failure_stays_quiet(scry):
 
     scry(FakeReply(503))
     assert NameTranslator().find_art("Sol Ring") == {}
+
+
+def test_the_exact_printing_wins_when_the_offer_names_its_edition(scry):
+    fake = scry(FakeReply(200, {"data": [{
+        "name": "Sol Ring", "set": "c21",
+        "image_uris": {"normal": "https://cards.scryfall.io/c21.jpg"},
+    }]}))
+
+    art = NameTranslator().find_art("Sol Ring", edition="c21")
+
+    assert art["image"] == "https://cards.scryfall.io/c21.jpg"
+    # ! no admite parecidos: la Carta en venta es esa y no una que se le parece.
+    assert fake.asked[0]["params"]["q"] == '!"Sol Ring" set:c21'
+    assert fake.asked[0]["params"]["unique"] == "prints"
+
+
+def test_a_foil_offer_asks_for_a_foil_printing(scry):
+    fake = scry(FakeReply(200, {"data": [{
+        "name": "Sol Ring", "image_uris": {"normal": "https://x/foil.jpg"}}]}))
+    NameTranslator().find_art("Sol Ring", edition="msc", foil=True)
+    assert fake.asked[0]["params"]["q"] == '!"Sol Ring" set:msc is:foil'
+
+
+def test_an_edition_nobody_knows_falls_back_to_the_card(scry):
+    """Una Edicion rara no deja el Panel vacio: se muestra la Carta a secas."""
+    fake = scry(FakeReply(404),
+                FakeReply(200, {"name": "Sol Ring",
+                                "image_uris": {"normal": "https://x/sol.jpg"}}))
+
+    art = NameTranslator().find_art("Sol Ring", edition="zzz")
+
+    assert art["image"] == "https://x/sol.jpg"
+    assert fake.asked[1]["url"] == scryfall.NAMED_URL
+
+
+def test_without_an_edition_nothing_extra_is_asked(scry):
+    fake = scry(FakeReply(200, {"name": "Sol Ring",
+                                "image_uris": {"normal": "https://x/sol.jpg"}}))
+    NameTranslator().find_art("Sol Ring")
+    assert len(fake.asked) == 1 and fake.asked[0]["url"] == scryfall.NAMED_URL

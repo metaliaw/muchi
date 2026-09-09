@@ -74,6 +74,9 @@ def build_offer(offer: SearchOffer, muchi_dolar: int) -> dict:
         "action": "Verificar" if offer.suspicious else "Ver",
         "treatment": treatment.build_treatment(offer),
         "pills": build_pills(offer),
+        # Lo que hace falta para pedir la Imagen de esta Impresion y no otra.
+        "edition": offer.edition,
+        "finish": offer.finish,
     }
 
 
