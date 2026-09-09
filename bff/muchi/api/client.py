@@ -25,6 +25,18 @@ def read_metadata(row: dict, field: str) -> str:
     return str(metadata.get(field) or "")
 
 
+# La Edicion no es un Campo del Contrato: cae en metadata, y cada Tienda la
+# nombra a su manera. Se toma la primera Llave que traiga algo.
+EDITION_FIELDS = ("set_code", "set", "edition", "expansion")
+
+
+def read_edition(row: dict) -> str:
+    for field in EDITION_FIELDS:
+        if found := read_metadata(row, field):
+            return found
+    return ""
+
+
 def build_offer(row: dict) -> SearchOffer:
     amount = Decimal(row["price_amount"])
     if not amount.is_finite() or amount < 0:
@@ -36,6 +48,7 @@ def build_offer(row: dict) -> SearchOffer:
         source=row["source"], finish=row.get("finish") or "",
         language=row.get("language") or "", condition=row.get("condition") or "",
         variant=read_metadata(row, "variant"), title=read_metadata(row, "title"),
+        edition=read_edition(row),
         suspicious_reason=row.get("suspicious_reason") or "",
     )
 

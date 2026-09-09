@@ -5,7 +5,11 @@ Puedes consultar una Carta o pegar una Lista completa y calcular una propuesta
 de Compra en CLP que considere también el costo de los Envíos.
 
 La API de Muchi realiza las Búsquedas y conserva sus Resultados. Este Front,
-construido con Streamlit, muestra el Avance, las Ofertas y el Carrito.
+construido con Vue 3, muestra el Avance, las Ofertas y el Carrito.
+
+Quienes quieran mirar detrás de la Pantalla pueden recorrer la
+[Arquitectura de Muchi](docs/arquitectura.md), sus Decisiones públicas y las
+formas de colaborar.
 
 ## Buscar Cartas
 
@@ -101,6 +105,19 @@ qué información preparar y cómo solicitar la integración. La conexión se
 realiza en la API de Muchi; publicar un enlace no incorpora automáticamente
 la Tienda.
 
+## Publicidad y Apoyo
+
+El Panel de la Búsqueda conserva un solo Espacio publicitario mientras consulta
+y después de terminar. Una de cada cuatro Búsquedas muestra la Tienda
+promocionada; las otras tres muestran una Unidad adaptable de Google AdSense.
+La elección depende del Identificador de la Búsqueda y no cambia durante las
+Consultas automáticas.
+
+Configura `MUCHI_ADSENSE_CLIENT` y `MUCHI_ADSENSE_SLOT` con los Identificadores
+públicos entregados por AdSense. Si faltan, Muchi muestra una Promoción interna
+en vez de solicitar un Anuncio externo. La Tienda promocionada utiliza
+`MUCHI_SPONSOR_NAME`, `MUCHI_SPONSOR_TEXT` y `MUCHI_SPONSOR_URL`.
+
 ## Ejecutar el Proyecto
 
 Necesitas Python con `venv` y acceso a una instancia de Muchi API. Copia
@@ -120,7 +137,7 @@ Servidor del Front; no debe publicarse en el Repositorio ni en enlaces.
 En Linux o macOS:
 
 ```bash
-./start.sh
+./start-web.sh   # BFF en :8000, Front en http://127.0.0.1:5173
 ```
 
 La API local requiere dos Procesos. Desde el Repositorio `muchi-api`, ejecuta
@@ -128,16 +145,34 @@ La API local requiere dos Procesos. Desde el Repositorio `muchi-api`, ejecuta
 los procesa. El Token del Front debe coincidir con el configurado en la API.
 Una Búsqueda que permanece en `queued` necesita un Worker disponible.
 
-En Windows, ejecuta `start.cmd`. También puedes iniciar la App manualmente
-con un Entorno virtual activo:
-
-```bash
-pip install -r requirements.txt
-streamlit run app.py
-```
-
 Para Producción, selecciona `MUCHI_ENV=production` y configura la URL y el Token
 en el Entorno de Despliegue.
+
+### El Token
+
+`./get-secret.sh` baja el Token vigente de Secret Manager y lo escribe en tu
+`.env`. Es para el Desarrollo local: en la Nube, Cloud Run lo monta solo.
+
+Para **rotarlo**, usa `./rotate-secret.sh` del Repositorio `muchi-api`. Ahí se
+crea el Secreto y ahí se versiona, y esa Rotación alcanza a los tres Servicios
+que lo consumen —el Worker, la API y este Front—. Un segundo Rotador de este
+lado solo se volvería viejo sin que nadie lo notara.
+
+## El Front Vue
+
+El Front es Vue 3 y lo sirve un BFF en FastAPI que conserva el Código de
+Seguridad y decide por él.
+
+En Producción, Cloud Run sirve el BFF y conserva una copia del Front. Firebase
+Hosting publica los Archivos estáticos y deriva las Rutas dinámicas al mismo
+Servicio. Un solo Script despliega ambos en ese orden:
+
+```bash
+./deploy.sh
+```
+
+La [Nota de Migración](docs/migracion-web.md) explica la Frontera entre
+`web/` y `server/` y las Rutas del BFF.
 
 ## Configuración y Arquitectura
 
@@ -149,7 +184,7 @@ El Front carga su Configuración en este orden:
 
 Los Tiempos deben ser positivos y finitos. Los Archivos de Configuración usan
 YAML; las Credenciales se inyectan por separado. Las Frases de Muchi están en
-[constants/phrases.yaml](constants/phrases.yaml), incluidos los Saludos y la Ayuda.
+[constants/phrases.json](constants/phrases.json), incluidos los Saludos y la Ayuda.
 `muchi/mtg/phrases.py` carga ese Contenido y genera las Burbujas y los Corazones;
 `messaging.py` sólo decide la prioridad de los Mensajes.
 
@@ -191,10 +226,14 @@ Puedes añadir `MUCHI_API_SEARCH_ID` para verificar una Búsqueda existente.
 
 ## Documentación
 
+- [Arquitectura de Muchi](docs/arquitectura.md): la Frontera entre Código
+  público y Lógica privada, Seguridad, Datos, Operación y una Guía neutral para
+  replicar el Patrón con otros Proveedores.
 - [Compartir el Stock de una Tienda](INTEGRAR-TIENDA.md).
 - [Contrato de Muchi API](docs/api/openapi.yaml): copia de referencia del archivo
   `openapi.yaml` del [Repositorio privado muchi-api](https://github.com/cangrejometralleta/muchi-api).
   El acceso al original requiere permisos. Los cambios del Contrato se realizan
   en ese Repositorio y luego se sincronizan aquí; esta copia no es una
   Especificación independiente.
-- [Notas de la Arquitectura anterior](docs/frontend-legacy.md), conservadas como referencia histórica.
+- [El Front y su Frontera](docs/migracion-web.md): qué dibuja el Front, qué
+  decide el BFF, sus Rutas y el Despliegue en Cloud Run.
