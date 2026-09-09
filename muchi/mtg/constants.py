@@ -1,9 +1,8 @@
 """Carga el Catálogo de Stock, separado de la Configuración."""
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
-
-import yaml
 
 from muchi.paths import ROOT
 
@@ -16,7 +15,7 @@ class StockCatalog:
 
 def read_stock_catalog() -> StockCatalog:
     """Valida las Fuentes y Señales compartidas al Arrancar."""
-    values = yaml.safe_load((ROOT / "constants/stock.yaml").read_text(encoding="utf-8"))
+    values = json.loads((ROOT / "constants/stock.json").read_text(encoding="utf-8"))
     expected = {"unverified_sources", "out_of_stock_markers"}
     if not isinstance(values, dict) or set(values) != expected:
         raise ValueError("Invalid stock catalog keys")
