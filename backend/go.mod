@@ -1,6 +1,6 @@
 module github.com/cangrejometralleta/muchi-api
 
-go 1.27.0
+go 1.26.0
 
 require (
 	cloud.google.com/go/cloudtasks v1.19.0
