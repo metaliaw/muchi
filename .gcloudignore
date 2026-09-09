@@ -1,0 +1,36 @@
+# Lo que no sube al Build. Lo que no se usa adentro del Contenedor pesa en
+# cada deploy y alarga el cold start.
+.git/
+.gitignore
+.claude/
+
+# El Entorno local se rearma adentro con pip; subirlo romperia la Imagen,
+# porque los binarios del .venv apuntan a rutas de esta maquina.
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Los Secretos viajan por Secret Manager, nunca en la Imagen.
+.env
+.streamlit/secrets.toml
+store-api.json
+
+# Herramientas de Desarrollo: no corren en Produccion.
+tests/
+tools/
+docs/
+requirements-dev.txt
+start.sh
+start.cmd
+get-secret.sh
+get-secret.cmd
+rotate-secret.sh
+rotate-secret.cmd
+
+# Base de Precios local. El Disco de Cloud Run es efimero: lo que se escriba
+# ahi se pierde al apagarse la Instancia.
+data/
+
+.DS_Store
