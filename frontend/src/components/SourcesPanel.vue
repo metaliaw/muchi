@@ -7,6 +7,7 @@ const emit = defineEmits(['nerd'])
 
 const rows = ref(null)
 const error = ref('')
+const open = ref(false)
 
 const SOURCE_LABELS = {
   ok: 'Disponible',
@@ -39,11 +40,15 @@ function showValue(key, value) {
   return value === null || value === '' ? '—' : value
 }
 
-async function refresh() {
+// El Boton abre y cierra. Cerrar no borra lo consultado: volver a abrir
+// muestra lo mismo y de paso lo actualiza.
+async function toggle() {
+  open.value = !open.value
+  if (!open.value) return
+  emit('nerd')
   error.value = ''
   try {
     rows.value = (await readSources()).sources
-    emit('nerd')
   } catch (failure) {
     error.value = failure.message
   }
@@ -52,9 +57,11 @@ async function refresh() {
 
 <template>
   <section class="mu-panel">
-    <button class="mu-ghost" @click="refresh">Estadísticas para Nerds</button>
-    <p v-if="error" class="mu-aviso error">{{ error }}</p>
-    <table v-if="rows?.length">
+    <button class="mu-ghost" :aria-expanded="open" @click="toggle">
+      {{ open ? '▾' : '▸' }} Estadísticas para Nerds
+    </button>
+    <p v-if="open && error" class="mu-aviso error">{{ error }}</p>
+    <table v-if="open && rows?.length">
       <thead>
         <tr><th v-for="key in Object.keys(rows[0])" :key="key">{{ showColumn(key) }}</th></tr>
       </thead>
