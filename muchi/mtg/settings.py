@@ -1,4 +1,4 @@
-"""Carga la Configuración de Stock para un Entorno explícito."""
+"""Carga la Configuración de Ofertas y Tasas para un Entorno explícito."""
 from __future__ import annotations
 
 import math
@@ -9,60 +9,6 @@ from functools import lru_cache
 import yaml
 
 from muchi.paths import ROOT
-
-
-@dataclass(frozen=True)
-class StockSettings:
-    timeout_seconds: float
-    cache_seconds: float
-
-
-def read_stock_file(name: str) -> dict:
-    path = ROOT / "config" / f"stock.{name}.yaml"
-    text = path.read_text(encoding="utf-8")
-    values = yaml.safe_load(text) if text.strip() else {}
-    if not isinstance(values, dict):
-        raise ValueError("Stock settings must be an object")
-    if set(values) - {"timeout_seconds", "cache_seconds"}:
-        raise ValueError("Unknown stock settings; global constants cannot be overridden")
-    for value in values.values():
-        if type(value) not in (int, float) or not math.isfinite(value) or value <= 0:
-            raise ValueError("Stock settings must be positive finite numbers")
-    return values
-
-
-def read_stock_overrides() -> dict[str, float]:
-    overrides = {}
-    declared = {
-        "MUCHI_STOCK_TIMEOUT_SECONDS": "timeout_seconds",
-        "MUCHI_STOCK_CACHE_SECONDS": "cache_seconds",
-    }
-    protected = {"MUCHI_UNVERIFIED_STOCK_SOURCES", "MUCHI_OUT_OF_STOCK_MARKERS"}
-    if protected.intersection(os.environ):
-        raise ValueError("Global stock constants cannot be overridden")
-    for variable, key in declared.items():
-        if variable in os.environ:
-            value = float(os.environ[variable])
-            if not math.isfinite(value) or value <= 0:
-                raise ValueError(f"{variable} must be a positive finite number")
-            overrides[key] = value
-    return overrides
-
-
-@lru_cache(maxsize=1)
-def load_stock_settings() -> StockSettings:
-    """Aplica Defaults, Archivo de Entorno y Variables declaradas una vez."""
-    environment = os.environ.get("MUCHI_ENV")
-    if environment not in {"development", "production"}:
-        raise ValueError("Set MUCHI_ENV to development or production")
-
-    values = read_stock_file("defaults")
-    values.update(read_stock_file(environment))
-    values.update(read_stock_overrides())
-    if set(values) != {"timeout_seconds", "cache_seconds"}:
-        raise ValueError("Missing required stock settings")
-
-    return StockSettings(**values)
 
 
 @dataclass(frozen=True)
