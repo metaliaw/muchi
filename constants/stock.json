@@ -1,0 +1,14 @@
+{
+  "unverified_sources": [
+    "scry",
+    "directo",
+    "muchi-api"
+  ],
+  "out_of_stock_markers": [
+    "fuera de stock",
+    "sin stock",
+    "agotado",
+    "sold out",
+    "out of stock"
+  ]
+}
