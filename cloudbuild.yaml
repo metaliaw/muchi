@@ -10,6 +10,8 @@ substitutions:
   _REGION: southamerica-east1
   _API_URL: https://muchi-serve-api-c2ce6c7oga-rj.a.run.app
   _TOKEN_SECRET: muchi-api-token
+  _ADSENSE_CLIENT: ''
+  _ADSENSE_SLOT: ''
   # SHORT_SHA solo lo llena un Trigger; en un submit manual queda vacío y la
   # Etiqueta de la Imagen sale rota. deploy.sh pasa el SHA del Commit.
   _TAG: latest
@@ -51,5 +53,5 @@ steps:
       # La Búsqueda es larga: el Front consulta cada pocos Segundos, pero una
       # Consulta a la API puede tardar. 120 s deja margen sin colgar la Instancia.
       - --timeout=120
-      - --set-env-vars=MUCHI_ENV=production,MUCHI_API_URL=${_API_URL}
+      - --set-env-vars=MUCHI_ENV=production,MUCHI_API_URL=${_API_URL},MUCHI_ADSENSE_CLIENT=${_ADSENSE_CLIENT},MUCHI_ADSENSE_SLOT=${_ADSENSE_SLOT}
       - --set-secrets=MUCHI_API_TOKEN=${_TOKEN_SECRET}:latest

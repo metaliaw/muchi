@@ -127,3 +127,30 @@ def test_config_never_publishes_the_token(client):
     http, _ = client
     body = http.get("/api/config").text
     assert "token" not in body.lower()
+
+
+def test_config_publishes_support_links(client, monkeypatch):
+    http, _ = client
+    monkeypatch.setenv("MUCHI_DONATION_URL", "https://apoyo.example/muchi")
+    monkeypatch.setenv("MUCHI_SPONSOR_NAME", "La Guarida")
+    monkeypatch.setenv("MUCHI_SPONSOR_TEXT", "Cartas y accesorios.")
+    monkeypatch.setenv("MUCHI_SPONSOR_URL", "https://guarida.example")
+    monkeypatch.setenv("MUCHI_ADSENSE_CLIENT", "ca-pub-1234567890123456")
+    monkeypatch.setenv("MUCHI_ADSENSE_SLOT", "1234567890")
+
+    reply = http.get("/api/config").json()
+
+    assert reply["donation_url"] == "https://apoyo.example/muchi"
+    assert reply["sponsor_name"] == "La Guarida"
+    assert reply["sponsor_text"] == "Cartas y accesorios."
+    assert reply["sponsor_url"] == "https://guarida.example"
+    assert reply["adsense_client"] == "ca-pub-1234567890123456"
+    assert reply["adsense_slot"] == "1234567890"
+
+
+def test_ads_txt_authorizes_configured_publisher(monkeypatch):
+    monkeypatch.setenv("MUCHI_ADSENSE_CLIENT", "ca-pub-1234567890123456")
+
+    content = main.read_ads_txt()
+
+    assert content == "google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0\n"

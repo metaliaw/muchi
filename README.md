@@ -7,6 +7,10 @@ de Compra en CLP que considere también el costo de los Envíos.
 La API de Muchi realiza las Búsquedas y conserva sus Resultados. Este Front,
 construido con Vue 3, muestra el Avance, las Ofertas y el Carrito.
 
+Quienes quieran mirar detrás de la Pantalla pueden recorrer la
+[Arquitectura de Muchi](docs/arquitectura.md), sus Decisiones públicas y las
+formas de colaborar.
+
 ## Buscar Cartas
 
 1. Escribe el Nombre de una Carta o pega una Lista con Cantidades.
@@ -101,6 +105,19 @@ qué información preparar y cómo solicitar la integración. La conexión se
 realiza en la API de Muchi; publicar un enlace no incorpora automáticamente
 la Tienda.
 
+## Publicidad y Apoyo
+
+El Panel de la Búsqueda conserva un solo Espacio publicitario mientras consulta
+y después de terminar. Una de cada cuatro Búsquedas muestra la Tienda
+promocionada; las otras tres muestran una Unidad adaptable de Google AdSense.
+La elección depende del Identificador de la Búsqueda y no cambia durante las
+Consultas automáticas.
+
+Configura `MUCHI_ADSENSE_CLIENT` y `MUCHI_ADSENSE_SLOT` con los Identificadores
+públicos entregados por AdSense. Si faltan, Muchi muestra una Promoción interna
+en vez de solicitar un Anuncio externo. La Tienda promocionada utiliza
+`MUCHI_SPONSOR_NAME`, `MUCHI_SPONSOR_TEXT` y `MUCHI_SPONSOR_URL`.
+
 ## Ejecutar el Proyecto
 
 Necesitas Python con `venv` y acceso a una instancia de Muchi API. Copia
@@ -146,8 +163,9 @@ lado solo se volvería viejo sin que nadie lo notara.
 El Front es Vue 3 y lo sirve un BFF en FastAPI que conserva el Código de
 Seguridad y decide por él.
 
-En Producción, un solo Servicio de Cloud Run sirve el Front compilado y el
-BFF:
+En Producción, Cloud Run sirve el BFF y conserva una copia del Front. Firebase
+Hosting publica los Archivos estáticos y deriva las Rutas dinámicas al mismo
+Servicio. Un solo Script despliega ambos en ese orden:
 
 ```bash
 ./deploy.sh
@@ -208,6 +226,9 @@ Puedes añadir `MUCHI_API_SEARCH_ID` para verificar una Búsqueda existente.
 
 ## Documentación
 
+- [Arquitectura de Muchi](docs/arquitectura.md): la Frontera entre Código
+  público y Lógica privada, el Recorrido de una Búsqueda, la Seguridad y las
+  formas de aprender y colaborar.
 - [Compartir el Stock de una Tienda](INTEGRAR-TIENDA.md).
 - [Contrato de Muchi API](docs/api/openapi.yaml): copia de referencia del archivo
   `openapi.yaml` del [Repositorio privado muchi-api](https://github.com/cangrejometralleta/muchi-api).
