@@ -1,0 +1,108 @@
+/* La Paleta de Muchi, la misma de style.py, ahora en CSS propio del Front.
+   El Modo Oscuro no reescribe Reglas: solo cambia el Valor de las Variables. */
+:root {
+  --mu-rosa-lav: #FDC9DA;
+  --mu-niebla:   #E9EDF6;
+  --mu-rosa:     #FDBFD3;
+  --mu-rosa-cl:  #FFCFE2;
+  --mu-papel:    #FDEEF5;
+  --mu-tinta:    #6E5A68;
+  --mu-tinta-sw: #A08F9C;
+  --mu-acento:   #E0729B;
+  --mu-peri:     #7B8FC7;
+  --mu-blanco:   #FFFFFF;
+  --mu-foil-bg:  #FFF0C2;
+  --mu-foil-fg:  #8A6A11;
+  --mu-cond-bg:  #F4F1F5;
+  --mu-cond-fg:  #7C6C78;
+  --mu-sombra:   0 6px 20px rgba(110, 90, 104, .18);
+  --mu-sombra-sw:0 3px 12px rgba(110, 90, 104, .12);
+}
+
+html[data-tema='oscuro'] {
+  --mu-rosa-lav: #3B2A3B;
+  --mu-niebla:   #262B3A;
+  --mu-rosa:     #4A2E3F;
+  --mu-rosa-cl:  #4C3547;
+  --mu-papel:    #1D181F;
+  --mu-tinta:    #F3E6EF;
+  --mu-tinta-sw: #B7A4B3;
+  --mu-acento:   #E0729B;
+  --mu-peri:     #93A6DC;
+  --mu-blanco:   #2A2230;
+  --mu-foil-bg:  #4A3F1E;
+  --mu-foil-fg:  #F0D68B;
+  --mu-cond-bg:  #332B36;
+  --mu-cond-fg:  #C9BAC5;
+  --mu-sombra:   0 6px 20px rgba(0, 0, 0, .45);
+  --mu-sombra-sw:0 3px 12px rgba(0, 0, 0, .35);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--mu-papel);
+  color: var(--mu-tinta);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+a { color: var(--mu-acento); }
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border: none;
+  border-radius: 999px;
+  padding: 9px 20px;
+  background: linear-gradient(135deg, var(--mu-acento), var(--mu-peri));
+  color: #fff;
+  box-shadow: var(--mu-sombra-sw);
+  transition: transform .15s ease, opacity .15s ease;
+}
+button:hover:not(:disabled) { transform: translateY(-1px); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+button.mu-ghost {
+  background: var(--mu-blanco);
+  color: var(--mu-tinta);
+  border: 2px solid var(--mu-rosa-cl);
+  box-shadow: none;
+}
+
+textarea, input, select {
+  font: inherit;
+  color: var(--mu-tinta);
+  background: var(--mu-blanco);
+  border: 2px solid var(--mu-rosa-cl);
+  border-radius: 16px;
+  padding: 10px 14px;
+  width: 100%;
+}
+textarea:focus, input:focus { outline: 2px solid var(--mu-acento); outline-offset: 1px; }
+
+.mu-panel {
+  background: var(--mu-blanco);
+  border: 2px solid var(--mu-rosa-cl);
+  border-radius: 20px;
+  padding: 18px;
+  box-shadow: var(--mu-sombra-sw);
+}
+
+.mu-caption { color: var(--mu-tinta-sw); font-size: .85rem; }
+.mu-aviso {
+  border-radius: 16px; padding: 10px 14px; margin: 8px 0;
+  background: var(--mu-niebla); border: 1px solid var(--mu-peri);
+}
+.mu-aviso.error { background: var(--mu-rosa-lav); border-color: var(--mu-acento); }
+
+.mu-pill {
+  display: inline-block; padding: 3px 12px; border-radius: 999px;
+  font-size: .78rem; font-weight: 600; margin: 2px 4px 2px 0;
+}
+.mu-pill.tienda { background: var(--mu-rosa-lav); color: #8A4C66; }
+html[data-tema='oscuro'] .mu-pill.tienda { color: var(--mu-tinta); }
+.mu-pill.foil   { background: var(--mu-foil-bg); color: var(--mu-foil-fg); }
+.mu-pill.cond   { background: var(--mu-cond-bg); color: var(--mu-cond-fg); }
+.mu-pill.mejor  { background: var(--mu-niebla);  color: var(--mu-peri); }
