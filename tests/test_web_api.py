@@ -68,6 +68,10 @@ def test_read_search_orders_offers_and_marks_cheapest(client):
     best = [offer["store"] for offer in reply["offers"] if offer["best"]]
     assert best == ["Otra"]
     assert reply["summary"] == {"lowest_clp": 10.0, "offers": 4, "stores": 4}
+    assert reply["items"] == [
+        {"name": "Sol Ring", "quantity": 2, "status": "found", "offers": 4},
+        {"name": "Black Lotus", "quantity": 1, "status": "not_found", "offers": 0},
+    ]
     assert any("Black Lotus" in notice["text"] for notice in reply["notices"])
 
 
@@ -98,6 +102,9 @@ def test_create_search_parses_the_decklist(client):
     assert reply.status_code == 200
     orders, key = searches.created[0]
     assert (orders[0].quantity, orders[0].name, key) == (4, "Lightning Bolt", "k" * 10)
+    assert reply.json()["items"] == [
+        {"name": "Lightning Bolt", "quantity": 4, "status": "queued", "offers": 0},
+    ]
 
 
 def test_create_search_rejects_lines_it_cannot_read(client):
