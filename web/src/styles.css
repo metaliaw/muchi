@@ -47,6 +47,8 @@ body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   font-size: 15px;
   line-height: 1.5;
+  /* El Pie flota fijo abajo: sin este Aire taparía la última Fila. */
+  padding-bottom: 72px;
 }
 
 a { color: var(--mu-acento); }
