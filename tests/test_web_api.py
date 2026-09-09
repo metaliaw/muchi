@@ -163,13 +163,23 @@ class FakeTranslator:
     languages = (("es", "Español", "Anillo solar"), ("ja", "Japonés", "太陽の指輪"))
     codes = frozenset({"es", "ja"})
 
+    ART = {"name": "Sol Ring", "printed_name": "",
+           "image": "https://cards.scryfall.io/normal/sol.jpg",
+           "url": "https://scryfall.com/card/x"}
+
     def __init__(self, answer="Sol Ring", explodes=None,
-                 suggestions=("Anillo solar", "Anillo brillante")):
+                 suggestions=("Anillo solar", "Anillo brillante"), art=None):
         self.answer = answer
         self.explodes = explodes
         self.suggestions = suggestions
+        self.art = self.ART if art is None else art
         self.asked = []
         self.suggested = []
+        self.looked = []
+
+    def find_art(self, name, language=""):
+        self.looked.append((name, language))
+        return self.art
 
     def suggest_names(self, text, language, limit=3):
         self.suggested.append((text, language))
@@ -275,3 +285,25 @@ def test_no_suggestion_is_an_empty_answer_not_a_failure(translating):
                        params={"name": "zzzz", "language": "es"})
     assert reply.status_code == 200
     assert reply.json() == {"suggestions": []}
+
+
+def test_art_answers_with_the_address_not_the_bytes(translating):
+    """La Imagen la sirve Scryfall al Navegador; el BFF solo pasa la Dirección."""
+    client, translator = translating(FakeTranslator())
+    reply = client.get("/api/card/art", params={"name": "Sol Ring"})
+    assert reply.status_code == 200
+    assert reply.json()["image"].startswith("https://cards.scryfall.io/")
+    assert translator.looked == [("Sol Ring", "")]
+
+
+def test_a_card_without_art_is_a_not_found(translating):
+    client, _ = translating(FakeTranslator(art={}))
+    reply = client.get("/api/card/art", params={"name": "zzzz"})
+    assert reply.status_code == 404
+
+
+def test_art_refuses_a_language_that_is_not_offered(translating):
+    client, translator = translating(FakeTranslator())
+    reply = client.get("/api/card/art", params={"name": "Sol Ring", "language": "xx"})
+    assert reply.status_code == 400
+    assert translator.looked == []
