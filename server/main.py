@@ -11,7 +11,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -31,6 +31,8 @@ from server import presenter
 VERIFY_STOCK = True
 STORES_ONLY = True
 WEB_DIST = ROOT / "web" / "dist"
+ADSENSE_AUTHORITY = "f08c47fec0942fa0"
+ADSENSE_CLIENT = "ca-pub-6368656861543000"
 
 app = FastAPI(title="Muchi Front", docs_url="/api/docs", openapi_url="/api/openapi.json")
 
@@ -74,7 +76,22 @@ def read_config() -> dict:
         "muchi_dolar": load_rate_settings().muchi_dolar,
         "environment": os.getenv("MUCHI_ENV", ""),
         "limits": {"max_cards": 500, "max_quantity": 99},
+        "donation_url": os.getenv("MUCHI_DONATION_URL", ""),
+        "sponsor_name": os.getenv("MUCHI_SPONSOR_NAME", ""),
+        "sponsor_text": os.getenv("MUCHI_SPONSOR_TEXT", ""),
+        "sponsor_url": os.getenv("MUCHI_SPONSOR_URL", ""),
+        "adsense_client": os.getenv("MUCHI_ADSENSE_CLIENT", "") or ADSENSE_CLIENT,
+        "adsense_slot": os.getenv("MUCHI_ADSENSE_SLOT", ""),
     }
+
+
+@app.get("/ads.txt", response_class=PlainTextResponse)
+def read_ads_txt() -> str:
+    """Declara a Google como Vendedor autorizado cuando AdSense está activo."""
+    client = os.getenv("MUCHI_ADSENSE_CLIENT", "") or ADSENSE_CLIENT
+    if not client.startswith("ca-pub-"):
+        raise HTTPException(404, "AdSense no está configurado.")
+    return f"google.com, {client.removeprefix('ca-')}, DIRECT, {ADSENSE_AUTHORITY}\n"
 
 
 @app.get("/api/muchi")
