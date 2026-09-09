@@ -180,13 +180,12 @@ El Front carga su Configuración en este orden:
 
 1. [Defaults de conexión](config/api.defaults.yaml).
 2. `config/api.development.yaml` o `config/api.production.yaml`, según `MUCHI_ENV`.
-3. `MUCHI_API_TIMEOUT_SECONDS`, `MUCHI_API_POLL_SECONDS` y
-   `MUCHI_API_MAX_CARDS`, si están definidas.
+3. `MUCHI_API_TIMEOUT_SECONDS` y `MUCHI_API_POLL_SECONDS`, si están definidas.
 
-Los Tiempos deben ser positivos y finitos. `max_cards` —cuántas Cartas admite
-una Búsqueda masiva— debe ser un Entero positivo: un Tope a medias se rechaza
-al arrancar en vez de redondearse. El Front lo lee de `/api/config` y lo
-escribe junto al Formulario, así que el Número vive en un solo lugar. Los Archivos de Configuración usan
+Los Tiempos deben ser positivos y finitos. Los Topes de una Búsqueda —cien
+Entradas, noventa y nueve copias— no se configuran: salen del Formato, un Mazo
+de Commander de cien Cartas. El Front los lee de `/api/config` y los escribe
+junto al Formulario, así que el Número vive en un solo lugar. Los Archivos de Configuración usan
 YAML; las Credenciales se inyectan por separado. Las Frases de Muchi están en
 [constants/phrases.json](constants/phrases.json), incluidos los Saludos y la Ayuda.
 `muchi/mtg/phrases.py` carga ese Contenido y genera las Burbujas y los Corazones;

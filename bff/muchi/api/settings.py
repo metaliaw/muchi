@@ -10,9 +10,7 @@ import yaml
 from muchi.paths import ROOT
 
 
-# Los Tiempos son Números con Coma; el Tope de Cartas se cuenta entero.
 TIMES = ("timeout_seconds", "poll_seconds")
-COUNTS = ("max_cards",)
 
 
 @dataclass(frozen=True)
@@ -21,21 +19,14 @@ class SearchSettings:
     token: str = field(repr=False)
     timeout_seconds: float
     poll_seconds: float
-    # Cuántas Cartas admite una Búsqueda masiva. El Front lo lee de
-    # /api/config y lo escribe en pantalla; nadie más lo copia.
-    max_cards: int
 
 
 def read_api_file(name: str) -> dict:
     text = (ROOT / "config" / f"api.{name}.yaml").read_text(encoding="utf-8")
     values = yaml.safe_load(text) if text.strip() else {}
-    if not isinstance(values, dict) or set(values) - set(TIMES) - set(COUNTS):
+    if not isinstance(values, dict) or set(values) - set(TIMES):
         raise ValueError("Configuración de API desconocida.")
-    for key, value in values.items():
-        if key in COUNTS:
-            if type(value) is not int or value <= 0:
-                raise ValueError("El Tope de Cartas debe ser un Entero positivo.")
-            continue
+    for value in values.values():
         if type(value) not in (float, int) or not math.isfinite(value) or value <= 0:
             raise ValueError("Los Tiempos de API deben ser positivos y finitos.")
     return values
@@ -52,12 +43,6 @@ def load_api_settings() -> SearchSettings:
         value = float(os.getenv(f"MUCHI_API_{key.upper()}", values[key]))
         if not math.isfinite(value) or value <= 0:
             raise ValueError("Los Tiempos de API deben ser positivos y finitos.")
-        values[key] = value
-    for key in COUNTS:
-        # int() rechaza "500.5" y " " solo: un Tope a medias no se redondea.
-        value = int(os.getenv(f"MUCHI_API_{key.upper()}", values[key]))
-        if value <= 0:
-            raise ValueError("El Tope de Cartas debe ser un Entero positivo.")
         values[key] = value
 
     url = os.getenv("MUCHI_API_URL", "").rstrip("/")
