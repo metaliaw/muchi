@@ -5,6 +5,7 @@ import * as api from './api.js'
 import MuchiPanel from './components/MuchiPanel.vue'
 import CardLookup from './components/CardLookup.vue'
 import CardArt from './components/CardArt.vue'
+import SiteFooter from './components/SiteFooter.vue'
 import SearchForm from './components/SearchForm.vue'
 import SearchProgress from './components/SearchProgress.vue'
 import OfferList from './components/OfferList.vue'
@@ -13,8 +14,6 @@ import SourcesPanel from './components/SourcesPanel.vue'
 import GoogleAd from './components/GoogleAd.vue'
 import GoogleAdsense from './components/GoogleAdsense.vue'
 import SponsorSpot from './components/SponsorSpot.vue'
-import SupportPanel from './components/SupportPanel.vue'
-import CommunityPanel from './components/CommunityPanel.vue'
 
 const THEME_KEY = 'muchi_tema'
 
@@ -194,8 +193,6 @@ onUnmounted(stopPolling)
     <div class="mu-lateral">
       <MuchiPanel :book="book" v-model:dark="dark" :message="message" />
       <CardArt :card="watched" />
-      <SupportPanel :donation-url="config.donation_url" />
-      <CommunityPanel />
     </div>
 
     <div class="mu-columna">
@@ -257,6 +254,12 @@ onUnmounted(stopPolling)
       <SourcesPanel />
     </div>
   </main>
+
+  <SiteFooter
+    :donation-url="config.donation_url"
+    :repository-url="config.repository_url"
+    :socials="config.socials || []"
+  />
 </template>
 
 <style scoped>
