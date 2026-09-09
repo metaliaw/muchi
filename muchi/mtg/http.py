@@ -21,7 +21,7 @@ import requests
 #
 # El canal se define fuera del codigo, que ademas es donde corresponde:
 #     MUCHI_CONTACTO="donde-te-lleguen@ejemplo.cl"
-# (en Streamlit Cloud: Settings -> Secrets/Variables).
+# (en Cloud Run: una Variable de Entorno del Servicio).
 #
 # Sin la variable, el User-Agent igual identifica a Muchi, pero no ofrece por
 # donde reclamar. Se puede salir asi a mirar precios; no se deberia dejar asi
