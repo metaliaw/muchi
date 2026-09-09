@@ -1,6 +1,6 @@
-# Del Front Streamlit al Front Vue
+# El Front y su Frontera
 
-Muchi tenía una sola Interfaz posible: Streamlit dibujaba, decidía y guardaba
+Muchi tenía una sola Interfaz posible: el Front dibujaba, decidía y guardaba
 el Estado en la misma Corrida. Cambiar un Detalle visual obligaba a repintar
 la Página completa, y cualquier otra Interfaz —una App, un Widget, un Bot—
 habría tenido que reimplementar las Reglas.
@@ -57,7 +57,7 @@ sigue funcionando entre Sesiones y entre Máquinas.
 `web/src/App.vue` orquesta: pide la Configuración, arranca la Consulta cada
 `poll_seconds` mientras la Búsqueda está pendiente y la detiene al recibir un
 Estado terminal. El Historial de Búsquedas y la Elección de Tema viven en
-`localStorage`; antes vivían en la Sesión de Streamlit y se perdían al cerrar.
+`localStorage`; antes vivían en la Sesión del Servidor y se perdían al cerrar.
 
 La Paleta es la misma de `muchi/mtg/style.py`, ahora en `web/src/styles.css`.
 El Modo Oscuro no reescribe Reglas: cambia el Valor de las Variables CSS.
@@ -95,10 +95,8 @@ necesitaría un segundo Servicio de todos modos. Un solo Cloud Run con
 `min-instances=0` cuesta prácticamente nada mientras nadie lo visite, y evita
 tanto el CORS como un segundo Despliegue que mantener sincronizado.
 
-## Qué pasa con Streamlit
+## El Front anterior
 
-`app.py` sigue en pie y funcionando. Las dos Interfaces hablan con la misma
-API y comparten el Dominio, así que pueden convivir mientras el Front nuevo se
-prueba. Cuando el Vue lo reemplace, se borran `app.py`, `.streamlit/` y
-`streamlit` de `requirements.txt`; `muchi/mtg/style.py`, `sprites.py` y las
-Partes de `phrases.py` que arman HTML para Streamlit se van con él.
+Ya no está. `app.py`, su Configuración, su Dependencia y las Piezas que armaban
+HTML para él se fueron cuando el Vue lo reemplazó. Su Historia vive en los
+Commits; el Código, en ninguna parte.
