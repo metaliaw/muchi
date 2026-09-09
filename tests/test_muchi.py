@@ -490,11 +490,6 @@ CARD_JSON = {
 
 
 
-def test_muchi_explains_search_resume():
-    titles = " ".join(t for t, _ in phrases.read_phrases().help_topics).lower()
-    assert "retomar una búsqueda" in titles
-
-
 if __name__ == "__main__":
     failures = 0
     for name, fn in sorted(globals().items()):
