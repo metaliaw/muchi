@@ -1,6 +1,7 @@
 <script setup>
 /** El Gato: saluda, se deja acariciar, comenta la Luz y explica de qué se trata. */
 import { computed, ref, watch } from 'vue'
+import MuchiSprite from './MuchiSprite.vue'
 
 const props = defineProps({
   book: { type: Object, default: null },
@@ -11,6 +12,7 @@ const emit = defineEmits(['update:dark'])
 
 const clicks = ref(0)
 const jumping = ref(false)
+const petted = ref(false)
 const helping = ref(false)
 const greetings = ref(0)
 const said = ref(null)
@@ -32,6 +34,7 @@ function pickGreeting() {
 function pet() {
   clicks.value += 1
   jumping.value = true
+  petted.value = true
   setTimeout(() => (jumping.value = false), 400)
   const every = props.book?.every || 10
   if (clicks.value % every === 0) said.value = pick(props.book?.phrases)
@@ -45,16 +48,24 @@ function toggleDark() {
 
 watch(() => props.message, (value) => { if (value) said.value = null })
 
-const face = computed(() => {
-  const state = bubble.value?.state
-  return { happy: '😸', angry: '😾', alert: '🙀', idle: '😽', talk: '😺' }[state] || '😺'
+// El Estado lo manda la Burbuja, salvo mientras Muchi festeja una Caricia.
+// Los cinco Nombres son los mismos que las Filas de la Hoja.
+const state = computed(() => {
+  if (petted.value) return 'happy'
+  return bubble.value?.state || 'idle'
 })
+
+// Las Animaciones de un solo Paso avisan al terminar; ahí suelta la Caricia y
+// Muchi vuelve al Estado que diga la Burbuja.
+function restMuchi() {
+  petted.value = false
+}
 </script>
 
 <template>
   <aside class="mu-panel mu-muchi">
     <button class="mu-sprite" :class="{ salta: jumping }" @click="pet" title="Apreta a Muchi">
-      {{ face }}
+      <MuchiSprite :state="state" @rested="restMuchi" />
     </button>
     <p v-if="bubble" class="mu-globo" :class="`mu-globo--${bubble.state}`">{{ bubble.text }}</p>
     <p v-if="clicks >= 3" class="mu-caption">🐾 Has acariciado a Muchi {{ clicks }} veces</p>
@@ -80,7 +91,8 @@ const face = computed(() => {
 <style scoped>
 .mu-muchi { display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
 .mu-sprite {
-  font-size: 4rem; background: none; box-shadow: none; padding: 0;
+  background: none; box-shadow: none; padding: 0; border: 0;
+  line-height: 0; cursor: pointer;
   transition: transform .2s ease; align-self: center;
 }
 .mu-sprite:hover { transform: scale(1.12); }
