@@ -39,9 +39,10 @@ export const readCart = (id, shipping) =>
   request(`/api/searches/${encodeURIComponent(id)}/cart?shipping=${shipping}`)
 export const readSources = () => request('/api/sources')
 export const readLanguages = () => request('/api/languages')
-export const readCardArt = (name, language = '') =>
+export const readCardArt = ({ name, language = '', edition = '', foil = false }) =>
   request(`/api/card/art?name=${encodeURIComponent(name)}` +
-          `&language=${encodeURIComponent(language)}`)
+          `&language=${encodeURIComponent(language)}` +
+          `&edition=${encodeURIComponent(edition)}&foil=${foil}`)
 export const readSuggestions = (name, language) =>
   request(`/api/card/suggestions?name=${encodeURIComponent(name)}` +
           `&language=${encodeURIComponent(language)}`)

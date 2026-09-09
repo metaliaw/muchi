@@ -14,6 +14,7 @@ def build_offer(**changes) -> SearchOffer:
         card_name="Sol Ring", store="Tienda", amount=Decimal("1000"),
         currency="CLP", url="https://tienda.cl/sol-ring", stock_status="available",
         suspicious=False, source="scry", variant="Foil NM Inglés",
+        finish="foil", edition="c21",
     )
     values.update(changes)
     return SearchOffer(**values)
@@ -177,8 +178,8 @@ class FakeTranslator:
         self.suggested = []
         self.looked = []
 
-    def find_art(self, name, language=""):
-        self.looked.append((name, language))
+    def find_art(self, name, language="", edition="", foil=False):
+        self.looked.append((name, language, edition, foil))
         return self.art
 
     def suggest_names(self, text, language, limit=3):
@@ -293,7 +294,7 @@ def test_art_answers_with_the_address_not_the_bytes(translating):
     reply = client.get("/api/card/art", params={"name": "Sol Ring"})
     assert reply.status_code == 200
     assert reply.json()["image"].startswith("https://cards.scryfall.io/")
-    assert translator.looked == [("Sol Ring", "")]
+    assert translator.looked == [("Sol Ring", "", "", False)]
 
 
 def test_a_card_without_art_is_a_not_found(translating):
@@ -335,3 +336,17 @@ def test_configured_networks_reach_the_footer(client, monkeypatch):
     # Discord llegó en blanco: eso no es una Dirección.
     assert rows == [{"name": "Instagram", "icon": "📸",
                      "url": "https://instagram.com/muchi"}]
+
+
+def test_art_carries_the_edition_of_the_offer_that_was_clicked(translating):
+    client, translator = translating(FakeTranslator())
+    client.get("/api/card/art",
+               params={"name": "Sol Ring", "edition": "c21", "foil": "true"})
+    assert translator.looked == [("Sol Ring", "", "c21", True)]
+
+
+def test_an_offer_publishes_what_identifies_its_printing(client):
+    """Sin Edición ni Acabado, el Front no puede pedir la Impresión exacta."""
+    reply, _ = client
+    row = reply.get("/api/searches/abc").json()["offers"][0]
+    assert "edition" in row and "finish" in row
