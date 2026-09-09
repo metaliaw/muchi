@@ -128,6 +128,19 @@ def read_languages() -> dict:
                           in build_muchi().translator.languages]}
 
 
+@app.get("/api/card/art")
+def read_card_art(name: str = Query(min_length=1, max_length=200),
+                  language: str = Query("", max_length=5)) -> dict:
+    """La Imagen de una Carta, servida por Scryfall directo al Navegador."""
+    translator = build_muchi().translator
+    if language and language not in translator.codes:
+        raise HTTPException(400, f"El Idioma «{language}» no está en la Lista.")
+    art = translator.find_art(name, language)
+    if not art:
+        raise HTTPException(404, f"No hay Imagen de «{name}».")
+    return art
+
+
 @app.get("/api/card/suggestions")
 def read_suggestions(name: str = Query(min_length=1, max_length=200),
                      language: str = Query(min_length=2, max_length=5)) -> dict:

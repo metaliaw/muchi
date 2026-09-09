@@ -188,3 +188,56 @@ def test_a_network_that_falls_never_reaches_whoever_is_typing(scry, monkeypatch)
 
     monkeypatch.setattr(scryfall.requests, "get", explode)
     assert NameTranslator().suggest_names("Anillo", "es") == ()
+
+
+# ------------------------------------------------------------- la Imagen
+def test_art_asks_named_when_no_language_is_chosen(scry):
+    fake = scry(FakeReply(200, {
+        "name": "Sol Ring", "scryfall_uri": "https://scryfall.com/x",
+        "image_uris": {"normal": "https://cards.scryfall.io/sol.jpg"},
+    }))
+
+    art = NameTranslator().find_art("Sol Ring")
+
+    assert art["image"] == "https://cards.scryfall.io/sol.jpg"
+    assert art["name"] == "Sol Ring" and art["url"] == "https://scryfall.com/x"
+    assert fake.asked[0]["url"] == scryfall.NAMED_URL
+
+
+def test_art_in_a_language_keeps_the_printed_name(scry):
+    scry(FakeReply(200, {"data": [{
+        "name": "Sol Ring", "printed_name": "Anillo solar",
+        "scryfall_uri": "https://scryfall.com/es",
+        "image_uris": {"normal": "https://cards.scryfall.io/anillo.jpg"},
+    }]}))
+
+    art = NameTranslator().find_art("Anillo solar", "es")
+
+    assert art["printed_name"] == "Anillo solar"
+    assert art["image"] == "https://cards.scryfall.io/anillo.jpg"
+
+
+def test_a_two_faced_card_shows_its_front(scry):
+    """Sin image_uris arriba, la Imagen vive en la primera Cara."""
+    scry(FakeReply(200, {
+        "name": "Delver of Secrets // Insectile Aberration",
+        "card_faces": [
+            {"image_uris": {"normal": "https://cards.scryfall.io/delver.jpg"}},
+            {"image_uris": {"normal": "https://cards.scryfall.io/aberration.jpg"}},
+        ],
+    }))
+    assert NameTranslator().find_art("Delver")["image"] \
+        == "https://cards.scryfall.io/delver.jpg"
+
+
+def test_a_card_without_any_image_is_nothing_to_show(scry):
+    scry(FakeReply(200, {"name": "Sol Ring", "image_uris": {}}))
+    assert NameTranslator().find_art("Sol Ring") == {}
+
+
+def test_looking_is_a_favour_so_a_failure_stays_quiet(scry):
+    scry(FakeReply(404))
+    assert NameTranslator().find_art("zzzz") == {}
+
+    scry(FakeReply(503))
+    assert NameTranslator().find_art("Sol Ring") == {}

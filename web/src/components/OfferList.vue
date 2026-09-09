@@ -2,6 +2,8 @@
 /** Las Ofertas, ordenadas por Precio dentro de cada Moneda por el BFF. */
 import { formatAmount, formatClp } from '../api.js'
 
+const emit = defineEmits(['look'])
+
 defineProps({
   offers: { type: Array, default: () => [] },
   summary: { type: Object, default: null },
@@ -31,7 +33,10 @@ defineProps({
     <article v-for="(offer, index) in offers" :key="`${offer.url}-${index}`"
              class="mu-panel mu-oferta" :class="{ mejor: offer.best }">
       <div class="mu-oferta-cab">
-        <h3>{{ offer.card_name }}</h3>
+        <h3 class="mu-mirable" tabindex="0" role="button"
+            :title="`Mira ${offer.card_name}`"
+            @click="emit('look', offer.card_name)"
+            @keydown.enter="emit('look', offer.card_name)">{{ offer.card_name }}</h3>
         <span class="mu-precio">{{ formatAmount(offer.amount, offer.currency) }}</span>
       </div>
       <div>
@@ -56,5 +61,8 @@ defineProps({
 .mu-oferta.mejor { border-color: var(--mu-peri); }
 .mu-oferta-cab { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap; }
 h3 { margin: 0; font-size: 1.05rem; }
+/* El Cursor avisa que el Nombre hace algo antes de que nadie lo pulse. */
+.mu-mirable { cursor: pointer; }
+.mu-mirable:hover, .mu-mirable:focus-visible { text-decoration: underline dotted; }
 .mu-precio { font-weight: 800; color: var(--mu-acento); }
 </style>
