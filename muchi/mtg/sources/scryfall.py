@@ -85,16 +85,43 @@ class NameTranslator:
                 break
         return tuple(names)
 
-    def find_art(self, name: str, language: str = "") -> dict:
+    def find_art(self, name: str, language: str = "",
+                 edition: str = "", foil: bool = False) -> dict:
         """La Imagen de una Carta y su Enlace a Scryfall.
+
+        Con Edicion se pide esa Impresion y no otra: la Carta que se mira es
+        la que esta en venta, con su Ilustracion y su Marco. Si esa Impresion
+        no aparece, se cae a la Carta a secas antes que dejar el Panel vacio.
 
         Mirar es un Favor, como sugerir: si la Fuente falla, devuelve Nada.
         La Imagen la sirve Scryfall directo al Navegador; el BFF solo pasa
         la Direccion, y ningun Byte de Carta cruza por aca.
         """
-        params = ({"q": f'lang:{language} "{name}"', "include_multilingual": "true",
-                   "unique": "cards"} if language else {"fuzzy": name})
-        url = SEARCH_URL if language else NAMED_URL
+        if edition:
+            exact = self._art_of_printing(name, edition, foil)
+            if exact:
+                return exact
+        return self._art_of_card(name, language)
+
+    def _art_of_printing(self, name: str, edition: str, foil: bool) -> dict:
+        """Una Impresion concreta. El Nombre va exacto: ! no admite parecidos."""
+        query = f'!"{name}" set:{edition}'
+        if foil:
+            query += " is:foil"
+        card = self._first_card(SEARCH_URL, {"q": query, "unique": "prints"})
+        return self._art_of(card) if card else {}
+
+    def _art_of_card(self, name: str, language: str) -> dict:
+        if language:
+            card = self._first_card(SEARCH_URL, {
+                "q": f'lang:{language} "{name}"',
+                "include_multilingual": "true", "unique": "cards"})
+        else:
+            card = self._first_card(NAMED_URL, {"fuzzy": name})
+        return self._art_of(card) if card else {}
+
+    def _first_card(self, url: str, params: dict) -> dict:
+        """La primera Carta que devuelva la Puerta, o Nada si algo sale mal."""
         try:
             reply = self._ask(url, params)
         except TranslationFailed:
@@ -105,8 +132,10 @@ class NameTranslator:
             body = reply.json()
         except ValueError:
             return {}
-        card = (body.get("data") or [{}])[0] if language else body
-        return self._art_of(card)
+        if "data" in body:
+            found = body.get("data") or []
+            return found[0] if found else {}
+        return body
 
     @staticmethod
     def _art_of(card: dict) -> dict:
