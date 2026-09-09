@@ -235,5 +235,8 @@ Puedes añadir `MUCHI_API_SEARCH_ID` para verificar una Búsqueda existente.
   El acceso al original requiere permisos. Los cambios del Contrato se realizan
   en ese Repositorio y luego se sincronizan aquí; esta copia no es una
   Especificación independiente.
+- [Colecciones de Bruno](docs/api/bruno/README.md): una Petición por Ruta del
+  Contrato, para consultar la API sin pasar por el BFF. Copia de referencia,
+  como el Contrato.
 - [El Front y su Frontera](docs/migracion-web.md): qué dibuja el Front, qué
   decide el BFF, sus Rutas y el Despliegue en Cloud Run.

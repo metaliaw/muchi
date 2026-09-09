@@ -1,0 +1,30 @@
+meta {
+  name: Find Card Offers
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/cards/offers?name=Sol Ring
+  body: none
+  auth: inherit
+}
+
+params:query {
+  name: Sol Ring
+}
+
+docs {
+  Una Carta, sin encolar nada: consulta las Fuentes y responde en la misma
+  Llamada. Sirve para probar una Tienda sin esperar a un Worker.
+}
+
+tests {
+  test("las Ofertas traen Precio y Moneda", function () {
+    expect(res.getStatus()).to.equal(200);
+    res.getBody().offers.forEach((offer) => {
+      expect(offer.price_amount).to.match(/^[0-9]+(\.[0-9]{1,2})?$/);
+      expect(offer.price_currency).to.match(/^[A-Z]{3}$/);
+    });
+  });
+}
