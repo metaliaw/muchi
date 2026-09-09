@@ -21,7 +21,8 @@
       "state": "angry",
       "phrases": [
         "¿Otra vez sin Stock? Grrr, las Tiendas se portan mal",
-        "El Envío salió más caro que la Carta, no puede ser"
+        "El Envío salió más caro que la Carta, no puede ser",
+        "rayozz no la encontré"
       ]
     },
     {
@@ -59,20 +60,8 @@
   ],
   "help": [
     {
-      "title": "Buscar una Carta",
-      "detail": "Escribe su Nombre y pulsa Buscar para consultar las Ofertas."
-    },
-    {
       "title": "Cotizar un Mazo",
       "detail": "Pega tu Lista con Cantidades. El Carrito compara Ofertas en CLP y Envíos."
-    },
-    {
-      "title": "Retomar una Búsqueda",
-      "detail": "Conserva su enlace o ingresa su Identificador en Retomar una Búsqueda."
-    },
-    {
-      "title": "Cancelar",
-      "detail": "Puedes detener una Búsqueda pendiente con Cancelar Búsqueda."
     },
     {
       "title": "De dónde salen los Precios",
