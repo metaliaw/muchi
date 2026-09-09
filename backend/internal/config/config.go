@@ -78,7 +78,7 @@ func LoadConfig() (Config, error) {
 		ServerShutdownTimeout:   readSecondsOr("MUCHI_SERVER_SHUTDOWN_TIMEOUT_SECONDS", 10),
 		HealthCheckTimeout:      readSecondsOr("MUCHI_HEALTH_CHECK_TIMEOUT_SECONDS", 2),
 		StockCheckLimit:         readIntOr("MUCHI_STOCK_CHECK_LIMIT", 5),
-		OfferCacheTTL:           readSecondsOr("MUCHI_OFFER_CACHE_TTL_SECONDS", 900),
+		OfferCacheTTL:           readSecondsOr("MUCHI_OFFER_CACHE_TTL_SECONDS", 259200),
 		OfferCacheEmptyTTL:      readSecondsOr("MUCHI_OFFER_CACHE_EMPTY_TTL_SECONDS", 120),
 		SearchTTL:               readSecondsOr("MUCHI_SEARCH_TTL_SECONDS", 86400),
 		MaxCardsPerSearch:       readIntOr("MUCHI_MAX_CARDS_PER_SEARCH", 500),
