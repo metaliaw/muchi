@@ -69,6 +69,11 @@ def read_health() -> dict:
 
 # Cada Red es un Nombre, un Icono y la Variable que la enciende. Una Red sin
 # Direccion no existe: el Pie solo muestra las que alguien configuro.
+# El Tope de una Búsqueda masiva. El Front lo lee de /api/config; escribirlo
+# también allá dejaría dos Números que se despegan.
+MAX_CARDS = 100
+MAX_QUANTITY = 99
+
 REPOSITORY_URL = "https://github.com/metaliaw/muchi"
 
 SOCIALS = (
@@ -94,7 +99,7 @@ def read_config() -> dict:
         "poll_seconds": settings.poll_seconds,
         "muchi_dolar": load_rate_settings().muchi_dolar,
         "environment": os.getenv("MUCHI_ENV", ""),
-        "limits": {"max_cards": 500, "max_quantity": 99},
+        "limits": {"max_cards": MAX_CARDS, "max_quantity": MAX_QUANTITY},
         "donation_url": os.getenv("MUCHI_DONATION_URL", ""),
         "sponsor_name": os.getenv("MUCHI_SPONSOR_NAME", ""),
         "sponsor_text": os.getenv("MUCHI_SPONSOR_TEXT", ""),
@@ -201,8 +206,10 @@ def create_search(request: SearchRequest) -> dict:
     if ignored:
         raise HTTPException(422, {"detail": "Revisa estas Líneas: " + ", ".join(ignored),
                                   "ignored": list(ignored)})
-    if not 1 <= len(orders) <= 500 or any(not 1 <= order.quantity <= 99 for order in orders):
-        raise HTTPException(422, {"detail": "Ingresa entre 1 y 500 Cartas, con Cantidades de 1 a 99."})
+    if not 1 <= len(orders) <= MAX_CARDS or any(
+            not 1 <= order.quantity <= MAX_QUANTITY for order in orders):
+        raise HTTPException(422, {"detail": f"Ingresa entre 1 y {MAX_CARDS} Cartas, "
+                                            f"con Cantidades de 1 a {MAX_QUANTITY}."})
     state = build_muchi().searches.create_search(
         orders=orders, verify_stock=VERIFY_STOCK, stores_only=STORES_ONLY,
         key=request.key,

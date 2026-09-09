@@ -350,3 +350,30 @@ def test_an_offer_publishes_what_identifies_its_printing(client):
     reply, _ = client
     row = reply.get("/api/searches/abc").json()["offers"][0]
     assert "edition" in row and "finish" in row
+
+
+# ---------------------------------------------------------------- los Topes
+def build_list(count: int) -> str:
+    return "\n".join(f"1 Carta{index:04d}" for index in range(count))
+
+
+def test_a_bulk_search_stops_at_the_limit(client):
+    """El Tope lo publica /api/config y lo aplica la misma Constante."""
+    reply, _ = client
+    limit = reply.get("/api/config").json()["limits"]["max_cards"]
+
+    assert reply.post("/api/searches",
+                      json={"text": build_list(limit), "key": "en-el-tope"}
+                      ).status_code == 200
+
+    refused = reply.post("/api/searches",
+                         json={"text": build_list(limit + 1), "key": "pasado-el-tope"})
+    assert refused.status_code == 422
+    # El Mensaje dice el Número de verdad: escrito a mano se despegaría.
+    assert str(limit) in refused.json()["detail"]["detail"]
+
+
+def test_the_polling_rhythm_reaches_the_front(client):
+    """El Front no elige el Ritmo: lo lee de la Configuración."""
+    reply, _ = client
+    assert reply.get("/api/config").json()["poll_seconds"] == 3
