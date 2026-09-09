@@ -191,7 +191,8 @@ def test_phrases_file_ships_with_example():
 
     assert phrases.PHRASES_PATH.exists(), "constants/phrases.json is missing"
     doc = json.loads(phrases.PHRASES_PATH.read_text(encoding="utf-8"))
-    assert set(doc) == {"every", "phrases", "greetings", "help", "dark", "light"}
+    assert set(doc) == {"every", "phrases", "greetings", "help", "dark",
+                        "light", "nerd"}
 
 
 def test_normalize_name():

@@ -127,6 +127,7 @@ def read_muchi() -> dict:
         "greetings": rows(book.greetings),
         "dark": rows(book.dark),
         "light": rows(book.light),
+        "nerd": rows(book.nerd),
         "help": [{"title": title, "detail": detail} for title, detail in book.help_topics],
     }
 

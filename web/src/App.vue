@@ -102,6 +102,15 @@ function lookAtCard(card) {
   watched.value = card
 }
 
+// A quien mira las Estadísticas, Muchi lo saluda como se merece. La Frase
+// sale al azar del Catálogo, igual que las de la Luz y las de las Caricias.
+function sayNerd() {
+  const rows = book.value?.nerd
+  if (!rows?.length) return
+  const said = rows[Math.floor(Math.random() * rows.length)]
+  say(said.text, said.state)
+}
+
 // Muchi no completa el Campo: dice lo que vio y quien escribe decide.
 function suggestNames(names) {
   const [first, ...rest] = names
@@ -252,7 +261,7 @@ onUnmounted(stopPolling)
       />
 
       <CartPanel v-if="offers.length" :search-id="searchId" />
-      <SourcesPanel />
+      <SourcesPanel @nerd="sayNerd" />
     </div>
   </main>
 
