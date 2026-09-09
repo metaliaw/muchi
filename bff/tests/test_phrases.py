@@ -14,6 +14,7 @@ def test_custom_catalog_controls_messages(tmp_path):
         "help": [{"title": "Ayuda", "detail": "Consulta una Carta"}],
         "dark": [{"text": "me pongo darkzz", "state": "happy"}],
         "light": [{"text": "prendieron las luces", "state": "alert"}],
+        "nerd": [{"text": "HAAAA NERDD!", "state": "happy"}],
     }
     path = tmp_path / "phrases.json"
     path.write_text(json.dumps(document))
@@ -29,7 +30,7 @@ def test_custom_catalog_controls_messages(tmp_path):
 
 @pytest.mark.parametrize("field,value", [
     ("every", None), ("every", True), ("every", 0),
-    ("greetings", []), ("help", []), ("dark", []), ("light", []),
+    ("greetings", []), ("help", []), ("dark", []), ("light", []), ("nerd", []),
     ("phrases", [{"state": "anxiety", "phrases": ["Texto"]}]),
     ("phrases", [{"state": "talk", "phrases": "Texto"}]),
     ("greetings", [{"text": "", "state": "talk"}]),
@@ -73,3 +74,9 @@ def test_broken_catalog_is_rejected(tmp_path):
     path.write_text('{"every": 10, "phrases": [')
     with pytest.raises(ValueError):
         phrases.read_phrases(path)
+
+
+def test_the_nerd_group_reaches_the_front():
+    """El Botón de las Estadísticas necesita al menos una Frase que decir."""
+    book = phrases.read_phrases()
+    assert book.nerd and all(p.text.strip() for p in book.nerd)
