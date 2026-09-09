@@ -77,9 +77,9 @@ function remember(id, label) {
   localStorage.setItem('muchi_historial', JSON.stringify(history.value))
 }
 
-function selectSearch(id) {
+function selectSearch(id, initialState = null) {
   searchId.value = id
-  state.value = null
+  state.value = initialState
   offers.value = []
   summary.value = null
   notices.value = []
@@ -128,7 +128,7 @@ async function send() {
     const reply = await api.createSearch(pending.value.text, pending.value.key)
     remember(reply.state.id, reply.label)
     pending.value = null
-    selectSearch(reply.state.id)
+    selectSearch(reply.state.id, reply.state)
     say('¡Miau! Ya salí a buscar', 'happy')
   } catch (failure) {
     error.value = failure.message
