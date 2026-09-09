@@ -4,6 +4,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import * as api from './api.js'
 import MuchiPanel from './components/MuchiPanel.vue'
 import CardLookup from './components/CardLookup.vue'
+import CardArt from './components/CardArt.vue'
 import SearchForm from './components/SearchForm.vue'
 import SearchProgress from './components/SearchProgress.vue'
 import OfferList from './components/OfferList.vue'
@@ -32,6 +33,8 @@ const unavailable = ref('')
 const error = ref('')
 const pending = ref(null)
 const lookupText = ref('')
+// La Carta que se mira: un Nombre, y el Idioma en que se escribió.
+const watched = ref(null)
 const history = ref(JSON.parse(localStorage.getItem('muchi_historial') || '[]'))
 
 let timer = null
@@ -93,6 +96,10 @@ async function submit(text) {
 
 function loadCard(canonicalName) {
   lookupText.value = canonicalName
+}
+
+function lookAtCard(name, language = '') {
+  watched.value = { name, language }
 }
 
 // Muchi no completa el Campo: dice lo que vio y quien escribe decide.
@@ -186,6 +193,7 @@ onUnmounted(stopPolling)
   <main class="mu-grilla">
     <div class="mu-lateral">
       <MuchiPanel :book="book" v-model:dark="dark" :message="message" />
+      <CardArt :card="watched" />
       <SupportPanel :donation-url="config.donation_url" />
       <CommunityPanel />
     </div>
@@ -201,6 +209,7 @@ onUnmounted(stopPolling)
             @found="loadCard"
             @failed="(text) => say(text, 'angry')"
             @suggest="suggestNames"
+            @look="lookAtCard"
           />
         </template>
       </SearchForm>
@@ -241,6 +250,7 @@ onUnmounted(stopPolling)
       <OfferList
         v-if="state" :offers="offers" :summary="summary"
         :notices="notices" :placeholder="placeholder"
+        @look="lookAtCard"
       />
 
       <CartPanel v-if="offers.length" :search-id="searchId" />

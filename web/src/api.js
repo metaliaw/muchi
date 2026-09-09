@@ -39,6 +39,9 @@ export const readCart = (id, shipping) =>
   request(`/api/searches/${encodeURIComponent(id)}/cart?shipping=${shipping}`)
 export const readSources = () => request('/api/sources')
 export const readLanguages = () => request('/api/languages')
+export const readCardArt = (name, language = '') =>
+  request(`/api/card/art?name=${encodeURIComponent(name)}` +
+          `&language=${encodeURIComponent(language)}`)
 export const readSuggestions = (name, language) =>
   request(`/api/card/suggestions?name=${encodeURIComponent(name)}` +
           `&language=${encodeURIComponent(language)}`)

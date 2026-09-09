@@ -85,6 +85,44 @@ class NameTranslator:
                 break
         return tuple(names)
 
+    def find_art(self, name: str, language: str = "") -> dict:
+        """La Imagen de una Carta y su Enlace a Scryfall.
+
+        Mirar es un Favor, como sugerir: si la Fuente falla, devuelve Nada.
+        La Imagen la sirve Scryfall directo al Navegador; el BFF solo pasa
+        la Direccion, y ningun Byte de Carta cruza por aca.
+        """
+        params = ({"q": f'lang:{language} "{name}"', "include_multilingual": "true",
+                   "unique": "cards"} if language else {"fuzzy": name})
+        url = SEARCH_URL if language else NAMED_URL
+        try:
+            reply = self._ask(url, params)
+        except TranslationFailed:
+            return {}
+        if not reply.ok:
+            return {}
+        try:
+            body = reply.json()
+        except ValueError:
+            return {}
+        card = (body.get("data") or [{}])[0] if language else body
+        return self._art_of(card)
+
+    @staticmethod
+    def _art_of(card: dict) -> dict:
+        # Una Carta de dos Caras no trae image_uris arriba: la Cara si.
+        images = card.get("image_uris")
+        if not images:
+            faces = card.get("card_faces") or []
+            images = (faces[0].get("image_uris") if faces else None) or {}
+        picture = images.get("normal") or images.get("large") or images.get("small")
+        if not picture:
+            return {}
+        return {"name": card.get("name", ""),
+                "printed_name": card.get("printed_name") or "",
+                "image": picture,
+                "url": card.get("scryfall_uri", "")}
+
     def _search_in_language(self, name: str, language: str) -> str:
         # Las Comillas piden la Frase entera: sin ellas cada Palabra busca sola.
         reply = self._ask(SEARCH_URL, {
