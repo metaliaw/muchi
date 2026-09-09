@@ -93,6 +93,10 @@
     {
       "text": "oh no prendieron las luces, no me vean estoy gordo",
       "state": "alert"
+    },
+    {
+      "text": "aayy mis ojos, avisa antes de prender la luz",
+      "state": "alert"
     }
   ]
 }
