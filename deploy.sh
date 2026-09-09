@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 #
-# Muchi a Cloud Run. Cinco tiempos: Verifica la Cuenta, Verifica el Secreto,
-# Prepara el Repositorio, Reparte los Permisos, Construye y Sube.
+# Muchi a Cloud Run y Firebase Hosting. Verifica, Construye y Publica ambos.
 #
 # El Front y el BFF viajan en una sola Imagen y un solo Servicio: un Origen,
 # ningun CORS, y el Codigo de Seguridad nunca cruza al Navegador.
@@ -44,7 +43,12 @@ die()  { printf '%s~nya!~%s %s\n' "$RED" "$OFF" "$1" >&2; exit 1; }
 check_account() {
     command -v gcloud >/dev/null 2>&1 \
         || die "No Encuentro gcloud. Instala el SDK de Google Cloud"
+    command -v npm >/dev/null 2>&1 \
+        || die "No Encuentro npm. Instala Node.js"
+    command -v firebase >/dev/null 2>&1 \
+        || die "No Encuentro firebase. Instala Firebase CLI"
     [ -f "$CONFIG" ] || die "Falta $CONFIG. Corre esto desde la Raiz del Repositorio"
+    [ -f firebase.json ] || die "Falta firebase.json. Ejecuta firebase init hosting"
 
     PROJECT="$(gcloud config get-value project 2>/dev/null)"
     case "$PROJECT" in
@@ -123,8 +127,10 @@ push_service() {
     note "El Front se compila dentro de la Imagen, no aca"
     echo
 
-    gcloud builds submit --config "$CONFIG" \
-        --substitutions="_SERVICE=$SERVICE,_REGION=$REGION,_TOKEN_SECRET=$TOKEN_SECRET,_TAG=$TAG"
+    local build_options
+    build_options="_SERVICE=$SERVICE,_REGION=$REGION,_TOKEN_SECRET=$TOKEN_SECRET,_TAG=$TAG"
+    build_options+=",_ADSENSE_CLIENT=${MUCHI_ADSENSE_CLIENT:-},_ADSENSE_SLOT=${MUCHI_ADSENSE_SLOT:-}"
+    gcloud builds submit --config "$CONFIG" --substitutions="$build_options"
 
     local url
     url="$(gcloud run services describe "$SERVICE" --region="$REGION" \
@@ -134,8 +140,28 @@ push_service() {
 }
 
 
+# Firebase sirve los Archivos estáticos y deriva el BFF al Servicio recién
+# publicado. Compilar después de Cloud Run evita adelantar el Front al Servidor.
+build_hosting() {
+    say "Compilando el Front para Firebase Hosting"
+    npm --prefix web ci
+    npm --prefix web run build
+}
+
+
+push_hosting() {
+    say "Publicando Firebase Hosting"
+    firebase deploy --only hosting --project "$PROJECT"
+
+    say "Muchi está publicado"
+    note "https://$PROJECT.web.app"
+}
+
+
 check_account
 check_secret
 prepare_repository
 grant_access
 push_service
+build_hosting
+push_hosting

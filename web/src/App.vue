@@ -8,10 +8,15 @@ import SearchProgress from './components/SearchProgress.vue'
 import OfferList from './components/OfferList.vue'
 import CartPanel from './components/CartPanel.vue'
 import SourcesPanel from './components/SourcesPanel.vue'
+import GoogleAd from './components/GoogleAd.vue'
+import GoogleAdsense from './components/GoogleAdsense.vue'
+import SponsorSpot from './components/SponsorSpot.vue'
+import SupportPanel from './components/SupportPanel.vue'
+import CommunityPanel from './components/CommunityPanel.vue'
 
 const THEME_KEY = 'muchi_tema'
 
-const config = ref({ poll_seconds: 5 })
+const config = ref({ poll_seconds: 5, adsense_client: 'ca-pub-6368656861543000' })
 const book = ref(null)
 const dark = ref(localStorage.getItem(THEME_KEY) === 'oscuro')
 const message = ref(null)
@@ -30,6 +35,14 @@ const history = ref(JSON.parse(localStorage.getItem('muchi_historial') || '[]'))
 let timer = null
 
 const busy = computed(() => Boolean(state.value && !state.value.done && !unavailable.value))
+const googleReady = computed(() => Boolean(config.value.adsense_client && config.value.adsense_slot))
+const sponsorReady = computed(() => Boolean(config.value.sponsor_name && config.value.sponsor_url))
+
+function hashSearch(id) {
+  return [...id].reduce((value, letter) => ((value * 31) + letter.charCodeAt(0)) >>> 0, 0)
+}
+
+const showSponsor = computed(() => sponsorReady.value && hashSearch(searchId.value) % 4 === 0)
 
 const placeholder = computed(() => {
   if (unavailable.value) return 'No hay Ofertas recibidas para mostrar.'
@@ -150,13 +163,19 @@ onUnmounted(stopPolling)
 </script>
 
 <template>
+  <GoogleAdsense :client="config.adsense_client" />
+
   <header class="mu-hero">
     <h1>🐱 Muchi</h1>
     <p>Busca Cartas y cotiza tu Lista</p>
   </header>
 
   <main class="mu-grilla">
-    <MuchiPanel :book="book" v-model:dark="dark" :message="message" />
+    <div class="mu-lateral">
+      <MuchiPanel :book="book" v-model:dark="dark" :message="message" />
+      <SupportPanel :donation-url="config.donation_url" />
+      <CommunityPanel />
+    </div>
 
     <div class="mu-columna">
       <SearchForm
@@ -180,7 +199,22 @@ onUnmounted(stopPolling)
         v-if="state" :state="state" :checked="checked"
         :poll-seconds="config.poll_seconds" :unavailable="unavailable"
         @cancel="cancel"
-      />
+      >
+        <SponsorSpot
+          v-if="showSponsor || !googleReady"
+          :key="`promo-${searchId}`"
+          :searching="!state.done"
+          :sponsor-name="showSponsor ? config.sponsor_name : ''"
+          :sponsor-text="showSponsor ? config.sponsor_text : ''"
+          :sponsor-url="showSponsor ? config.sponsor_url : ''"
+        />
+        <GoogleAd
+          v-else
+          :key="`google-${searchId}`"
+          :client="config.adsense_client"
+          :slot="config.adsense_slot"
+        />
+      </SearchProgress>
 
       <OfferList
         v-if="state" :offers="offers" :summary="summary"
@@ -206,6 +240,7 @@ onUnmounted(stopPolling)
   max-width: 1100px; margin: 22px auto; padding: 0 16px; align-items: start;
 }
 .mu-columna { display: flex; flex-direction: column; gap: 16px; }
+.mu-lateral { display: flex; flex-direction: column; gap: 16px; }
 .mu-historia { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 summary { cursor: pointer; font-weight: 600; }
 @media (max-width: 800px) { .mu-grilla { grid-template-columns: 1fr; } }

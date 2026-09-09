@@ -71,6 +71,26 @@ button.mu-ghost {
   box-shadow: none;
 }
 
+.mu-boton {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 9px 20px;
+  background: linear-gradient(135deg, var(--mu-acento), var(--mu-peri));
+  color: #fff;
+  box-shadow: var(--mu-sombra-sw);
+  font-weight: 600;
+  text-decoration: none;
+}
+.mu-boton:hover { transform: translateY(-1px); }
+.mu-boton:focus-visible, button:focus-visible, a:focus-visible {
+  outline: 3px solid var(--mu-peri);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button, .mu-boton { transition: none; }
+}
+
 textarea, input, select {
   font: inherit;
   color: var(--mu-tinta);
