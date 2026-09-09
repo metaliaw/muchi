@@ -60,6 +60,35 @@ const state = computed(() => {
 function restMuchi() {
   petted.value = false
 }
+
+// Los Corazones que saltan del Boton de Ayuda. Cada uno lleva su Desvio y su
+// Demora, para que no suban en Fila; el que termina se borra solo.
+const hearts = ref([])
+const HEART_FACES = ['💗', '💖', '💘', '💝', '💕']
+let heartId = 0
+
+function throwHearts() {
+  for (let index = 0; index < 6; index += 1) {
+    const heart = {
+      id: (heartId += 1),
+      face: HEART_FACES[Math.floor(Math.random() * HEART_FACES.length)],
+      shift: `${Math.round(Math.random() * 60 - 30)}px`,
+      delay: `${index * 70}ms`,
+      turn: `${Math.round(Math.random() * 50 - 25)}deg`,
+    }
+    hearts.value.push(heart)
+    // Se va cuando su Animacion termina: sin esto la Lista crece sin fin.
+    setTimeout(() => {
+      hearts.value = hearts.value.filter((row) => row.id !== heart.id)
+    }, 1400 + index * 70)
+  }
+}
+
+function askForHelp() {
+  helping.value = !helping.value
+  greetings.value += 1
+  if (helping.value) throwHearts()
+}
 </script>
 
 <template>
@@ -75,9 +104,16 @@ function restMuchi() {
       Modo Oscuro
     </label>
 
-    <button class="mu-ghost" @click="helping = !helping; greetings += 1">
-      {{ helping ? 'Gracias Muchi 💝' : 'Muchi, ayudame!' }}
-    </button>
+    <div class="mu-pedido">
+      <button class="mu-ghost" @click="askForHelp">
+        {{ helping ? 'Gracias Muchi 💝' : 'Muchi, ayudame!' }}
+      </button>
+      <span class="mu-corazones" aria-hidden="true">
+        <span v-for="heart in hearts" :key="heart.id" class="mu-corazon"
+              :style="{ '--desvio': heart.shift, '--giro': heart.turn,
+                        animationDelay: heart.delay }">{{ heart.face }}</span>
+      </span>
+    </div>
 
     <div v-if="helping" class="mu-ayuda">
       <details v-for="topic in book?.help || []" :key="topic.title">
@@ -110,4 +146,28 @@ function restMuchi() {
 .mu-toggle { display: flex; gap: 8px; align-items: center; font-size: .9rem; }
 .mu-toggle input { width: auto; }
 .mu-ayuda summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
+
+/* Los Corazones salen del Boton y suben. Viven en una Capa que no recibe
+   Pulsos, para que nunca tapen el Boton del que salieron. */
+.mu-pedido { position: relative; display: flex; }
+.mu-pedido > .mu-ghost { flex: 1; }
+.mu-corazones {
+  position: absolute; inset: 0;
+  pointer-events: none; overflow: visible;
+}
+.mu-corazon {
+  position: absolute; left: 50%; top: 0;
+  font-size: 1.1rem; line-height: 1;
+  animation: mu-sube 1.2s ease-out forwards;
+}
+@keyframes mu-sube {
+  0%   { opacity: 0; transform: translate(-50%, 0) scale(.6) rotate(0deg); }
+  15%  { opacity: 1; transform: translate(-50%, -6px) scale(1.1) rotate(0deg); }
+  100% { opacity: 0;
+         transform: translate(calc(-50% + var(--desvio)), -74px) scale(.9) rotate(var(--giro)); }
+}
+/* Quien pidio menos Movimiento ve el Boton cambiar, y nada mas. */
+@media (prefers-reduced-motion: reduce) {
+  .mu-corazon { animation: none; opacity: 0; }
+}
 </style>
