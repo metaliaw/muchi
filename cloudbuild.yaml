@@ -1,6 +1,6 @@
-# Despliegue del Front en Cloud Run.
-#   gcloud builds submit --config cloudbuild.yaml \
-#     --substitutions=_SERVICE=muchi-web,_REGION=southamerica-east1
+# Despliegue del Front en Cloud Run. Lo invoca ./deploy.sh, que antes
+# comprueba la Cuenta, el Secreto, el Repositorio de Imágenes y los Permisos
+# que Cloud Build necesita para publicar.
 #
 # El Código de Seguridad de la API no viaja acá: se monta desde Secret Manager
 # al desplegar, así nunca queda escrito en la Imagen ni en este Archivo.
@@ -10,25 +10,28 @@ substitutions:
   _REGION: southamerica-east1
   _API_URL: https://muchi-serve-api-c2ce6c7oga-rj.a.run.app
   _TOKEN_SECRET: muchi-api-token
+  # SHORT_SHA solo lo llena un Trigger; en un submit manual queda vacío y la
+  # Etiqueta de la Imagen sale rota. deploy.sh pasa el SHA del Commit.
+  _TAG: latest
 
 options:
   logging: CLOUD_LOGGING_ONLY
 
 images:
-  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/muchi/${_SERVICE}:${SHORT_SHA}
+  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/muchi/${_SERVICE}:${_TAG}
 
 steps:
   - name: gcr.io/cloud-builders/docker
     args:
       - build
       - -t
-      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/muchi/${_SERVICE}:${SHORT_SHA}
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/muchi/${_SERVICE}:${_TAG}
       - .
 
   - name: gcr.io/cloud-builders/docker
     args:
       - push
-      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/muchi/${_SERVICE}:${SHORT_SHA}
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/muchi/${_SERVICE}:${_TAG}
 
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     entrypoint: gcloud
@@ -36,7 +39,7 @@ steps:
       - run
       - deploy
       - ${_SERVICE}
-      - --image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/muchi/${_SERVICE}:${SHORT_SHA}
+      - --image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/muchi/${_SERVICE}:${_TAG}
       - --region=${_REGION}
       - --platform=managed
       - --allow-unauthenticated
