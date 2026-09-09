@@ -24,6 +24,8 @@ class SearchOffer:
     variant: str = ""
     title: str = ""
     suspicious_reason: str = ""
+    # La Edicion va ultima: las Pruebas arman esta Forma por Posicion.
+    edition: str = ""
 
 
 @dataclass(frozen=True)
