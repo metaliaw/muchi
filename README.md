@@ -139,6 +139,29 @@ streamlit run app.py
 Para Producción, selecciona `MUCHI_ENV=production` y configura la URL y el Token
 en el Entorno de Despliegue.
 
+## El Front Vue
+
+Además del Front de Streamlit hay un Front nuevo en Vue 3, servido por un BFF
+en FastAPI que conserva el Código de Seguridad y decide por las dos
+Interfaces. En Desarrollo:
+
+```bash
+./start-web.sh   # BFF en :8000, Front en http://127.0.0.1:5173
+```
+
+En Producción, un solo Servicio de Cloud Run sirve el Front compilado y el
+BFF:
+
+```bash
+gcloud builds submit --config cloudbuild.yaml \
+  --substitutions=_SERVICE=muchi-web,_REGION=southamerica-west1
+```
+
+Las dos Interfaces hablan con la misma API y comparten el Dominio, así que
+pueden convivir. La [Nota de Migración](docs/migracion-web.md) explica la
+Frontera entre `web/` y `server/`, las Rutas del BFF y qué se borra cuando el
+Vue reemplace a Streamlit.
+
 ## Configuración y Arquitectura
 
 El Front carga su Configuración en este orden:
@@ -197,4 +220,6 @@ Puedes añadir `MUCHI_API_SEARCH_ID` para verificar una Búsqueda existente.
   El acceso al original requiere permisos. Los cambios del Contrato se realizan
   en ese Repositorio y luego se sincronizan aquí; esta copia no es una
   Especificación independiente.
+- [Del Front Streamlit al Front Vue](docs/migracion-web.md): la Frontera entre
+  el Front y el BFF, sus Rutas y el Despliegue en Cloud Run.
 - [Notas de la Arquitectura anterior](docs/frontend-legacy.md), conservadas como referencia histórica.
