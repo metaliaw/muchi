@@ -2,6 +2,7 @@ package muchiapi
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -21,11 +22,15 @@ var (
 	taskOnce   sync.Once
 	taskWorker search.Worker
 	taskError  error
+	sweepOnce  sync.Once
+	sweeper    search.Sweeper
+	sweepError error
 )
 
 func init() {
 	functions.HTTP("ServeAPI", ServeAPI)
 	functions.HTTP("ProcessSearch", ProcessSearch)
+	functions.HTTP("SweepQueue", SweepQueue)
 }
 
 // ServeAPI Serves the public Muchi HTTP contract.
@@ -86,6 +91,46 @@ func ProcessSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// SweepQueue Puts back the Wake-ups that silent Turns spent.
+//
+// A Task carries no Item, so a Turn that ends without working spends a
+// Wake-up that nothing replaces. Run on a Schedule, this notices the Drift
+// and repairs it; without it, an Item whose Task was spent waits forever.
+func SweepQueue(w http.ResponseWriter, r *http.Request) {
+	sweepOnce.Do(func() {
+		settings, err := config.LoadConfig()
+		if err != nil {
+			sweepError = err
+			return
+		}
+		runtime, err := application.BuildRuntime(r.Context(), settings, buildLogger(), true)
+		if err != nil {
+			sweepError = err
+			return
+		}
+		if runtime.Queue == nil {
+			sweepError = errors.New("sweep needs a Task Queue: MUCHI_TASK_URL is empty")
+			return
+		}
+		sweeper = search.Sweeper{
+			Items: runtime.Store, Queue: runtime.Queue,
+			Logger: buildLogger(), MaxWakes: settings.SweepMaxWakes,
+		}
+	})
+	if sweepError != nil {
+		buildLogger().Error("SweepQueue Startup Failed", "error", sweepError)
+		http.Error(w, "Service unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	woken, err := sweeper.SweepQueue(r.Context())
+	if err != nil {
+		http.Error(w, "Sweep failed", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, `{"woken":%d}`, woken)
 }
 
 func buildLogger() *slog.Logger {

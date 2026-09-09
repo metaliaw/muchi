@@ -199,3 +199,42 @@ func TestFinishedItemLeavesTheQueue(t *testing.T) {
 			record.AvailableAt, record.ExpiresAt)
 	}
 }
+
+// TestCountWaitingItemsIgnoresDeadDocuments Keeps the Sweeper honest. Counting
+// a dead Document would ask for Turns that only ever skip it.
+func TestCountWaitingItemsIgnoresDeadDocuments(t *testing.T) {
+	store := openTestStore(t)
+	ctx := context.Background()
+	job := createTestSearch(t, store, "waiting")
+
+	waiting, err := store.CountWaitingItems(ctx, 50)
+	if err != nil || waiting != 2 {
+		t.Fatalf("two fresh Items must wait: waiting=%d err=%v", waiting, err)
+	}
+
+	dead := itemRecord{
+		Payload:     mustJSON(search.Item{ID: "item_dead", SearchID: job.ID, Status: search.ItemPending}),
+		SearchID:    job.ID,
+		AvailableAt: time.Now().UTC().Add(-time.Hour),
+		ExpiresAt:   time.Now().UTC().Add(-time.Hour),
+	}
+	if _, err := store.client.Collection("items").Doc("item_dead").Set(ctx, dead); err != nil {
+		t.Fatal(err)
+	}
+
+	waiting, err = store.CountWaitingItems(ctx, 50)
+	if err != nil || waiting != 2 {
+		t.Fatalf("a dead Document is not Work: waiting=%d err=%v", waiting, err)
+	}
+}
+
+// TestCountWaitingItemsRespectsTheCap Stops one Sweep from firing everything.
+func TestCountWaitingItemsRespectsTheCap(t *testing.T) {
+	store := openTestStore(t)
+	createTestSearch(t, store, "capped")
+
+	waiting, err := store.CountWaitingItems(context.Background(), 1)
+	if err != nil || waiting != 1 {
+		t.Fatalf("waiting=%d err=%v", waiting, err)
+	}
+}

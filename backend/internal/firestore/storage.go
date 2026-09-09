@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sort"
 	"time"
 
@@ -47,6 +48,20 @@ func boundContext(ctx context.Context) (context.Context, context.CancelFunc) {
 type Store struct {
 	client    *firestorelib.Client
 	searchTTL time.Duration
+	logger    *slog.Logger
+}
+
+// TellStore Gives the Store a Voice. Without one it stays silent, which is
+// what every Test wants and what Production must never have.
+func (s *Store) TellStore(logger *slog.Logger) {
+	s.logger = logger
+}
+
+func (s *Store) say() *slog.Logger {
+	if s.logger == nil {
+		return slog.New(slog.DiscardHandler)
+	}
+	return s.logger
 }
 
 type searchRecord struct {
@@ -181,9 +196,17 @@ func (s *Store) ClaimSearchItem(ctx context.Context, owner string, lease time.Du
 			OrderBy("available_at", firestorelib.Asc).
 			Limit(claimCandidates)
 		documents := tx.Documents(query)
+		var skipped []string
 		for {
 			document, err := documents.Next()
 			if errors.Is(err, iterator.Done) {
+				// Skipping every Candidate is not an idle Turn, and the two
+				// used to look identical from outside. That is what let the
+				// Queue stall for two hours without a single Warning.
+				if len(skipped) > 0 {
+					s.say().Warn("Claim Skipped Every Candidate",
+						"skipped", len(skipped), "items", skipped)
+				}
 				return search.ErrNotFound
 			}
 			if err != nil {
@@ -194,12 +217,52 @@ func (s *Store) ClaimSearchItem(ctx context.Context, owner string, lease time.Du
 			// clean until one of them is actually taken.
 			err = s.claimItem(ctx, tx, document, owner, lease, &claimed)
 			if errors.Is(err, search.ErrNotFound) {
+				skipped = append(skipped, document.Ref.ID)
 				continue
+			}
+			if err == nil && len(skipped) > 0 {
+				s.say().Warn("Claim Stepped Over Dead Items",
+					"skipped", len(skipped), "items", skipped, "claimed", claimed.ID)
 			}
 			return err
 		}
 	})
 	return claimed, mapStoreError(err)
+}
+
+// CountWaitingItems Says how many Items are ready for a Turn right now.
+//
+// A Task carries no Item: it means "wake up and take whatever is there", so
+// the only Bond between Work and Wake-ups is the Count. A Turn that ends
+// without working spends a Wake-up and nothing puts it back; the Sweeper
+// compares this Count with the Queue and repairs the Difference.
+func (s *Store) CountWaitingItems(ctx context.Context, limit int) (int, error) {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
+	now := time.Now().UTC()
+	documents := s.client.Collection("items").
+		Where("available_at", "<=", now).
+		OrderBy("available_at", firestorelib.Asc).
+		Limit(limit).
+		Documents(ctx)
+	defer documents.Stop()
+	waiting := 0
+	for {
+		document, err := documents.Next()
+		if errors.Is(err, iterator.Done) {
+			return waiting, nil
+		}
+		if err != nil {
+			return waiting, mapStoreError(err)
+		}
+		var record itemRecord
+		// A dead Document is not Work: counting it would ask for Turns that
+		// only ever skip it.
+		if err := document.DataTo(&record); err != nil || record.ExpiresAt.Before(now) {
+			continue
+		}
+		waiting++
+	}
 }
 
 func (s *Store) RenewItemLease(ctx context.Context, id, owner string, lease time.Duration) error {

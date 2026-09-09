@@ -72,8 +72,25 @@ func (q *Queue) CloseQueue() error {
 	return q.client.Close()
 }
 
+// WakeWorker Adds one Turn that is not tied to any Position.
+//
+// The Sweeper uses it to replace Wake-ups that a silent Turn spent without
+// working. The Name carries the Minute so a Repair is never mistaken for the
+// original Task: Cloud Tasks remembers a used Name for about an Hour and
+// answers AlreadyExists, which createTask swallows. Reusing the Name would
+// repair nothing and report Success.
+func (q *Queue) WakeWorker(ctx context.Context, reason string) error {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
+	stamp := time.Now().UTC().Format("20060102-150405.000")
+	return q.dispatch(ctx, fmt.Sprintf("%s/tasks/%s-%s", q.parent, reason, stamp))
+}
+
 func (q *Queue) createTask(ctx context.Context, searchID string, position int) error {
-	name := fmt.Sprintf("%s/tasks/%s-%03d", q.parent, searchID, position)
+	return q.dispatch(ctx, fmt.Sprintf("%s/tasks/%s-%03d", q.parent, searchID, position))
+}
+
+func (q *Queue) dispatch(ctx context.Context, name string) error {
 	request := &cloudtaskspb.HttpRequest{
 		Url:        q.targetURL,
 		HttpMethod: cloudtaskspb.HttpMethod_POST,

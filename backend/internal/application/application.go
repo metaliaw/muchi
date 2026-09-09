@@ -24,6 +24,7 @@ const userAgent = "muchi-api/1.0"
 type Runtime struct {
 	Service search.Service
 	Store   *firestorestore.Store
+	Queue   *taskqueue.Queue
 }
 
 // BuildRuntime Casts the Search Providers for one Function Instance.
@@ -32,6 +33,9 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 	if err != nil {
 		return Runtime{}, err
 	}
+	// The Store Warns when a Claim steps over dead Items; silent, that Warning
+	// is the one that took two Hours to notice.
+	store.TellStore(logger)
 	storeConfig, err := stores.LoadStoreConfig(config.StoresPath, logger)
 	if err != nil {
 		return Runtime{}, err
@@ -65,6 +69,7 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 			return Runtime{}, err
 		}
 		service.Tasks = queue
+		return Runtime{Service: service, Store: store, Queue: queue}, nil
 	}
 	return Runtime{Service: service, Store: store}, nil
 }
