@@ -1,2 +1,5 @@
 timeout_seconds: 10
 poll_seconds: 3
+# Cuántas Cartas admite una Búsqueda masiva. Se publica en /api/config y el
+# Front lo escribe en pantalla, para que el Tope no viva escrito dos veces.
+max_cards: 500

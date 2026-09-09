@@ -11,14 +11,16 @@ const props = defineProps({
   limits: { type: Object, default: () => ({}) },
 })
 
-const maxCards = computed(() => props.limits.max_cards || 100)
+// Sin Configuración todavía no hay Tope que anunciar: mejor callarlo que
+// inventar un Número que el Servidor no aplica.
+const maxCards = computed(() => props.limits.max_cards || 0)
 const maxQuantity = computed(() => props.limits.max_quantity || 99)
 
 // Contar Líneas con algo escrito basta para avisar antes de enviar. Quien
 // decide de verdad es el Servidor; esto solo evita el viaje perdido.
 const written = computed(() =>
   text.value.split('\n').filter((line) => line.trim() && !line.trim().startsWith('#')).length)
-const tooMany = computed(() => written.value > maxCards.value)
+const tooMany = computed(() => Boolean(maxCards.value) && written.value > maxCards.value)
 const emit = defineEmits(['search', 'retry', 'resume'])
 
 const text = defineModel('text', { type: String, default: '' })
@@ -38,8 +40,8 @@ const identifier = ref('')
         <button type="submit" :disabled="busy || pending || !text.trim() || tooMany">
           Buscar
         </button>
-        <span class="mu-caption" :class="{ pasado: tooMany }">
-          Entre 1 y {{ maxCards }} entradas, de 1 a {{ maxQuantity }} copias.
+        <span v-if="maxCards" class="mu-caption" :class="{ pasado: tooMany }">
+          Hasta {{ maxCards }} Cartas por Búsqueda, de 1 a {{ maxQuantity }} copias.
           <template v-if="written">Llevas {{ written }}.</template>
         </span>
       </div>
