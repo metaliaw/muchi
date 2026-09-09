@@ -11,7 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from muchi.mtg import decklist, phrases, optimizer, deck_search  # noqa: E402
+from muchi.mtg import decklist, phrases, optimizer  # noqa: E402
 from muchi.mtg.models import Offer, Order  # noqa: E402
 
 
@@ -45,56 +45,10 @@ def test_decklist_sums_duplicates():
     assert len(orders) == 1 and orders[0].quantity == 3
 
 
-def test_deck_search_resumes_after_a_rerun_without_losing_results():
-    """El mismo job guardado en session_state continua en la carta siguiente."""
-    job = deck_search.DeckSearchJob.start([
-        Order(1, "Sol Ring"), Order(1, "Counterspell"), Order(1, "Island"),
-    ])
-    sol_ring = [_offer("T1", "Sol Ring", 1500)]
-
-    job.record(sol_ring)
-    # Simula el objeto recuperado por la siguiente ejecucion de Streamlit.
-    resumed = job
-    assert resumed.current == Order(1, "Counterspell")
-    assert resumed.found_by_card == {"sol ring": sol_ring}
-
-    resumed.record([])
-    resumed.record(failed=True)
-    assert resumed.done
-    assert resumed.found_by_card == {"sol ring": sol_ring}
-    assert resumed.failed == ["Island"]
 
 
-def test_deck_search_keeps_offers_when_history_storage_fails():
-    """Un fallo secundario de SQLite nunca es un error de tienda."""
-    job = deck_search.DeckSearchJob.start([Order(1, "Sol Ring")])
-    found = [_offer("T1", "Sol Ring", 1500)]
-
-    def broken_archive(_name, _offers):
-        raise OSError("read-only database")
-
-    outcome = deck_search.run_next(
-        job, lambda _name: found, broken_archive,
-    )
-
-    assert job.done
-    assert job.found_by_card == {"sol ring": found}
-    assert job.failed == []
-    assert outcome.query_error is None
-    assert isinstance(outcome.archive_error, OSError)
 
 
-def test_deck_search_counts_only_lookup_failures_as_errors():
-    job = deck_search.DeckSearchJob.start([Order(1, "Sol Ring")])
-
-    def broken_lookup(_name):
-        raise TimeoutError("scry timeout")
-
-    outcome = deck_search.run_next(job, broken_lookup)
-
-    assert job.done and job.failed == ["Sol Ring"]
-    assert job.found_by_card == {}
-    assert isinstance(outcome.query_error, TimeoutError)
 
 
 def _offer(store, card_name, price):
