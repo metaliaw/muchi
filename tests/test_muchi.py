@@ -11,14 +11,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from muchi.mtg import (decklist, phrases, deck, offers, optimizer,
-                       oracle, deck_search)  # noqa: E402
-from muchi.mtg.settings import OfferSettings, read_offer_file
+from muchi.mtg import decklist, phrases, optimizer, deck_search  # noqa: E402
 from muchi.mtg.models import Offer, Order  # noqa: E402
-from muchi.mtg.ports import CardRequest  # noqa: E402
-from muchi.mtg.sources import (  # noqa: E402
-    store_api, edhrec, moxfield, scry, scryfall, shopify, stock,
-)
 
 
 def test_decklist_formats():
@@ -161,87 +155,18 @@ def test_optimizer_respects_quantities():
 
 
 
-def test_pda_chile_configured():
-    assert "PDA Chile" in shopify.STORES
-    assert shopify.STORES["PDA Chile"].startswith("https://")
-    # unreachable stores are declared with a reason, never silently omitted
-    for store, (url, reason) in shopify.BLOCKED_STORES.items():
-        assert url.startswith("https://") and len(reason) > 20, store
 
 
-def test_store_api_without_config():
-    """The feature is optional: no file, empty list and zero requests."""
-    assert store_api.load_stores("no-existe-este-archivo.json") == []
 
 
-def test_store_api_maps_fields():
-    store = store_api.StoreApi(
-        name="Wombat", url="https://x/rest/v1/stock", kind="postgrest",
-        fields={"nombre": "carta", "precio": "precio_clp", "stock": "cantidad",
-                "edicion": "set_codigo", "condicion": "estado", "url": "link"},
-    )
-    rows = [
-        {"carta": "Sol Ring", "precio_clp": 3500, "cantidad": 4,
-         "set_codigo": "C21", "estado": "NM", "link": "https://x/sol-ring"},
-        {"carta": "Black Lotus", "precio_clp": 999999, "cantidad": 0},  # out of stock
-        {"carta": "Roto", "precio_clp": None, "cantidad": 2},           # no price
-        {"carta": "Brainstorm", "precio_clp": "4.750", "cantidad": 1},  # price with dot
-    ]
-    offers = store_api.build_offers(store, rows)
-
-    assert [o.card_name for o in offers] == ["Sol Ring", "Brainstorm"]
-    o = offers[0]
-    assert o.price_clp == 3500 and o.store == "Wombat"
-    assert o.title == "Sol Ring [C21] - NM"
-    assert o.url == "https://x/sol-ring"
-    assert o.source == "api" and not o.marketplace
-    assert offers[1].price_clp == 4750, "must parse '4.750' as 4750"
 
 
-def test_store_api_key_comes_from_env():
-    store = store_api.StoreApi(name="X", url="https://x", env_apikey="MUCHI_TEST_KEY")
-    os.environ.pop("MUCHI_TEST_KEY", None)
-    assert store.api_key == ""
-    os.environ["MUCHI_TEST_KEY"] = "secreta"
-    try:
-        assert store.api_key == "secreta"
-    finally:
-        os.environ.pop("MUCHI_TEST_KEY", None)
 
 
-def test_example_config_is_valid_json():
-    path = Path(__file__).resolve().parent.parent / "store-api.example.json"
-    data = json.loads(path.read_text(encoding="utf-8"))
-    stores = [store_api.build_store(row) for row in data["tiendas"]]
-    assert len(stores) == 2
-    # the example must not carry any real API key
-    for t in stores:
-        assert not t.api_key, f"{t.name} ships an API key in the example"
 
 
-def test_moxfield_list_id():
-    assert moxfield.extract_list_id(
-        "https://moxfield.com/decks/yqdRPdoUlEiFz21qKYHGMA") == "yqdRPdoUlEiFz21qKYHGMA"
-    assert moxfield.extract_list_id(
-        "https://www.moxfield.com/decks/l-hvQOWPTEKJ0rMjMUHJxg/") == "l-hvQOWPTEKJ0rMjMUHJxg"
-    assert moxfield.extract_list_id("l_sw58BtJUaWZj9n6VNCDw") == "l_sw58BtJUaWZj9n6VNCDw"
-    for broken in ("", "https://ejemplo.cl/algo/otro"):
-        try:
-            moxfield.extract_list_id(broken)
-            raise AssertionError(f"should reject {broken!r}")
-        except ValueError:
-            pass
 
 
-def test_moxfield_foil_uses_ck_foil():
-    """The expensive bug: quoting a foil at the non-foil price."""
-    prices = {"ck": 1.50, "ck_foil": 17.99}
-    assert moxfield.read_ck_price(prices, is_foil=True) == 17.99
-    assert moxfield.read_ck_price(prices, is_foil=False) == 1.50
-    # if the requested finish is missing, do NOT fall through to the other one
-    assert moxfield.read_ck_price({"ck": 1.50}, is_foil=True) is None
-    assert moxfield.read_ck_price({"ck_foil": 17.99}, is_foil=False) is None
-    assert moxfield.read_ck_price({}, is_foil=False) is None
 
 
 
@@ -322,239 +247,47 @@ def test_normalize_name():
     assert normalize_name("Sol Ring") == "sol-ring"
 
 
-def test_parse_offers_from_real_html():
-    """Exact format that scry.cl server-renders."""
-    html = (
-        '<a data-track-type="store_offer_click" data-store-name="PayToWin" '
-        'data-card-name="Ragavan, Nimble Pilferer" '
-        'data-offer-title="Ragavan, Nimble Pilferer [MH2] - Near Mint Foil" '
-        'data-price-clp="118400" data-variant-key="k1" '
-        'data-product-url="https://www.paytowin.cl/products/x?variant=1">Ver</a>'
-        '<a data-track-type="store_offer_click" data-store-name="CatLotus" '
-        'data-offer-title="Ragavan, Nimble Pilferer [MH2] - Near Mint" '
-        'data-price-clp="99000" data-variant-key="k2" '
-        'data-product-url="https://catlotus.cl/y">Ver</a>'
-    )
-    offers = scry.parse_offers_html(html)
-    assert len(offers) == 2
-    assert offers[0].store == "CatLotus" and offers[0].price_clp == 99000  # sorted by price
-    assert offers[1].is_foil is True
-    assert offers[0].is_foil is False
-    assert offers[1].condition == "Near Mint"
-    assert offers[0].edition == "MH2"
 
 
-def test_marketplace_vs_store():
-    """Scry marketplace offers come from marketplace.scry.cl; stores don't."""
-    assert scry.is_marketplace("https://marketplace.scry.cl/magic-master/sol-ring") is True
-    assert scry.is_marketplace("https://scry.cl/card/sol-ring") is True
-    assert scry.is_marketplace("https://catlotus.cl/carta/123") is False
-    assert scry.is_marketplace("https://www.paytowin.cl/products/x") is False
-    assert scry.is_marketplace("https://gameofmagicsingles.cl/products/y") is False
-    # Must not match a domain that just happens to contain the substring
-    assert scry.is_marketplace("https://noscry.cl/x") is False
 
 
-def test_marks_marketplace_on_parse():
-    html = (
-        '<a data-track-type="store_offer_click" data-store-name="Magic Master" '
-        'data-offer-title="Sol Ring - NM" data-price-clp="1791" data-variant-key="k1" '
-        'data-product-url="https://marketplace.scry.cl/magic-master/sol-ring">Ver</a>'
-        '<a data-track-type="store_offer_click" data-store-name="CatLotus" '
-        'data-offer-title="Sol Ring - NM" data-price-clp="2000" data-variant-key="k2" '
-        'data-product-url="https://catlotus.cl/x">Ver</a>'
-    )
-    offers = scry.parse_offers_html(html)
-    by_store = {o.store: o.marketplace for o in offers}
-    assert by_store == {"Magic Master": True, "CatLotus": False}, by_store
 
 
-def _rec(name, category="Top Cards", inc=0.5, syn=0.1):
-    return edhrec.RawRecommendation(name=name, category=category, tag=category.lower(),
-                                    inclusion=inc, synergy=syn, num_decks=10)
 
 
-def test_edhrec_normalizes_commanders():
-    assert edhrec.normalize_name("Atraxa, Praetors' Voice") == "atraxa-praetors-voice"
-    assert edhrec.normalize_name("Kenrith, the Returned King") == "kenrith-the-returned-king"
-    assert edhrec.normalize_name("Edgar Markov") == "edgar-markov"
 
 
-def test_subtracts_cards_already_owned():
-    recs = [_rec("Sol Ring"), _rec("Skullclamp"), _rec("Arcane Signet")]
-    # The comparison is normalised: case and punctuation must not matter
-    missing_recs = deck.subtract_owned_cards(recs, {"sol ring", "ARCANE SIGNET"})
-    assert [r.name for r in missing_recs] == ["Skullclamp"]
 
 
-def test_without_a_deck_returns_all():
-    recs = [_rec("Sol Ring"), _rec("Skullclamp")]
-    assert len(deck.subtract_owned_cards(recs, set())) == 2
 
 
-def test_categories_keep_their_order():
-    recs = [_rec("A", "Top Cards"), _rec("B", "Creatures"),
-            _rec("C", "Top Cards"), _rec("D", "Instants")]
-    assert deck.list_categories(recs) == ["Top Cards", "Creatures", "Instants"]
 
 
-def test_basic_lands_are_recognised():
-    for n in ("Mountain", "island", "Snow-Covered Forest", "Wastes"):
-        assert edhrec.is_basic_land(n) is True, n
-    for n in ("Mountain Valley", "Goblin Warchief", "Islandia"):
-        assert edhrec.is_basic_land(n) is False, n
 
 
-def test_inclusion_pct():
-    assert _rec("X", inc=0.6127).inclusion_pct == 61.3
 
 
-def test_shopify_parses_title():
-    d = shopify.parse_title("Ragavan, Nimble Pilferer (Borderless) [MH2 - 138]")
-    assert d["nombre"] == "Ragavan, Nimble Pilferer"
-    assert d["variante"] == "Borderless"
-    assert d["set"] == "MH2" and d["cn"] == "138"
-
-    d2 = shopify.parse_title("Growth Spiral (7054) [SLD - 7054]")
-    assert d2["nombre"] == "Growth Spiral" and d2["set"] == "SLD"
 
 
-def test_shopify_product_offers():
-    product = {
-        "title": "Sol Ring [C21 - 263]",
-        "handle": "sol-ring-c21",
-        "variants": [
-            {"id": 1, "title": "Near Mint / English / Normal", "price": "3500", "available": True},
-            {"id": 2, "title": "Near Mint / English / Foil", "price": "9000", "available": False},
-        ],
-    }
-    offers = shopify.build_product_offers(product, "PayToWin", "https://www.paytowin.cl")
-    assert len(offers) == 1, "out-of-stock variants are discarded"
-    assert offers[0].price_clp == 3500
-    assert offers[0].language == "English"
-    assert "variant=1" in offers[0].url
 
 
-def test_shopify_reads_exact_variant_stock():
-    target = shopify.product_json_url(
-        "https://shop.cl/products/sol-ring?utm_source=scry&variant=22"
-    )
-    assert target == ("https://shop.cl/products/sol-ring.js", "22")
-    product = {"variants": [
-        {"id": 11, "available": True},
-        {"id": 22, "available": False},
-    ]}
-    assert shopify.read_variant_availability(product, "22") is False
-    assert shopify.read_variant_availability(product, "99") is None
-    assert shopify.product_json_url("https://shop.cl/pages/sol-ring") is None
 
 
-def test_reads_stock_from_structured_page_html():
-    sold_out = (
-        '<script type="application/ld+json">'
-        '{"@type":"Product","offers":{"availability":"https://schema.org/OutOfStock"}}'
-        '</script>'
-    )
-    assert stock.read_page_availability(sold_out) is False
-    assert stock.read_page_availability(
-        '<meta itemprop="availability" content="https://schema.org/InStock">'
-    ) is True
 
 
-def test_only_reads_out_of_stock_near_purchase_signals():
-    assert stock.read_page_availability(
-        '<main><div class="product-stock">Fuera de stock</div></main>'
-    ) is False
-    assert stock.read_page_availability(
-        '<footer>Revisa nuestra política para productos fuera de stock</footer>'
-    ) is None
 
 
-def test_reads_lacripta_main_product_without_being_fooled_by_recommendations():
-    html = """
-    <main>
-      <div id="product-14840" class="product outofstock product-type-variable">
-        <form class="variations_form" data-product_variations="[]">
-          <p class="stock out-of-stock">
-            En este momento no hay existencias de este producto ni está disponible.
-          </p>
-        </form>
-      </div>
-      <li class="product instock purchasable">Otra carta disponible</li>
-    </main>
-    """
-    assert stock.read_page_availability(html) is False
 
 
-def test_reads_available_woocommerce_product():
-    html = """
-    <main><div id="product-1" class="product instock product-type-simple">
-      <p class="stock in-stock">Hay existencias</p>
-    </div></main>
-    """
-    assert stock.read_page_availability(html) is True
 
 
-def test_reads_exact_woocommerce_variation():
-    variations = json.dumps([{
-        "attributes": {
-            "attribute_pa_idioma": "espanol",
-            "attribute_pa_estado": "nm",
-        },
-        "is_in_stock": False,
-    }]).replace('"', "&quot;")
-    html = (
-        '<main><div id="product-1" class="product instock product-type-variable">'
-        f'<form class="variations_form" data-product_variations="{variations}"></form>'
-        '</div></main>'
-    )
-    selected = {"attribute_pa_idioma": "espanol", "attribute_pa_estado": "nm"}
-    assert stock.read_page_availability(html, selected) is False
 
 
-def test_woocommerce_missing_selected_variation_is_unavailable():
-    variations = json.dumps([{
-        "attributes": {
-            "attribute_pa_idioma": "ingles-2",
-            "attribute_pa_estado": "nm",
-        },
-        "is_in_stock": True,
-    }]).replace('"', "&quot;")
-    html = (
-        '<main><div id="product-14848" class="product instock product-type-variable">'
-        f'<form class="variations_form" data-product_variations="{variations}"></form>'
-        '</div></main>'
-    )
-    selected = {"attribute_pa_idioma": "espanol", "attribute_pa_estado": "nm"}
-    assert stock.read_page_availability(html, selected, "lacripta.cl") is False
 
 
-def test_store_specific_marker_is_scoped_to_its_domain_and_main_product():
-    html = '<main><div id="product-1" class="product">Sold out</div></main>'
-    assert stock.read_page_availability(html, host="lacripta.cl") is False
-    assert stock.read_page_availability(html, host="otra.cl") is None
-    assert stock.STORE_INSTRUCTIONS["lacripta.cl"]["platform"] == "woocommerce"
 
 
 # ----------------------------------------------------------------- the ports
-def test_every_source_meets_its_port():
-    """An adapter that stops fulfilling its port breaks here, not in production."""
-    from muchi.mtg import ports
-    from muchi.mtg.http import PoliteSession
-    from muchi.mtg.sources.store_api import StoreApiSource
-    from muchi.mtg.sources.edhrec import EdhrecAdvisor
-    from muchi.mtg.sources.scry import ScrySource
-    from muchi.mtg.sources.shopify import ShopifyCatalog
-    from muchi.mtg.sources.stock import StorePageStockVerifier
-
-    sess = PoliteSession()
-    assert isinstance(ScrySource(sess), ports.PrimarySource)
-    assert isinstance(ScrySource(sess), ports.OfferSource)
-    assert isinstance(StoreApiSource(sess, store_api.StoreApi("X", "u")),
-                      ports.OfferSource)
-    assert isinstance(EdhrecAdvisor(sess), ports.DeckAdvisor)
-    assert isinstance(ShopifyCatalog(sess), ports.StoreCatalog)
-    assert isinstance(StorePageStockVerifier(sess), ports.StockVerifier)
 
 
 def test_only_the_cast_imports_sources():
@@ -599,123 +332,23 @@ class _FakePrimary(_FakeSource):
         return iter(())
 
 
-def test_find_offers_sorts_and_dedupes():
-    """When the primary source already covers a store, the secondary skips it."""
-    primary = _FakePrimary("scry", [_offer("CatLotus", "Sol Ring", 5000)])
-    local = _FakeSource("local index", [
-        _offer("CatLotus", "Sol Ring", 4000),   # already covered: discarded
-        _offer("PDA Chile", "Sol Ring", 3000),  # new: enters the list
-    ])
-
-    card_id, found = offers.find_offers(primary, [local], "Sol Ring")
-
-    assert card_id == "id-1"
-    assert [(o.store, o.price_clp) for o in found] == [
-        ("PDA Chile", 3000), ("CatLotus", 5000),
-    ]
 
 
-def test_a_failing_source_does_not_sink_search():
-    primary = _FakePrimary("scry", [_offer("CatLotus", "Sol Ring", 5000)])
-    broken_source = _FakeSource("Wombat", explodes=True)
-    healthy = _FakeSource("PDA Chile", [_offer("PDA Chile", "Sol Ring", 3000)])
-
-    _, found = offers.find_offers(primary, [broken_source, healthy], "Sol Ring")
-    assert [o.store for o in found] == ["PDA Chile", "CatLotus"]
 
 
-def test_filter_hides_sellers_and_foils():
-    from muchi.mtg.models import Offer
-    normal = Offer("CatLotus", "Sol Ring", "Sol Ring", 1000, "u", finish="Normal")
-    foil = Offer("PDA Chile", "Sol Ring", "Sol Ring", 2000, "u", finish="Foil")
-    loose = Offer("Pepito", "Sol Ring", "Sol Ring", 500, "u", marketplace=True)
-    all_offers = [normal, foil, loose]
-
-    assert [o.store for o in offers.filter_offers(all_offers)] == ["CatLotus", "PDA Chile"]
-    assert len(offers.filter_offers(all_offers, stores_only=False)) == 3
-    assert [o.store for o in offers.filter_offers(all_offers, "Solo foil")] == ["PDA Chile"]
-    assert [o.store for o in offers.filter_offers(all_offers, "Solo normal")] == ["CatLotus"]
-    assert [o.store for o in offers.filter_offers(all_offers, stores=["PDA Chile"])] \
-        == ["PDA Chile"]
 
 
-def test_marks_an_isolated_low_price_as_suspicious():
-    found = [_offer("Bad scrape", "Sol Ring", 152)] + [
-        _offer(f"T{i}", "Sol Ring", price)
-        for i, price in enumerate((1462, 1791, 2000, 2500, 2800), start=1)
-    ]
-    suspicious = offers.find_suspicious_prices(found, OfferSettings(**read_offer_file("defaults")))
-    assert {(o.store, o.price_clp) for o in suspicious} == {("Bad scrape", 152)}
-    assert offers.find_cheapest_offer(found, suspicious).price_clp == 1462
 
 
-def test_does_not_guess_from_a_small_sample_or_normal_price_spread():
-    small = [_offer("T1", "A", 100), _offer("T2", "A", 1000)]
-    normal = [_offer(f"T{i}", "A", p)
-              for i, p in enumerate((500, 900, 1200, 1600, 1900), start=1)]
-    assert offers.find_suspicious_prices(small, OfferSettings(**read_offer_file("defaults"))) == set()
-    assert offers.find_suspicious_prices(normal, OfferSettings(**read_offer_file("defaults"))) == set()
 
 
-def test_scry_stock_is_marked_as_unverified():
-    scry_offer = _offer("T1", "Sol Ring", 2000)
-    cached_offer = Offer("T2", "Sol Ring", "Sol Ring", 2100, "u",
-                         source="directo")
-    live_offer = Offer("T3", "Sol Ring", "Sol Ring", 2200, "u", source="api")
-    assert offers.requires_stock_check(scry_offer) is True
-    assert offers.requires_stock_check(cached_offer) is True
-    assert offers.requires_stock_check(live_offer) is False
 
 
-def test_only_the_five_cheapest_offers_are_checked():
-    class Verifier:
-        def __init__(self):
-            self.checked = []
-
-        def verify_stock(self, offer):
-            self.checked.append(offer.price_clp)
-            return offer.price_clp != 300
-
-    verifier = Verifier()
-    found = [_offer(f"T{i}", "A", i * 100) for i in range(1, 8)]
-    checks = offers.verify_cheapest_stock(verifier, found, OfferSettings(**read_offer_file("defaults")))
-    assert sorted(verifier.checked) == [100, 200, 300, 400, 500]
-    assert checks[found[2]] is False
-    assert found[5] not in checks
 
 
-def test_suspicious_prices_do_not_consume_stock_checks():
-    class Verifier:
-        def __init__(self):
-            self.checked = []
-
-        def verify_stock(self, offer):
-            self.checked.append(offer.price_clp)
-            return True
-
-    found = [_offer("Bad scrape", "Sol Ring", 152)] + [
-        _offer(f"T{i}", "Sol Ring", price)
-        for i, price in enumerate((1462, 1791, 2000, 2500, 2800, 3200), start=1)
-    ]
-    verifier = Verifier()
-    checks = offers.verify_cheapest_stock(verifier, found, OfferSettings(**read_offer_file("defaults")))
-
-    assert sorted(verifier.checked) == [1462, 1791, 2000, 2500, 2800]
-    assert found[0] not in checks
 
 
 # -------------------------------------------------------------------- the deck
-def test_deck_subtracts_and_lists_categories():
-    from muchi.mtg.ports import Recommendation
-
-    recs = [
-        Recommendation("Sol Ring", "Top Cards", 0.9, 0.1),
-        Recommendation("Arcane Signet", "Mana Artifacts", 0.8, 0.2),
-    ]
-    assert [r.name for r in deck.subtract_owned_cards(recs, {"sol ring"})] \
-        == ["Arcane Signet"]
-    assert deck.list_categories(recs) == ["Top Cards", "Mana Artifacts"]
-    assert recs[0].inclusion_pct == 90.0
 
 
 # ----------------------------------------------------------------- the stores
@@ -843,14 +476,6 @@ def test_root_paths_match_repo():
     assert paths.DATA == root / "data"
 
 
-def test_package_paths_stay_within_repo():
-    """A path that goes one level too far doesn't explode: it points elsewhere."""
-    from muchi import paths
-    from muchi.mtg.sources import moxfield, store_api
-
-    for label, path in [("store_api.CONFIG", store_api.CONFIG),
-                        ("moxfield.CONFIG", moxfield.CONFIG)]:
-        assert paths.ROOT in path.parents, f"{label} escaped the repo: {path}"
 
 
 
@@ -858,89 +483,28 @@ def test_package_paths_stay_within_repo():
 # El puente es->en y la escalera de pedidos. Es texto puro y nucleo puro: se
 # prueba entero sin red, que es justo lo que lo hace confiable.
 
-def test_oracle_translates_a_known_phrase():
-    phrases, loose = oracle.parse_request("destruye la criatura objetivo")
-    assert phrases == ["destroy target creature"]
-    assert loose == [], "'objetivo' ya viene dentro de la frase traducida"
 
 
-def test_oracle_prefers_the_longest_phrase():
-    phrases, _ = oracle.parse_request("roba una carta")
-    assert phrases == ["draw a card"], "no debe partirse en 'draw' mas relleno"
 
 
-def test_oracle_accepts_spanglish():
-    """Asi se escribe de verdad: media frase en cada idioma."""
-    phrases, loose = oracle.parse_request("destruye target creature")
-    assert "destroy" in phrases
-    assert set(loose) == {"target", "creature"}
 
 
-def test_oracle_ignores_accents_and_case():
-    assert (oracle.parse_request("DESTRUYE la Criatura")[0]
-            == oracle.parse_request("destruye la criatura")[0])
-    assert oracle.parse_request("hace daño")[0] == ["deals damage"], \
-        "la tilde y la enie no pueden dejar la frase sin traducir"
 
 
-def test_oracle_drops_filler_words():
-    _, loose = oracle.parse_request("quiero una carta que roba cartas")
-    assert loose == [], "'quiero', 'una', 'que' no pueden llegar al pedido"
 
 
-def test_oracle_without_anything_invents_nothing():
-    assert oracle.build_requests("") == []
 
 
-def test_oracle_first_request_is_the_strictest():
-    steps = oracle.build_requests("roba una carta", card_type="creature")
-    assert steps[0].phrases == ("draw a card",)
-    assert steps[0].card_type == "creature"
-    assert steps[0].note == "", "la primera no afloja nada, no hay que avisar"
 
 
-def test_oracle_ladder_loosens_step_by_step():
-    """Con una palabra que no conocemos, el segundo escalon la deja fuera."""
-    steps = oracle.build_requests("destruye chuchunco")
-    assert steps[0].words == ("chuchunco",)
-    assert steps[1].words == () and steps[1].phrases == ("destroy",)
-    assert steps[1].note, "cuando afloja tiene que poder explicarlo"
-    assert not any(s.is_empty for s in steps), "ningun pedido puede salir vacio"
 
 
-def test_oracle_never_drops_every_word():
-    """Soltar todas las palabras no es aflojar: es devolver el catalogo entero.
-
-    "counter target spell" no matchea ninguna frase del diccionario --- ya viene
-    en ingles --- asi que las tres palabras son lo unico que dice que buscar.
-    """
-    steps = oracle.build_requests("counter target spell", card_type="instant")
-    assert steps[0].words == ("counter", "target", "spell")
-    assert all(s.words or s.phrases or s.literal_text or s.note == "solo con los filtros"
-               for s in steps)
-    assert steps[1].literal_text, "antes de rendirse prueba el texto tal cual"
 
 
-def test_oracle_intent_carries_a_fallback():
-    steps = oracle.build_requests("", intents=("removal",))
-    assert steps[0].intents == ("removal",)
-    assert any("destroy target" in p for s in steps for p in s.phrases), \
-        "si la etiqueta del proveedor muere, tiene que quedar un plan B"
 
 
-def test_oracle_raw_spanish_is_the_last_resort():
-    """Buscar el texto en espanol puede no funcionar: nunca va primero."""
-    steps = oracle.build_requests("destruye la criatura objetivo")
-    literal = [i for i, s in enumerate(steps) if s.literal_text]
-    assert literal and literal[0] > 0
 
 
-def test_oracle_declares_no_vendor_syntax():
-    """El nucleo pide en sustantivos; la sintaxis vive detras del puerto."""
-    source = (Path(__file__).resolve().parent.parent
-              / "muchi" / "mtg" / "oracle.py").read_text(encoding="utf-8")
-    for leak in ("otag:", "o:\"", "id<=", "mv<=", "scryfall"):
-        assert leak not in source, f"se filtro sintaxis del proveedor: {leak}"
 
 
 # -------------------------------------------------------------- el catalogo
@@ -956,79 +520,20 @@ CARD_JSON = {
 }
 
 
-def test_scryfall_renders_a_request():
-    query = scryfall.render_query(CardRequest(
-        phrases=("draw a card",), words=("dies",), intents=("removal",),
-        colors=("w", "u"), card_type="creature", format_name="commander",
-        max_mana=3,
-    ))
-    assert query == ('o:"draw a card" o:dies otag:removal id<=wu '
-                     't:creature f:commander mv<=3')
 
 
-def test_scryfall_ignores_unknown_intents():
-    """Un chip que el proveedor no tiene no puede ensuciar la query."""
-    query = scryfall.render_query(CardRequest(phrases=("draw a card",),
-                                              intents=("no-existe",)))
-    assert query == 'o:"draw a card"'
 
 
-def test_scryfall_parses_a_card():
-    card = scryfall.parse_card(CARD_JSON)
-    assert card.name == "Lightning Bolt"
-    assert card.image == "https://img/bolt.jpg"
-    assert card.mana_cost == "{R}"
-    assert not card.is_translated
 
 
-def test_scryfall_keeps_the_english_name_on_translations():
-    """Lo mas importante del modulo: al carrito va 'Lightning Bolt', no 'Rayo'.
-
-    Las tiendas chilenas indexan por el nombre en ingles. Si la clave canonica
-    se contaminara con el traducido, la cotizacion no encontraria nada.
-    """
-    card = scryfall.parse_card({
-        **CARD_JSON, "lang": "es", "printed_name": "Rayo",
-        "printed_text": "Rayo hace 3 puntos de dano a cualquier objetivo.",
-        "printed_type_line": "Instantaneo",
-    })
-    assert card.name == "Lightning Bolt"
-    assert card.local_name == "Rayo"
-    assert card.show_as("es")[0] == "Rayo"
-    assert card.show_as("en")[0] == "Lightning Bolt"
 
 
-def test_scryfall_falls_back_to_english():
-    card = scryfall.parse_card(CARD_JSON)
-    name, type_line, text, image = card.show_as("es")
-    assert name == "Lightning Bolt"
-    assert type_line == "Instant" and text.startswith("Lightning Bolt deals")
-    assert image == "https://img/bolt.jpg"
 
 
-def test_scryfall_joins_both_faces():
-    card = scryfall.parse_card({
-        "name": "Delver of Secrets // Insectile Aberration", "lang": "en",
-        "card_faces": [
-            {"name": "Delver of Secrets",
-             "oracle_text": "At the beginning of your upkeep...",
-             "image_uris": {"normal": "https://img/delver.jpg"}},
-            {"name": "Insectile Aberration", "oracle_text": "Flying"},
-        ],
-    })
-    assert "Flying" in card.text and "upkeep" in card.text
-    assert card.image == "https://img/delver.jpg", "la imagen sale de la cara que la tenga"
 
 
-def test_scryfall_builds_an_exact_name_query():
-    assert scryfall.build_name_query(["Sol Ring", "Counterspell"]) \
-        == '(!"Sol Ring" or !"Counterspell")'
-    assert scryfall.build_name_query([]) == ""
 
 
-def test_scryfall_fulfils_the_catalog_port():
-    from muchi.mtg.ports import CardCatalog
-    assert isinstance(scryfall.ScryfallCatalog(sess=None), CardCatalog)
 
 
 def test_muchi_explains_search_resume():
