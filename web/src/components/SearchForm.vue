@@ -1,12 +1,24 @@
 <script setup>
 /** Una Carta o una Lista. El Envío pendiente conserva su Clave de Idempotencia. */
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
-defineProps({
+const props = defineProps({
   busy: { type: Boolean, default: false },
   pending: { type: Boolean, default: false },
   error: { type: String, default: '' },
+  // Los Topes los manda el Servidor. Escritos aquí también, se despegarían
+  // del que de verdad rechaza la Búsqueda.
+  limits: { type: Object, default: () => ({}) },
 })
+
+const maxCards = computed(() => props.limits.max_cards || 100)
+const maxQuantity = computed(() => props.limits.max_quantity || 99)
+
+// Contar Líneas con algo escrito basta para avisar antes de enviar. Quien
+// decide de verdad es el Servidor; esto solo evita el viaje perdido.
+const written = computed(() =>
+  text.value.split('\n').filter((line) => line.trim() && !line.trim().startsWith('#')).length)
+const tooMany = computed(() => written.value > maxCards.value)
 const emit = defineEmits(['search', 'retry', 'resume'])
 
 const text = defineModel('text', { type: String, default: '' })
@@ -23,8 +35,13 @@ const identifier = ref('')
         aria-label="Una Carta o tu Lista"
       ></textarea>
       <div class="mu-fila">
-        <button type="submit" :disabled="busy || pending || !text.trim()">Buscar</button>
-        <span class="mu-caption">Entre 1 y 500 entradas, de 1 a 99 copias.</span>
+        <button type="submit" :disabled="busy || pending || !text.trim() || tooMany">
+          Buscar
+        </button>
+        <span class="mu-caption" :class="{ pasado: tooMany }">
+          Entre 1 y {{ maxCards }} entradas, de 1 a {{ maxQuantity }} copias.
+          <template v-if="written">Llevas {{ written }}.</template>
+        </span>
       </div>
     </form>
 
@@ -48,6 +65,8 @@ const identifier = ref('')
 
 <style scoped>
 h2 { margin-top: 0; }
+/* Pasado el Tope, el Aviso deja de ser una Nota al pie. */
+.pasado { color: var(--mu-acento); font-weight: 700; }
 .mu-fila { display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
 summary { cursor: pointer; font-weight: 600; margin-top: 12px; }
 </style>
