@@ -105,23 +105,3 @@ def pick_phrase(phrases) -> Phrase | None:
 def pick_theme_phrase(book: PhraseBook, dark: bool) -> Phrase | None:
     """Una Frase del Modo que acaba de quedar encendido."""
     return pick_phrase(book.dark if dark else book.light)
-
-
-def build_hearts_html(quantity: int = 9, seed: int | None = None) -> str:
-    """Corazoncitos subiendo, cada uno con su desfase para que no vayan en fila."""
-    rnd = random.Random(seed)
-    pieces = []
-    for _ in range(quantity):
-        left = rnd.randint(4, 88)
-        delay = rnd.uniform(0, 0.7)
-        scale = rnd.uniform(0.75, 1.35)
-        emoji = rnd.choice(["\U0001F49D", "\U0001F495", "\U0001F49E", "\U0001F338"])
-        pieces.append(
-            f'<span class="mu-corazon" style="left:{left}%;'
-            f'animation-delay:{delay:.2f}s;font-size:{scale:.2f}rem">{emoji}</span>'
-        )
-    return '<div class="mu-corazones">' + "".join(pieces) + "</div>"
-
-def build_bubble_html(text: str, state: str = "talk") -> str:
-    """La única burbuja del Muchi lateral, con tono según el mensaje."""
-    return f'<div class="mu-globo mu-globo--{state}">{text}</div>'
