@@ -1,0 +1,51 @@
+# Despliegue del Front en Cloud Run.
+#   gcloud builds submit --config cloudbuild.yaml \
+#     --substitutions=_SERVICE=muchi-web,_REGION=southamerica-west1
+#
+# El Código de Seguridad de la API no viaja acá: se monta desde Secret Manager
+# al desplegar, así nunca queda escrito en la Imagen ni en este Archivo.
+substitutions:
+  _SERVICE: muchi-web
+  _REGION: southamerica-west1
+  _API_URL: https://muchi-serve-api-c2ce6c7oga-rj.a.run.app
+  _TOKEN_SECRET: muchi-api-token
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+images:
+  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/muchi/${_SERVICE}:${SHORT_SHA}
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/muchi/${_SERVICE}:${SHORT_SHA}
+      - .
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/muchi/${_SERVICE}:${SHORT_SHA}
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/muchi/${_SERVICE}:${SHORT_SHA}
+      - --region=${_REGION}
+      - --platform=managed
+      - --allow-unauthenticated
+      - --port=8080
+      - --cpu=1
+      - --memory=512Mi
+      - --min-instances=0
+      - --max-instances=4
+      # La Búsqueda es larga: el Front consulta cada pocos Segundos, pero una
+      # Consulta a la API puede tardar. 120 s deja margen sin colgar la Instancia.
+      - --timeout=120
+      - --set-env-vars=MUCHI_ENV=production,MUCHI_API_URL=${_API_URL}
+      - --set-secrets=MUCHI_API_TOKEN=${_TOKEN_SECRET}:latest
