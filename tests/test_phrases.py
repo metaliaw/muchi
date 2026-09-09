@@ -11,6 +11,8 @@ def test_custom_catalog_controls_messages(tmp_path):
         "phrases": [{"state": "happy", "phrases": ["Caricia"]}],
         "greetings": [{"text": "Bienvenido", "state": "idle"}],
         "help": [{"title": "Ayuda", "detail": "Consulta una Carta"}],
+        "dark": [{"text": "me pongo darkzz", "state": "happy"}],
+        "light": [{"text": "prendieron las luces", "state": "alert"}],
     }
     path = tmp_path / "phrases.yaml"
     path.write_text(yaml.safe_dump(document))
@@ -20,11 +22,13 @@ def test_custom_catalog_controls_messages(tmp_path):
     assert not phrases.speaks_now(10, book.every)
     assert phrases.select_greeting(book, 10) == phrases.Phrase("Bienvenido", "idle")
     assert book.help_topics == (("Ayuda", "Consulta una Carta"),)
+    assert phrases.pick_theme_phrase(book, True).text == "me pongo darkzz"
+    assert phrases.pick_theme_phrase(book, False).text == "prendieron las luces"
 
 
 @pytest.mark.parametrize("field,value", [
     ("every", None), ("every", True), ("every", 0),
-    ("greetings", []), ("help", []),
+    ("greetings", []), ("help", []), ("dark", []), ("light", []),
     ("phrases", [{"state": "anxiety", "phrases": ["Texto"]}]),
     ("phrases", [{"state": "talk", "phrases": "Texto"}]),
     ("greetings", [{"text": "", "state": "talk"}]),
@@ -35,6 +39,15 @@ def test_rejects_invalid_catalog(tmp_path, field, value):
     path = tmp_path / "phrases.yaml"
     path.write_text(yaml.safe_dump(document))
     with pytest.raises(ValueError):
+        phrases.read_phrases(path)
+
+
+def test_missing_theme_lists_have_no_fallback(tmp_path):
+    document = yaml.safe_load(phrases.PHRASES_PATH.read_text())
+    del document["dark"]
+    path = tmp_path / "phrases.yaml"
+    path.write_text(yaml.safe_dump(document))
+    with pytest.raises(ValueError, match="dark"):
         phrases.read_phrases(path)
 
 

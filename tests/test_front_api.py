@@ -1,4 +1,5 @@
 """Prueba la Interfaz contra un Servicio simulado, sin Red ni SQLite."""
+import re
 from decimal import Decimal
 from unittest.mock import Mock
 
@@ -43,6 +44,22 @@ def front(monkeypatch):
     load_api_settings.cache_clear()
 
 
+def read_cards(app):
+    """Las Tarjetas de Ofertas, tal como Muchi las pinta, en su Orden."""
+    return "\n".join(element.value for element in app.markdown)
+
+
+def read_prices(app):
+    """Los Precios de las Tarjetas de Ofertas, de arriba hacia abajo.
+
+    Las Líneas del Carrito también son Tarjetas con Precio, pero se compran,
+    no se miran: se reconocen por su Botón y quedan fuera.
+    """
+    offers = [element.value for element in app.markdown
+              if "mu-precio" in element.value and ">Comprar<" not in element.value]
+    return re.findall(r'class="mu-precio[^"]*">([^<]+)<', "\n".join(offers))
+
+
 def click_button(app, label):
     next(button for button in app.button if button.label == label).click().run()
 
@@ -57,9 +74,9 @@ def test_front_search_and_prices(front):
     assert service.create_search.call_count == 1
     assert app.session_state["terminal_results"]
     assert app.metric[0].value == "CLP 4,247.98"
-    assert app.dataframe[0].value.iloc[0]["Precio"] == 123.99
-    assert app.dataframe[0].value.iloc[0]["Stock"] == "En Stock"
-    assert app.dataframe[0].value.iloc[0]["Tratamiento"] == "No Foil · Inglés"
+    cards = read_cards(app)
+    assert "$124" in cards
+    assert "En Stock" in cards and "No Foil" in cards and "Inglés" in cards
     calls = service.read_search.call_count
     app.run()
     assert service.read_search.call_count == calls
@@ -74,9 +91,9 @@ def test_suspicious_column_explains_itself_in_spanish(front, service_offer):
     app.text_area[0].input("Sol Ring")
     click_button(app, "Buscar")
     assert not app.exception
-    frame = app.dataframe[0].value
-    assert "Motivo" not in frame.columns
-    assert list(frame["Sospechoso"]) == ["Precio bajo el 30% de la Mediana de su Moneda", ""]
+    cards = read_cards(app)
+    assert "Precio bajo el 30% de la Mediana de su Moneda" in cards
+    assert "Verificar" in cards
 
 
 def test_dollar_offers_join_the_cart_at_the_muchi_dolar(front, service_offer):
@@ -112,7 +129,7 @@ def test_table_opens_ordered_by_price_across_every_card(front, service_offer):
     app.text_area[0].input("Sol Ring\nBolt")
     click_button(app, "Buscar")
     assert not app.exception
-    assert list(app.dataframe[0].value["Precio"]) == [800.0, 1500.0, 9000.0]
+    assert read_prices(app) == ["$800", "$1.500", "$9.000"]
 
 
 def test_dollars_stay_in_their_own_block_when_ordering(front, service_offer):
@@ -124,13 +141,7 @@ def test_dollars_stay_in_their_own_block_when_ordering(front, service_offer):
     app.text_area[0].input("Sol Ring")
     click_button(app, "Buscar")
     assert not app.exception
-    frame = app.dataframe[0].value
-    assert list(frame["Moneda"]) == ["CLP", "CLP", "USD"]
-    assert list(frame["Precio"]) == [1500.0, 9000.0, 4.0]
-
-
-def read_cells(app):
-    return str(app.dataframe[0].proto)
+    assert read_prices(app) == ["$1.500", "$9.000", "USD 4,00"]
 
 
 def test_prices_are_written_with_chilean_separators(front, service_offer):
@@ -141,10 +152,7 @@ def test_prices_are_written_with_chilean_separators(front, service_offer):
     app.text_area[0].input("Sol Ring")
     click_button(app, "Buscar")
     assert not app.exception
-    cells = read_cells(app)
-    assert "1.234.567" in cells and "1.791" in cells
-    # El Valor sigue siendo Número, que es lo que la Tabla ordena.
-    assert list(app.dataframe[0].value["Precio"]) == [1791.0, 1234567.0]
+    assert read_prices(app) == ["$1.791", "$1.234.567"]
 
 
 def test_cents_bring_back_the_decimal_comma(front, service_offer):
@@ -155,8 +163,8 @@ def test_cents_bring_back_the_decimal_comma(front, service_offer):
     app.text_area[0].input("Sol Ring")
     click_button(app, "Buscar")
     assert not app.exception
-    cells = read_cells(app)
-    assert "1.500,00" in cells and "3,49" in cells
+    # Los Pesos no llevan Centavos; el Dólar sí, con su Coma.
+    assert read_prices(app) == ["$1.500", "USD 3,49"]
 
 
 def test_search_sends_fixed_options_without_asking(front):
@@ -261,7 +269,7 @@ def test_status_survives_results_failure_and_recovers(front):
     app.run()
     assert not app.exception
     assert app.session_state["terminal_results"]
-    assert app.dataframe[0].value.iloc[0]["Carta"] == "Sol Ring"
+    assert "Sol Ring" in read_cards(app)
 
 
 def test_default_poll_interval_is_five_seconds(front):
@@ -294,8 +302,9 @@ def test_dark_mode_toggle_makes_muchi_talk(front):
 
     assert not app.exception
     assert app.session_state["muchi_oscuro"]
-    assert any("se apaga la luz , baila como pokemon en cOnVerS3" in block.value
-               for block in app.markdown)
+    spoken = "\n".join(block.value for block in app.markdown)
+    assert "me pongo darkzz" in spoken or (
+        "se apaga la luz , baila como pokemon en cOnVerS3" in spoken)
 
 
 def test_light_mode_toggle_embarrasses_muchi(front):
@@ -306,5 +315,5 @@ def test_light_mode_toggle_embarrasses_muchi(front):
 
     assert not app.exception
     assert not app.session_state["muchi_oscuro"]
-    assert any("oh no prendieron las luces, no me vean estoy gordo" in block.value
-               for block in app.markdown)
+    spoken = "\n".join(block.value for block in app.markdown)
+    assert "oh no prendieron las luces, no me vean estoy gordo" in spoken

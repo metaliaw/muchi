@@ -1,4 +1,4 @@
-# Contenido de Muchi: Caricias, Saludos y Ayuda.
+# Contenido de Muchi: Caricias, Saludos, Ayuda y Comentarios de la Luz.
 every: 10
 phrases:
 - state: alert
@@ -43,3 +43,11 @@ help:
   detail: Puedes detener una Búsqueda pendiente con Cancelar Búsqueda.
 - title: De dónde salen los Precios
   detail: El Servicio de Muchi consulta sus Fuentes. Puedes ver su Estado en Fuentes.
+dark:
+- text: me pongo darkzz
+  state: happy
+- text: se apaga la luz , baila como pokemon en cOnVerS3
+  state: happy
+light:
+- text: oh no prendieron las luces, no me vean estoy gordo
+  state: alert
