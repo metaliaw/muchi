@@ -351,6 +351,7 @@ def test_phrases_file_ships_with_example():
     assert phrases.PHRASES_PATH.exists(), "constants/phrases.yaml is missing"
     text = phrases.PHRASES_PATH.read_text(encoding="utf-8")
     assert "greetings:" in text and "help:" in text
+    assert "dark:" in text and "light:" in text
 
 
 def test_normalize_name():
