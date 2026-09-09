@@ -182,7 +182,7 @@ El Front carga su Configuración en este orden:
 
 Los Tiempos deben ser positivos y finitos. Los Archivos de Configuración usan
 YAML; las Credenciales se inyectan por separado. Las Frases de Muchi están en
-[constants/phrases.yaml](constants/phrases.yaml), incluidos los Saludos y la Ayuda.
+[constants/phrases.json](constants/phrases.json), incluidos los Saludos y la Ayuda.
 `muchi/mtg/phrases.py` carga ese Contenido y genera las Burbujas y los Corazones;
 `messaging.py` sólo decide la prioridad de los Mensajes.
 
