@@ -151,12 +151,14 @@ def read_languages() -> dict:
 
 @app.get("/api/card/art")
 def read_card_art(name: str = Query(min_length=1, max_length=200),
-                  language: str = Query("", max_length=5)) -> dict:
+                  language: str = Query("", max_length=5),
+                  edition: str = Query("", max_length=10),
+                  foil: bool = Query(False)) -> dict:
     """La Imagen de una Carta, servida por Scryfall directo al Navegador."""
     translator = build_muchi().translator
     if language and language not in translator.codes:
         raise HTTPException(400, f"El Idioma «{language}» no está en la Lista.")
-    art = translator.find_art(name, language)
+    art = translator.find_art(name, language, edition, foil)
     if not art:
         raise HTTPException(404, f"No hay Imagen de «{name}».")
     return art

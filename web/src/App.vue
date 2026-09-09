@@ -97,8 +97,9 @@ function loadCard(canonicalName) {
   lookupText.value = canonicalName
 }
 
-function lookAtCard(name, language = '') {
-  watched.value = { name, language }
+// Del Buscador llega un Nombre; de una Oferta, la Impresion entera.
+function lookAtCard(card) {
+  watched.value = card
 }
 
 // Muchi no completa el Campo: dice lo que vio y quien escribe decide.

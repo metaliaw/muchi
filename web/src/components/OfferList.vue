@@ -4,6 +4,13 @@ import { formatAmount, formatClp } from '../api.js'
 
 const emit = defineEmits(['look'])
 
+// Lo que identifica la Impresion en venta. Sin Edicion, Scryfall elige ella.
+const printingOf = (offer) => ({
+  name: offer.card_name,
+  edition: offer.edition || '',
+  foil: Boolean(offer.finish && offer.finish.toLowerCase().includes('foil')),
+})
+
 defineProps({
   offers: { type: Array, default: () => [] },
   summary: { type: Object, default: null },
@@ -35,8 +42,8 @@ defineProps({
       <div class="mu-oferta-cab">
         <h3 class="mu-mirable" tabindex="0" role="button"
             :title="`Mira ${offer.card_name}`"
-            @click="emit('look', offer.card_name)"
-            @keydown.enter="emit('look', offer.card_name)">{{ offer.card_name }}</h3>
+            @click="emit('look', printingOf(offer))"
+            @keydown.enter="emit('look', printingOf(offer))">{{ offer.card_name }}</h3>
         <span class="mu-precio">{{ formatAmount(offer.amount, offer.currency) }}</span>
       </div>
       <div>

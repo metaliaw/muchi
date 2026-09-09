@@ -67,8 +67,9 @@ async function lookup() {
   try {
     const card = await api.readCard(name.value, language.value)
     emit('found', card.canonical_name)
-    // Traducir ya sabe cual Carta es: mostrarla no cuesta un Pulso mas.
-    emit('look', card.canonical_name)
+    // Traducir ya sabe cual Carta es: mostrarla no cuesta un Pulso mas. Va el
+    // Nombre canonico sin Idioma: la Imagen inglesa es la que todos reconocen.
+    emit('look', { name: card.canonical_name })
   } catch (error) {
     emit('failed', error.message)
   } finally {
