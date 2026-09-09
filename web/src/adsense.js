@@ -4,6 +4,12 @@ let scriptLoad = null
 export function loadAds(client) {
   if (scriptLoad) return scriptLoad
 
+  const existing = document.querySelector('script[data-muchi-adsense]')
+  if (existing) {
+    scriptLoad = Promise.resolve()
+    return scriptLoad
+  }
+
   scriptLoad = new Promise((resolve, reject) => {
     const script = document.createElement('script')
     script.async = true
