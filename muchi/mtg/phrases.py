@@ -1,16 +1,16 @@
 """Carga los Textos de Muchi y Presenta su Burbuja y sus Corazones."""
 from __future__ import annotations
 
+import json
 import random
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
-import yaml
-
 from muchi.paths import ROOT
 
-PHRASES_PATH = ROOT / "constants" / "phrases.yaml"
+# El Contenido de Muchi: Caricias, Saludos, Ayuda y Comentarios de la Luz.
+PHRASES_PATH = ROOT / "constants" / "phrases.json"
 # Estados del Protocolo visual, compartidos por Frases y Burbujas.
 STATES = frozenset({"idle", "talk", "happy", "alert", "angry"})
 
@@ -83,10 +83,10 @@ def read_phrases(path: Path = PHRASES_PATH) -> PhraseBook:
     """Lee una vez el Catálogo. Un Archivo ausente desactiva los Mensajes."""
     if not path.exists():
         return PhraseBook(every=0, phrases=())
-    doc = yaml.safe_load(path.read_text(encoding="utf-8"))
     try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
         return build_phrase_book(doc)
-    except (KeyError, TypeError) as error:
+    except (KeyError, TypeError, json.JSONDecodeError) as error:
         raise ValueError("Estructura de Frases inválida.") from error
 
 

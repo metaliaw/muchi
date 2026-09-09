@@ -319,7 +319,7 @@ def test_phrase_book_reads_yaml():
 def test_phrase_book_missing_file_is_harmless():
     from muchi.mtg import phrases
 
-    book = phrases.read_phrases(Path("no-such-phrases.yaml"))
+    book = phrases.read_phrases(Path("no-such-phrases.json"))
     assert book.every == 0 and book.phrases == ()
 
 
@@ -348,10 +348,9 @@ def test_speaks_now_on_the_boundary():
 def test_phrases_file_ships_with_example():
     from muchi.mtg import phrases
 
-    assert phrases.PHRASES_PATH.exists(), "constants/phrases.yaml is missing"
-    text = phrases.PHRASES_PATH.read_text(encoding="utf-8")
-    assert "greetings:" in text and "help:" in text
-    assert "dark:" in text and "light:" in text
+    assert phrases.PHRASES_PATH.exists(), "constants/phrases.json is missing"
+    doc = json.loads(phrases.PHRASES_PATH.read_text(encoding="utf-8"))
+    assert set(doc) == {"every", "phrases", "greetings", "help", "dark", "light"}
 
 
 def test_normalize_name():
