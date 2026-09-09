@@ -227,8 +227,8 @@ Puedes añadir `MUCHI_API_SEARCH_ID` para verificar una Búsqueda existente.
 ## Documentación
 
 - [Arquitectura de Muchi](docs/arquitectura.md): la Frontera entre Código
-  público y Lógica privada, el Recorrido de una Búsqueda, la Seguridad y las
-  formas de aprender y colaborar.
+  público y Lógica privada, Seguridad, Datos, Operación y una Guía neutral para
+  replicar el Patrón con otros Proveedores.
 - [Compartir el Stock de una Tienda](INTEGRAR-TIENDA.md).
 - [Contrato de Muchi API](docs/api/openapi.yaml): copia de referencia del archivo
   `openapi.yaml` del [Repositorio privado muchi-api](https://github.com/cangrejometralleta/muchi-api).
