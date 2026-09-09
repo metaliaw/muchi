@@ -139,6 +139,16 @@ streamlit run app.py
 Para Producción, selecciona `MUCHI_ENV=production` y configura la URL y el Token
 en el Entorno de Despliegue.
 
+### El Token
+
+`./get-secret.sh` baja el Token vigente de Secret Manager y lo escribe en tu
+`.env`. Es para el Desarrollo local: en la Nube, Cloud Run lo monta solo.
+
+Para **rotarlo**, usa `./rotate-secret.sh` del Repositorio `muchi-api`. Ahí se
+crea el Secreto y ahí se versiona, y esa Rotación alcanza a los tres Servicios
+que lo consumen —el Worker, la API y este Front—. Un segundo Rotador de este
+lado solo se volvería viejo sin que nadie lo notara.
+
 ## Configuración y Arquitectura
 
 El Front carga su Configuración en este orden:
