@@ -56,7 +56,7 @@ onUnmounted(() => { if (forget) clearTimeout(forget) })
       <input :id="`id-${state.id}`" class="mu-id-campo" :value="state.id" readonly
              @focus="$event.target.select()" />
       <button class="mu-ghost" type="button" @click="copyIdentifier">
-        {{ copied ? '✅ Copiado' : 'Copiar' }}
+        {{ copied ? '✅ Copiado' : '📋 Copiar' }}
       </button>
     </div>
     <p v-if="checked" class="mu-caption">Último Estado recibido: {{ checked }}</p>
