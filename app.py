@@ -8,7 +8,6 @@ from urllib.parse import quote
 from decimal import Decimal
 from datetime import datetime, timezone
 
-import pandas
 import streamlit as st
 from dotenv import load_dotenv
 
@@ -35,11 +34,14 @@ STOCK_LABELS = {"available": "En Stock", "unavailable": "Agotado",
 VERIFY_STOCK = True
 STORES_ONLY = True
 SUSPICIOUS_REASON = re.compile(r"price_below_(\d+)_percent_median")
+# El Aviso que acompaña a una Oferta sospechosa, bajo sus Pastillas.
+SUSPICIOUS_NOTE = ("Muy por debajo de las otras Ofertas; verifica la Variante "
+                   "y el Precio final.")
+# Los Acabados van en Dorado; el resto del Tratamiento, en Gris.
+FOIL_TAGS = ("Foil", "Etched")
 # El Muchi Dólar solo convierte Dólares. Una Oferta en otra Moneda se muestra
 # con su Valor original y queda fuera del Carrito, porque nadie sabe cuánto es.
 MUCHI_DOLAR_CURRENCY = "USD"
-DARK_PHRASE = "se apaga la luz , baila como pokemon en cOnVerS3"
-LIGHT_PHRASE = "oh no prendieron las luces, no me vean estoy gordo"
 MUCHI_MESSENGER = None
 
 st.set_page_config(page_title="Muchi.cl", page_icon=CAT, layout="wide")
@@ -65,8 +67,9 @@ def toggle_dark_mode() -> None:
     El Toggle ya dejó su Valor nuevo en session_state cuando llega acá.
     """
     dark = st.session_state["muchi_oscuro"]
-    remember_muchi(html.escape(DARK_PHRASE if dark else LIGHT_PHRASE),
-                   "happy" if dark else "alert")
+    phrase = phrases.pick_theme_phrase(phrases.read_phrases(), dark)
+    if phrase:
+        remember_muchi(html.escape(phrase.text), phrase.state)
 
 
 @st.cache_resource
@@ -290,64 +293,76 @@ def read_suspicious_note(reason: str) -> str:
     return reason or "Precio fuera de Rango"
 
 
-def build_offer_row(offer) -> dict:
-    return {
-        "Carta": offer.card_name, "Tienda": offer.store,
-        "Tratamiento": treatment.build_treatment(offer),
-        "Precio": float(offer.amount), "Moneda": offer.currency,
-        "Stock": STOCK_LABELS.get(offer.stock_status, offer.stock_status),
-        "Sospechoso": read_suspicious_note(offer.suspicious_reason)
-        if offer.suspicious else "",
-        "Oferta": offer.url,
-    }
+def build_offer_pills(offer) -> list[tuple[str, str]]:
+    """Las Pastillas de una Oferta: quién la vende, cómo viene y su Stock."""
+    pills = [("tienda", offer.store)]
+    for tag in treatment.build_treatment(offer).split(treatment.SEPARATOR):
+        if tag:
+            pills.append(("foil" if tag in FOIL_TAGS else "cond", tag))
+    label = STOCK_LABELS.get(offer.stock_status, offer.stock_status)
+    pills.append(("tienda" if offer.stock_status == "available" else "cond", label))
+    if offer.suspicious:
+        pills.append(("cond", f"\u26a0 {read_suspicious_note(offer.suspicious_reason)}"))
+    return pills
 
 
-def order_rows(rows: list[dict]) -> list[dict]:
+def order_offers(offers: list) -> list:
     """Abre por Precio, barata primero, mezclando todas las Cartas.
 
-    La Tabla es ordenable por Encabezado, así que esto es solo el Orden de
-    partida: el que sirve para responder "cuánto sale lo más barato".
+    Cada Moneda va en su propio Bloque: comparar 4 Dólares contra 4000 Pesos
+    por su Número sería mentir, y el Muchi Dólar es un Cambio de Muchi, no el
+    Precio que la Tienda publica.
     """
-    return sorted(rows, key=lambda row: (row["Moneda"], row["Precio"]))
+    return sorted(offers, key=lambda offer: (offer.currency, offer.amount))
 
 
-def build_price_format(rows: list[dict]):
-    """Escribe el Precio a la Chilena: Punto de Miles, Coma de Decimales.
+def pick_cheapest(offers: list, muchi_dolar: int):
+    """La Oferta más barata que Muchi recomendaría: sin Alertas ni Agotados."""
+    eligible = [offer for offer in offers
+                if not offer.suspicious and offer.stock_status != "unavailable"
+                and convert_to_clp(offer, muchi_dolar) is not None]
+    return min(eligible, key=lambda offer: convert_to_clp(offer, muchi_dolar),
+               default=None)
 
-    Los Decimales aparecen solo si alguna Oferta los trae. Los Pesos no llevan
-    Centavos y la Columna se lee mejor sin ellos, pero 3,49 tampoco es 3.
 
-    Se aplica como Formato de pandas y no como `format` de la Columna: así la
-    Celda se lee 1.791 mientras el Valor sigue siendo el Número 1791, que es
-    lo que la Tabla ordena cuando alguien pincha el Encabezado.
-    """
-    decimals = 0 if all(float(row["Precio"]).is_integer() for row in rows) else 2
-    swap = str.maketrans(",.", ".,")
-    return lambda value: f"{value:,.{decimals}f}".translate(swap)
+def show_offers_summary(offers: list, muchi_dolar: int) -> None:
+    """Las tres Fichas de arriba: el Piso, cuántas Ofertas y de cuántas Tiendas."""
+    prices = [price for price in (convert_to_clp(offer, muchi_dolar) for offer in offers)
+              if price is not None]
+    lowest = style.format_clp(round(min(prices))) if prices else "—"
+    c1, c2, c3 = st.columns(3)
+    c1.markdown(style.paint_tile("Menor Observado", lowest, ok=bool(prices)),
+                unsafe_allow_html=True)
+    c2.markdown(style.paint_tile("Ofertas", str(len(offers))), unsafe_allow_html=True)
+    c3.markdown(style.paint_tile("Tiendas", str(len({offer.store for offer in offers}))),
+                unsafe_allow_html=True)
+    st.write("")
 
 
 def show_search_results(items) -> None:
-    rows = []
+    muchi_dolar = load_rate_settings().muchi_dolar
+    offers = []
     for item in items:
         if item.status == "source_error":
             st.warning(f"{item.name}: no se pudo completar la Consulta.")
         elif item.status == "not_found":
             st.caption(f"{item.name}: sin Ofertas.")
-        rows.extend(build_offer_row(offer) for offer in item.offers)
-    if rows:
-        rows = order_rows(rows)
-        frame = pandas.DataFrame(rows)
-        st.dataframe(
-            frame.style.format({"Precio": build_price_format(rows)}),
-            hide_index=True, use_container_width=True,
-            column_config={
-                "Oferta": st.column_config.LinkColumn("Oferta"),
-                "Sospechoso": st.column_config.TextColumn(
-                    "Sospechoso",
-                    help="Por qué Muchi desconfía del Precio. El Carrito las descarta.",
-                ),
-            },
-        )
+        offers.extend(item.offers)
+    if offers:
+        offers = order_offers(offers)
+        cheapest = pick_cheapest(offers, muchi_dolar)
+        show_offers_summary(offers, muchi_dolar)
+        for offer in offers:
+            best = offer is cheapest
+            pills = build_offer_pills(offer)
+            if best:
+                pills.append(("mejor", "\U0001F43E el mas barato"))
+            st.markdown(style.paint_offer_card(
+                offer.card_name, style.format_amount(offer.amount, offer.currency),
+                offer.url, pills, best=best,
+                note=SUSPICIOUS_NOTE if offer.suspicious else "",
+                action="Verificar" if offer.suspicious else "Ver",
+            ), unsafe_allow_html=True)
     else:
         state = st.session_state.get("search_state")
         if st.session_state.get("search_unavailable"):
@@ -396,8 +411,15 @@ def show_search_cart(items) -> None:
         if converted:
             st.caption(f"{converted} Ofertas en USD entraron convertidas.")
         st.metric("Total con Envíos", f"CLP {Decimal(plan.total):,.2f}")
-        if plan.lines:
-            st.dataframe([vars(line) for line in plan.lines], hide_index=True)
+        for store in plan.stores:
+            lines = [line for line in plan.lines if line.store == store]
+            cards = sum(line.quantity for line in lines)
+            subtotal = sum(line.subtotal for line in lines)
+            st.markdown(style.paint_store_header(store, cards, round(subtotal),
+                                                 plan.shipping_per_store),
+                        unsafe_allow_html=True)
+            for line in lines:
+                st.markdown(style.paint_line(line), unsafe_allow_html=True)
         if plan.missing:
             st.caption("Sin Oferta apta: " + ", ".join(plan.missing))
 
