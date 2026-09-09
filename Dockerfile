@@ -1,30 +1,35 @@
-# Un solo Servicio en Cloud Run: el Front compilado y el BFF que lo sirve.
-# Compilar el Front acá evita subir node_modules y deja el Despliegue
-# reproducible: la misma Imagen se construye igual en cualquier Máquina.
-FROM node:22-alpine AS web
-WORKDIR /web
-COPY web/package.json web/package-lock.json* ./
-RUN npm ci || npm install
-COPY web/ ./
-RUN npm run build
+# Muchi en un Contenedor: Dependencias primero, Codigo despues.
+#
+# El orden importa. requirements.txt cambia poco y el codigo cambia siempre,
+# asi que la capa de pip se cachea entre deploys y solo se recompila cuando
+# una dependencia se mueve de verdad.
+#
+# Esta Rama sirve el Front de Streamlit. El Front Vue vive en
+# experimental-vue, con su propio Dockerfile de dos Etapas y su BFF.
+FROM python:3.12-slim
 
-FROM python:3.11-slim
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+# PYTHONUNBUFFERED manda los logs a Cloud Logging apenas se escriben; sin el,
+# Python los guarda en un buffer y el ultimo grito antes de morir se pierde.
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
+
 WORKDIR /app
 
-COPY requirements-web.txt ./
-# El Front nuevo no usa Streamlit ni el Scraping antiguo: solo el Dominio,
-# el Cliente HTTP de la API y el BFF.
-RUN pip install --no-cache-dir -r requirements-web.txt \
-    "requests>=2.32" "pyyaml>=6.0" "python-dotenv>=1.0"
+COPY requirements.txt ./
+RUN pip install --requirement requirements.txt
 
-COPY muchi/ ./muchi/
-COPY server/ ./server/
-COPY config/ ./config/
-COPY constants/ ./constants/
-COPY --from=web /web/dist ./web/dist
+COPY . .
 
-ENV MUCHI_ENV=production PORT=8080
+# Cloud Run elige el Puerto y lo anuncia en PORT; 8080 es su Default y sirve
+# para correr esta misma Imagen a mano. La direccion va en 0.0.0.0 porque el
+# Contenedor recibe Trafico de afuera, no de si mismo.
+ENV PORT=8080
 EXPOSE 8080
-# Cloud Run entrega el Puerto en $PORT y espera que el Proceso escuche ahí.
-CMD ["sh", "-c", "uvicorn server.main:app --host 0.0.0.0 --port ${PORT:-8080}"]
+
+CMD exec streamlit run app.py \
+    --server.port "$PORT" \
+    --server.address 0.0.0.0 \
+    --server.headless true \
+    --server.runOnSave false \
+    --browser.gatherUsageStats false

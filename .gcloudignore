@@ -12,6 +12,11 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 
+# El Front Vue vive en experimental-vue y no entra en esta Imagen, pero su
+# node_modules queda en disco al cambiar de Rama: cuarenta y un megas subiendo
+# en cada deploy que no sirven para nada acá.
+web/
+
 # Los Secretos viajan por Secret Manager, nunca en la Imagen.
 .env
 .streamlit/secrets.toml
