@@ -1,0 +1,24 @@
+meta {
+  name: Get Search
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/searches/{{searchId}}
+  body: none
+  auth: inherit
+}
+
+docs {
+  El Estado de la Búsqueda. Si processed no se mueve y status sigue en
+  queued, nadie la está tomando: mirá Source Health antes de culpar a la
+  Búsqueda.
+}
+
+tests {
+  test("responde con la Búsqueda pedida", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().id).to.equal(bru.getEnvVar("searchId"));
+  });
+}
