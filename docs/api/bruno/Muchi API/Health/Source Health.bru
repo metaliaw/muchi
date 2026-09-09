@@ -1,0 +1,29 @@
+meta {
+  name: Source Health
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/health/sources
+  body: none
+  auth: inherit
+}
+
+docs {
+  El Estado de cada Fuente. last_success dice cuándo se consultó por última
+  vez de verdad: si todas quedaron congeladas en el mismo Minuto, el Worker
+  dejó de trabajar.
+}
+
+tests {
+  test("cada Fuente trae su Cuenta de Fallos", function () {
+    expect(res.getStatus()).to.equal(200);
+    const sources = res.getBody().sources;
+    expect(sources).to.be.an("array");
+    sources.forEach((source) => {
+      expect(source.source).to.be.a("string");
+      expect(source.consecutive_failures).to.be.a("number");
+    });
+  });
+}

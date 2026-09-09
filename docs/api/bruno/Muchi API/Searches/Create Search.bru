@@ -1,0 +1,48 @@
+meta {
+  name: Create Search
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/searches
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+  Idempotency-Key: {{$randomUUID}}
+}
+
+body:json {
+  {
+    "cards": [
+      { "name": "Sol Ring", "quantity": 1 },
+      { "name": "Anger", "quantity": 2 }
+    ],
+    "options": { "verify_stock": true, "stores_only": false }
+  }
+}
+
+docs {
+  Devuelve 202 y la Búsqueda en queued: encolar no es procesar. El
+  Identificador queda guardado en el Entorno para las Peticiones que siguen.
+
+  La Idempotency-Key va sola en cada Envío. Repetir la misma Clave con otro
+  Cuerpo da 409; repetirla con el mismo devuelve la Búsqueda original.
+}
+
+script:post-response {
+  if (res.getStatus() === 202) {
+    bru.setEnvVar("searchId", res.getBody().id);
+  }
+}
+
+tests {
+  test("la Búsqueda queda encolada", function () {
+    expect(res.getStatus()).to.equal(202);
+    expect(res.getBody().status).to.equal("queued");
+    expect(res.getBody().total).to.equal(2);
+  });
+}

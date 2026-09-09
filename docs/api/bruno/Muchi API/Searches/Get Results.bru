@@ -1,0 +1,27 @@
+meta {
+  name: Get Results
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/searches/{{searchId}}/results
+  body: none
+  auth: inherit
+}
+
+docs {
+  Resultados parciales o finales: responde 200 aunque la Búsqueda no haya
+  terminado, con los Ítems todavía en pending y sus Ofertas vacías.
+}
+
+tests {
+  test("cada Ítem trae su Estado y sus Ofertas", function () {
+    expect(res.getStatus()).to.equal(200);
+    res.getBody().items.forEach((item) => {
+      expect(item.status).to.be.oneOf(
+        ["pending", "running", "found", "not_found", "source_error"]);
+      expect(item.offers).to.be.an("array");
+    });
+  });
+}
