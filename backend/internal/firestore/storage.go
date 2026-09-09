@@ -26,10 +26,9 @@ import (
 // (an HTTP handler, a Cloud Tasks-triggered function) may carry much longer ones.
 const maxRPCDeadline = 20 * time.Second
 
-// A Claim looks past the Head of the Queue. One Document that cannot be
-// claimed used to stop every other one behind it: the Query returned it, the
-// Claim refused it, and the Worker answered "no Work" forever.
-const claimCandidates = 20
+// One Turn discards this many dead Items before its final Claim. The Bound
+// keeps a damaged Queue from holding one Function open without Limit.
+const maxClaimDiscards = 20
 
 // A finished Item is parked beyond its own Expiry. Parked exactly on it, it
 // became claimable at the very Instant a Claim starts refusing it, and every
@@ -189,24 +188,28 @@ func (s *Store) CancelSearch(ctx context.Context, id, key, hash string) (search.
 func (s *Store) ClaimSearchItem(ctx context.Context, owner string, lease time.Duration) (search.Item, error) {
 	ctx, cancel := boundContext(ctx)
 	defer cancel()
+	for attempt := 0; attempt <= maxClaimDiscards; attempt++ {
+		claimed, discarded, err := s.claimSearchItem(ctx, owner, lease)
+		if err != nil || claimed.ID != "" {
+			return claimed, mapStoreError(err)
+		}
+		s.say().Warn("Claim Discarded Dead Item", "item", discarded)
+	}
+	return search.Item{}, search.ErrNotFound
+}
+
+func (s *Store) claimSearchItem(ctx context.Context, owner string, lease time.Duration) (search.Item, string, error) {
 	var claimed search.Item
+	var discarded string
 	err := s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
 		query := s.client.Collection("items").
 			Where("available_at", "<=", time.Now().UTC()).
 			OrderBy("available_at", firestorelib.Asc).
-			Limit(claimCandidates)
+			Limit(1)
 		documents := tx.Documents(query)
-		var skipped []string
 		for {
 			document, err := documents.Next()
 			if errors.Is(err, iterator.Done) {
-				// Skipping every Candidate is not an idle Turn, and the two
-				// used to look identical from outside. That is what let the
-				// Queue stall for two hours without a single Warning.
-				if len(skipped) > 0 {
-					s.say().Warn("Claim Skipped Every Candidate",
-						"skipped", len(skipped), "items", skipped)
-				}
 				return search.ErrNotFound
 			}
 			if err != nil {
@@ -217,17 +220,13 @@ func (s *Store) ClaimSearchItem(ctx context.Context, owner string, lease time.Du
 			// clean until one of them is actually taken.
 			err = s.claimItem(ctx, tx, document, owner, lease, &claimed)
 			if errors.Is(err, search.ErrNotFound) {
-				skipped = append(skipped, document.Ref.ID)
-				continue
-			}
-			if err == nil && len(skipped) > 0 {
-				s.say().Warn("Claim Stepped Over Dead Items",
-					"skipped", len(skipped), "items", skipped, "claimed", claimed.ID)
+				discarded = document.Ref.ID
+				return tx.Delete(document.Ref)
 			}
 			return err
 		}
 	})
-	return claimed, mapStoreError(err)
+	return claimed, discarded, err
 }
 
 // CountWaitingItems Says how many Items are ready for a Turn right now.
@@ -483,8 +482,11 @@ func (s *Store) claimItem(ctx context.Context, tx *firestorelib.Transaction, doc
 		return search.ErrNotFound
 	}
 	job, err := s.readSearch(ctx, tx, item.SearchID)
-	if err != nil || job.Status == search.JobCancelled {
+	if status.Code(err) == codes.NotFound || errors.Is(err, search.ErrNotFound) || job.Status == search.JobCancelled {
 		return search.ErrNotFound
+	}
+	if err != nil {
+		return err
 	}
 	now := time.Now().UTC()
 	expires := now.Add(lease)

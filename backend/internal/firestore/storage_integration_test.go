@@ -170,6 +170,34 @@ func TestPoisonItemDoesNotBlockTheQueue(t *testing.T) {
 	}
 }
 
+// TestOrphanItemsLeaveTheQueue Reproduces the Production Stall: Firestore TTL
+// can remove a Search before its Items, leaving the oldest Turns unclaimable.
+func TestOrphanItemsLeaveTheQueue(t *testing.T) {
+	store := openTestStore(t)
+	ctx := context.Background()
+	createTestSearch(t, store, "after-orphans")
+
+	for position := range maxClaimDiscards {
+		id := fmt.Sprintf("item_orphan_%02d", position)
+		record := itemRecord{
+			Payload: mustJSON(search.Item{
+				ID: id, SearchID: "search_expired", Status: search.ItemPending,
+			}),
+			SearchID: "search_expired", Position: position,
+			AvailableAt: time.Now().UTC().Add(-time.Hour),
+			ExpiresAt:   time.Now().UTC().Add(time.Hour),
+		}
+		if _, err := store.client.Collection("items").Doc(id).Set(ctx, record); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	claimed, err := store.ClaimSearchItem(ctx, "worker", time.Minute)
+	if err != nil || claimed.SearchID == "search_expired" {
+		t.Fatalf("the Queue stalled behind orphan Items: claimed=%#v err=%v", claimed, err)
+	}
+}
+
 // TestFinishedItemLeavesTheQueue Keeps dead Documents out of the Candidates.
 // Parked on its own Expiry, a finished Item came back as an eternal Skip.
 func TestFinishedItemLeavesTheQueue(t *testing.T) {
