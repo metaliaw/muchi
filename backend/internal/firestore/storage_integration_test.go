@@ -141,3 +141,61 @@ func TestListEmptySources(t *testing.T) {
 		t.Fatalf("empty sources JSON=%s", body)
 	}
 }
+
+// TestPoisonItemDoesNotBlockTheQueue Reproduces the Stall that stopped every
+// Search: one Document that a Claim always refuses, sitting at the Head.
+func TestPoisonItemDoesNotBlockTheQueue(t *testing.T) {
+	store := openTestStore(t)
+	ctx := context.Background()
+	job := createTestSearch(t, store, "poison")
+
+	// The Poison: expired, and available before every healthy Item, so the
+	// Query hands it over first on every single Turn.
+	poison := itemRecord{
+		Payload:     mustJSON(search.Item{ID: "item_poison", SearchID: job.ID, Status: search.ItemPending}),
+		SearchID:    job.ID,
+		AvailableAt: time.Now().UTC().Add(-time.Hour),
+		ExpiresAt:   time.Now().UTC().Add(-time.Hour),
+	}
+	if _, err := store.client.Collection("items").Doc("item_poison").Set(ctx, poison); err != nil {
+		t.Fatal(err)
+	}
+
+	claimed, err := store.ClaimSearchItem(ctx, "worker", time.Minute)
+	if err != nil {
+		t.Fatalf("the Queue stalled behind the poisoned Item: %v", err)
+	}
+	if claimed.ID == "item_poison" {
+		t.Fatalf("an expired Item was claimed: %#v", claimed)
+	}
+}
+
+// TestFinishedItemLeavesTheQueue Keeps dead Documents out of the Candidates.
+// Parked on its own Expiry, a finished Item came back as an eternal Skip.
+func TestFinishedItemLeavesTheQueue(t *testing.T) {
+	store := openTestStore(t)
+	ctx := context.Background()
+	createTestSearch(t, store, "finished")
+
+	item, err := store.ClaimSearchItem(ctx, "worker", time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	item.Status = search.ItemFound
+	if err := store.CompleteSearchItem(ctx, item, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	document, err := store.client.Collection("items").Doc(item.ID).Get(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var record itemRecord
+	if err := document.DataTo(&record); err != nil {
+		t.Fatal(err)
+	}
+	if !record.AvailableAt.After(record.ExpiresAt) {
+		t.Fatalf("a finished Item stays claimable at its Expiry: available=%v expires=%v",
+			record.AvailableAt, record.ExpiresAt)
+	}
+}

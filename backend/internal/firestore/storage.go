@@ -25,6 +25,16 @@ import (
 // (an HTTP handler, a Cloud Tasks-triggered function) may carry much longer ones.
 const maxRPCDeadline = 20 * time.Second
 
+// A Claim looks past the Head of the Queue. One Document that cannot be
+// claimed used to stop every other one behind it: the Query returned it, the
+// Claim refused it, and the Worker answered "no Work" forever.
+const claimCandidates = 20
+
+// A finished Item is parked beyond its own Expiry. Parked exactly on it, it
+// became claimable at the very Instant a Claim starts refusing it, and every
+// Turn from then on wasted a Candidate Slot on a dead Document.
+const doneParking = 24 * time.Hour
+
 // boundContext shortens ctx's deadline to maxRPCDeadline when the caller's is longer,
 // while still honoring an earlier deadline or cancellation from the caller.
 func boundContext(ctx context.Context) (context.Context, context.CancelFunc) {
@@ -169,15 +179,25 @@ func (s *Store) ClaimSearchItem(ctx context.Context, owner string, lease time.Du
 		query := s.client.Collection("items").
 			Where("available_at", "<=", time.Now().UTC()).
 			OrderBy("available_at", firestorelib.Asc).
-			Limit(1)
-		document, err := tx.Documents(query).Next()
-		if errors.Is(err, iterator.Done) {
-			return search.ErrNotFound
-		}
-		if err != nil {
+			Limit(claimCandidates)
+		documents := tx.Documents(query)
+		for {
+			document, err := documents.Next()
+			if errors.Is(err, iterator.Done) {
+				return search.ErrNotFound
+			}
+			if err != nil {
+				return err
+			}
+			// A Candidate that cannot be claimed is skipped, never fatal.
+			// claimItem refuses before it writes, so the Transaction stays
+			// clean until one of them is actually taken.
+			err = s.claimItem(ctx, tx, document, owner, lease, &claimed)
+			if errors.Is(err, search.ErrNotFound) {
+				continue
+			}
 			return err
 		}
-		return s.claimItem(ctx, tx, document, owner, lease, &claimed)
 	})
 	return claimed, mapStoreError(err)
 }
@@ -428,7 +448,7 @@ func (s *Store) completeItem(ctx context.Context, tx *firestorelib.Transaction, 
 		return err
 	}
 	item.LeaseOwner, item.LeaseUntil = "", nil
-	record.Payload, record.AvailableAt = mustJSON(item), record.ExpiresAt
+	record.Payload, record.AvailableAt = mustJSON(item), record.ExpiresAt.Add(doneParking)
 	record.LeaseOwner, record.LeaseUntil = "", nil
 	if err := tx.Set(reference, record); err != nil {
 		return err
