@@ -87,5 +87,11 @@
       "text": "aayy mis ojos, avisa antes de prender la luz",
       "state": "alert"
     }
+  ],
+  "nerd": [
+    {
+      "text": "HAAAA NERDD!",
+      "state": "happy"
+    }
   ]
 }
