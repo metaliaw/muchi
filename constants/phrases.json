@@ -1,0 +1,98 @@
+{
+  "every": 10,
+  "phrases": [
+    {
+      "state": "alert",
+      "phrases": [
+        "Ver dos Islas enderezadas me pone nervioso",
+        "Dos Tierras enderezadas... me tiemblan las patitas",
+        "Un mulligan a cuatro me da cosita"
+      ]
+    },
+    {
+      "state": "happy",
+      "phrases": [
+        "¡Miau! Otro clic más cerca de un Sol Ring",
+        "Encontré justo la Carta que buscabas, de nada",
+        "¡Nya! Tu Mazo quedó genial"
+      ]
+    },
+    {
+      "state": "angry",
+      "phrases": [
+        "¿Otra vez sin Stock? Grrr, las Tiendas se portan mal",
+        "El Envío salió más caro que la Carta, no puede ser"
+      ]
+    },
+    {
+      "state": "idle",
+      "phrases": [
+        "Mira, si me dejas acariciar me duermo",
+        "Zzz... me despiertas cuando haya una Promoción"
+      ]
+    },
+    {
+      "state": "talk",
+      "phrases": [
+        "¿Sabías que puedes retomar una Búsqueda con su enlace?",
+        "Miau, ¿y si preparamos un Mazo nuevo?"
+      ]
+    }
+  ],
+  "greetings": [
+    {
+      "text": "Miau, ¿en qué te ayudo?",
+      "state": "talk"
+    },
+    {
+      "text": "¿Qué Carta estás buscando?",
+      "state": "talk"
+    },
+    {
+      "text": "¡Aquí estoy! ¿Qué necesitas?",
+      "state": "talk"
+    },
+    {
+      "text": "Miau, ¿preparamos un Mazo?",
+      "state": "talk"
+    }
+  ],
+  "help": [
+    {
+      "title": "Buscar una Carta",
+      "detail": "Escribe su Nombre y pulsa Buscar para consultar las Ofertas."
+    },
+    {
+      "title": "Cotizar un Mazo",
+      "detail": "Pega tu Lista con Cantidades. El Carrito compara Ofertas en CLP y Envíos."
+    },
+    {
+      "title": "Retomar una Búsqueda",
+      "detail": "Conserva su enlace o ingresa su Identificador en Retomar una Búsqueda."
+    },
+    {
+      "title": "Cancelar",
+      "detail": "Puedes detener una Búsqueda pendiente con Cancelar Búsqueda."
+    },
+    {
+      "title": "De dónde salen los Precios",
+      "detail": "El Servicio de Muchi consulta sus Fuentes. Puedes ver su Estado en Fuentes."
+    }
+  ],
+  "dark": [
+    {
+      "text": "me puse darkzz",
+      "state": "happy"
+    },
+    {
+      "text": "se apaga la luz , baila como pokemon en cOnVerS3",
+      "state": "happy"
+    }
+  ],
+  "light": [
+    {
+      "text": "oh no prendieron las luces, no me vean estoy gordo",
+      "state": "alert"
+    }
+  ]
+}
