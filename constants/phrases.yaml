@@ -44,7 +44,7 @@ help:
 - title: De dónde salen los Precios
   detail: El Servicio de Muchi consulta sus Fuentes. Puedes ver su Estado en Fuentes.
 dark:
-- text: me pongo darkzz
+- text: me puse darkzz
   state: happy
 - text: se apaga la luz , baila como pokemon en cOnVerS3
   state: happy

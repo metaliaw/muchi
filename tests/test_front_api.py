@@ -303,7 +303,7 @@ def test_dark_mode_toggle_makes_muchi_talk(front):
     assert not app.exception
     assert app.session_state["muchi_oscuro"]
     spoken = "\n".join(block.value for block in app.markdown)
-    assert "me pongo darkzz" in spoken or (
+    assert "me puse darkzz" in spoken or (
         "se apaga la luz , baila como pokemon en cOnVerS3" in spoken)
 
 
