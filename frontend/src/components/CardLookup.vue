@@ -3,7 +3,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import * as api from '../api.js'
 
-const emit = defineEmits(['found', 'failed', 'suggest'])
+const emit = defineEmits(['found', 'failed', 'suggest', 'look'])
 
 // Lo que tarda una Duda en volverse Silencio. Menos interrumpe a quien escribe.
 const DOUBT_SECONDS = 4
@@ -67,6 +67,8 @@ async function lookup() {
   try {
     const card = await api.readCard(name.value, language.value)
     emit('found', card.canonical_name)
+    // Traducir ya sabe cual Carta es: mostrarla no cuesta un Pulso mas.
+    emit('look', card.canonical_name)
   } catch (error) {
     emit('failed', error.message)
   } finally {
