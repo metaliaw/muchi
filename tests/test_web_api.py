@@ -357,6 +357,17 @@ def build_list(count: int) -> str:
     return "\n".join(f"1 Carta{index:04d}" for index in range(count))
 
 
+def test_the_limits_come_from_the_commander_deck(client):
+    """Cien Cartas tiene el Mazo: 99 copias más el Comandante.
+
+    Los Topes salen del Formato, no de una Preferencia. Cambiarlos sin cambiar
+    esa Razón es lo que este Test pregunta en voz alta.
+    """
+    reply, _ = client
+    limits = reply.get("/api/config").json()["limits"]
+    assert limits == {"max_cards": 100, "max_quantity": 99}
+
+
 def test_a_bulk_search_stops_at_the_limit(client):
     """El Tope lo publica /api/config y lo aplica la misma Constante."""
     reply, _ = client
