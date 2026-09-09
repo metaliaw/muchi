@@ -73,6 +73,10 @@ Firestore conserva búsquedas y resultados durante 24 horas. La caché de oferta
 mantiene sus TTL positivos y negativos independientes. Cloud Tasks ejecuta una
 función privada por cada carta, sin un worker residente.
 
+El [incidente de ítems huérfanos](docs/cola-items-huerfanos.md) documenta cómo
+una cola activa dejó de avanzar, el patrón de reclamo que lo resolvió y las
+invariantes necesarias para reproducir esta arquitectura con seguridad.
+
 ## Google Cloud
 
 La función pública usa el entry point `ServeAPI`. La función privada de Cloud
