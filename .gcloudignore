@@ -21,7 +21,6 @@ web/.vite/
 
 # Los Secretos viajan por Secret Manager, nunca en la Imagen.
 .env
-store-api.json
 
 # Herramientas de Desarrollo: no corren en Produccion.
 tests/
