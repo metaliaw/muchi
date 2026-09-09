@@ -79,6 +79,9 @@ invariantes necesarias para reproducir esta arquitectura con seguridad.
 
 ## Google Cloud
 
+El [diagrama de arquitectura](docs/arquitectura.md) muestra los límites entre
+entrada HTTP, cola, workers, persistencia, fuentes, identidades y secretos.
+
 La función pública usa el entry point `ServeAPI`. La función privada de Cloud
 Tasks usa `ProcessSearch` y no debe permitir invocaciones sin autenticar.
 
