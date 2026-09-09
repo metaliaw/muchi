@@ -226,6 +226,45 @@ def format_thousands(n) -> str:
     return f"{int(n):,}".replace(",", ".")
 
 
+def format_amount(amount, currency: str) -> str:
+    """Escribe un Precio con su Moneda, a la Chilena.
+
+    Los Pesos van sin Decimales, porque no los tienen. Cualquier otra Moneda
+    los conserva: 3,49 no es 3, y la Oferta se lee tal como la publica la
+    Tienda, sin convertirla a nada.
+    """
+    if currency == "CLP":
+        return format_clp(round(amount))
+    body = f"{amount:,.2f}".translate(str.maketrans(",.", ".,"))
+    return f"{currency} {body}"
+
+
+def paint_offer_card(title: str, price: str, url: str, pills=(),
+                     best: bool = False, note: str = "",
+                     action: str = "Ver") -> str:
+    """Una Oferta de la Búsqueda, con sus Pastillas y su Botón.
+
+    Las Pastillas llegan armadas desde afuera como pares (clase, texto): quién
+    la vende y cómo viene la Carta lo decide la Búsqueda, no la Identidad.
+    """
+    card_class = "mu-card mejor" if best else "mu-card"
+    price_class = "mu-precio mejor" if best else "mu-precio"
+    pill_html = "".join(
+        f'<span class="mu-pill {kind}">{escape(text)}</span>' for kind, text in pills
+    )
+    note_html = f'<div class="mu-sub">{escape(note)}</div>' if note else ""
+    return (
+        f'<div class="{card_class}"><div class="mu-fila">'
+        f'<div class="mu-izq"><div class="mu-nombre">{escape(title)}</div>'
+        f'<div style="margin-top:6px">{pill_html}</div>{note_html}</div>'
+        f'<div style="text-align:right">'
+        f'<div class="{price_class}">{escape(price)}</div></div>'
+        f'<a class="mu-btn" href="{escape(url, quote=True)}" target="_blank" '
+        f'rel="noopener">{escape(action)}</a>'
+        f"</div></div>"
+    )
+
+
 def paint_offer(o, best: bool = False, unverified_stock: bool = False,
                 verified_stock: bool = False) -> str:
     """Una oferta: quien la vende, en que estado y a cuanto."""

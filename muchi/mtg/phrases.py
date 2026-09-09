@@ -27,6 +27,8 @@ class PhraseBook:
     phrases: tuple[Phrase, ...]
     greetings: tuple[Phrase, ...] = ()
     help_topics: tuple[tuple[str, str], ...] = ()
+    dark: tuple[Phrase, ...] = ()
+    light: tuple[Phrase, ...] = ()
 
 
 def require_text(value) -> str:
@@ -41,26 +43,32 @@ def build_phrase(text, state) -> Phrase:
     return Phrase(require_text(text), state)
 
 
+def build_line_phrases(rows) -> tuple[Phrase, ...]:
+    return tuple(build_phrase(row["text"], row["state"]) for row in rows)
+
+
 def build_phrase_book(doc: dict) -> PhraseBook:
     """Valida el Catálogo completo; no introduce Defaults alternativos."""
-    expected = {"every", "phrases", "greetings", "help"}
+    expected = {"every", "phrases", "greetings", "help", "dark", "light"}
     if not isinstance(doc, dict) or set(doc) != expected:
-        raise ValueError("El Catálogo requiere every, phrases, greetings y help.")
+        raise ValueError(
+            "El Catálogo requiere every, phrases, greetings, help, dark y light.")
     if type(doc["every"]) is not int or doc["every"] <= 0:
         raise ValueError("every debe ser un entero positivo.")
-    for key in ("phrases", "greetings", "help"):
+    for key in ("phrases", "greetings", "help", "dark", "light"):
         if not isinstance(doc[key], list) or not doc[key]:
             raise ValueError(f"{key} debe ser una Lista no vacía.")
 
     phrases = tuple(build_phrase(text, group["state"])
                     for group in doc["phrases"]
                     for text in read_group_texts(group))
-    greetings = tuple(build_phrase(row["text"], row["state"])
-                      for row in doc["greetings"])
+    greetings = build_line_phrases(doc["greetings"])
     help_topics = tuple((require_text(row["title"]), require_text(row["detail"]))
                         for row in doc["help"])
+    dark = build_line_phrases(doc["dark"])
+    light = build_line_phrases(doc["light"])
 
-    return PhraseBook(doc["every"], phrases, greetings, help_topics)
+    return PhraseBook(doc["every"], phrases, greetings, help_topics, dark, light)
 
 
 def read_group_texts(group: dict) -> list[str]:
@@ -92,6 +100,11 @@ def speaks_now(clicks: int, every: int) -> bool:
 
 def pick_phrase(phrases) -> Phrase | None:
     return random.choice(phrases) if phrases else None
+
+
+def pick_theme_phrase(book: PhraseBook, dark: bool) -> Phrase | None:
+    """Una Frase del Modo que acaba de quedar encendido."""
+    return pick_phrase(book.dark if dark else book.light)
 
 
 def build_hearts_html(quantity: int = 9, seed: int | None = None) -> str:
