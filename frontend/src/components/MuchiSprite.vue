@@ -59,9 +59,8 @@ const style = computed(() => ({
   '--fill': looping.value ? 'none' : 'forwards',
 }))
 
-// Streamlit borraba los <script>, así que allá las Animaciones de un solo Paso
-// se congelaban en su último Cuadro para siempre. Acá se avisa al terminar y
-// Muchi puede volver a Reposo, que es lo que la Animación siempre quiso hacer.
+// Una Animación de un solo Paso avisa al terminar, y Muchi vuelve a Reposo.
+// Sin ese Aviso se congelaría en su último Cuadro para siempre.
 function reportRest() {
   if (!looping.value) emit('rested')
 }

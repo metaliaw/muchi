@@ -53,35 +53,39 @@ def test_local_api_auth(api_config: tuple[str, dict[str, str]]) -> None:
     os.getenv("MUCHI_API_SEARCH_INTEGRATION") != "1",
     reason="requiere MUCHI_API_SEARCH_INTEGRATION=1; consulta Tiendas reales",
 )
-def test_front_receives_sol_ring_offers() -> None:
+def test_the_front_receives_sol_ring_offers() -> None:
+    """Sol Ring de punta a punta: el BFF crea la Búsqueda y espera sus Ofertas.
+
+    El Front dibuja y no decide, así que se prueba por donde el Navegador
+    pregunta: las Rutas del BFF, con la API y su Worker de verdad al otro lado.
+    """
     import time
-    from pathlib import Path
-    from streamlit.testing.v1 import AppTest
+
+    from fastapi.testclient import TestClient
+
     from muchi.api.settings import load_api_settings
-    import streamlit as st
+    from server import main
 
     load_api_settings.cache_clear()
-    st.cache_resource.clear()
-    app = AppTest.from_file(str(Path(__file__).resolve().parents[1] / "app.py"),
-                            default_timeout=30)
+    client = TestClient(main.app)
+
     identifier = os.getenv("MUCHI_API_SEARCH_ID")
-    if identifier:
-        app.query_params["search"] = identifier
-    app.run()
-    assert not app.exception
     if not identifier:
-        app.text_area[0].input("Sol Ring")
-        next(button for button in app.button if button.label == "Buscar").click().run()
+        created = client.post("/api/searches",
+                              json={"text": "Sol Ring", "key": "integration"})
+        assert created.status_code == 200, created.text
+        identifier = created.json()["state"]["id"]
+
     deadline = time.monotonic() + 600
-    while not app.session_state["terminal_results"] and time.monotonic() < deadline:
-        assert not app.exception
-        assert not app.error, [error.value for error in app.error]
+    body = {}
+    while time.monotonic() < deadline:
+        reply = client.get(f"/api/searches/{identifier}")
+        assert reply.status_code == 200, reply.text
+        body = reply.json()
+        if body["state"]["done"]:
+            break
         time.sleep(5)
-        app.run()
-    assert not app.exception
-    assert app.session_state["terminal_results"], "La Búsqueda no terminó en 10 minutos"
-    assert any(item.name.lower() == "sol ring" and item.offers
-               for item in app.session_state["search_items"])
-    assert any("Carta" in table.value.columns and
-               table.value["Carta"].str.lower().eq("sol ring").any()
-               for table in app.dataframe)
+
+    assert body.get("state", {}).get("done"), "La Búsqueda no terminó en 10 minutos"
+    assert any(offer["card_name"].lower() == "sol ring" for offer in body["offers"]), \
+        body["offers"]

@@ -13,8 +13,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
 
 COPY requirements-web.txt ./
-# El Front nuevo no usa Streamlit ni el Scraping antiguo: solo el Dominio,
-# el Cliente HTTP de la API y el BFF.
+# El Front no arrastra el Scraping antiguo: solo el Dominio, el Cliente HTTP
+# de la API y el BFF.
 RUN pip install --no-cache-dir -r requirements-web.txt \
     "requests>=2.32" "pyyaml>=6.0" "python-dotenv>=1.0"
 
