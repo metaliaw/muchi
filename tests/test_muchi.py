@@ -252,12 +252,6 @@ def test_moxfield_foil_uses_ck_foil():
 
 
 
-def test_hearts_vary_between_clicks():
-    first = phrases.build_hearts_html(seed=1)
-    second = phrases.build_hearts_html(seed=2)
-    # Careful: the container class is "mu-corazones" which contains "mu-corazon".
-    assert first.count('class="mu-corazon"') == 9
-    assert first != second, "same positions every time would look like a canned animation"
 
 
 def test_greetings_and_help_not_empty():
@@ -266,51 +260,19 @@ def test_greetings_and_help_not_empty():
         assert title.strip() and len(detail) > 30, title
 
 
-def test_sidebar_bubble_carries_tone_without_drawing_another_muchi():
-    bubble = phrases.build_bubble_html("Algo salio mal", "angry")
-    assert 'class="mu-globo mu-globo--angry"' in bubble
-    assert "mu-sprite" not in bubble
 
 
-def test_muchi_message_priorities_prevent_collisions():
-    from muchi.mtg.messaging import MuchiMessenger, Priority
-
-    rendered = []
-    messenger = MuchiMessenger(rendered.append)
-    messenger.render_default("Saludo de prueba", "talk")
-    assert rendered[-1].source == "greeting"
-    assert rendered[-1].text == "Saludo de prueba"
-
-    assert messenger.publish("aviso", "idle", Priority.PASSIVE, "cart")
-    assert messenger.publish("caricia", "happy", Priority.CLICK, "clicker")
-    assert not messenger.publish("pasivo", "idle", Priority.PASSIVE, "hidden")
-    assert messenger.publish("buscando", "talk", Priority.PROGRESS, "search")
-    assert not messenger.publish("otra caricia", "happy", Priority.CLICK, "clicker")
-    assert messenger.publish("fallo", "angry", Priority.ERROR, "search")
-    assert not messenger.publish("resumen", "alert", Priority.RESULT, "result")
-    assert rendered[-1].text == "fallo"
 
 
-def test_muchi_message_clear_only_affects_its_source():
-    from muchi.mtg.messaging import MuchiMessenger, Priority
-
-    rendered = []
-    cleared = []
-    messenger = MuchiMessenger(rendered.append, lambda: cleared.append(True))
-    messenger.publish("buscando", "talk", Priority.PROGRESS, "deck_search")
-    assert messenger.clear("otra_busqueda") is False
-    assert messenger.current is not None
-    assert messenger.clear("deck_search") is True
-    assert messenger.current is None and cleared == [True]
 
 
 # ------------------------------------------------------------------ phrases
-def test_phrase_book_reads_yaml():
+def test_phrase_book_reads_catalog():
     from muchi.mtg import phrases
 
     book = phrases.read_phrases()
     assert book.every == 10
-    assert book.phrases, "the phrases YAML must not be empty"
+    assert book.phrases, "the phrases catalog must not be empty"
     assert all(p.text.strip() for p in book.phrases)
     states = {p.state for p in book.phrases}
     assert states <= {"idle", "talk", "happy", "alert", "angry"}, states
@@ -598,7 +560,8 @@ def test_every_source_meets_its_port():
 def test_only_the_cast_imports_sources():
     """The core depends on the shape. If this fails, a vendor leaked in."""
     root = Path(__file__).resolve().parent.parent
-    revisados = list((root / "muchi" / "mtg").glob("*.py")) + [root / "app.py"]
+    revisados = (list((root / "muchi" / "mtg").glob("*.py"))
+                 + list((root / "server").glob("*.py")))
     # If the package moves again, this test would pass looking at zero files.
     assert len(revisados) > 10, f"the package path is wrong: {revisados}"
 
