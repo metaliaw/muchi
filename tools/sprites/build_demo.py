@@ -198,7 +198,7 @@ __SHEETCSS__
 <header>
   <p class="eyebrow">Sprite sheet + keyframes CSS</p>
   <h1 class="title">Muchi <span>Sprite Lab</span></h1>
-  <p class="lede">Cuatro cuerpos para la mascota del carrito, cada uno con sus estados listos para animar. Todo sale de un PNG por estilo y una sola regla de <code>@keyframes</code> con <code>steps()</code> &mdash; sin JavaScript, asi que corre igual dentro de Streamlit.</p>
+  <p class="lede">Cuatro cuerpos para la mascota del carrito, cada uno con sus estados listos para animar. Todo sale de un PNG por estilo y una sola regla de <code>@keyframes</code> con <code>steps()</code> &mdash; sin JavaScript, asi que corre igual en cualquier Pagina.</p>
   <div class="parade">__PARADE__</div>
 </header>
 
@@ -232,8 +232,8 @@ __SHEETCSS__
   <p class="eyebrow">Pegalo en tu app</p>
   <h2>El CSS minimo</h2>
   <pre>__CSSSNIP__</pre>
-  <h2>En Streamlit, ya cableado</h2>
-  <p class="lede">Streamlit borra las etiquetas <code>&lt;script&gt;</code> de <code>st.markdown</code>, pero no toca los keyframes. En el repo el retro ya es la mascota de la barra lateral, y cada <code>st.warning</code> / <code>st.error</code> / <code>st.info</code> / <code>st.success</code> paso a ser un pensamiento de Muchi: el estado del sprite y el color del borde dicen lo mismo que el texto.</p>
+  <h2>En Muchi, ya cableado</h2>
+  <p class="lede">Los keyframes no necesitan JavaScript, asi que la mascota corre igual donde la peguen. En el repo el retro ya es la mascota de la barra lateral, y cada Aviso paso a ser un pensamiento de Muchi: el estado del sprite y el color del borde dicen lo mismo que el texto.</p>
   <pre>__PYSNIP__</pre>
 </section>
 
