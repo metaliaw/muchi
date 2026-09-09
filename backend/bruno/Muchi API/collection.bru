@@ -1,0 +1,19 @@
+auth {
+  mode: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+headers {
+  Accept: application/json
+}
+
+docs {
+  El Contrato vive en openapi.yaml. Cada Petición de aquí es una Ruta de ese
+  Archivo; si una deja de coincidir, la que manda es la Especificación.
+
+  Corre Create Search antes que Estado, Resultados o Cancelar: esa Petición
+  guarda el Identificador devuelto en el Entorno, y las otras lo leen.
+}
