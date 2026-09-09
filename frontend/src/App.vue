@@ -5,6 +5,7 @@ import * as api from './api.js'
 import MuchiPanel from './components/MuchiPanel.vue'
 import CardLookup from './components/CardLookup.vue'
 import CardArt from './components/CardArt.vue'
+import CommunityPanel from './components/CommunityPanel.vue'
 import SiteFooter from './components/SiteFooter.vue'
 import SearchForm from './components/SearchForm.vue'
 import SearchProgress from './components/SearchProgress.vue'
@@ -203,6 +204,7 @@ onUnmounted(stopPolling)
     <div class="mu-lateral">
       <MuchiPanel :book="book" v-model:dark="dark" :message="message" />
       <CardArt :card="watched" />
+      <CommunityPanel :repository-url="config.repository_url" />
     </div>
 
     <div class="mu-columna">
@@ -267,7 +269,6 @@ onUnmounted(stopPolling)
 
   <SiteFooter
     :donation-url="config.donation_url"
-    :repository-url="config.repository_url"
     :socials="config.socials || []"
   />
 </template>
