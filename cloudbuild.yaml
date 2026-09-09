@@ -1,12 +1,13 @@
 # Despliegue del Front en Cloud Run.
 #   gcloud builds submit --config cloudbuild.yaml \
-#     --substitutions=_SERVICE=muchi-web,_REGION=southamerica-west1
+#     --substitutions=_SERVICE=muchi-web,_REGION=southamerica-east1
 #
 # El Código de Seguridad de la API no viaja acá: se monta desde Secret Manager
 # al desplegar, así nunca queda escrito en la Imagen ni en este Archivo.
 substitutions:
   _SERVICE: muchi-web
-  _REGION: southamerica-west1
+  # La misma Región que la API: cada Búsqueda cruza ese salto.
+  _REGION: southamerica-east1
   _API_URL: https://muchi-serve-api-c2ce6c7oga-rj.a.run.app
   _TOKEN_SECRET: muchi-api-token
 
