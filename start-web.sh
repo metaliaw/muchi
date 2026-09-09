@@ -17,7 +17,12 @@ if [ ! -d web/node_modules ]; then
   (cd web && npm install)
 fi
 
-python3 -m uvicorn server.main:app --reload --port 8000 &
+# El Recargador mira solo lo que el BFF sirve: sin .venv ni node_modules se
+# despierta rapido, y el Catalogo recarga igual que el Codigo.
+python3 -m uvicorn server.main:app --port 8000 \
+  --reload \
+  --reload-dir server --reload-dir muchi --reload-dir constants \
+  --reload-include '*.json' &
 BFF=$!
 trap 'kill "$BFF" 2>/dev/null || true' EXIT INT TERM
 
