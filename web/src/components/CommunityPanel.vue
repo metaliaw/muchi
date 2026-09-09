@@ -44,8 +44,11 @@ const AUTHORS = [
 <style scoped>
 .mu-comunidad {
   box-shadow: none;
+  /* Al lado hay Paneles blancos: un 9% se perdia contra ellos. El Tinte
+     sube y el Desvanecido se estira, para que el Panel se distinga sin
+     gritar. Mismo Color, el de siempre. */
   background:
-    linear-gradient(145deg, color-mix(in srgb, var(--mu-peri) 9%, transparent), transparent 55%),
+    linear-gradient(145deg, color-mix(in srgb, var(--mu-peri) 22%, transparent), transparent 78%),
     var(--mu-blanco);
 }
 .mu-comunidad__eyebrow {
