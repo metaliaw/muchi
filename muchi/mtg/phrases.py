@@ -1,16 +1,16 @@
 """Carga los Textos de Muchi y Presenta su Burbuja y sus Corazones."""
 from __future__ import annotations
 
+import json
 import random
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
-import yaml
-
 from muchi.paths import ROOT
 
-PHRASES_PATH = ROOT / "constants" / "phrases.yaml"
+# El Contenido de Muchi: Caricias, Saludos, Ayuda y Comentarios de la Luz.
+PHRASES_PATH = ROOT / "constants" / "phrases.json"
 # Estados del Protocolo visual, compartidos por Frases y Burbujas.
 STATES = frozenset({"idle", "talk", "happy", "alert", "angry"})
 
@@ -29,6 +29,7 @@ class PhraseBook:
     help_topics: tuple[tuple[str, str], ...] = ()
     dark: tuple[Phrase, ...] = ()
     light: tuple[Phrase, ...] = ()
+    nerd: tuple[Phrase, ...] = ()
 
 
 def require_text(value) -> str:
@@ -49,13 +50,14 @@ def build_line_phrases(rows) -> tuple[Phrase, ...]:
 
 def build_phrase_book(doc: dict) -> PhraseBook:
     """Valida el Catálogo completo; no introduce Defaults alternativos."""
-    expected = {"every", "phrases", "greetings", "help", "dark", "light"}
+    expected = {"every", "phrases", "greetings", "help", "dark", "light", "nerd"}
     if not isinstance(doc, dict) or set(doc) != expected:
         raise ValueError(
-            "El Catálogo requiere every, phrases, greetings, help, dark y light.")
+            "El Catálogo requiere every, phrases, greetings, help, dark, "
+            "light y nerd.")
     if type(doc["every"]) is not int or doc["every"] <= 0:
         raise ValueError("every debe ser un entero positivo.")
-    for key in ("phrases", "greetings", "help", "dark", "light"):
+    for key in ("phrases", "greetings", "help", "dark", "light", "nerd"):
         if not isinstance(doc[key], list) or not doc[key]:
             raise ValueError(f"{key} debe ser una Lista no vacía.")
 
@@ -67,8 +69,10 @@ def build_phrase_book(doc: dict) -> PhraseBook:
                         for row in doc["help"])
     dark = build_line_phrases(doc["dark"])
     light = build_line_phrases(doc["light"])
+    nerd = build_line_phrases(doc["nerd"])
 
-    return PhraseBook(doc["every"], phrases, greetings, help_topics, dark, light)
+    return PhraseBook(doc["every"], phrases, greetings, help_topics, dark,
+                      light, nerd)
 
 
 def read_group_texts(group: dict) -> list[str]:
@@ -83,10 +87,10 @@ def read_phrases(path: Path = PHRASES_PATH) -> PhraseBook:
     """Lee una vez el Catálogo. Un Archivo ausente desactiva los Mensajes."""
     if not path.exists():
         return PhraseBook(every=0, phrases=())
-    doc = yaml.safe_load(path.read_text(encoding="utf-8"))
     try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
         return build_phrase_book(doc)
-    except (KeyError, TypeError) as error:
+    except (KeyError, TypeError, json.JSONDecodeError) as error:
         raise ValueError("Estructura de Frases inválida.") from error
 
 
@@ -105,23 +109,3 @@ def pick_phrase(phrases) -> Phrase | None:
 def pick_theme_phrase(book: PhraseBook, dark: bool) -> Phrase | None:
     """Una Frase del Modo que acaba de quedar encendido."""
     return pick_phrase(book.dark if dark else book.light)
-
-
-def build_hearts_html(quantity: int = 9, seed: int | None = None) -> str:
-    """Corazoncitos subiendo, cada uno con su desfase para que no vayan en fila."""
-    rnd = random.Random(seed)
-    pieces = []
-    for _ in range(quantity):
-        left = rnd.randint(4, 88)
-        delay = rnd.uniform(0, 0.7)
-        scale = rnd.uniform(0.75, 1.35)
-        emoji = rnd.choice(["\U0001F49D", "\U0001F495", "\U0001F49E", "\U0001F338"])
-        pieces.append(
-            f'<span class="mu-corazon" style="left:{left}%;'
-            f'animation-delay:{delay:.2f}s;font-size:{scale:.2f}rem">{emoji}</span>'
-        )
-    return '<div class="mu-corazones">' + "".join(pieces) + "</div>"
-
-def build_bubble_html(text: str, state: str = "talk") -> str:
-    """La única burbuja del Muchi lateral, con tono según el mensaje."""
-    return f'<div class="mu-globo mu-globo--{state}">{text}</div>'

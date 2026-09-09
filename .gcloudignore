@@ -1,0 +1,37 @@
+# Lo que no sube al Build. Lo que no se usa adentro del Contenedor pesa en
+# cada deploy y alarga el cold start.
+.git/
+.gitignore
+.claude/
+
+# El Entorno local se rearma adentro con pip; subirlo romperia la Imagen,
+# porque los binarios del .venv apuntan a rutas de esta maquina.
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# El Front se compila dentro de la Imagen. Subir node_modules pesa 41 MB y es
+# peor que inutil: el COPY del Dockerfile pisaria los Binarios del Contenedor
+# con los de esta maquina.
+web/node_modules/
+web/dist/
+web/.vite/
+
+# Los Secretos viajan por Secret Manager, nunca en la Imagen.
+.env
+
+# Herramientas de Desarrollo: no corren en Produccion.
+tests/
+tools/
+docs/
+requirements-dev.txt
+get-secret.sh
+get-secret.cmd
+
+# Base de Precios local. El Disco de Cloud Run es efimero: lo que se escriba
+# ahi se pierde al apagarse la Instancia.
+data/
+
+.DS_Store

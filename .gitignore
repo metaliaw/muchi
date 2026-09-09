@@ -3,9 +3,11 @@ __pycache__/
 .venv/
 venv/
 data/
-.streamlit/secrets.toml
 .env
 .pytest_cache/
 .DS_Store
-store-api.json
 .claude/
+.agents/
+skills-lock.json
+.firebase/
+firebase-debug*.log
