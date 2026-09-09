@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 # Rotates Muchi Credentials with the Active gcloud Session and syncs .env.
+#
+# Alcanza a los tres Consumidores del Token: el Worker, la API y el Front.
+# El Front se despliega desde otro Repositorio, pero monta este mismo Secreto,
+# y una Rotacion que no lo incluye lo deja autenticando con un Token muerto.
 set +x
 set -euo pipefail
 umask 077
@@ -9,17 +13,13 @@ source "$ROOT/config/deploy.env"
 PROJECT=""
 SECRET_NAME=${MUCHI_API_TOKEN%:*}
 VERSION=""
-STREAMLIT_URL="https://muchitgc.streamlit.app/"
-STREAMLIT_KEY="MUCHI_API_TOKEN"
-STREAMLIT_DOCS="https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management"
 DRY_RUN=false
 WORK_DIR=""
 STEP="Configuración"
 
 usage() {
   printf '%s\n' '🐱 rotate-secret.sh --project ID [--region REGION]' \
-    '  [--secret NOMBRE] [--version NUMERO] [--streamlit-url HTTPS_URL]' \
-    '  [--streamlit-key CLAVE] [--dry-run]' \
+    '  [--secret NOMBRE] [--version NUMERO] [--dry-run]' \
     'Sin --version: Genera un Token nuevo. Con --version: Reanuda o Revierte.'
 }
 cleanup() {
@@ -60,11 +60,11 @@ sync_env_token() {
 
 while (( $# )); do
   case "$1" in
-    --project|--region|--secret|--version|--streamlit-url|--streamlit-key)
+    --project|--region|--secret|--version)
       (( $# >= 2 )) || fail "Falta el Valor de $1"
       case "$1" in
         --project) PROJECT=$2 ;; --region) REGION=$2 ;; --secret) SECRET_NAME=$2 ;;
-        --version) VERSION=$2 ;; --streamlit-url) STREAMLIT_URL=$2 ;; --streamlit-key) STREAMLIT_KEY=$2 ;;
+        --version) VERSION=$2 ;;
       esac
       shift 2 ;;
     --dry-run) DRY_RUN=true; shift ;;
@@ -77,36 +77,16 @@ if [[ -z "$PROJECT" ]]; then PROJECT=$(gcloud config get-value project 2>/dev/nu
 [[ "$REGION" =~ ^[a-z0-9-]+$ ]] || fail 'Región Inválida.'
 [[ "$SECRET_NAME" =~ ^[a-zA-Z0-9_-]+$ ]] || fail 'Nombre de Secreto Inválido.'
 [[ -z "$VERSION" || "$VERSION" =~ ^[1-9][0-9]*$ ]] || fail 'Usa una Versión Numérica Positiva.'
-[[ "$STREAMLIT_KEY" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]] || fail 'La Clave debe ser un Nombre TOML simple.'
-[[ "$STREAMLIT_URL" =~ ^https://[a-zA-Z0-9.-]+/?$ ]] || fail 'Usa la URL HTTPS de la App, sin Ruta ni Parámetros.'
-
-streamlit_fallback() {
-  printf '\n⚠️ %s\n' 'Si no Aparece el menú Settings ni la Sección Secrets:'
-  printf '%s\n' \
-    '· Entra con la Cuenta Dueña de la App; el Panel solo Muestra sus Apps.' \
-    '· Dentro de la App, abajo a la Derecha: Manage app → ⋮ → Settings.' \
-    '· Si sigue Ausente, Redespliega la App; el menú Aparece tras el Redespliegue.' \
-    '· Al Redesplegar, el Token va en Advanced settings… → Secrets, antes de Deploy.' \
-    '· Streamlit no Lee .env ni secrets.toml del Repo; el Secreto vive solo en ese Panel.'
-  printf '· Guía Oficial: %s\n' "$STREAMLIT_DOCS"
-}
+[[ "$FRONT_NAME" =~ ^[a-z0-9-]+$ ]] || fail 'Nombre de Front Inválido.'
 
 instructions() {
   printf '\n✅ Versión: %s:%s\n' "$SECRET_NAME" "$VERSION"
   printf 'Secret Manager: https://console.cloud.google.com/security/secret-manager/secret/%s/versions?project=%s\n' "$SECRET_NAME" "$PROJECT"
-  printf 'Streamlit: %s\nPanel: https://share.streamlit.io/\nGuía: %s\n' "$STREAMLIT_URL" "$STREAMLIT_DOCS"
-  printf '%s\n' \
-    '1. Entra al Panel con la Cuenta Dueña de la App.' \
-    '2. Abre la App: menú ⋮ → Settings → Secrets.' \
-    "3. Pega la Línea $STREAMLIT_KEY = \"…\" impresa arriba; Conserva las otras Claves." \
-    '4. Pulsa Save. Si la App mantiene el Cliente en Caché, usa Reboot app.' \
-    '5. Crea una Búsqueda desde Streamlit y Confirma que no devuelve 401.' \
-    'Comparte estos Enlaces e Instrucciones; el Token ya está Impreso Arriba.'
-  streamlit_fallback
 }
+
 if "$DRY_RUN"; then
   printf '🐱 Vista Previa: %s / %s\n' "$PROJECT" "$REGION"
-  printf '%s\n' "API: $API_NAME · Worker: $WORKER_NAME" \
+  printf '%s\n' "API: $API_NAME · Worker: $WORKER_NAME · Front: $FRONT_NAME" \
     'Se Actualizará MUCHI_API_TOKEN y se Enviará el Tráfico a las nuevas Revisiones.' \
     'No se Generan Tokens ni se Modifica GCP.'
   VERSION=${VERSION:-NUEVA}
@@ -124,7 +104,7 @@ WORKER_SERVICE=$(cloud functions describe "$WORKER_NAME" --gen2 --region="$REGIO
 API_SERVICE=${API_SERVICE##*/}
 WORKER_SERVICE=${WORKER_SERVICE##*/}
 [[ "$API_SERVICE" =~ ^[a-z0-9-]+$ && "$WORKER_SERVICE" =~ ^[a-z0-9-]+$ ]] || fail 'Servicios Cloud Run Ausentes.'
-for service in "$API_SERVICE" "$WORKER_SERVICE"; do
+for service in "$API_SERVICE" "$WORKER_SERVICE" "$FRONT_NAME"; do
   cloud run services describe "$service" --region="$REGION" --format=json > "$WORK_DIR/$service.json"
   python3 - "$WORK_DIR/$service.json" "$service" <<'PY'
 import json, sys
@@ -159,12 +139,12 @@ fi
 step 'Token'
 TOKEN=$(<"$WORK_DIR/token")
 printf '%s\n' "$TOKEN"
-printf '%s = "%s"\n' "$STREAMLIT_KEY" "$TOKEN"
 sync_env_token "$TOKEN"
 instructions
-printf '\n⚠️ Actualiza Streamlit al Terminar: su Token Anterior dejará de Funcionar.\n'
 
-for service in "$WORKER_SERVICE" "$API_SERVICE"; do
+# El Orden sigue al Trafico, de adentro hacia afuera: el Worker no atiende a
+# nadie, la API atiende al Front, el Front atiende al Usuario.
+for service in "$WORKER_SERVICE" "$API_SERVICE" "$FRONT_NAME"; do
   step "Actualizando $service"
   revision=$(cloud run services update "$service" --region="$REGION" \
     --update-secrets="MUCHI_API_TOKEN=$SECRET_NAME:latest" --format='value(status.latestReadyRevisionName)')
@@ -196,4 +176,4 @@ except urllib.error.URLError:
     raise SystemExit('No se pudo Conectar con la API.') from None
 print('✅ API Autenticada con la Versión Seleccionada')
 PY
-printf 'API: %s\n✅ API y Worker Actualizados. Falta Guardar el Token en Streamlit.\n' "$API_URL"
+printf 'API: %s\n✅ Worker, API y Front Actualizados.\n' "$API_URL"
