@@ -11,7 +11,7 @@ import (
 type SearchStore interface {
 	CreateSearch(context.Context, string, string, CreateInput) (Job, error)
 	GetSearch(context.Context, string) (Job, error)
-	ListResults(context.Context, string) (Result, error)
+	ListResults(context.Context, string, ResultPage) (Result, error)
 	CancelSearch(context.Context, string, string, string) (Job, error)
 	ClaimSearchItem(context.Context, string, time.Duration) (Item, error)
 	RenewItemLease(context.Context, string, string, time.Duration) error

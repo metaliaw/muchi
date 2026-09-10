@@ -49,6 +49,14 @@ fi
 for group in searches items item_offers idempotency offer_cache; do
 	cloud firestore fields ttls update expires_at --collection-group="$group" '--database=(default)' --enable-ttl --async
 done
+result_index=$(cloud firestore indexes composite list \
+	--filter='queryScope=COLLECTION AND fields.fieldPath:search_id AND fields.fieldPath:completion_sequence' \
+	--format='value(name)')
+if [ -z "$result_index" ]; then
+	cloud firestore indexes composite create --collection-group=items --query-scope=collection \
+		--field-config=field-path=search_id,order=ascending \
+		--field-config=field-path=completion_sequence,order=ascending --async
+fi
 existing=$(cloud tasks queues list --location="$REGION" --filter="name:$TASK_QUEUE" --format='value(name.basename())')
 action=create
 if [ "$existing" = "$TASK_QUEUE" ]; then action=update; fi

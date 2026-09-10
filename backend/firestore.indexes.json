@@ -1,5 +1,14 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "items",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "search_id", "order": "ASCENDING"},
+        {"fieldPath": "completion_sequence", "order": "ASCENDING"}
+      ]
+    }
+  ],
   "fieldOverrides": [
     {"collectionGroup": "searches", "fieldPath": "expires_at", "ttl": true, "indexes": []},
     {"collectionGroup": "items", "fieldPath": "expires_at", "ttl": true, "indexes": []},

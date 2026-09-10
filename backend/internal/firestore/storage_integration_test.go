@@ -93,6 +93,31 @@ func TestCompleteItem(t *testing.T) {
 	}
 }
 
+func TestListResultPages(t *testing.T) {
+	store := openTestStore(t)
+	job := createTestSearch(t, store, "result-pages")
+	ctx := context.Background()
+	for range 2 {
+		item, err := store.ClaimSearchItem(ctx, "worker", time.Minute)
+		if err != nil {
+			t.Fatal(err)
+		}
+		item.Status = search.ItemFound
+		if err := store.CompleteSearchItem(ctx, item, nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	first, err := store.ListResults(ctx, job.ID, search.ResultPage{Limit: 1})
+	if err != nil || len(first.Items) != 1 || first.Cursor != 1 || !first.HasMore {
+		t.Fatalf("first result page=%#v err=%v", first, err)
+	}
+	second, err := store.ListResults(ctx, job.ID, search.ResultPage{After: first.Cursor, Limit: 1})
+	if err != nil || len(second.Items) != 1 || second.Cursor != 2 || second.HasMore {
+		t.Fatalf("second result page=%#v err=%v", second, err)
+	}
+}
+
 func openTestStore(t *testing.T) *Store {
 	t.Helper()
 	if os.Getenv("FIRESTORE_EMULATOR_HOST") == "" {

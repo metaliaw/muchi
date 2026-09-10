@@ -70,6 +70,7 @@ type Item struct {
 	ID             string        `json:"id"`
 	SearchID       string        `json:"search_id"`
 	Position       int           `json:"position"`
+	Sequence       int           `json:"sequence,omitempty"`
 	OriginalName   string        `json:"original_name"`
 	NormalizedName string        `json:"normalized_name"`
 	Quantity       int           `json:"quantity"`
@@ -88,6 +89,13 @@ type Item struct {
 type Result struct {
 	SearchID string `json:"search_id"`
 	Items    []Item `json:"items"`
+	Cursor   int    `json:"cursor"`
+	HasMore  bool   `json:"has_more"`
+}
+
+type ResultPage struct {
+	After int
+	Limit int
 }
 
 type SourceHealth struct {

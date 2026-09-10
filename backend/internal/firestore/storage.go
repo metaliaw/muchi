@@ -73,6 +73,7 @@ type itemRecord struct {
 	Payload     []byte     `firestore:"payload"`
 	SearchID    string     `firestore:"search_id"`
 	Position    int        `firestore:"position"`
+	Sequence    int        `firestore:"completion_sequence"`
 	LeaseOwner  string     `firestore:"lease_owner"`
 	LeaseUntil  *time.Time `firestore:"lease_until,omitempty"`
 	AvailableAt time.Time  `firestore:"available_at"`
@@ -145,7 +146,7 @@ func (s *Store) GetSearch(ctx context.Context, id string) (search.Job, error) {
 	return decodeSearch(document)
 }
 
-func (s *Store) ListResults(ctx context.Context, id string) (search.Result, error) {
+func (s *Store) ListResults(ctx context.Context, id string, page search.ResultPage) (search.Result, error) {
 	ctx, cancel := boundContext(ctx)
 	defer cancel()
 	document, err := s.client.Collection("searches").Doc(id).Get(ctx)
@@ -156,8 +157,12 @@ func (s *Store) ListResults(ctx context.Context, id string) (search.Result, erro
 	if err := document.DataTo(&record); err != nil || record.ExpiresAt.Before(time.Now()) {
 		return search.Result{}, search.ErrNotFound
 	}
-	items, err := s.loadItems(ctx, record.ItemIDs)
-	return search.Result{SearchID: id, Items: items}, err
+	items, hasMore, err := s.loadResultPage(ctx, id, page)
+	cursor := page.After
+	if len(items) > 0 {
+		cursor = items[len(items)-1].Sequence
+	}
+	return search.Result{SearchID: id, Items: items, Cursor: cursor, HasMore: hasMore}, err
 }
 
 func (s *Store) CancelSearch(ctx context.Context, id, key, hash string) (search.Job, error) {
@@ -512,8 +517,10 @@ func (s *Store) completeItem(ctx context.Context, tx *firestorelib.Transaction, 
 	if err != nil {
 		return err
 	}
+	item.Sequence = job.Processed + 1
 	item.LeaseOwner, item.LeaseUntil = "", nil
 	record.Payload, record.AvailableAt = mustJSON(item), record.ExpiresAt.Add(doneParking)
+	record.Sequence = item.Sequence
 	record.LeaseOwner, record.LeaseUntil = "", nil
 	if err := tx.Set(reference, record); err != nil {
 		return err
@@ -526,26 +533,39 @@ func (s *Store) completeItem(ctx context.Context, tx *firestorelib.Transaction, 
 	return tx.Update(s.client.Collection("searches").Doc(job.ID), []firestorelib.Update{{Path: "payload", Value: mustJSON(job)}})
 }
 
-func (s *Store) loadItems(ctx context.Context, ids []string) ([]search.Item, error) {
-	items := make([]search.Item, 0, len(ids))
-	for _, id := range ids {
-		document, err := s.client.Collection("items").Doc(id).Get(ctx)
+func (s *Store) loadResultPage(ctx context.Context, id string, page search.ResultPage) ([]search.Item, bool, error) {
+	documents := s.client.Collection("items").
+		Where("search_id", "==", id).
+		Where("completion_sequence", ">", page.After).
+		OrderBy("completion_sequence", firestorelib.Asc).
+		Limit(page.Limit + 1).
+		Documents(ctx)
+	defer documents.Stop()
+	items := make([]search.Item, 0, page.Limit)
+	for len(items) <= page.Limit {
+		document, err := documents.Next()
+		if errors.Is(err, iterator.Done) {
+			return items, false, nil
+		}
 		if err != nil {
-			return nil, mapStoreError(err)
+			return nil, false, mapStoreError(err)
 		}
 		item, _, err := decodeItem(document)
 		if err != nil {
-			return nil, err
+			return nil, false, err
+		}
+		if len(items) == page.Limit {
+			return items, true, nil
 		}
 		item.Offers = []offer.Offer{}
-		if offers, err := s.client.Collection("item_offers").Doc(id).Get(ctx); err == nil {
+		if offers, err := s.client.Collection("item_offers").Doc(item.ID).Get(ctx); err == nil {
 			var record valueRecord
 			_ = offers.DataTo(&record)
 			_ = json.Unmarshal(record.Payload, &item.Offers)
 		}
 		items = append(items, item)
 	}
-	return items, nil
+	return items, false, nil
 }
 
 func (s *Store) loadSource(ctx context.Context, domain string) (sourceRecord, error) {

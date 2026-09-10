@@ -44,8 +44,8 @@ func (s Service) GetSearch(ctx context.Context, id string) (Job, error) {
 	return s.Searches.GetSearch(ctx, id)
 }
 
-func (s Service) ListResults(ctx context.Context, id string) (Result, error) {
-	return s.Searches.ListResults(ctx, id)
+func (s Service) ListResults(ctx context.Context, id string, page ResultPage) (Result, error) {
+	return s.Searches.ListResults(ctx, id, page)
 }
 
 func (s Service) CancelSearch(ctx context.Context, id, key string) (Job, error) {

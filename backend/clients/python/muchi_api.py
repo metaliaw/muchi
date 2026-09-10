@@ -27,8 +27,9 @@ class MuchiAPI:
     def get_search(self, search_id: str) -> dict[str, Any]:
         return self._request("GET", f"/v1/searches/{search_id}")
 
-    def get_results(self, search_id: str) -> dict[str, Any]:
-        return self._request("GET", f"/v1/searches/{search_id}/results")
+    def get_results(self, search_id: str, after: int = 0, limit: int = 50) -> dict[str, Any]:
+        query = urllib.parse.urlencode({"after": after, "limit": limit})
+        return self._request("GET", f"/v1/searches/{search_id}/results?{query}")
 
     def cancel_search(self, search_id: str, idempotency_key: str) -> dict[str, Any]:
         return self._request("POST", f"/v1/searches/{search_id}/cancel", {}, idempotency_key)

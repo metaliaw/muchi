@@ -9,6 +9,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -33,6 +34,11 @@ type errorReply struct {
 type contextKey string
 
 const requestIDKey contextKey = "request_id"
+
+const (
+	defaultResultLimit = 50
+	maxResultLimit     = 100
+)
 
 // BuildHandler Connects each API Story to its public route.
 func (a API) BuildHandler() http.Handler {
@@ -82,12 +88,37 @@ func (a API) getSearch(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a API) listResults(w http.ResponseWriter, r *http.Request) {
-	result, err := a.Searches.ListResults(r.Context(), r.PathValue("search_id"))
+	page, err := decodeResultPage(r)
+	if err != nil {
+		a.writeError(w, r, search.ErrInvalid)
+		return
+	}
+	result, err := a.Searches.ListResults(r.Context(), r.PathValue("search_id"), page)
 	if err != nil {
 		a.writeError(w, r, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, result)
+}
+
+func decodeResultPage(r *http.Request) (search.ResultPage, error) {
+	after, err := readQueryNumber(r, "after", 0)
+	if err != nil || after < 0 {
+		return search.ResultPage{}, search.ErrInvalid
+	}
+	limit, err := readQueryNumber(r, "limit", defaultResultLimit)
+	if err != nil || limit < 1 || limit > maxResultLimit {
+		return search.ResultPage{}, search.ErrInvalid
+	}
+	return search.ResultPage{After: after, Limit: limit}, nil
+}
+
+func readQueryNumber(r *http.Request, name string, fallback int) (int, error) {
+	value := r.URL.Query().Get(name)
+	if value == "" {
+		return fallback, nil
+	}
+	return strconv.Atoi(value)
 }
 
 func (a API) cancelSearch(w http.ResponseWriter, r *http.Request) {

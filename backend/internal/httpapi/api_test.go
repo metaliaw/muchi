@@ -15,7 +15,8 @@ import (
 )
 
 type fakeStore struct {
-	job search.Job
+	job  search.Job
+	page search.ResultPage
 }
 
 func (s *fakeStore) CreateSearch(_ context.Context, _, _ string, input search.CreateInput) (search.Job, error) {
@@ -23,8 +24,9 @@ func (s *fakeStore) CreateSearch(_ context.Context, _, _ string, input search.Cr
 	return s.job, nil
 }
 func (s *fakeStore) GetSearch(context.Context, string) (search.Job, error) { return s.job, nil }
-func (s *fakeStore) ListResults(context.Context, string) (search.Result, error) {
-	return search.Result{SearchID: s.job.ID, Items: []search.Item{}}, nil
+func (s *fakeStore) ListResults(_ context.Context, _ string, page search.ResultPage) (search.Result, error) {
+	s.page = page
+	return search.Result{SearchID: s.job.ID, Items: []search.Item{}, Cursor: page.After}, nil
 }
 func (s *fakeStore) CancelSearch(context.Context, string, string, string) (search.Job, error) {
 	s.job.Status = search.JobCancelled
@@ -78,5 +80,29 @@ func TestHideError(t *testing.T) {
 	status, code, message := mapError(errors.New("database password leaked"))
 	if status != http.StatusInternalServerError || code != "internal_error" || strings.Contains(message, "password") {
 		t.Fatalf("mapError() status=%d code=%q message=%q", status, code, message)
+	}
+}
+
+func TestListResultPage(t *testing.T) {
+	store := &fakeStore{job: search.Job{ID: "search_one"}}
+	api := API{Searches: search.Service{Searches: store}, Token: "secret"}
+	request := httptest.NewRequest(http.MethodGet, "/v1/searches/search_one/results?after=12&limit=25", nil)
+	request.Header.Set("Authorization", "Bearer secret")
+	response := httptest.NewRecorder()
+	api.BuildHandler().ServeHTTP(response, request)
+	if response.Code != http.StatusOK || store.page != (search.ResultPage{After: 12, Limit: 25}) {
+		t.Fatalf("result page=%#v status=%d body=%s", store.page, response.Code, response.Body.String())
+	}
+}
+
+func TestRejectResultPage(t *testing.T) {
+	store := &fakeStore{}
+	api := API{Searches: search.Service{Searches: store}, Token: "secret"}
+	request := httptest.NewRequest(http.MethodGet, "/v1/searches/search_one/results?after=-1&limit=101", nil)
+	request.Header.Set("Authorization", "Bearer secret")
+	response := httptest.NewRecorder()
+	api.BuildHandler().ServeHTTP(response, request)
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("invalid result page status=%d body=%s", response.Code, response.Body.String())
 	}
 }
