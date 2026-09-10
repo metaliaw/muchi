@@ -4,8 +4,8 @@ let scriptLoad = null
 export function loadAds(client) {
   if (scriptLoad) return scriptLoad
 
-  const existing = document.querySelector('script[data-muchi-adsense]')
-  if (existing) {
+  // El Script del head ya dejó la Cola lista: no hay nada que Cargar.
+  if (window.adsbygoogle) {
     scriptLoad = Promise.resolve()
     return scriptLoad
   }
@@ -14,7 +14,6 @@ export function loadAds(client) {
     const script = document.createElement('script')
     script.async = true
     script.crossOrigin = 'anonymous'
-    script.dataset.muchiAdsense = 'true'
     script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(client)}`
     script.addEventListener('load', resolve, { once: true })
     script.addEventListener('error', reject, { once: true })

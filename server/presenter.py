@@ -43,22 +43,25 @@ def convert_to_clp(offer: SearchOffer, muchi_dolar: int) -> Decimal | None:
     return None
 
 
-def build_pills(offer: SearchOffer) -> list[dict]:
+def build_pills(offer: SearchOffer, verified: bool = True) -> list[dict]:
     """Las Pastillas de una Oferta: quién la vende, cómo viene y su Stock."""
     pills = [{"kind": "tienda", "text": offer.store}]
     for tag in treatment.build_treatment(offer).split(treatment.SEPARATOR):
         if tag:
             pills.append({"kind": "foil" if tag in FOIL_TAGS else "cond", "text": tag})
-    label = STOCK_LABELS.get(offer.stock_status, offer.stock_status)
-    pills.append({"kind": "tienda" if offer.stock_status == "available" else "cond",
-                  "text": label})
+    # Sin Re-verificación, el Stock es Ruido: toda Oferta diría lo mismo.
+    if verified:
+        label = STOCK_LABELS.get(offer.stock_status, offer.stock_status)
+        pills.append({"kind": "tienda" if offer.stock_status == "available" else "cond",
+                      "text": label})
     if offer.suspicious:
         pills.append({"kind": "cond",
                       "text": f"⚠ {read_suspicious_note(offer.suspicious_reason)}"})
     return pills
 
 
-def build_offer(offer: SearchOffer, muchi_dolar: int) -> dict:
+def build_offer(offer: SearchOffer, muchi_dolar: int,
+                verified: bool = True) -> dict:
     price = convert_to_clp(offer, muchi_dolar)
     return {
         "card_name": offer.card_name,
@@ -68,12 +71,13 @@ def build_offer(offer: SearchOffer, muchi_dolar: int) -> dict:
         "price_clp": None if price is None else float(price),
         "url": offer.url,
         "stock_status": offer.stock_status,
-        "stock_label": STOCK_LABELS.get(offer.stock_status, offer.stock_status),
+        "stock_label": (STOCK_LABELS.get(offer.stock_status, offer.stock_status)
+                        if verified else ""),
         "suspicious": offer.suspicious,
         "note": SUSPICIOUS_NOTE if offer.suspicious else "",
         "action": "Verificar" if offer.suspicious else "Ver",
         "treatment": treatment.build_treatment(offer),
-        "pills": build_pills(offer),
+        "pills": build_pills(offer, verified),
         # Lo que hace falta para pedir la Imagen de esta Impresion y no otra.
         "edition": offer.edition,
         "finish": offer.finish,
@@ -108,7 +112,8 @@ def build_state(state: SearchState) -> dict:
     }
 
 
-def build_results(items: tuple[SearchItem, ...], muchi_dolar: int) -> dict:
+def build_results(items: tuple[SearchItem, ...], muchi_dolar: int,
+                  verified: bool = True) -> dict:
     """Las Ofertas ya ordenadas, con la más barata marcada y el Resumen listo."""
     offers: list[SearchOffer] = []
     positions: dict[int, int] = {}
@@ -129,7 +134,7 @@ def build_results(items: tuple[SearchItem, ...], muchi_dolar: int) -> dict:
     cheapest = pick_cheapest(offers, muchi_dolar)
     rows = []
     for offer in offers:
-        row = build_offer(offer, muchi_dolar)
+        row = build_offer(offer, muchi_dolar, verified)
         row["item_position"] = positions[id(offer)]
         row["best"] = offer is cheapest
         rows.append(row)
