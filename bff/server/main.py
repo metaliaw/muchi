@@ -222,18 +222,21 @@ def create_search(request: SearchRequest) -> dict:
         "state": presenter.build_state(state),
         "label": ", ".join(order.name for order in orders),
         "items": [{"name": order.name, "quantity": order.quantity,
-                   "status": "queued", "offers": 0} for order in orders],
+                   "position": position, "sequence": 0,
+                   "status": "queued", "offers": 0}
+                  for position, order in enumerate(orders)],
     }
 
 
 @app.get("/api/searches/{search_id}")
-def read_search(search_id: str) -> dict:
+def read_search(search_id: str, after: int = Query(0, ge=0)) -> dict:
     """Estado y Ofertas en una sola Consulta: el Front pregunta una vez por Ciclo."""
     searches = build_muchi().searches
     state = searches.read_search(search_id)
-    results = presenter.build_results(searches.read_results(search_id),
-                                      load_rate_settings().muchi_dolar)
-    return {"state": presenter.build_state(state), **results}
+    page = searches.read_results(search_id, after)
+    results = presenter.build_results(page.items, load_rate_settings().muchi_dolar)
+    return {"state": presenter.build_state(state), **results,
+            "cursor": page.cursor, "has_more": page.has_more}
 
 
 @app.post("/api/searches/{search_id}/cancel")
@@ -244,8 +247,22 @@ def cancel_search(search_id: str, request: CancelRequest) -> dict:
 
 @app.get("/api/searches/{search_id}/cart")
 def read_cart(search_id: str, shipping: int = Query(4000, ge=0, le=1_000_000)) -> dict:
-    items = build_muchi().searches.read_results(search_id)
+    searches = build_muchi().searches
+    items = read_all_results(searches, search_id)
     return presenter.build_cart(items, shipping, load_rate_settings().muchi_dolar)
+
+
+def read_all_results(searches, search_id: str):
+    items = []
+    cursor = 0
+    while True:
+        page = searches.read_results(search_id, cursor)
+        items.extend(page.items)
+        if not page.has_more:
+            return tuple(items)
+        if page.cursor <= cursor:
+            raise QueryFailed("La API no avanzó el Cursor de Resultados.")
+        cursor = page.cursor
 
 
 @app.get("/api/sources")

@@ -24,7 +24,7 @@ defineProps({
   <section>
     <div v-if="items.length" class="mu-panel mu-lista">
       <h2>Cartas de la Lista</h2>
-      <p v-for="item in items" :key="item.name" class="mu-lista-fila">
+      <p v-for="item in items" :key="item.position" class="mu-lista-fila">
         <span><strong>{{ item.quantity }}×</strong> {{ item.name }}</span>
         <span class="mu-caption">{{ item.offers }} Ofertas</span>
       </p>

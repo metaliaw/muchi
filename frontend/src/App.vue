@@ -31,6 +31,8 @@ const items = ref([])
 const offers = ref([])
 const summary = ref(null)
 const notices = ref([])
+const cursor = ref(0)
+const hasMore = ref(false)
 const checked = ref('')
 const unavailable = ref('')
 const error = ref('')
@@ -41,8 +43,11 @@ const watched = ref(null)
 const history = ref(JSON.parse(localStorage.getItem('muchi_historial') || '[]'))
 
 let timer = null
+let refreshing = false
 
-const busy = computed(() => Boolean(state.value && !state.value.done && !unavailable.value))
+const busy = computed(() => Boolean(
+  state.value && (!state.value.done || hasMore.value) && !unavailable.value
+))
 const googleReady = computed(() => Boolean(config.value.adsense_client && config.value.adsense_slot))
 const sponsorReady = computed(() => Boolean(config.value.sponsor_name && config.value.sponsor_url))
 
@@ -85,6 +90,8 @@ function selectSearch(id, initialState = null, initialItems = []) {
   offers.value = []
   summary.value = null
   notices.value = []
+  cursor.value = 0
+  hasMore.value = false
   unavailable.value = ''
   checked.value = ''
   const url = new URL(location.href)
@@ -141,17 +148,17 @@ async function send() {
 }
 
 async function refresh() {
-  if (!searchId.value || unavailable.value) return
+  if (!searchId.value || unavailable.value || refreshing) return
+  refreshing = true
   try {
-    const reply = await api.readSearch(searchId.value)
+    const reply = await api.readSearch(searchId.value, cursor.value)
     state.value = reply.state
-    items.value = reply.items || []
-    offers.value = reply.offers
-    summary.value = reply.summary
-    notices.value = reply.notices
+    applyResults(reply)
+    cursor.value = reply.cursor
+    hasMore.value = reply.has_more
     checked.value = new Date().toISOString().slice(11, 19) + ' UTC'
     remember(reply.state.id)
-    if (reply.state.done) stopPolling()
+    if (reply.state.done && !reply.has_more) stopPolling()
   } catch (failure) {
     if (failure.retriable) {
       // Los Resultados recibidos se conservan y se reintenta la Consulta.
@@ -160,7 +167,36 @@ async function refresh() {
       unavailable.value = failure.message
       stopPolling()
     }
+  } finally {
+    refreshing = false
   }
+}
+
+function replacePositions(current, incoming) {
+  const positions = new Set(incoming.map((row) => row.position ?? row.item_position))
+  return [...current.filter((row) => !positions.has(row.position ?? row.item_position)),
+          ...incoming]
+}
+
+function summarizeOffers(rows) {
+  const eligible = rows.filter((row) => !row.suspicious && row.stock_status !== 'unavailable' && row.price_clp != null)
+  const cheapest = eligible.reduce((best, row) => !best || row.price_clp < best.price_clp ? row : best, null)
+  rows.forEach((row) => { row.best = row === cheapest })
+  const prices = rows.filter((row) => row.price_clp != null).map((row) => row.price_clp)
+  return {
+    lowest_clp: prices.length ? Math.min(...prices) : null,
+    offers: rows.length,
+    stores: new Set(rows.map((row) => row.store)).size,
+  }
+}
+
+function applyResults(reply) {
+  items.value = replacePositions(items.value, reply.items || [])
+    .sort((left, right) => left.position - right.position)
+  offers.value = replacePositions(offers.value, reply.offers || [])
+    .sort((left, right) => left.currency.localeCompare(right.currency) || Number(left.amount) - Number(right.amount))
+  notices.value = replacePositions(notices.value, reply.notices || [])
+  summary.value = summarizeOffers(offers.value)
 }
 
 async function cancel() {
