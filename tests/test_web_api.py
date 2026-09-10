@@ -5,7 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from muchi.mtg.ports import CardNotFound, QueryFailed, SearchRejected, TranslationFailed
-from muchi.mtg.search import SearchItem, SearchOffer, SearchState
+from muchi.mtg.search import SearchItem, SearchOffer, SearchResults, SearchState
 from server import main
 
 
@@ -33,8 +33,10 @@ class FakeSearches:
     def read_search(self, search_id):
         return self.state
 
-    def read_results(self, search_id):
-        return self.items
+    def read_results(self, search_id, after=0):
+        remaining = tuple(item for item in self.items if item.sequence > after)
+        cursor = remaining[-1].sequence if remaining else after
+        return SearchResults(remaining, cursor, False)
 
     def cancel_search(self, search_id, key):
         return SearchState("abc", "cancelled", 2, 1, 1, 0)
@@ -52,8 +54,9 @@ def client(monkeypatch):
             build_offer(store="Dudosa", amount=Decimal("10"), suspicious=True,
                         suspicious_reason="price_below_40_percent_median"),
             build_offer(store="Gringa", amount=Decimal("3"), currency="USD"),
-        )),
-        SearchItem("Black Lotus", 1, "not_found", ()),
+        ), id="item-1", position=0, sequence=1),
+        SearchItem("Black Lotus", 1, "not_found", (),
+                   id="item-2", position=1, sequence=2),
     ))
     monkeypatch.setattr(main, "build_muchi", lambda: type("Cast", (), {"searches": searches})())
     return TestClient(main.app), searches
@@ -69,9 +72,12 @@ def test_read_search_orders_offers_and_marks_cheapest(client):
     assert best == ["Otra"]
     assert reply["summary"] == {"lowest_clp": 10.0, "offers": 4, "stores": 4}
     assert reply["items"] == [
-        {"name": "Sol Ring", "quantity": 2, "status": "found", "offers": 4},
-        {"name": "Black Lotus", "quantity": 1, "status": "not_found", "offers": 0},
+        {"id": "item-1", "position": 0, "sequence": 1,
+         "name": "Sol Ring", "quantity": 2, "status": "found", "offers": 4},
+        {"id": "item-2", "position": 1, "sequence": 2,
+         "name": "Black Lotus", "quantity": 1, "status": "not_found", "offers": 0},
     ]
+    assert (reply["cursor"], reply["has_more"]) == (2, False)
     assert any("Black Lotus" in notice["text"] for notice in reply["notices"])
 
 
@@ -103,7 +109,8 @@ def test_create_search_parses_the_decklist(client):
     orders, key = searches.created[0]
     assert (orders[0].quantity, orders[0].name, key) == (4, "Lightning Bolt", "k" * 10)
     assert reply.json()["items"] == [
-        {"name": "Lightning Bolt", "quantity": 4, "status": "queued", "offers": 0},
+        {"name": "Lightning Bolt", "quantity": 4, "position": 0,
+         "sequence": 0, "status": "queued", "offers": 0},
     ]
 
 

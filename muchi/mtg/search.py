@@ -35,6 +35,16 @@ class SearchItem:
     status: str
     offers: tuple[SearchOffer, ...]
     error_message: str = ""
+    id: str = ""
+    position: int = 0
+    sequence: int = 0
+
+
+@dataclass(frozen=True)
+class SearchResults:
+    items: tuple[SearchItem, ...]
+    cursor: int
+    has_more: bool
 
 
 @dataclass(frozen=True)
@@ -58,6 +68,6 @@ class SearchService(Protocol):
     def create_search(self, orders: list[Order], verify_stock: bool,
                       stores_only: bool, key: str) -> SearchState: ...
     def read_search(self, search_id: str) -> SearchState: ...
-    def read_results(self, search_id: str) -> tuple[SearchItem, ...]: ...
+    def read_results(self, search_id: str, after: int = 0) -> SearchResults: ...
     def cancel_search(self, search_id: str, key: str) -> SearchState: ...
     def read_sources(self) -> list[dict]: ...

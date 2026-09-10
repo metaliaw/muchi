@@ -111,14 +111,18 @@ def build_state(state: SearchState) -> dict:
 def build_results(items: tuple[SearchItem, ...], muchi_dolar: int) -> dict:
     """Las Ofertas ya ordenadas, con la más barata marcada y el Resumen listo."""
     offers: list[SearchOffer] = []
+    positions: dict[int, int] = {}
     notices = []
     for item in items:
         if item.status == "source_error":
             notices.append({"level": "warning", "card": item.name,
+                            "item_position": item.position,
                             "text": f"{item.name}: no se pudo completar la Consulta."})
         elif item.status == "not_found":
             notices.append({"level": "caption", "card": item.name,
+                            "item_position": item.position,
                             "text": f"{item.name}: sin Ofertas."})
+        positions.update((id(offer), item.position) for offer in item.offers)
         offers.extend(item.offers)
 
     offers = order_offers(offers)
@@ -126,6 +130,7 @@ def build_results(items: tuple[SearchItem, ...], muchi_dolar: int) -> dict:
     rows = []
     for offer in offers:
         row = build_offer(offer, muchi_dolar)
+        row["item_position"] = positions[id(offer)]
         row["best"] = offer is cheapest
         rows.append(row)
     prices = [price for price in
@@ -133,6 +138,9 @@ def build_results(items: tuple[SearchItem, ...], muchi_dolar: int) -> dict:
               if price is not None]
     return {
         "items": [{
+            "id": item.id,
+            "position": item.position,
+            "sequence": item.sequence,
             "name": item.name,
             "quantity": item.quantity,
             "status": item.status,
