@@ -9,7 +9,7 @@ import requests
 
 from muchi.mtg.models import Order
 from muchi.mtg.ports import QueryFailed, SearchRejected
-from muchi.mtg.search import SearchItem, SearchOffer, SearchState
+from muchi.mtg.search import SearchItem, SearchOffer, SearchResults, SearchState
 
 
 def build_search(reply: dict) -> SearchState:
@@ -63,13 +63,15 @@ def order_offers(offers) -> tuple[SearchOffer, ...]:
     return tuple(sorted(offers, key=lambda offer: (offer.currency, offer.amount)))
 
 
-def build_items(reply: dict) -> tuple[SearchItem, ...]:
+def build_results(reply: dict) -> SearchResults:
     ordered = sorted(reply["items"], key=lambda row: row["position"])
-    return tuple(SearchItem(
+    items = tuple(SearchItem(
         name=row["original_name"], quantity=row["quantity"], status=row["status"],
         offers=order_offers(build_offer(offer) for offer in row["offers"]),
         error_message=row.get("error_message") or "",
+        id=row["id"], position=row["position"], sequence=row["sequence"],
     ) for row in ordered)
+    return SearchResults(items, reply["cursor"], reply["has_more"])
 
 
 @dataclass
@@ -133,9 +135,12 @@ class SearchProvider:
         reply = self.request_reply("GET", f"/searches/{quote(search_id, safe='')}")
         return self.parse_reply(build_search, reply)
 
-    def read_results(self, search_id: str) -> tuple[SearchItem, ...]:
-        reply = self.request_reply("GET", f"/searches/{quote(search_id, safe='')}/results")
-        return self.parse_reply(build_items, reply)
+    def read_results(self, search_id: str, after: int = 0) -> SearchResults:
+        reply = self.request_reply(
+            "GET", f"/searches/{quote(search_id, safe='')}/results",
+            params={"after": after, "limit": 50},
+        )
+        return self.parse_reply(build_results, reply)
 
     def cancel_search(self, search_id: str, key: str) -> SearchState:
         reply = self.request_reply(
