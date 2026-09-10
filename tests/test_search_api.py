@@ -22,8 +22,10 @@ def offer_reply():
 
 
 def result_reply():
-    return {"items": [dict(position=0, original_name="Sol Ring", quantity=2,
-                           status="found", offers=[offer_reply()])]}
+    return {"items": [dict(id="item-1", position=0, sequence=1,
+                           original_name="Sol Ring", quantity=2,
+                           status="found", offers=[offer_reply()])],
+            "cursor": 1, "has_more": False}
 
 
 def make_provider(reply, status=200):
@@ -76,7 +78,7 @@ def test_orders_offers_by_price_within_each_currency():
         dict(offer_reply(), price_amount=amount, price_currency=currency)
         for amount, currency in prices
     ]
-    item, = make_provider(reply).read_results("search-1")
+    item, = make_provider(reply).read_results("search-1").items
     assert [(str(offer.amount), offer.currency) for offer in item.offers] == [
         ("1500", "CLP"), ("9000", "CLP"), ("3.00", "USD"), ("12.50", "USD"),
     ]
@@ -88,7 +90,7 @@ def test_reads_treatment_fields_and_tolerates_nulls():
         finish=None, language="Inglés", condition=None,
         metadata={"variant": "Near Mint Foil", "title": "Sol Ring [SLD]"},
     )
-    item, = make_provider(reply).read_results("search-1")
+    item, = make_provider(reply).read_results("search-1").items
     offer = item.offers[0]
     assert (offer.finish, offer.condition) == ("", "")
     assert offer.language == "Inglés"
@@ -99,18 +101,22 @@ def test_reads_treatment_fields_and_tolerates_nulls():
 def test_missing_metadata_leaves_treatment_empty():
     reply = result_reply()
     reply["items"][0]["offers"][0]["metadata"] = None
-    item, = make_provider(reply).read_results("search-1")
+    item, = make_provider(reply).read_results("search-1").items
     assert (item.offers[0].variant, item.offers[0].title) == ("", "")
 
 
 def test_reads_partial_results():
     provider = make_provider(result_reply())
-    item, = provider.read_results("search-1")
+    result = provider.read_results("search-1", 7)
+    item, = result.items
     assert item.quantity == 2
     assert item.offers[0].amount == Decimal("1.69")
     assert item.offers[0].currency == "USD"
     assert item.offers[0].suspicious
     assert item.offers[0].stock_status == "unknown"
+    assert (item.id, item.position, item.sequence) == ("item-1", 0, 1)
+    assert (result.cursor, result.has_more) == (1, False)
+    assert provider.session.request.call_args.kwargs["params"] == {"after": 7, "limit": 50}
 
 
 @pytest.mark.parametrize("status", ["completed", "completed_with_errors", "failed", "cancelled"])
@@ -137,7 +143,7 @@ def test_rejects_invalid_search(orders):
 
 def test_rejects_bad_results():
     with pytest.raises(QueryFailed):
-        make_provider({"items": [{}]}).read_results("search-1")
+        make_provider({"items": [{}], "cursor": 0, "has_more": False}).read_results("search-1")
 
 
 def test_reads_offers_and_health():

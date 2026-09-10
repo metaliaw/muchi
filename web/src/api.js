@@ -32,7 +32,8 @@ export const readConfig = () => request('/api/config')
 export const readMuchi = () => request('/api/muchi')
 export const readDecklist = (text, key) => post('/api/decklist', { text, key })
 export const createSearch = (text, key) => post('/api/searches', { text, key })
-export const readSearch = (id) => request(`/api/searches/${encodeURIComponent(id)}`)
+export const readSearch = (id, after = 0) =>
+  request(`/api/searches/${encodeURIComponent(id)}?after=${after}`)
 export const cancelSearch = (id, key) =>
   post(`/api/searches/${encodeURIComponent(id)}/cancel`, { key })
 export const readCart = (id, shipping) =>
