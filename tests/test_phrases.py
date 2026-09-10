@@ -1,7 +1,6 @@
 """El Catálogo define los Textos y la Frecuencia sin Defaults duplicados."""
-import json
-
 import pytest
+import yaml
 
 from muchi.mtg import phrases
 
@@ -16,8 +15,8 @@ def test_custom_catalog_controls_messages(tmp_path):
         "light": [{"text": "prendieron las luces", "state": "alert"}],
         "nerd": [{"text": "HAAAA NERDD!", "state": "happy"}],
     }
-    path = tmp_path / "phrases.json"
-    path.write_text(json.dumps(document))
+    path = tmp_path / "phrases.yaml"
+    path.write_text(yaml.safe_dump(document))
     book = phrases.read_phrases(path)
     assert book.every == 7
     assert phrases.speaks_now(7, book.every)
@@ -36,42 +35,42 @@ def test_custom_catalog_controls_messages(tmp_path):
     ("greetings", [{"text": "", "state": "talk"}]),
 ])
 def test_rejects_invalid_catalog(tmp_path, field, value):
-    document = json.loads(phrases.PHRASES_PATH.read_text())
+    document = yaml.safe_load(phrases.PHRASES_PATH.read_text())
     document[field] = value
-    path = tmp_path / "phrases.json"
-    path.write_text(json.dumps(document))
+    path = tmp_path / "phrases.yaml"
+    path.write_text(yaml.safe_dump(document))
     with pytest.raises(ValueError):
         phrases.read_phrases(path)
 
 
 def test_missing_theme_lists_have_no_fallback(tmp_path):
-    document = json.loads(phrases.PHRASES_PATH.read_text())
+    document = yaml.safe_load(phrases.PHRASES_PATH.read_text())
     del document["dark"]
-    path = tmp_path / "phrases.json"
-    path.write_text(json.dumps(document))
+    path = tmp_path / "phrases.yaml"
+    path.write_text(yaml.safe_dump(document))
     with pytest.raises(ValueError, match="dark"):
         phrases.read_phrases(path)
 
 
 def test_missing_frequency_has_no_fallback(tmp_path):
-    document = json.loads(phrases.PHRASES_PATH.read_text())
+    document = yaml.safe_load(phrases.PHRASES_PATH.read_text())
     del document["every"]
-    path = tmp_path / "phrases.json"
-    path.write_text(json.dumps(document))
+    path = tmp_path / "phrases.yaml"
+    path.write_text(yaml.safe_dump(document))
     with pytest.raises(ValueError, match="every"):
         phrases.read_phrases(path)
 
 
 def test_absent_catalog_has_no_greeting(tmp_path):
-    book = phrases.read_phrases(tmp_path / "missing.json")
+    book = phrases.read_phrases(tmp_path / "missing.yaml")
     assert phrases.select_greeting(book) is None
     assert book.help_topics == ()
 
 
 def test_broken_catalog_is_rejected(tmp_path):
-    """Un JSON cortado a la mitad falla como Catálogo, no como Excepción cruda."""
-    path = tmp_path / "phrases.json"
-    path.write_text('{"every": 10, "phrases": [')
+    """Un YAML cortado a la mitad falla como Catálogo, no como Excepción cruda."""
+    path = tmp_path / "phrases.yaml"
+    path.write_text("every: 10\nphrases: [")
     with pytest.raises(ValueError):
         phrases.read_phrases(path)
 
