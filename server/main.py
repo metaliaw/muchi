@@ -28,7 +28,9 @@ from server import presenter
 
 # El Contrato pide ambas Opciones en cada Pedido. Se envían fijas: la API
 # comprueba el Stock de las Ofertas más baratas y hoy ignora "stores_only".
-VERIFY_STOCK = True
+# La Re-verificación pega una segunda Vez por Oferta: nace Apagada, y
+# MUCHI_VERIFY_STOCK=1 la Enciende el Día que la Certeza pese más que la Carga.
+VERIFY_STOCK = os.getenv("MUCHI_VERIFY_STOCK", "0").strip() in {"1", "true", "si", "yes"}
 STORES_ONLY = True
 WEB_DIST = ROOT / "web" / "dist"
 ADSENSE_AUTHORITY = "f08c47fec0942fa0"
@@ -234,7 +236,8 @@ def read_search(search_id: str, after: int = Query(0, ge=0)) -> dict:
     searches = build_muchi().searches
     state = searches.read_search(search_id)
     page = searches.read_results(search_id, after)
-    results = presenter.build_results(page.items, load_rate_settings().muchi_dolar)
+    results = presenter.build_results(page.items, load_rate_settings().muchi_dolar,
+                                      verified=VERIFY_STOCK)
     return {"state": presenter.build_state(state), **results,
             "cursor": page.cursor, "has_more": page.has_more}
 
