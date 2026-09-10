@@ -187,7 +187,7 @@ Entradas, noventa y nueve copias— no se configuran: salen del Formato, un Mazo
 de Commander de cien Cartas. El Front los lee de `/api/config` y los escribe
 junto al Formulario, así que el Número vive en un solo lugar. Los Archivos de Configuración usan
 YAML; las Credenciales se inyectan por separado. Las Frases de Muchi están en
-[constants/phrases.json](constants/phrases.json), incluidos los Saludos y la Ayuda.
+[constants/phrases.yaml](constants/phrases.yaml), incluidos los Saludos y la Ayuda.
 `muchi/mtg/phrases.py` carga ese Contenido y genera las Burbujas y los Corazones;
 `messaging.py` sólo decide la prioridad de los Mensajes.
 

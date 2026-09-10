@@ -1,10 +1,18 @@
 /** Único punto de contacto con el BFF. El Navegador jamás ve el Token. */
 
 async function request(path, options = {}) {
-  const response = await fetch(path, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  })
+  let response
+  try {
+    response = await fetch(path, {
+      headers: { 'Content-Type': 'application/json' },
+      ...options,
+    })
+  } catch {
+    // Sin Respuesta no hay Status: la Red se cortó antes de llegar al BFF.
+    const error = new Error('La Consulta no llegó al Servicio. Se puede reintentar.')
+    error.retriable = true
+    throw error
+  }
   let body = null
   try {
     body = await response.json()
