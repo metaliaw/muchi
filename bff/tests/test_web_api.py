@@ -91,6 +91,20 @@ def test_suspicious_offer_explains_itself_in_words(client):
     assert dudosa["note"] and dudosa["action"] == "Verificar"
 
 
+def test_unverified_offers_show_no_stock_badge(client):
+    """Sin Re-verificación, el Stock no se Declara: ni Pastilla ni Etiqueta."""
+    from server import presenter
+
+    rows = presenter.build_results(
+        (SearchItem("Sol Ring", 1, "found", (
+            build_offer(amount=Decimal("4000")),), id="i-1", position=0, sequence=1),),
+        muchi_dolar=1000, verified=False)
+    offer, = rows["offers"]
+    assert offer["stock_label"] == ""
+    assert all(pill["text"] not in presenter.STOCK_LABELS.values()
+               for pill in offer["pills"])
+
+
 def test_cart_skips_suspicious_and_converts_dollars(client):
     http, _ = client
     plan = http.get("/api/searches/abc/cart?shipping=4000").json()
