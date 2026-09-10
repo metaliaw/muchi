@@ -21,6 +21,7 @@ type Config struct {
 	StoresPath              string
 	ScryURL                 string
 	ScryEnabled             bool
+	ScryCommunityEnabled    bool
 	WorkerID                string
 	LeaseDuration           time.Duration
 	PollInterval            time.Duration
@@ -65,6 +66,7 @@ func LoadConfig() (Config, error) {
 		StoresPath:              readValueOr("MUCHI_STORES_CONFIG", "config/stores.yaml"),
 		ScryURL:                 readValueOr("MUCHI_SCRY_URL", "https://scry.cl"),
 		ScryEnabled:             readBoolOr("MUCHI_SCRY_ENABLED", true),
+		ScryCommunityEnabled:    readBoolOr("MUCHI_SCRY_COMMUNITY_ENABLED", false),
 		WorkerID:                readValueOr("MUCHI_WORKER_ID", readHostname()),
 		LeaseDuration:           readSecondsOr("MUCHI_LEASE_SECONDS", 60),
 		PollInterval:            readSecondsOr("MUCHI_POLL_SECONDS", 2),

@@ -7,7 +7,7 @@ prepare_deploy() {
 	DRY_RUN=false
 	while [ "$#" -gt 0 ]; do
 		case "$1" in
-		--project | --region | --token-secret | --token-file | --scry)
+		--project | --region | --token-secret | --token-file | --scry | --scry-community)
 			[ "$#" -ge 2 ] || fail_deploy "Falta el Valor de $1"
 			case "$1" in
 			--project) PROJECT=$2 ;;
@@ -15,6 +15,7 @@ prepare_deploy() {
 			--token-secret) MUCHI_API_TOKEN=$2 ;;
 			--token-file) TOKEN_FILE=$2 ;;
 			--scry) MUCHI_SCRY_ENABLED=$2 ;;
+			--scry-community) MUCHI_SCRY_COMMUNITY_ENABLED=$2 ;;
 			esac
 			shift 2
 			;;
@@ -34,6 +35,7 @@ prepare_deploy() {
 	case "$PROJECT" in '' | '(unset)' | *[!a-z0-9-]*) fail_deploy 'Selecciona un Proyecto con --project.' ;; esac
 	case "$REGION" in '' | *[!a-z0-9-]*) fail_deploy 'Región Inválida.' ;; esac
 	case "$MUCHI_SCRY_ENABLED" in true | false) ;; *) fail_deploy 'Usa --scry true o --scry false.' ;; esac
+	case "$MUCHI_SCRY_COMMUNITY_ENABLED" in true | false) ;; *) fail_deploy 'Usa --scry-community true o --scry-community false.' ;; esac
 	case "$MUCHI_API_TOKEN" in *:*) ;; *) fail_deploy 'Usa --token-secret NOMBRE:VERSION.' ;; esac
 	SECRET_NAME=${MUCHI_API_TOKEN%:*}
 	case "$SECRET_NAME" in '' | *[!a-zA-Z0-9_-]*) fail_deploy 'Nombre de Secreto Inválido.' ;; esac
@@ -83,5 +85,5 @@ fail_deploy() {
 show_deploy_help() {
 	printf '%s\n' "🐱 $0 [--project ID] [--region REGION]" \
 		'  [--token-secret NOMBRE:VERSION] [--token-file ARCHIVO]' \
-		'  [--scry true|false] [--dry-run]'
+		'  [--scry true|false] [--scry-community true|false] [--dry-run]'
 }

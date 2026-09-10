@@ -43,7 +43,7 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 	fetcher := buildSourceClient(config, store, logger)
 	var catalog search.OfferSource
 	if config.ScryEnabled {
-		catalog = scry.Client{Fetcher: fetcher, BaseURL: config.ScryURL}
+		catalog = scry.Client{Fetcher: fetcher, BaseURL: config.ScryURL, ExcludeCommunity: !config.ScryCommunityEnabled}
 	} else if logger != nil {
 		logger.Warn("Scry Disabled", "flag", "MUCHI_SCRY_ENABLED", "offers", "direct stores only")
 	}
@@ -53,7 +53,7 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		Sources:           buildOfferSources(fetcher, catalog, storeConfig, store, config.OfferCacheTTL, logger),
 		Stocks:            checker,
 		Cache:             store,
-		CacheNamespace:    search.HashPayload([]any{"moxfield-v1", config.ScryURL, config.ScryEnabled, storeConfig}) + ":",
+		CacheNamespace:    search.HashPayload([]any{"moxfield-v1", config.ScryURL, config.ScryEnabled, config.ScryCommunityEnabled, storeConfig}) + ":",
 		CacheTTL:          config.OfferCacheTTL,
 		EmptyCacheTTL:     config.OfferCacheEmptyTTL,
 		MaxCards:          config.MaxCardsPerSearch,

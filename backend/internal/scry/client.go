@@ -25,6 +25,9 @@ type SourceFetcher interface {
 type Client struct {
 	Fetcher SourceFetcher
 	BaseURL string
+	// ExcludeCommunity Drops the Offers Scry hosts itself: a Community Seller
+	// holds a page under the Scry Domain, never a Storefront of its own.
+	ExcludeCommunity bool
 }
 
 var slugSeparators = regexp.MustCompile(`[^a-z0-9]+`)
@@ -48,7 +51,14 @@ func (c Client) FindOffers(ctx context.Context, name string) ([]offer.Offer, err
 		}
 		return nil, err
 	}
-	return readOffers(data)
+	items, err := readOffers(data)
+	if err != nil {
+		return nil, err
+	}
+	if c.ExcludeCommunity {
+		items = withoutCommunityOffers(items, base.Host)
+	}
+	return items, nil
 }
 
 func buildCardSlug(name string) string {
@@ -95,6 +105,21 @@ func readAttributes(node *html.Node) map[string]string {
 		attrs[attr.Key] = attr.Val
 	}
 	return attrs
+}
+
+// withoutCommunityOffers Keeps the Offers that link out to a Storefront. A
+// Community Offer points back under the Scry Domain —marketplace.scry.cl—
+// because the Seller has no Site of its own to link to.
+func withoutCommunityOffers(items []offer.Offer, host string) []offer.Offer {
+	kept := items[:0]
+	for _, item := range items {
+		link, err := url.Parse(item.URL)
+		if err != nil || link.Host == host || strings.HasSuffix(link.Host, "."+host) {
+			continue
+		}
+		kept = append(kept, item)
+	}
+	return kept
 }
 
 func buildOffer(attrs map[string]string) (offer.Offer, error) {
