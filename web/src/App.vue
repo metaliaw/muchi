@@ -86,6 +86,7 @@ function remember(id, label) {
 function selectSearch(id, initialState = null, initialItems = []) {
   searchId.value = id
   state.value = initialState
+  stateChanges.value = []
   items.value = initialItems
   offers.value = []
   summary.value = null
@@ -147,12 +148,26 @@ async function send() {
   }
 }
 
+// Las Llaves del Estado que Cambiaron en el último Ciclo. La Vista las usa
+// para Reaccionar solo a lo Nuevo; vacío significa "nada se movió".
+const stateChanges = ref([])
+
+// Compara el Estado recibido con el que ya se muestra. El Servidor manda el
+// Estado entero en cada Ciclo; el Delta se Siente aquí, no en la Red.
+function applyState(incoming) {
+  const current = state.value
+  stateChanges.value = current
+    ? Object.keys(incoming).filter((key) => incoming[key] !== current[key])
+    : Object.keys(incoming)
+  state.value = incoming
+}
+
 async function refresh() {
   if (!searchId.value || unavailable.value || refreshing) return
   refreshing = true
   try {
     const reply = await api.readSearch(searchId.value, cursor.value)
-    state.value = reply.state
+    applyState(reply.state)
     applyResults(reply)
     cursor.value = reply.cursor
     hasMore.value = reply.has_more
@@ -202,7 +217,7 @@ function applyResults(reply) {
 async function cancel() {
   try {
     const reply = await api.cancelSearch(searchId.value, api.newKey())
-    state.value = reply.state
+    applyState(reply.state)
     say('Ya paré de buscar', 'idle')
   } catch (failure) {
     error.value = failure.message
