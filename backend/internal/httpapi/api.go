@@ -9,16 +9,21 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/cangrejometralleta/muchi-api/internal/cardmetadata"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 )
 
 type API struct {
 	Searches           search.Service
 	Health             search.HealthStore
+	CardMetadata       map[search.Game]cardmetadata.Provider
+	Autocomplete       map[search.Game]cardmetadata.AutocompleteProvider
+	SupportedGames     map[search.Game]string
 	Token              string
 	Logger             *slog.Logger
 	HealthCheckTimeout time.Duration
@@ -45,12 +50,32 @@ func (a API) BuildHandler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v1/health", a.getHealth)
 	mux.Handle("GET /v1/health/sources", a.authenticate(http.HandlerFunc(a.listSourceHealth)))
+	mux.Handle("GET /v1/supported-games", a.authenticate(http.HandlerFunc(a.listSupportedGames)))
 	mux.Handle("POST /v1/searches", a.authenticate(http.HandlerFunc(a.createSearch)))
 	mux.Handle("GET /v1/searches/{search_id}", a.authenticate(http.HandlerFunc(a.getSearch)))
 	mux.Handle("GET /v1/searches/{search_id}/results", a.authenticate(http.HandlerFunc(a.listResults)))
 	mux.Handle("POST /v1/searches/{search_id}/cancel", a.authenticate(http.HandlerFunc(a.cancelSearch)))
 	mux.Handle("GET /v1/cards/offers", a.authenticate(http.HandlerFunc(a.findCardOffers)))
 	return a.identifyRequest(a.recoverPanic(mux))
+}
+
+type supportedGameReply struct {
+	Name         string      `json:"name"`
+	ReferenceKey search.Game `json:"reference_key"`
+}
+
+func (a API) listSupportedGames(w http.ResponseWriter, _ *http.Request) {
+	keys := make([]string, 0, len(a.SupportedGames))
+	for game := range a.SupportedGames {
+		keys = append(keys, string(game))
+	}
+	slices.Sort(keys)
+	games := make([]supportedGameReply, 0, len(keys))
+	for _, key := range keys {
+		game := search.Game(key)
+		games = append(games, supportedGameReply{Name: a.SupportedGames[game], ReferenceKey: game})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"games": games})
 }
 
 func (a API) createSearch(w http.ResponseWriter, r *http.Request) {

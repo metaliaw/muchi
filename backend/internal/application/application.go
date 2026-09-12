@@ -29,6 +29,7 @@ type Runtime struct {
 	Queue                 *taskqueue.Queue
 	CardMetadataProviders map[search.Game]cardmetadata.Provider
 	AutocompleteProviders map[search.Game]cardmetadata.AutocompleteProvider
+	SupportedGames        map[search.Game]string
 }
 
 // BuildRuntime Casts the Search Providers for one Function Instance.
@@ -57,6 +58,12 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		search.GamePokemon: tcgmatchMetadata,
 		search.GameYuGiOh:  tcgmatchYuGiOh,
 	}
+	supportedGames := make(map[search.Game]string)
+	for key, game := range storeConfig.Games {
+		if game.Enabled {
+			supportedGames[search.Game(key)] = game.Name
+		}
+	}
 	checker := stores.Checker{Fetcher: fetcher, Config: storeConfig}
 	service := search.Service{
 		Searches:          store,
@@ -79,9 +86,9 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 			return Runtime{}, err
 		}
 		service.Tasks = queue
-		return Runtime{Service: service, Store: store, Queue: queue, CardMetadataProviders: cardMetadataProviders, AutocompleteProviders: autocompleteProviders}, nil
+		return Runtime{Service: service, Store: store, Queue: queue, CardMetadataProviders: cardMetadataProviders, AutocompleteProviders: autocompleteProviders, SupportedGames: supportedGames}, nil
 	}
-	return Runtime{Service: service, Store: store, CardMetadataProviders: cardMetadataProviders, AutocompleteProviders: autocompleteProviders}, nil
+	return Runtime{Service: service, Store: store, CardMetadataProviders: cardMetadataProviders, AutocompleteProviders: autocompleteProviders, SupportedGames: supportedGames}, nil
 }
 
 func buildProviders(fetcher stores.SourceFetcher, config stores.Config) map[search.Game]search.Provider {

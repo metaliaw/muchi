@@ -40,14 +40,17 @@ func runCommand(logger *slog.Logger, args []string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 	if args[0] == "serve" {
-		return serveAPI(ctx, config, logger, runtime.Service, runtime.Store)
+		return serveAPI(ctx, config, logger, runtime)
 	}
 	return workSearches(ctx, config, runtime.Service)
 }
 
-func serveAPI(ctx context.Context, config config.Config, logger *slog.Logger, service search.Service, health search.HealthStore) error {
+func serveAPI(ctx context.Context, config config.Config, logger *slog.Logger, runtime application.Runtime) error {
 	api := httpapi.API{
-		Searches: service, Health: health, Token: config.APIToken, Logger: logger,
+		Searches: runtime.Service, Health: runtime.Store,
+		CardMetadata: runtime.CardMetadataProviders, Autocomplete: runtime.AutocompleteProviders,
+		SupportedGames: runtime.SupportedGames,
+		Token:          config.APIToken, Logger: logger,
 		HealthCheckTimeout: config.HealthCheckTimeout,
 	}
 	observed := metrics.NewMetrics().MeasureRequests(api.BuildHandler())

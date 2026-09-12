@@ -25,6 +25,20 @@ paths:
                 required: [sources]
                 properties:
                   sources: {type: array, items: {$ref: "#/components/schemas/SourceHealth"}}
+  /supported-games:
+    get:
+      responses:
+        "200":
+          description: Games currently supported by the API
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [games]
+                properties:
+                  games:
+                    type: array
+                    items: {$ref: "#/components/schemas/SupportedGame"}
   /searches:
     post:
       parameters:
@@ -78,6 +92,12 @@ paths:
   /cards/offers:
     get:
       parameters:
+        - name: game
+          in: query
+          description: Game catalog; defaults to Magic when omitted
+          schema:
+            allOf: [{$ref: "#/components/schemas/Game"}]
+            default: magic
         - name: name
           in: query
           required: true
@@ -109,6 +129,10 @@ components:
       additionalProperties: false
       required: [cards, options]
       properties:
+        game:
+          allOf: [{$ref: "#/components/schemas/Game"}]
+          description: Game catalog; defaults to Magic when omitted
+          default: magic
         cards:
           type: array
           minItems: 1
@@ -154,10 +178,11 @@ components:
         has_more: {type: boolean}
     SearchItem:
       type: object
-      required: [id, search_id, position, sequence, original_name, normalized_name, quantity, status, attempts, offers]
+      required: [id, search_id, game, position, sequence, original_name, normalized_name, quantity, status, attempts, offers]
       properties:
         id: {type: string}
         search_id: {type: string}
+        game: {$ref: "#/components/schemas/Game"}
         position: {type: integer}
         sequence: {type: integer, minimum: 1}
         original_name: {type: string}
@@ -188,6 +213,16 @@ components:
         suspicious: {type: boolean}
         suspicious_reason: {type: string}
         metadata: {type: object, additionalProperties: {type: string}}
+    Game:
+      type: string
+      enum: [magic, pokemon, yugioh]
+      example: magic
+    SupportedGame:
+      type: object
+      required: [name, reference_key]
+      properties:
+        name: {type: string}
+        reference_key: {$ref: "#/components/schemas/Game"}
     SourceHealth:
       type: object
       required: [source, consecutive_failures, latency_ms]

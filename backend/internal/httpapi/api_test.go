@@ -96,6 +96,25 @@ func TestRequireHeaders(t *testing.T) {
 	}
 }
 
+func TestListSupportedGames(t *testing.T) {
+	api := API{
+		Token: "secret",
+		SupportedGames: map[search.Game]string{
+			search.GamePokemon: "Pokémon",
+			search.GameMagic:   "Magic: The Gathering",
+		},
+	}
+	request := httptest.NewRequest(http.MethodGet, "/v1/supported-games", nil)
+	request.Header.Set("Authorization", "Bearer secret")
+	response := httptest.NewRecorder()
+
+	api.BuildHandler().ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK || response.Body.String() != `{"games":[{"name":"Magic: The Gathering","reference_key":"magic"},{"name":"Pokémon","reference_key":"pokemon"}]}`+"\n" {
+		t.Fatalf("GET /v1/supported-games status=%d body=%s", response.Code, response.Body.String())
+	}
+}
+
 func TestHideError(t *testing.T) {
 	status, code, message := mapError(errors.New("database password leaked"))
 	if status != http.StatusInternalServerError || code != "internal_error" || strings.Contains(message, "password") {
