@@ -43,7 +43,7 @@ func (*fakeStore) ListSourceHealth(context.Context) ([]search.SourceHealth, erro
 func TestCreateSearch(t *testing.T) {
 	store := &fakeStore{}
 	api := API{Searches: search.Service{Searches: store, MaxCards: 500, MaxQuantity: 99}, Health: store, Token: "secret"}
-	body := `{"cards":[{"name":"Sol Ring","quantity":1}],"options":{"verify_stock":true,"stores_only":true}}`
+	body := `{"game":"magic","cards":[{"name":"Sol Ring","quantity":1}],"options":{"verify_stock":true,"stores_only":true}}`
 	request := httptest.NewRequest(http.MethodPost, "/v1/searches", strings.NewReader(body))
 	request.Header.Set("Authorization", "Bearer secret")
 	request.Header.Set("Idempotency-Key", "request-one")
@@ -55,6 +55,26 @@ func TestCreateSearch(t *testing.T) {
 	var job search.Job
 	if err := json.NewDecoder(response.Body).Decode(&job); err != nil || job.ID != "search_one" {
 		t.Fatalf("POST /v1/searches job=%#v err=%v", job, err)
+	}
+}
+
+func TestDecodeSearchDefaultsToMagic(t *testing.T) {
+	request := httptest.NewRequest(http.MethodPost, "/v1/searches", strings.NewReader(`{"cards":[{"name":"Sol Ring","quantity":1}]}`))
+
+	input, err := decodeSearch(request)
+
+	if err != nil || input.Game != search.GameMagic {
+		t.Fatalf("decodeSearch() game=%q err=%v", input.Game, err)
+	}
+}
+
+func TestDecodeSearchKeepsExplicitGame(t *testing.T) {
+	request := httptest.NewRequest(http.MethodPost, "/v1/searches", strings.NewReader(`{"game":"pokemon","cards":[{"name":"Pikachu","quantity":1}]}`))
+
+	input, err := decodeSearch(request)
+
+	if err != nil || input.Game != search.GamePokemon {
+		t.Fatalf("decodeSearch() game=%q err=%v", input.Game, err)
 	}
 }
 

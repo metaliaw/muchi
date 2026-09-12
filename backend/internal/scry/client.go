@@ -30,6 +30,10 @@ type Client struct {
 	ExcludeCommunity bool
 }
 
+func (c Client) Search(ctx context.Context, name string) ([]offer.Offer, error) {
+	return c.FindOffers(ctx, name)
+}
+
 var slugSeparators = regexp.MustCompile(`[^a-z0-9]+`)
 
 // FindOffers Reads the Saved Offers Published on a Scry Card Page.

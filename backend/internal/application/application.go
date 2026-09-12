@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/cangrejometralleta/muchi-api/internal/cardmetadata"
 	"github.com/cangrejometralleta/muchi-api/internal/config"
 	firestorestore "github.com/cangrejometralleta/muchi-api/internal/firestore"
 	"github.com/cangrejometralleta/muchi-api/internal/jumpseller"
@@ -16,15 +17,18 @@ import (
 	"github.com/cangrejometralleta/muchi-api/internal/source"
 	"github.com/cangrejometralleta/muchi-api/internal/stores"
 	"github.com/cangrejometralleta/muchi-api/internal/taskqueue"
+	"github.com/cangrejometralleta/muchi-api/internal/tcgmatch"
 )
 
 // userAgent identifies this service to card sources; it does not vary by environment.
 const userAgent = "muchi-api/1.0"
 
 type Runtime struct {
-	Service search.Service
-	Store   *firestorestore.Store
-	Queue   *taskqueue.Queue
+	Service               search.Service
+	Store                 *firestorestore.Store
+	Queue                 *taskqueue.Queue
+	CardMetadataProviders map[search.Game]cardmetadata.Provider
+	AutocompleteProviders map[search.Game]cardmetadata.AutocompleteProvider
 }
 
 // BuildRuntime Casts the Search Providers for one Function Instance.
@@ -41,19 +45,25 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		return Runtime{}, err
 	}
 	fetcher := buildSourceClient(config, store, logger)
-	var catalog search.OfferSource
-	if config.ScryEnabled {
-		catalog = scry.Client{Fetcher: fetcher, BaseURL: config.ScryURL, ExcludeCommunity: !config.ScryCommunityEnabled}
-	} else if logger != nil {
-		logger.Warn("Scry Disabled", "flag", "MUCHI_SCRY_ENABLED", "offers", "direct stores only")
+	tcgmatchMetadata := tcgmatch.Client{Fetcher: fetcher, BaseURL: storeConfig.SearchProviders["tcgmatch"].URL, Game: string(search.GamePokemon)}
+	tcgmatchYuGiOh := tcgmatch.Client{Fetcher: fetcher, BaseURL: storeConfig.SearchProviders["tcgmatch"].URL, Game: string(search.GameYuGiOh)}
+	cardMetadataProviders := map[search.Game]cardmetadata.Provider{
+		search.GameMagic:   cardmetadata.Scryfall{Fetcher: fetcher},
+		search.GamePokemon: tcgmatchMetadata,
+		search.GameYuGiOh:  tcgmatchYuGiOh,
+	}
+	autocompleteProviders := map[search.Game]cardmetadata.AutocompleteProvider{
+		search.GameMagic:   cardmetadata.Scryfall{Fetcher: fetcher},
+		search.GamePokemon: tcgmatchMetadata,
+		search.GameYuGiOh:  tcgmatchYuGiOh,
 	}
 	checker := stores.Checker{Fetcher: fetcher, Config: storeConfig}
 	service := search.Service{
 		Searches:          store,
-		Sources:           buildOfferSources(fetcher, catalog, storeConfig, store, config.OfferCacheTTL, logger),
+		Providers:         buildProviders(fetcher, storeConfig),
 		Stocks:            checker,
 		Cache:             store,
-		CacheNamespace:    search.HashPayload([]any{"moxfield-v1", config.ScryURL, config.ScryEnabled, config.ScryCommunityEnabled, storeConfig}) + ":",
+		CacheNamespace:    search.HashPayload([]any{"search-providers-v1", storeConfig}) + ":",
 		CacheTTL:          config.OfferCacheTTL,
 		EmptyCacheTTL:     config.OfferCacheEmptyTTL,
 		MaxCards:          config.MaxCardsPerSearch,
@@ -69,9 +79,30 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 			return Runtime{}, err
 		}
 		service.Tasks = queue
-		return Runtime{Service: service, Store: store, Queue: queue}, nil
+		return Runtime{Service: service, Store: store, Queue: queue, CardMetadataProviders: cardMetadataProviders, AutocompleteProviders: autocompleteProviders}, nil
 	}
-	return Runtime{Service: service, Store: store}, nil
+	return Runtime{Service: service, Store: store, CardMetadataProviders: cardMetadataProviders, AutocompleteProviders: autocompleteProviders}, nil
+}
+
+func buildProviders(fetcher stores.SourceFetcher, config stores.Config) map[search.Game]search.Provider {
+	providers := make(map[search.Game]search.Provider, len(config.Games))
+	for _, provider := range config.SearchProviders {
+		if !provider.Enabled {
+			continue
+		}
+		for _, game := range provider.Games {
+			if gameConfig, found := config.Games[game]; !found || !gameConfig.Enabled {
+				continue
+			}
+			switch provider.Type {
+			case "scry":
+				providers[search.Game(game)] = scry.Client{Fetcher: fetcher, BaseURL: provider.URL, ExcludeCommunity: !provider.Community}
+			case "tcgmatch":
+				providers[search.Game(game)] = tcgmatch.Client{Fetcher: fetcher, BaseURL: provider.URL, Game: game}
+			}
+		}
+	}
+	return providers
 }
 
 func buildSourceClient(config config.Config, gate source.TrafficGate, logger *slog.Logger) source.Client {

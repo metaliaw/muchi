@@ -40,12 +40,22 @@ type CardInput struct {
 	Quantity int    `json:"quantity"`
 }
 
+type Game string
+
+const (
+	GameMagic    Game = "magic"
+	GameOnePiece Game = "one-piece"
+	GamePokemon  Game = "pokemon"
+	GameYuGiOh   Game = "yugioh"
+)
+
 type Options struct {
 	VerifyStock bool `json:"verify_stock"`
 	StoresOnly  bool `json:"stores_only"`
 }
 
 type CreateInput struct {
+	Game    Game        `json:"game"`
 	Cards   []CardInput `json:"cards"`
 	Options Options     `json:"options"`
 }
@@ -69,6 +79,7 @@ type Job struct {
 type Item struct {
 	ID             string        `json:"id"`
 	SearchID       string        `json:"search_id"`
+	Game           Game          `json:"game"`
 	Position       int           `json:"position"`
 	Sequence       int           `json:"sequence,omitempty"`
 	OriginalName   string        `json:"original_name"`

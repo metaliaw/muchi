@@ -44,7 +44,7 @@ func (w Worker) processNext(ctx context.Context) error {
 	defer cancel()
 	go w.renewLease(work, item.ID)
 
-	items, sourceErr := w.Service.collectOffers(work, item.NormalizedName)
+	items, sourceErr := w.Service.collectOffers(work, item.Game, item.NormalizedName)
 	if item.VerifyStock {
 		items = w.verifyStocks(work, items)
 	}

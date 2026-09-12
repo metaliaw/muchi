@@ -23,7 +23,12 @@ type TaskQueue interface {
 	DispatchSearch(context.Context, Job) error
 }
 
-// OfferSource Finds Offers shaped by https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml.
+// Provider Searches one Game through its configured external Catalog.
+type Provider interface {
+	Search(context.Context, string) ([]offer.Offer, error)
+}
+
+// OfferSource Finds Offers in one directly configured Store.
 type OfferSource interface {
 	FindOffers(context.Context, string) ([]offer.Offer, error)
 }

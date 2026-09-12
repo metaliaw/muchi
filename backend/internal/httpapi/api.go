@@ -74,6 +74,9 @@ func (a API) createSearch(w http.ResponseWriter, r *http.Request) {
 func decodeSearch(r *http.Request) (search.CreateInput, error) {
 	var input search.CreateInput
 	err := decodeJSON(r, &input)
+	if err == nil && input.Game == "" {
+		input.Game = search.GameMagic
+	}
 
 	return input, err
 }
@@ -135,7 +138,11 @@ func (a API) cancelSearch(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a API) findCardOffers(w http.ResponseWriter, r *http.Request) {
-	items, err := a.Searches.FindCardOffers(r.Context(), r.URL.Query().Get("name"))
+	game := search.Game(r.URL.Query().Get("game"))
+	if game == "" {
+		game = search.GameMagic
+	}
+	items, err := a.Searches.FindCardOffers(r.Context(), game, r.URL.Query().Get("name"))
 	if err != nil {
 		a.writeError(w, r, err)
 		return

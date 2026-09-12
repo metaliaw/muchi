@@ -12,7 +12,7 @@ cloud functions deploy "$API_NAME" --gen2 --trigger-http --allow-unauthenticated
 	--runtime="$RUNTIME" --region="$REGION" --source=. --entry-point=ServeAPI --ignore-file=.gcloudignore \
 	--service-account="$API_EMAIL" --build-service-account="projects/$PROJECT/serviceAccounts/$BUILD_EMAIL" \
 	--memory="$MEMORY" --timeout="$TIMEOUT" --min-instances=0 --max-instances="$MAX_INSTANCES" --concurrency=1 \
-	--set-env-vars="GOOGLE_CLOUD_PROJECT=$PROJECT,MUCHI_STORES_CONFIG=serverless_function_source_code/config/stores.yaml,MUCHI_TASK_REGION=$REGION,MUCHI_TASK_QUEUE=$TASK_QUEUE,MUCHI_TASK_URL=$WORKER_URL,MUCHI_TASK_SERVICE_ACCOUNT=$TASK_EMAIL,MUCHI_SCRY_ENABLED=$MUCHI_SCRY_ENABLED,MUCHI_SCRY_COMMUNITY_ENABLED=$MUCHI_SCRY_COMMUNITY_ENABLED" \
+	--set-env-vars="GOOGLE_CLOUD_PROJECT=$PROJECT,MUCHI_STORES_CONFIG=serverless_function_source_code/config/stores.yaml,MUCHI_TASK_REGION=$REGION,MUCHI_TASK_QUEUE=$TASK_QUEUE,MUCHI_TASK_URL=$WORKER_URL,MUCHI_TASK_SERVICE_ACCOUNT=$TASK_EMAIL" \
 	--set-secrets="MUCHI_API_TOKEN=$MUCHI_API_TOKEN" --format=none
 if "$DRY_RUN"; then
 	printf '%s\n' '✅ API Lista para Desplegar'

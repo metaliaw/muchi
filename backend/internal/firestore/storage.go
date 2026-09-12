@@ -430,7 +430,7 @@ func (s *Store) createItems(ctx context.Context, job search.Job, input search.Cr
 	batch := s.client.Batch()
 	for index, card := range input.Cards {
 		item := search.Item{
-			ID: stored.ItemIDs[index], SearchID: job.ID, Position: index,
+			ID: stored.ItemIDs[index], SearchID: job.ID, Game: input.Game, Position: index,
 			OriginalName: card.Name, NormalizedName: offer.NormalizeCard(card.Name),
 			Quantity: card.Quantity, Status: search.ItemPending, Offers: []offer.Offer{},
 			VerifyStock: input.Options.VerifyStock, StoresOnly: input.Options.StoresOnly,

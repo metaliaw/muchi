@@ -16,6 +16,7 @@ const maxConcurrentSources = 4
 
 type Service struct {
 	Searches          SearchStore
+	Providers         map[Game]Provider
 	Sources           []OfferSource
 	Stocks            StockChecker
 	Cache             OfferCache
@@ -53,20 +54,29 @@ func (s Service) CancelSearch(ctx context.Context, id, key string) (Job, error) 
 	return s.Searches.CancelSearch(ctx, id, key, hash)
 }
 
-func (s Service) FindCardOffers(ctx context.Context, name string) ([]offer.Offer, error) {
+func (s Service) FindCardOffers(ctx context.Context, game Game, name string) ([]offer.Offer, error) {
 	name = strings.TrimSpace(name)
-	if name == "" {
+	if name == "" || !validGame(game) {
 		return nil, ErrInvalid
 	}
-	return s.collectOffers(ctx, name)
+	return s.collectOffers(ctx, game, name)
 }
 
-func (s Service) collectOffers(ctx context.Context, name string) ([]offer.Offer, error) {
-	key := s.CacheNamespace + offer.NormalizeCard(name)
+func (s Service) collectOffers(ctx context.Context, game Game, name string) ([]offer.Offer, error) {
+	key := s.CacheNamespace + string(game) + ":" + offer.NormalizeCard(name)
 	if items, found := s.loadOfferCache(ctx, key); found {
 		return items, nil
 	}
-	items, err := querySources(ctx, s.Sources, name)
+	provider, found := s.Providers[game]
+	var items []offer.Offer
+	var err error
+	if found {
+		items, err = provider.Search(ctx, name)
+	} else if len(s.Sources) > 0 {
+		items, err = querySources(ctx, s.Sources, name)
+	} else {
+		return nil, ErrInvalid
+	}
 	if err != nil && len(items) == 0 {
 		return nil, err
 	}
@@ -98,7 +108,7 @@ func (s Service) saveOfferCache(ctx context.Context, key string, items []offer.O
 
 // ValidateCreate Bounds one Search Request by the configured Card and Quantity Limits.
 func ValidateCreate(input CreateInput, maxCards, maxQuantity int) error {
-	if len(input.Cards) == 0 || len(input.Cards) > maxCards {
+	if !validGame(input.Game) || len(input.Cards) == 0 || len(input.Cards) > maxCards {
 		return ErrInvalid
 	}
 	for _, card := range input.Cards {
@@ -107,6 +117,10 @@ func ValidateCreate(input CreateInput, maxCards, maxQuantity int) error {
 		}
 	}
 	return nil
+}
+
+func validGame(game Game) bool {
+	return game == GameMagic || game == GamePokemon || game == GameYuGiOh || game == GameOnePiece
 }
 
 func HashPayload(value any) string {

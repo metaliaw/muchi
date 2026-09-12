@@ -12,7 +12,7 @@ cambia ese valor en `config/stores.yaml` y reinicia API y worker.
 
 De Scry se leen los precios guardados en sus páginas, en CLP, junto con tienda y variante.
 La verificación de stock consulta las tiendas configuradas; un precio publicado no confirma stock.
-`MUCHI_SCRY_URL` permite cambiar la URL base (por defecto `https://scry.cl`).
+La URL, Activación y Comunidad de Scry se Configuran en `search_providers` dentro de `config/stores.yaml`.
 El lector depende del HTML público de Scry y no fuerza una actualización de su caché.
 
 Las listas Moxfield se resuelven automáticamente por la API v3 a partir de cada

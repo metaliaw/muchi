@@ -1,6 +1,61 @@
+games:
+  magic:
+    name: "Magic: The Gathering"
+    reference_key: magic
+    enabled: true
+    origins:
+      - scry
+      - moxfield
+      - jumpseller
+      - shopify
+      - woocommerce
+  pokemon:
+    name: Pokémon
+    reference_key: pokemon
+    enabled: true
+    origins:
+      - tcgmatch
+      - jumpseller
+      - shopify
+      - woocommerce
+  yugioh:
+    name: Yu-Gi-Oh!
+    reference_key: yugioh
+    enabled: true
+    origins:
+      - tcgmatch
+  one-piece:
+    name: One Piece
+    reference_key: one-piece
+    enabled: false
+    origins:
+      - tcgmatch
+
+search_providers:
+  scry:
+    type: scry
+    url: https://scry.cl
+    enabled: true
+    community: false
+    games: [magic]
+    stores:
+      - lacripta.cl
+      - onplay.cl
+      - gameofmagicsingles.cl
+      - singles.collectorcenter.cl
+      - www.cardsouls.cl
+      - el-wombat-rabioso-tcg
+  tcgmatch:
+    type: tcgmatch
+    url: https://api.tcgmatch.cl
+    enabled: true
+    games: [pokemon, yugioh, one-piece]
+    stores: []
+
 stores:
   # Jumpseller Directo Pausado: Paginación Lenta. Scry Conserva sus Ofertas Publicadas.
   lacripta.cl:
+    games: [magic]
     platform: woocommerce
     unavailable_selectors:
       - "div.product.outofstock"
@@ -13,6 +68,7 @@ stores:
     allow_redirects: true
     enabled: true
   onplay.cl:
+    games: [magic]
     name: "OnPlay Singles"
     platform: woocommerce
     unavailable_selectors:
@@ -26,48 +82,56 @@ stores:
     allow_redirects: true
     enabled: true
   gameofmagicsingles.cl:
+    games: [magic]
     name: "Game of Magic Singles"
     platform: shopify
     timeout_seconds: 10
     allow_redirects: true
     enabled: true
   singles.collectorcenter.cl:
+    games: [magic]
     name: "Collector Center"
     platform: shopify
     timeout_seconds: 10
     allow_redirects: true
     enabled: true
   www.cardsouls.cl:
+    games: [magic]
     name: "CardSouls"
     platform: shopify
     timeout_seconds: 10
     allow_redirects: true
     enabled: true
   www.cartaslafortaleza.cl:
+    games: [magic]
     name: "Cartas La Fortaleza"
     platform: jumpseller
     timeout_seconds: 10
     allow_redirects: true
     enabled: false
   www.chronomagic.cl:
+    games: [magic]
     name: "ChronoMagic"
     platform: jumpseller
     timeout_seconds: 10
     allow_redirects: true
     enabled: false
   gamequest.cl:
+    games: [magic]
     name: "GameQuest"
     platform: jumpseller
     timeout_seconds: 10
     allow_redirects: true
     enabled: false
   www.magic4ever.cl:
+    games: [magic]
     name: "Magic4Ever"
     platform: jumpseller
     timeout_seconds: 10
     allow_redirects: true
     enabled: false
   el-wombat-rabioso-tcg:
+    games: [magic]
     name: "El Wombat Rabioso TCG"
     enabled: true
     lists:

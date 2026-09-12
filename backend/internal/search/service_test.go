@@ -9,19 +9,13 @@ import (
 	"github.com/cangrejometralleta/muchi-api/internal/offer"
 )
 
-type stubSource struct {
+type stubProvider struct {
 	items []offer.Offer
 	err   error
 }
 
-func (s stubSource) FindOffers(context.Context, string) ([]offer.Offer, error) {
+func (s stubProvider) Search(context.Context, string) ([]offer.Offer, error) {
 	return s.items, s.err
-}
-
-type sourceProbe func(context.Context, string) ([]offer.Offer, error)
-
-func (p sourceProbe) FindOffers(ctx context.Context, name string) ([]offer.Offer, error) {
-	return p(ctx, name)
 }
 
 type stubCache struct {
@@ -39,50 +33,35 @@ func (c *stubCache) SaveOffers(_ context.Context, _ string, items []offer.Offer,
 	return nil
 }
 
-func TestFindFallback(t *testing.T) {
+func TestFindProvider(t *testing.T) {
 	wanted := offer.Offer{ID: "one", Store: "store", URL: "https://store.test", PriceAmount: "10.00", PriceCurrency: "USD"}
 	cache := &stubCache{}
-	service := Service{Sources: []OfferSource{stubSource{err: errors.New("down")}, stubSource{items: []offer.Offer{wanted}}}, Cache: cache}
-	items, err := service.FindCardOffers(context.Background(), "Sol Ring")
-	if err != nil || len(items) != 1 || cache.saved {
+	service := Service{Providers: map[Game]Provider{GameMagic: stubProvider{items: []offer.Offer{wanted}}}, Cache: cache}
+	items, err := service.FindCardOffers(context.Background(), GameMagic, "Sol Ring")
+	if err != nil || len(items) != 1 || !cache.saved {
 		t.Fatalf("FindCardOffers() items=%v saved=%v err=%v", items, cache.saved, err)
 	}
 }
 
-func TestSourcesRunTogether(t *testing.T) {
-	started := make(chan struct{}, 2)
-	release := make(chan struct{})
-	probe := func(id string) sourceProbe {
-		return func(context.Context, string) ([]offer.Offer, error) {
-			started <- struct{}{}
-			<-release
-			return []offer.Offer{{ID: id}}, nil
-		}
-	}
-	done := make(chan []offer.Offer, 1)
-	go func() {
-		items, _ := querySources(context.Background(), []OfferSource{probe("one"), probe("two")}, "Sol Ring")
-		done <- items
-	}()
-
-	for range 2 {
-		select {
-		case <-started:
-		case <-time.After(time.Second):
-			t.Fatal("Sources did not Run Together")
-		}
-	}
-	close(release)
-	items := <-done
-	if len(items) != 2 || items[0].ID != "one" || items[1].ID != "two" {
-		t.Fatalf("querySources() items = %v", items)
+func TestFindProviderRejectsUnconfiguredGame(t *testing.T) {
+	service := Service{Providers: map[Game]Provider{}}
+	if _, err := service.FindCardOffers(context.Background(), GamePokemon, "Charizard"); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("FindCardOffers() error=%v", err)
 	}
 }
 
 func TestValidateCreate(t *testing.T) {
-	valid := CreateInput{Cards: []CardInput{{Name: "Sol Ring", Quantity: 1}}}
-	if err := ValidateCreate(valid, 500, 99); err != nil {
-		t.Fatalf("ValidateCreate() error = %v", err)
+	valid := CreateInput{Game: GameMagic, Cards: []CardInput{{Name: "Sol Ring", Quantity: 1}}}
+	for _, game := range []Game{GameMagic, GamePokemon, GameYuGiOh, GameOnePiece} {
+		valid.Game = game
+		if err := ValidateCreate(valid, 500, 99); err != nil {
+			t.Fatalf("ValidateCreate(%q) error = %v", game, err)
+		}
+	}
+	invalidGame := valid
+	invalidGame.Game = "unknown"
+	if err := ValidateCreate(invalidGame, 500, 99); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("ValidateCreate() game error = %v", err)
 	}
 	valid.Cards[0].Quantity = 0
 	if err := ValidateCreate(valid, 500, 99); !errors.Is(err, ErrInvalid) {
