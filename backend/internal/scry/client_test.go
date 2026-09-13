@@ -101,6 +101,43 @@ func TestOffersMatchEditionsNamedInWords(t *testing.T) {
 	}
 }
 
+// Cada Tienda Escribe la Impresión a su Manera. Estas son las Formas
+// reales que scry.cl Publica, tomadas de una Búsqueda en Producción.
+func TestOffersMatchEveryStoreTitleShape(t *testing.T) {
+	prints := []cardmetadata.Print{
+		{Edition: "c19", EditionName: "Commander 2019", CollectorNumber: "221", Image: "https://images.test/c19-221.jpg"},
+		{Edition: "c14", EditionName: "Commander 2014", CollectorNumber: "270", Image: "https://images.test/c14-270.jpg"},
+		{Edition: "mkc", EditionName: "Murders at Karlov Manor Commander", CollectorNumber: "237", Image: "https://images.test/mkc-237.jpg"},
+		{Edition: "znc", EditionName: "Zendikar Rising Commander", CollectorNumber: "72", Image: "https://images.test/znc-72.jpg"},
+		{Edition: "pip", EditionName: "Fallout", CollectorNumber: "123", Image: "https://images.test/pip-123.jpg"},
+	}
+	for _, test := range []struct{ name, title, want string }{
+		{"code and hash number", "Sol Ring [C19] #221 ENG", "https://images.test/c19-221.jpg"},
+		{"code and number in parentheses", "Sol Ring — Commander 2019 (C19 #221) · NM · EN", "https://images.test/c19-221.jpg"},
+		{"code joined by a dash", "Sol Ring [C14-270] [Near Mint / Inglés]", "https://images.test/c14-270.jpg"},
+		{"code spaced from its number", "Sol Ring [MKC - 237] [Moderately Played]", "https://images.test/mkc-237.jpg"},
+		{"code among pipes", "Sol Ring | Inglés | NM | MKC", "https://images.test/mkc-237.jpg"},
+		{"code buried in words", "Sol Ring [ZNC Normal Inglés NM Normal]", "https://images.test/znc-72.jpg"},
+		{"edition named in words", "Sol Ring [Fallout]", "https://images.test/pip-123.jpg"},
+		{"no edition at all", "Sol Ring — Near Mint", ""},
+		{"condition only", "Sol Ring [Idioma: Español, Estado: NM]", ""},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			page := `<div id="results"><a data-track-type="store_offer_click" data-store-name="One" data-card-name="Sol Ring" data-variant-key="one" data-price-clp="2800" data-product-url="https://one.test/x" data-offer-title="` + test.title + `"></a></div>`
+			client := Client{Fetcher: &pageFetcher{data: []byte(page)}, BaseURL: "https://scry.test", Prints: printProvider{prints: prints}}
+
+			items, err := client.FindOffers(context.Background(), "Sol Ring")
+
+			if err != nil || len(items) != 1 {
+				t.Fatalf("FindOffers() items=%#v err=%v", items, err)
+			}
+			if items[0].Image != test.want {
+				t.Fatalf("image=%q want %q", items[0].Image, test.want)
+			}
+		})
+	}
+}
+
 func TestPageFailures(t *testing.T) {
 	for _, test := range []struct {
 		name, page string

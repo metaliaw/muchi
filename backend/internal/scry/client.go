@@ -37,7 +37,6 @@ func (c Client) Search(ctx context.Context, name string) ([]offer.Offer, error) 
 }
 
 var slugSeparators = regexp.MustCompile(`[^a-z0-9]+`)
-var printingPattern = regexp.MustCompile(`(?i)\[([^\[\]]+)\](?:\s+#([[:alnum:]★]+))?`)
 
 // FindOffers Reads the Saved Offers Published on a Scry Card Page.
 func (c Client) FindOffers(ctx context.Context, name string) ([]offer.Offer, error) {
@@ -157,8 +156,7 @@ func (c Client) applyPrintImages(ctx context.Context, name string, items []offer
 	}
 	exact, editions := indexPrintImages(prints)
 	for index := range items {
-		edition, number := readPrinting(items[index].Metadata["title"])
-		items[index].Image = selectPrintImage(exact, editions, edition, number)
+		items[index].Image = matchPrintImage(exact, editions, items[index].Metadata["title"], name)
 	}
 	return items
 }
@@ -190,17 +188,45 @@ func indexPrintImages(prints []cardmetadata.Print) (map[string]string, map[strin
 	return exact, editions
 }
 
-func readPrinting(title string) (string, string) {
-	parts := printingPattern.FindStringSubmatch(title)
-	if len(parts) == 0 {
-		return "", ""
+// matchPrintImage Finds the Image for whatever Shape a Store Chose to Write.
+// Every Store Writes its own: `[C21] #263`, `| C20`, `(C19 #221)`,
+// `[C14-270]`, `[MKC - 237]`, `- 214 -`. Guessing the Shape Needs one Rule
+// per Store; Asking instead which Word *is* an Edition Scryfall Listed for
+// this Card Needs none, and Never Invents one.
+func matchPrintImage(exact, editions map[string]string, title, name string) string {
+	words := titleWords(strings.TrimPrefix(strings.ToLower(title), strings.ToLower(name)))
+	edition := longestEdition(words, editions)
+	if edition == "" {
+		return ""
 	}
-	return strings.ToLower(strings.TrimSpace(parts[1])), strings.ToLower(parts[2])
-}
-
-func selectPrintImage(exact, editions map[string]string, edition, number string) string {
-	if number != "" {
-		return exact[edition+":"+number]
+	// Every numeric Word is a Candidate Number, and a wrong Guess Costs
+	// nothing: only a Pair the Print List Confirms Wins. When none does,
+	// the Edition alone Answers with its first Impresión.
+	for _, word := range words {
+		if image := exact[edition+":"+word]; image != "" {
+			return image
+		}
 	}
 	return editions[edition]
+}
+
+var wordPattern = regexp.MustCompile(`[\p{L}\p{N}★]+`)
+
+func titleWords(title string) []string {
+	return wordPattern.FindAllString(title, -1)
+}
+
+// longestEdition Prefers `modern horizons 2` over a bare `2`, so a Name of
+// several Words Wins against a Fragment of itself.
+func longestEdition(words []string, editions map[string]string) string {
+	const longestEditionName = 6
+	for length := longestEditionName; length >= 1; length-- {
+		for start := 0; start+length <= len(words); start++ {
+			candidate := strings.Join(words[start:start+length], " ")
+			if _, known := editions[candidate]; known {
+				return candidate
+			}
+		}
+	}
+	return ""
 }
