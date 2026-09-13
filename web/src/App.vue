@@ -12,7 +12,7 @@ import SearchProgress from './components/SearchProgress.vue'
 import OfferList from './components/OfferList.vue'
 import CartPanel from './components/CartPanel.vue'
 import SourcesPanel from './components/SourcesPanel.vue'
-import GoogleAd from './components/GoogleAd.vue'
+import AdSpot from './components/AdSpot.vue'
 import GoogleAdsense from './components/GoogleAdsense.vue'
 import SponsorSpot from './components/SponsorSpot.vue'
 
@@ -50,7 +50,12 @@ let refreshing = false
 const busy = computed(() => Boolean(
   state.value && (!state.value.done || hasMore.value) && !unavailable.value
 ))
-const googleReady = computed(() => Boolean(config.value.adsense_client && config.value.adsense_slot))
+// Fuera de Producción el Algoritmo Decide igual, pero AdSpot Dibuja
+// un Placeholder en vez del Anuncio: así se Prueba la Elección sin Google.
+const googleReady = computed(() =>
+  config.value.environment !== 'production'
+  || Boolean(config.value.adsense_client && config.value.adsense_slot)
+)
 const sponsorReady = computed(() => Boolean(config.value.sponsor_name && config.value.sponsor_url))
 
 function hashSearch(id) {
@@ -322,9 +327,10 @@ onUnmounted(stopPolling)
           :sponsor-text="showSponsor ? config.sponsor_text : ''"
           :sponsor-url="showSponsor ? config.sponsor_url : ''"
         />
-        <GoogleAd
+        <AdSpot
           v-else
           :key="`google-${searchId}`"
+          :environment="config.environment"
           :client="config.adsense_client"
           :slot="config.adsense_slot"
         />
