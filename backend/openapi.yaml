@@ -265,6 +265,7 @@ components:
       properties:
         name: {type: string}
         printed_name: {type: string}
+        edition: {type: string}
         image: {type: string, format: uri}
         url: {type: string, format: uri}
     SourceHealth:

@@ -85,7 +85,7 @@ func (c Client) Search(ctx context.Context, name string) ([]offer.Offer, error) 
 			return nil, err
 		}
 		for _, entry := range listings {
-			if item, ok := buildOffer(entry, product.Name, c.Game); ok {
+			if item, ok := buildOffer(entry, product, c.Game); ok {
 				items = append(items, item)
 			}
 		}
@@ -106,7 +106,11 @@ func (c Client) CardMetadata(ctx context.Context, request cardmetadata.Request) 
 		if !c.matches(product, request.Language) || request.Edition != "" && !strings.EqualFold(request.Edition, product.SetCode) && !strings.EqualFold(request.Edition, product.SetID) {
 			continue
 		}
-		return cardmetadata.Metadata{Name: product.Name, Image: product.Image}, nil
+		edition := product.SetCode
+		if edition == "" {
+			edition = product.SetID
+		}
+		return cardmetadata.Metadata{Name: product.Name, Edition: edition, Image: product.Image}, nil
 	}
 	return cardmetadata.Metadata{}, nil
 }
@@ -191,7 +195,7 @@ func (c Client) readListings(ctx context.Context, base *url.URL, catalogID int64
 	return reply.Data, nil
 }
 
-func buildOffer(entry listing, cardName, game string) (offer.Offer, bool) {
+func buildOffer(entry listing, product catalogProduct, game string) (offer.Offer, bool) {
 	if !entry.IsActive || entry.Quantity < 1 || entry.Price < 1 || entry.ID == "" || entry.User.Name == "" || entry.TCG != game {
 		return offer.Offer{}, false
 	}
@@ -202,10 +206,13 @@ func buildOffer(entry listing, cardName, game string) (offer.Offer, bool) {
 		finish = "holo"
 	}
 	return offer.Offer{
-		ID: "tcgmatch:" + entry.ID, VariantID: entry.ID, CardName: cardName,
+		ID: "tcgmatch:" + entry.ID, VariantID: entry.ID, CardName: product.Name,
 		Store: entry.User.Name, PriceAmount: strconv.FormatInt(entry.Price, 10), PriceCurrency: "CLP",
 		URL: "https://tcgmatch.cl/producto/" + entry.ID, Source: "tcgmatch.cl", StockStatus: "available",
 		Language: entry.Language, Condition: entry.Status, Finish: finish,
-		Metadata: map[string]string{"game": game, "quantity": strconv.Itoa(entry.Quantity), "seller": entry.User.Username},
+		Metadata: map[string]string{
+			"game": game, "quantity": strconv.Itoa(entry.Quantity), "seller": entry.User.Username,
+			"set_id": product.SetID, "set_code": product.SetCode, "image": product.Image,
+		},
 	}, true
 }

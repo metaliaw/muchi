@@ -125,6 +125,7 @@ type cardList struct {
 type scryfallCard struct {
 	Name        string            `json:"name"`
 	PrintedName string            `json:"printed_name"`
+	Set         string            `json:"set"`
 	ScryfallURL string            `json:"scryfall_uri"`
 	ImageURIs   map[string]string `json:"image_uris"`
 	CardFaces   []scryfallCard    `json:"card_faces"`
@@ -142,5 +143,5 @@ func metadataOf(card *scryfallCard) Metadata {
 	if image == "" {
 		image = images["small"]
 	}
-	return Metadata{Name: card.Name, PrintedName: card.PrintedName, Image: image, URL: card.ScryfallURL}
+	return Metadata{Name: card.Name, PrintedName: card.PrintedName, Edition: card.Set, Image: image, URL: card.ScryfallURL}
 }

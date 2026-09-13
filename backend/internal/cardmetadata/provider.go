@@ -22,6 +22,7 @@ type Request struct {
 type Metadata struct {
 	Name        string `json:"name"`
 	PrintedName string `json:"printed_name,omitempty"`
+	Edition     string `json:"edition,omitempty"`
 	Image       string `json:"image,omitempty"`
 	URL         string `json:"url,omitempty"`
 }
