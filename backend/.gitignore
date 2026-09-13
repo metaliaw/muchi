@@ -4,3 +4,26 @@
 __pycache__/
 *.pyc
 vendor/
+
+# One Repository Holds one active Handoff, and never Commits it.
+# See .agents/skills/bye-bye-bye/SKILL.md — Never Commit or Push the Handoff.
+/.handoff.md
+
+# The Canon Arrives as a Cache, and a Cache is not Carried.
+# AGENTS.md Names the Address; OneTwoUpdate Recreates the Rest.
+# See rules/the-head-is-the-canon.md — the Head is the Claim.
+/.canon/
+/RULES.md
+/VALUES.md
+/PATTERNS.md
+/.canonignore
+/rules
+/values
+/patterns
+/.agents/agents
+/.agents/skills
+/.claude/agents
+/.claude/skills
+/.codex/agents
+/.github/agents
+/.github/skills
