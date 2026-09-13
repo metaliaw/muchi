@@ -46,7 +46,7 @@ func (c *memoryCache) SaveOffers(_ context.Context, key string, items []offer.Of
 	return nil
 }
 
-func TestSolRingProbe(t *testing.T) {
+func TestMagicProbe(t *testing.T) {
 	if os.Getenv("MUCHI_LIVE") == "" {
 		t.Skip("set MUCHI_LIVE=1")
 	}
