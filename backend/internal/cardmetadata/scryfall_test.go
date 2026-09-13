@@ -66,6 +66,23 @@ func TestScryfallAsksForExactFoilPrinting(t *testing.T) {
 	}
 }
 
+func TestScryfallDoesNotAssumeTheFirstVariantInAnEdition(t *testing.T) {
+	fetcher := &fakeFetcher{replies: [][]byte{
+		[]byte(`{"data":[{"name":"Sol Ring","image_uris":{"normal":"https://cards.scryfall.io/first.jpg"}},{"name":"Sol Ring","image_uris":{"normal":"https://cards.scryfall.io/second.jpg"}}]}`),
+		[]byte(`{"name":"Sol Ring","image_uris":{"normal":"https://cards.scryfall.io/card.jpg"}}`),
+	}}
+	provider := Scryfall{Fetcher: fetcher}
+
+	metadata, err := provider.CardMetadata(context.Background(), Request{Name: "Sol Ring", Edition: "sld"})
+
+	if err != nil || metadata.Image != "https://cards.scryfall.io/card.jpg" {
+		t.Fatalf("CardMetadata() metadata=%#v err=%v", metadata, err)
+	}
+	if len(fetcher.targets) != 2 || !strings.Contains(fetcher.targets[1], "/cards/named") {
+		t.Fatalf("targets=%#v", fetcher.targets)
+	}
+}
+
 func TestScryfallUsesTheFrontFaceImage(t *testing.T) {
 	fetcher := &fakeFetcher{replies: [][]byte{
 		[]byte(`{"name":"Delver of Secrets","card_faces":[{"image_uris":{"normal":"https://cards.scryfall.io/front.jpg"}},{"image_uris":{"normal":"https://cards.scryfall.io/back.jpg"}}]}`),
