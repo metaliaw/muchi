@@ -111,10 +111,13 @@ type ResultPage struct {
 }
 
 type SourceHealth struct {
-	Source              string     `json:"source"`
-	LastSuccess         *time.Time `json:"last_success,omitempty"`
-	LastFailure         *time.Time `json:"last_failure,omitempty"`
-	ConsecutiveFailures int        `json:"consecutive_failures"`
-	LatencyMilliseconds int64      `json:"latency_ms"`
-	CircuitOpenUntil    *time.Time `json:"circuit_open_until,omitempty"`
+	Source                        string     `json:"source"`
+	Platform                      string     `json:"platform,omitempty"`
+	Enabled                       bool       `json:"enabled"`
+	EstimatedResponseMilliseconds int64      `json:"estimated_response_ms"`
+	LastSuccess                   *time.Time `json:"last_success,omitempty"`
+	LastFailure                   *time.Time `json:"last_failure,omitempty"`
+	ConsecutiveFailures           int        `json:"consecutive_failures"`
+	LatencyMilliseconds           int64      `json:"latency_ms"`
+	CircuitOpenUntil              *time.Time `json:"circuit_open_until,omitempty"`
 }

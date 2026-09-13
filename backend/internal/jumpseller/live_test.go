@@ -45,6 +45,31 @@ func TestLiveSolRing(t *testing.T) {
 	}
 }
 
+func TestLiveDecksCardsDarkMagician(t *testing.T) {
+	if os.Getenv("MUCHI_TEST_JUMPSELLER_LIVE") != "1" {
+		t.Skip("set MUCHI_TEST_JUMPSELLER_LIVE=1")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
+	defer cancel()
+	fetcher := &loggedFetcher{test: t, client: source.Client{
+		HTTP: &http.Client{Timeout: 15 * time.Second}, MaxAttempts: 2,
+		BaseDelay: time.Second, UserAgent: "muchi-api/1.0",
+	}}
+	client := jumpseller.Client{Domain: "www.deckscards.cl", Name: "Decks Cards", Fetcher: fetcher}
+	started := time.Now()
+	items, err := client.FindOffers(ctx, "Dark Magician")
+	if err != nil || len(items) == 0 {
+		t.Fatalf("requests=%d offers=%d duration=%s err=%v", fetcher.calls, len(items), time.Since(started), err)
+	}
+	for _, item := range items {
+		if item.CardName != "Dark Magician" || item.VariantID == "" || item.StockStatus != "available" {
+			t.Fatalf("unexpected offer=%+v", item)
+		}
+		t.Logf("variant=%s language=%s price=%s %s url=%s", item.VariantID, item.Language, item.PriceAmount, item.PriceCurrency, item.URL)
+	}
+	t.Logf("requests=%d offers=%d duration=%s", fetcher.calls, len(items), time.Since(started))
+}
+
 // loggedFetcher Reports Progress during Long Storefront Searches.
 type loggedFetcher struct {
 	test   *testing.T

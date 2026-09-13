@@ -34,16 +34,24 @@ type SearchProviderConfig struct {
 }
 
 type StoreConfig struct {
-	Games                []string       `yaml:"games"`
-	Platform             string         `yaml:"platform"`
-	UnavailableSelectors []string       `yaml:"unavailable_selectors"`
-	UnavailableText      []string       `yaml:"unavailable_text"`
-	ScopeSelector        string         `yaml:"scope_selector"`
-	TimeoutSeconds       int            `yaml:"timeout_seconds"`
-	AllowRedirects       bool           `yaml:"allow_redirects"`
-	Enabled              bool           `yaml:"enabled"`
-	Name                 string         `yaml:"name"`
-	Lists                []MoxfieldList `yaml:"lists"`
+	Games                    []string       `yaml:"games"`
+	Platform                 string         `yaml:"platform"`
+	Location                 StoreLocation  `yaml:"location"`
+	UnavailableSelectors     []string       `yaml:"unavailable_selectors"`
+	UnavailableText          []string       `yaml:"unavailable_text"`
+	ScopeSelector            string         `yaml:"scope_selector"`
+	TimeoutSeconds           int            `yaml:"timeout_seconds"`
+	EstimatedResponseSeconds int            `yaml:"estimated_response_seconds"`
+	AllowRedirects           bool           `yaml:"allow_redirects"`
+	Enabled                  bool           `yaml:"enabled"`
+	Name                     string         `yaml:"name"`
+	Lists                    []MoxfieldList `yaml:"lists"`
+}
+
+type StoreLocation struct {
+	Country string `yaml:"country"`
+	Region  string `yaml:"region"`
+	Commune string `yaml:"commune"`
 }
 
 // MoxfieldList Prices a public https://moxfield.com deck as store inventory.
@@ -150,8 +158,8 @@ func validateChecker(store StoreConfig) error {
 	if store.Platform == "" {
 		return nil
 	}
-	validPlatform := store.Platform == "jumpseller" || store.Platform == "shopify" || store.Platform == "woocommerce" || store.Platform == "html"
-	if !validPlatform || store.TimeoutSeconds < 1 {
+	validPlatform := store.Platform == "jumpseller" || store.Platform == "shopify" || store.Platform == "woocommerce" || store.Platform == "prestashop" || store.Platform == "html"
+	if !validPlatform || store.TimeoutSeconds < 1 || store.EstimatedResponseSeconds < 0 {
 		return errors.New("invalid store configuration")
 	}
 	return nil

@@ -18,6 +18,7 @@ type Service struct {
 	Searches          SearchStore
 	Providers         map[Game]Provider
 	Sources           []OfferSource
+	SourcesByGame     map[Game][]OfferSource
 	Stocks            StockChecker
 	Cache             OfferCache
 	CacheNamespace    string
@@ -67,16 +68,15 @@ func (s Service) collectOffers(ctx context.Context, game Game, name string) ([]o
 	if items, found := s.loadOfferCache(ctx, key); found {
 		return items, nil
 	}
-	provider, found := s.Providers[game]
-	var items []offer.Offer
-	var err error
-	if found {
-		items, err = provider.Search(ctx, name)
-	} else if len(s.Sources) > 0 {
-		items, err = querySources(ctx, s.Sources, name)
-	} else {
+	sources := s.SourcesByGame[game]
+	if len(sources) == 0 {
+		sources = s.Sources
+	}
+	provider, hasProvider := s.Providers[game]
+	if !hasProvider && len(sources) == 0 {
 		return nil, ErrInvalid
 	}
+	items, err := queryGameSources(ctx, provider, hasProvider, sources, name)
 	if err != nil && len(items) == 0 {
 		return nil, err
 	}
@@ -85,6 +85,22 @@ func (s Service) collectOffers(ctx context.Context, game Game, name string) ([]o
 		s.saveOfferCache(ctx, key, items)
 	}
 	return items, nil
+}
+
+func queryGameSources(ctx context.Context, provider Provider, hasProvider bool, sources []OfferSource, name string) ([]offer.Offer, error) {
+	results := make([][]offer.Offer, 0, len(sources)+1)
+	errors := make([]error, 0, len(sources)+1)
+	if hasProvider {
+		items, err := provider.Search(ctx, name)
+		results = append(results, items)
+		errors = append(errors, err)
+	}
+	if len(sources) > 0 {
+		items, err := querySources(ctx, sources, name)
+		results = append(results, items)
+		errors = append(errors, err)
+	}
+	return combineSources(results, errors)
 }
 
 func (s Service) loadOfferCache(ctx context.Context, key string) ([]offer.Offer, bool) {

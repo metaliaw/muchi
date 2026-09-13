@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/cangrejometralleta/muchi-api/internal/cardmetadata"
@@ -11,6 +12,7 @@ import (
 	firestorestore "github.com/cangrejometralleta/muchi-api/internal/firestore"
 	"github.com/cangrejometralleta/muchi-api/internal/jumpseller"
 	"github.com/cangrejometralleta/muchi-api/internal/moxfield"
+	"github.com/cangrejometralleta/muchi-api/internal/prestashop"
 	"github.com/cangrejometralleta/muchi-api/internal/scry"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 	"github.com/cangrejometralleta/muchi-api/internal/shopify"
@@ -68,6 +70,7 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 	service := search.Service{
 		Searches:          store,
 		Providers:         buildProviders(fetcher, storeConfig),
+		SourcesByGame:     buildSourcesByGame(fetcher, storeConfig, store, config.OfferCacheTTL, logger),
 		Stocks:            checker,
 		Cache:             store,
 		CacheNamespace:    search.HashPayload([]any{"search-providers-v1", storeConfig}) + ":",
@@ -89,6 +92,48 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		return Runtime{Service: service, Store: store, Queue: queue, CardMetadataProviders: cardMetadataProviders, AutocompleteProviders: autocompleteProviders, SupportedGames: supportedGames}, nil
 	}
 	return Runtime{Service: service, Store: store, CardMetadataProviders: cardMetadataProviders, AutocompleteProviders: autocompleteProviders, SupportedGames: supportedGames}, nil
+}
+
+func buildSourcesByGame(fetcher stores.SourceFetcher, config stores.Config, cache moxfield.InventoryCache, ttl time.Duration, logger *slog.Logger) map[search.Game][]search.OfferSource {
+	result := make(map[search.Game][]search.OfferSource)
+	for key, game := range config.Games {
+		if !game.Enabled {
+			continue
+		}
+		allowed := make(map[string]bool, len(game.Origins))
+		for _, origin := range game.Origins {
+			allowed[origin] = true
+		}
+		for domain, store := range config.Stores {
+			if !store.Enabled || !slices.Contains(store.Games, key) {
+				continue
+			}
+			for _, list := range store.Lists {
+				if allowed["moxfield"] {
+					result[search.Game(key)] = append(result[search.Game(key)], &moxfield.Client{Fetcher: fetcher, Cache: cache, TTL: ttl, Logger: logger, StoreID: domain, Store: store.Name, Label: list.Label, ListURL: list.URL, Rate: list.CLPPerCKUSD})
+				}
+			}
+			switch store.Platform {
+			case "jumpseller":
+				if allowed["jumpseller"] {
+					result[search.Game(key)] = append(result[search.Game(key)], jumpseller.Client{Fetcher: fetcher, Domain: domain, Name: store.Name})
+				}
+			case "shopify":
+				if allowed["shopify"] {
+					result[search.Game(key)] = append(result[search.Game(key)], shopify.Client{Fetcher: fetcher, Domain: domain, Name: store.Name})
+				}
+			case "woocommerce":
+				if allowed["woocommerce"] {
+					result[search.Game(key)] = append(result[search.Game(key)], stores.Catalog{Fetcher: fetcher, Domain: domain, Name: store.Name})
+				}
+			case "prestashop":
+				if allowed["prestashop"] {
+					result[search.Game(key)] = append(result[search.Game(key)], prestashop.Client{Fetcher: fetcher, Domain: domain, Name: store.Name, SearchPath: "/busqueda"})
+				}
+			}
+		}
+	}
+	return result
 }
 
 func buildProviders(fetcher stores.SourceFetcher, config stores.Config) map[search.Game]search.Provider {
@@ -145,6 +190,9 @@ func buildOfferSources(fetcher stores.SourceFetcher, catalog search.OfferSource,
 		}
 		if store.Platform == "woocommerce" {
 			sources = append(sources, stores.Catalog{Fetcher: fetcher, Domain: domain, Name: store.Name})
+		}
+		if store.Platform == "prestashop" {
+			sources = append(sources, prestashop.Client{Fetcher: fetcher, Domain: domain, Name: store.Name, SearchPath: "/busqueda"})
 		}
 	}
 	return sources

@@ -24,6 +24,8 @@ games:
     enabled: true
     origins:
       - tcgmatch
+      - jumpseller
+      - prestashop
   one-piece:
     name: One Piece
     reference_key: one-piece
@@ -53,6 +55,26 @@ search_providers:
     stores: []
 
 stores:
+  www.deckscards.cl:
+    games: [yugioh]
+    name: "Decks Cards"
+    platform: jumpseller
+    timeout_seconds: 10
+    estimated_response_seconds: 145
+    allow_redirects: true
+    enabled: true
+  v3.netdecker.cl:
+    games: [yugioh]
+    name: "Netdecker"
+    platform: prestashop
+    location:
+      country: Chile
+      region: Valparaíso
+      commune: Viña del Mar
+    timeout_seconds: 10
+    estimated_response_seconds: 10
+    allow_redirects: true
+    enabled: true
   # Jumpseller Directo Pausado: Paginación Lenta. Scry Conserva sus Ofertas Publicadas.
   lacripta.cl:
     games: [magic]

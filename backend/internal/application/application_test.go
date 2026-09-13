@@ -6,6 +6,7 @@ import (
 
 	"github.com/cangrejometralleta/muchi-api/internal/jumpseller"
 	"github.com/cangrejometralleta/muchi-api/internal/moxfield"
+	"github.com/cangrejometralleta/muchi-api/internal/prestashop"
 	"github.com/cangrejometralleta/muchi-api/internal/scry"
 	"github.com/cangrejometralleta/muchi-api/internal/shopify"
 	"github.com/cangrejometralleta/muchi-api/internal/stores"
@@ -25,6 +26,7 @@ func TestConfiguredSources(t *testing.T) {
 	catalogs := 0
 	shopifyStores := 0
 	jumpsellerStores := 0
+	prestashopStores := 0
 	for _, source := range sources {
 		switch value := source.(type) {
 		case *moxfield.Client:
@@ -36,11 +38,13 @@ func TestConfiguredSources(t *testing.T) {
 			jumpsellerStores++
 		case shopify.Client:
 			shopifyStores++
+		case prestashop.Client:
+			prestashopStores++
 		case stores.Catalog:
 			catalogs++
 		}
 	}
-	if lists != 9 || catalogs != 2 || shopifyStores != 3 || jumpsellerStores != 4 || len(sources) != 19 {
+	if lists != 9 || catalogs != 2 || shopifyStores != 3 || jumpsellerStores != 5 || prestashopStores != 1 || len(sources) != 21 {
 		t.Fatalf("sources=%d lists=%d catalogs=%d", len(sources), lists, catalogs)
 	}
 	for _, domain := range []string{"gameofmagicsingles.cl", "singles.collectorcenter.cl", "www.cardsouls.cl"} {
@@ -52,7 +56,7 @@ func TestConfiguredSources(t *testing.T) {
 	store := config.Stores["el-wombat-rabioso-tcg"]
 	store.Enabled = false
 	config.Stores["el-wombat-rabioso-tcg"] = store
-	if sources := buildOfferSources(nil, scry.Client{}, config, nil, time.Minute, nil); len(sources) != 10 {
+	if sources := buildOfferSources(nil, scry.Client{}, config, nil, time.Minute, nil); len(sources) != 12 {
 		t.Fatalf("disabled lists still active: %d", len(sources))
 	}
 	for domain, store := range config.Stores {
@@ -61,7 +65,7 @@ func TestConfiguredSources(t *testing.T) {
 			config.Stores[domain] = store
 		}
 	}
-	if sources := buildOfferSources(nil, scry.Client{}, config, nil, time.Minute, nil); len(sources) != 7 {
+	if sources := buildOfferSources(nil, scry.Client{}, config, nil, time.Minute, nil); len(sources) != 9 {
 		t.Fatalf("disabled Shopify stores still active: %d", len(sources))
 	}
 	for domain, store := range config.Stores {
@@ -70,7 +74,7 @@ func TestConfiguredSources(t *testing.T) {
 			config.Stores[domain] = store
 		}
 	}
-	if sources := buildOfferSources(nil, scry.Client{}, config, nil, time.Minute, nil); len(sources) != 3 {
+	if sources := buildOfferSources(nil, scry.Client{}, config, nil, time.Minute, nil); len(sources) != 4 {
 		t.Fatalf("disabled Jumpseller stores still active: %d", len(sources))
 	}
 }
@@ -86,7 +90,7 @@ func TestSourcesWithoutScry(t *testing.T) {
 			t.Fatal("Scry still active")
 		}
 	}
-	if len(sources) != 14 {
+	if len(sources) != 16 {
 		t.Fatalf("sources=%d", len(sources))
 	}
 }
@@ -103,14 +107,14 @@ func TestSlowCatalogsPausedWithScryAvailable(t *testing.T) {
 		}
 	}
 	sources := buildOfferSources(nil, scry.Client{}, config, nil, time.Minute, nil)
-	if len(sources) != 15 {
+	if len(sources) != 17 {
 		t.Fatalf("sources=%d", len(sources))
 	}
 	if _, ok := sources[0].(scry.Client); !ok {
 		t.Fatal("Scry missing")
 	}
 	for _, source := range sources {
-		if _, ok := source.(jumpseller.Client); ok {
+		if client, ok := source.(jumpseller.Client); ok && client.Domain != "www.deckscards.cl" {
 			t.Fatal("slow catalog still active")
 		}
 	}

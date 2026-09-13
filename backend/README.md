@@ -15,6 +15,12 @@ La verificación de stock consulta las tiendas configuradas; un precio publicado
 La URL, Activación y Comunidad de Scry se Configuran en `search_providers` dentro de `config/stores.yaml`.
 El lector depende del HTML público de Scry y no fuerza una actualización de su caché.
 
+El [flujo de búsqueda por juego](docs/busqueda-proveedores.md) explica cómo se
+combinan agregadores y tiendas desde el YAML, cómo se elige cada adaptador y cómo
+se tratan tiempos y duplicados.
+La [identidad de cartas entre juegos y ediciones](docs/identidad-cartas-juegos-ediciones.md)
+describe qué identifica una búsqueda, una impresión y una variante comercial.
+
 Las listas Moxfield se resuelven automáticamente por la API v3 a partir de cada
 `lists[].url`. Para agregar una tienda, define `name`, `enabled: true` y sus listas
 con `label`, `url` y `clp_per_ck_usd`; reinicia el servicio para cargar la configuración.
@@ -76,11 +82,17 @@ función privada por cada carta, sin un worker residente.
 El [incidente de ítems huérfanos](docs/cola-items-huerfanos.md) documenta cómo
 una cola activa dejó de avanzar, el patrón de reclamo que lo resolvió y las
 invariantes necesarias para reproducir esta arquitectura con seguridad.
+La [paginación por cursor](docs/paginacion-cursor-consistencia.md) explica cómo
+los clientes consumen resultados incrementales mientras varios workers terminan
+cartas fuera del orden de entrada.
 
 ## Google Cloud
 
 El [diagrama de arquitectura](docs/arquitectura.md) muestra los límites entre
 entrada HTTP, cola, workers, persistencia, fuentes, identidades y secretos.
+El [incidente de despliegue, revisiones y secretos](docs/despliegue-revisiones-secretos.md)
+explica por qué una rotación correcta también debe mover tráfico y actualizar a
+todos los consumidores.
 
 La función pública usa el entry point `ServeAPI`. La función privada de Cloud
 Tasks usa `ProcessSearch` y no debe permitir invocaciones sin autenticar.

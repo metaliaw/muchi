@@ -17,6 +17,11 @@ type SourceFetcher interface {
 	FetchSource(context.Context, string, string) ([]byte, error)
 }
 
+// CommerceAdapter Checks Stock according to one Store Platform.
+type CommerceAdapter interface {
+	CheckStock(context.Context, offer.Offer) (string, error)
+}
+
 type Checker struct {
 	Fetcher SourceFetcher
 	Config  Config
@@ -31,17 +36,25 @@ func (c Checker) CheckStock(ctx context.Context, item offer.Offer) (string, erro
 	if !found || !config.Enabled {
 		return "unknown", nil
 	}
-	if config.Platform == "jumpseller" {
-		return (jumpseller.Client{Fetcher: c.Fetcher, Domain: link.Host, Name: config.Name}).CheckStock(ctx, item)
-	}
-	if config.Platform == "shopify" {
-		return (shopify.Client{Fetcher: c.Fetcher, Domain: link.Host, Name: config.Name}).CheckStock(ctx, item)
+	if adapter := c.commerceAdapter(config, link.Host); adapter != nil {
+		return adapter.CheckStock(ctx, item)
 	}
 	data, err := c.Fetcher.FetchSource(ctx, link.Host, item.URL)
 	if err != nil {
 		return "unknown", err
 	}
 	return inspectStock(data, config), nil
+}
+
+func (c Checker) commerceAdapter(config StoreConfig, domain string) CommerceAdapter {
+	switch config.Platform {
+	case "jumpseller":
+		return jumpseller.Client{Fetcher: c.Fetcher, Domain: domain, Name: config.Name}
+	case "shopify":
+		return shopify.Client{Fetcher: c.Fetcher, Domain: domain, Name: config.Name}
+	default:
+		return nil
+	}
 }
 
 func inspectStock(data []byte, config StoreConfig) string {

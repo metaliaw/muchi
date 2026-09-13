@@ -16,8 +16,10 @@ flowchart TB
         api[ServeAPI<br/>Cloud Function pública]
         auth[Bearer Token<br/>Idempotency Key]
         health[Salud pública]
+      cards[Consultas de Juegos,<br/>Metadata y Ofertas]
         auth --> api
         health --> api
+      cards --> api
     end
 
     subgraph control[Plano de Control]
@@ -31,8 +33,10 @@ flowchart TB
     subgraph work[Plano de Trabajo]
         worker[ProcessSearch<br/>Cloud Function privada]
         claim[Reclamo con Lease<br/>y limpieza transaccional]
-        search[Servicio de Búsqueda<br/>hasta 4 fuentes concurrentes]
+      search[Servicio de Búsqueda<br/>por Juego]
+      compose[Providers + SourcesByGame<br/>desde stores.yaml]
         worker --> claim --> search
+      compose --> search
     end
 
     subgraph data[Persistencia]
@@ -50,8 +54,8 @@ flowchart TB
     end
 
     subgraph providers[Fuentes Externas]
-        scry[Scry]
-        stores[WooCommerce<br/>Shopify y Jumpseller]
+      aggregators[Scry y TCGMatch<br/>Agregadores]
+      stores[WooCommerce, Shopify,<br/>Jumpseller y PrestaShop]
         lists[Listas Moxfield]
     end
 
@@ -70,7 +74,7 @@ flowchart TB
     tasks -->|POST con OIDC| worker
     claim <-->|transacción y lease| firestore
     search <-->|caché y salud| firestore
-    search --> scry
+    search --> aggregators
     search --> stores
     search --> lists
     secret -.-> api
@@ -100,8 +104,9 @@ flowchart TB
 3. La API agrega un despertar a Cloud Tasks por cada carta y responde `202`.
 4. Cloud Tasks invoca al worker privado usando OIDC.
 5. El worker reclama el siguiente ítem disponible mediante una transacción.
-6. El servicio consulta hasta cuatro fuentes simultáneamente, usa caché y
-   verifica una cantidad acotada de ofertas.
+6. El servicio resuelve el agregador y las tiendas del juego desde
+  `config/stores.yaml`; consulta las tiendas con hasta cuatro fuentes
+  simultáneas y combina todas las ofertas.
 7. El worker guarda ofertas y progreso dentro del estado persistido.
 8. El cliente consulta estado y resultados hasta alcanzar un estado terminal.
 
@@ -118,20 +123,28 @@ flowchart LR
     transport[internal/httpapi<br/>Contrato HTTP]
     application[internal/application<br/>Composición]
     domain[internal/search y offer<br/>Dominio y Puertos]
+    config[config/stores.yaml<br/>Juegos, Orígenes y Tiendas]
     adapters[Adaptadores<br/>Firestore, Tasks y Fuentes]
 
     function --> transport
     function --> application
     transport --> domain
+    config --> application
     application --> domain
     application --> adapters
     adapters --> domain
 ```
 
-El dominio declara necesidades como `SearchStore`, `TaskQueue`, `OfferSource`,
-`StockChecker` y `OfferCache`. Los paquetes de proveedores implementan esos
-puertos. Así, las reglas de búsqueda no importan tipos de Firestore, Cloud Tasks
-ni clientes HTTP concretos.
+El dominio declara necesidades como `SearchStore`, `TaskQueue`, `Provider`,
+`OfferSource`, `StockChecker` y `OfferCache`. `internal/application` construye
+los agregadores en `Providers` y agrupa las tiendas en `SourcesByGame` usando los
+juegos, orígenes, plataformas y estados del YAML. Los paquetes de proveedores
+implementan esos puertos. Así, las reglas de búsqueda no importan tipos de
+Firestore, Cloud Tasks ni clientes HTTP concretos.
+
+El [flujo de búsqueda por juego](busqueda-proveedores.md) detalla esa composición.
+La [identidad de cartas](identidad-cartas-juegos-ediciones.md) separa búsqueda,
+impresión y variante comercial.
 
 ## Disponibilidad y Recuperación
 
