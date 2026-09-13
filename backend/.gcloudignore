@@ -16,4 +16,13 @@ muchi-api
 .agents/
 .codex/
 .claude/
+.github/
+
+# El Canon es una Cache local, no Fuente que se Compile.
+# Sube 752 KB y un .git entero en cada Deploy si no se Nombra aqui.
+.canon/
+.canonignore
+rules
+values
+patterns
 config/deploy.*
