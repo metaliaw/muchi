@@ -11,6 +11,13 @@
 #   ./deploy.sh                      -> despliega el Commit actual
 #   MUCHI_REGION=us-east1 ./deploy.sh
 #
+# El Pie, el Apoyo y AdSense viajan por el Entorno. Lo que no exportes queda
+# vacio, y el Front lo omite:
+#
+#   MUCHI_INSTAGRAM_URL=https://instagram.com/muchi ./deploy.sh
+#
+# Un .env se exporta entero con `set -a; . ./.env; set +a` antes de llamar.
+#
 # El Token lo comparte muchi-api, que lo guarda en Secret Manager. Rotarlo es
 # Asunto suyo: ./rotate-secret.sh de ese Repositorio alcanza a este Servicio.
 #
@@ -127,9 +134,25 @@ push_service() {
     note "El Front se compila dentro de la Imagen, no aca"
     echo
 
+    # El ^|^ cambia el Separador: el Texto del Patrocinador lleva Comas, y con
+    # el Separador por Defecto una Coma partiria el Valor en dos Sustituciones
+    # rotas. Ninguna URL contiene una Barra vertical.
     local build_options
-    build_options="_SERVICE=$SERVICE,_REGION=$REGION,_TOKEN_SECRET=$TOKEN_SECRET,_TAG=$TAG"
-    build_options+=",_ADSENSE_CLIENT=${MUCHI_ADSENSE_CLIENT:-},_ADSENSE_SLOT=${MUCHI_ADSENSE_SLOT:-}"
+    build_options="^|^_SERVICE=$SERVICE|_REGION=$REGION|_TOKEN_SECRET=$TOKEN_SECRET|_TAG=$TAG"
+    build_options+="|_ADSENSE_CLIENT=${MUCHI_ADSENSE_CLIENT:-}|_ADSENSE_SLOT=${MUCHI_ADSENSE_SLOT:-}"
+    # El Pie y el Apoyo salen del Entorno, no del Repositorio: son Direcciones
+    # publicas, pero cambian sin que el Codigo cambie. Lo que no exportes queda
+    # vacio, y una Red sin Direccion no aparece.
+    build_options+="|_DONATION_URL=${MUCHI_DONATION_URL:-}"
+    build_options+="|_SPONSOR_NAME=${MUCHI_SPONSOR_NAME:-}"
+    build_options+="|_SPONSOR_TEXT=${MUCHI_SPONSOR_TEXT:-}"
+    build_options+="|_SPONSOR_URL=${MUCHI_SPONSOR_URL:-}"
+    build_options+="|_INSTAGRAM_URL=${MUCHI_INSTAGRAM_URL:-}"
+    build_options+="|_DISCORD_URL=${MUCHI_DISCORD_URL:-}"
+    build_options+="|_X_URL=${MUCHI_X_URL:-}"
+    build_options+="|_YOUTUBE_URL=${MUCHI_YOUTUBE_URL:-}"
+    build_options+="|_TIKTOK_URL=${MUCHI_TIKTOK_URL:-}"
+    build_options+="|_VERIFY_STOCK=${MUCHI_VERIFY_STOCK:-}"
     gcloud builds submit --config "$CONFIG" --substitutions="$build_options"
 
     local url

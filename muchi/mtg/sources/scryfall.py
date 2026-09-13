@@ -108,8 +108,22 @@ class NameTranslator:
         query = f'!"{name}" set:{edition}'
         if foil:
             query += " is:foil"
-        card = self._first_card(SEARCH_URL, {"q": query, "unique": "prints"})
+        card = self._only_card(SEARCH_URL, {"q": query, "unique": "prints"})
         return self._art_of(card) if card else {}
+
+    def _only_card(self, url: str, params: dict) -> dict:
+        """La Impresion cuando la Consulta no deja ninguna Variante abierta."""
+        try:
+            reply = self._ask(url, params)
+        except TranslationFailed:
+            return {}
+        if not reply.ok:
+            return {}
+        try:
+            found = reply.json().get("data") or []
+        except ValueError:
+            return {}
+        return found[0] if len(found) == 1 else {}
 
     def _art_of_card(self, name: str, language: str) -> dict:
         if language:

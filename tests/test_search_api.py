@@ -12,7 +12,7 @@ from muchi.mtg.ports import QueryFailed
 
 
 def search_reply(status="running"):
-    return dict(id="search-1", status=status, total=1, processed=0, found=0, errors=0)
+    return dict(id="search-1", game="pokemon", status=status, total=1, processed=0, found=0, errors=0)
 
 
 def offer_reply():
@@ -22,7 +22,7 @@ def offer_reply():
 
 
 def result_reply():
-    return {"items": [dict(id="item-1", position=0, sequence=1,
+    return {"items": [dict(id="item-1", game="pokemon", position=0, sequence=1,
                            original_name="Sol Ring", quantity=2,
                            status="found", offers=[offer_reply()])],
             "cursor": 1, "has_more": False}
@@ -40,16 +40,50 @@ def make_provider(reply, status=200):
 
 def test_creates_authenticated_search():
     provider = make_provider(search_reply(), 202)
-    state = provider.create_search([Order(2, "Sol Ring")], True, False, "stable-key")
+    state = provider.create_search(
+        [Order(2, "Sol Ring")], True, False, "stable-key", "pokemon",
+    )
     assert state.id == "search-1"
+    assert state.game == "pokemon"
     args, kwargs = provider.session.request.call_args
     assert args == ("POST", "https://example.com/v1/searches")
     assert kwargs["headers"]["Authorization"] == "Bearer private-code"
     assert kwargs["headers"]["Idempotency-Key"] == "stable-key"
-    assert kwargs["json"] == {"cards": [{"name": "Sol Ring", "quantity": 2}],
+    assert kwargs["json"] == {"game": "pokemon",
+                              "cards": [{"name": "Sol Ring", "quantity": 2}],
                               "options": {"verify_stock": True, "stores_only": False}}
     assert kwargs["allow_redirects"] is False
     assert "private-code" not in repr(provider)
+
+
+def test_reads_card_metadata_for_the_selected_game():
+    provider = make_provider({"name": "Pikachu", "image": "https://images.example/pikachu.jpg"})
+    metadata = provider.read_card_metadata("pokemon", "Pikachu")
+    assert metadata["image"] == "https://images.example/pikachu.jpg"
+    _, kwargs = provider.session.request.call_args
+    assert kwargs["params"]["game"] == "pokemon"
+
+
+def test_autocompletes_cards_for_the_selected_game():
+    provider = make_provider({"suggestions": ["Pikachu", "Pikachu VMAX"]})
+    assert provider.autocomplete_cards("pokemon", "Pika") == ["Pikachu", "Pikachu VMAX"]
+    _, kwargs = provider.session.request.call_args
+    assert kwargs["params"]["game"] == "pokemon"
+
+
+def test_offer_keeps_embedded_card_metadata():
+    reply = result_reply()
+    reply["items"][0]["offers"][0]["metadata"] = {
+        "image": "https://images.example/pikachu.jpg", "game": "pokemon",
+        "set_id": "sv03", "set_code": "OBF",
+    }
+    provider = make_provider(reply)
+    provider.session.request.return_value.status_code = 200
+
+    offer = provider.read_results("search-1").items[0].offers[0]
+
+    assert offer.metadata["image"] == "https://images.example/pikachu.jpg"
+    assert offer.edition == "OBF"
 
 
 def test_retry_keeps_idempotency():
