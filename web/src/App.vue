@@ -12,7 +12,7 @@ import SearchProgress from './components/SearchProgress.vue'
 import OfferList from './components/OfferList.vue'
 import CartPanel from './components/CartPanel.vue'
 import SourcesPanel from './components/SourcesPanel.vue'
-import GoogleAd from './components/GoogleAd.vue'
+import AdSpot from './components/AdSpot.vue'
 import GoogleAdsense from './components/GoogleAdsense.vue'
 import SponsorSpot from './components/SponsorSpot.vue'
 
@@ -22,6 +22,8 @@ const THEME_KEY = 'muchi_tema'
 // para los milisegundos que van entre que arranca la Página y llega la Config.
 const config = ref({ poll_seconds: 3, adsense_client: 'ca-pub-6368656861543000' })
 const book = ref(null)
+const games = ref([])
+const game = ref('')
 const dark = ref(localStorage.getItem(THEME_KEY) === 'oscuro')
 const message = ref(null)
 
@@ -48,7 +50,12 @@ let refreshing = false
 const busy = computed(() => Boolean(
   state.value && (!state.value.done || hasMore.value) && !unavailable.value
 ))
-const googleReady = computed(() => Boolean(config.value.adsense_client && config.value.adsense_slot))
+// Fuera de Producción el Algoritmo Decide igual, pero AdSpot Dibuja
+// un Placeholder en vez del Anuncio: así se Prueba la Elección sin Google.
+const googleReady = computed(() =>
+  config.value.environment !== 'production'
+  || Boolean(config.value.adsense_client && config.value.adsense_slot)
+)
 const sponsorReady = computed(() => Boolean(config.value.sponsor_name && config.value.sponsor_url))
 
 function hashSearch(id) {
@@ -76,6 +83,9 @@ function applyTheme() {
   localStorage.setItem(THEME_KEY, dark.value ? 'oscuro' : 'claro')
 }
 watch(dark, applyTheme)
+watch(game, () => {
+  watched.value = null
+})
 
 function remember(id, label) {
   const rest = history.value.filter((entry) => entry.id !== id)
@@ -102,7 +112,7 @@ function selectSearch(id, initialState = null, initialItems = []) {
 }
 
 async function submit(text) {
-  pending.value = { text, key: api.newKey() }
+  pending.value = { text, game: game.value, key: api.newKey() }
   await send()
 }
 
@@ -135,7 +145,9 @@ async function send() {
   if (!pending.value) return
   error.value = ''
   try {
-    const reply = await api.createSearch(pending.value.text, pending.value.key)
+    const reply = await api.createSearch(
+      pending.value.text, pending.value.game, pending.value.key
+    )
     remember(reply.state.id, reply.label)
     pending.value = null
     selectSearch(reply.state.id, reply.state, reply.items || [])
@@ -160,6 +172,7 @@ function applyState(incoming) {
     ? Object.keys(incoming).filter((key) => incoming[key] !== current[key])
     : Object.keys(incoming)
   state.value = incoming
+  if (incoming.game) game.value = incoming.game
 }
 
 async function refresh() {
@@ -208,6 +221,8 @@ function summarizeOffers(rows) {
 function applyResults(reply) {
   items.value = replacePositions(items.value, reply.items || [])
     .sort((left, right) => left.position - right.position)
+  const resultGame = items.value.find((item) => item.game)?.game
+  if (resultGame) game.value = resultGame
   offers.value = replacePositions(offers.value, reply.offers || [])
     .sort((left, right) => left.currency.localeCompare(right.currency) || Number(left.amount) - Number(right.amount))
   notices.value = replacePositions(notices.value, reply.notices || [])
@@ -239,6 +254,9 @@ watch(busy, (value) => (value ? startPolling() : stopPolling()))
 onMounted(async () => {
   applyTheme()
   try {
+    const supported = await api.readSupportedGames()
+    games.value = supported.games || []
+    game.value = games.value[0]?.reference_key || ''
     ;[config.value, book.value] = await Promise.all([api.readConfig(), api.readMuchi()])
   } catch (failure) {
     error.value = failure.message
@@ -259,19 +277,23 @@ onUnmounted(stopPolling)
   <main class="mu-grilla">
     <div class="mu-lateral">
       <MuchiPanel :book="book" v-model:dark="dark" :message="message" />
-      <CardArt :card="watched" />
+      <CardArt :card="watched" :game="game" />
       <CommunityPanel :repository-url="config.repository_url" />
     </div>
 
     <div class="mu-columna">
       <SearchForm
         v-model:text="lookupText"
+        v-model:game="game"
+        :games="games"
         :busy="busy" :pending="Boolean(pending)" :error="error"
         :limits="config.limits"
         @search="submit" @retry="send" @resume="selectSearch"
       >
         <template #lookup>
           <CardLookup
+            v-if="game"
+            :game="game"
             @found="loadCard"
             @failed="(text) => say(text, 'angry')"
             @suggest="suggestNames"
@@ -305,9 +327,10 @@ onUnmounted(stopPolling)
           :sponsor-text="showSponsor ? config.sponsor_text : ''"
           :sponsor-url="showSponsor ? config.sponsor_url : ''"
         />
-        <GoogleAd
+        <AdSpot
           v-else
           :key="`google-${searchId}`"
+          :environment="config.environment"
           :client="config.adsense_client"
           :slot="config.adsense_slot"
         />
@@ -343,8 +366,16 @@ onUnmounted(stopPolling)
   max-width: 1100px; margin: 22px auto; padding: 0 16px; align-items: start;
 }
 .mu-columna { display: flex; flex-direction: column; gap: 16px; }
-.mu-lateral { display: flex; flex-direction: column; gap: 16px; }
+.mu-lateral {
+  display: flex; flex-direction: column; gap: 16px;
+  position: sticky; top: 16px;
+}
 .mu-historia { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 summary { cursor: pointer; font-weight: 600; }
-@media (max-width: 800px) { .mu-grilla { grid-template-columns: 1fr; } }
+/* En Móvil la Grilla es una sola Columna: el Lateral Suelta el Flote
+   para no Tapar el Contenido al Bajar. */
+@media (max-width: 800px) {
+  .mu-grilla { grid-template-columns: 1fr; }
+  .mu-lateral { position: static; }
+}
 </style>

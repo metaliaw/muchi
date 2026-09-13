@@ -41,6 +41,7 @@ app = FastAPI(title="Muchi Front", docs_url="/api/docs", openapi_url="/api/opena
 
 class SearchRequest(BaseModel):
     text: str = Field(min_length=1, max_length=20000)
+    game: str = Field("magic", min_length=1, max_length=50)
     # La Clave de Idempotencia la elige el Front: reintentar un Envío que no
     # supo su Suerte no debe crear una segunda Búsqueda.
     key: str = Field(min_length=8, max_length=100)
@@ -161,6 +162,12 @@ def read_languages() -> dict:
                           in build_muchi().translator.languages]}
 
 
+@app.get("/api/supported-games")
+def read_supported_games() -> dict:
+    """Los Juegos disponibles los nombra muchi-api, no el Front."""
+    return {"games": build_muchi().searches.read_supported_games()}
+
+
 @app.get("/api/card/art")
 def read_card_art(name: str = Query(min_length=1, max_length=200),
                   language: str = Query("", max_length=5),
@@ -174,6 +181,24 @@ def read_card_art(name: str = Query(min_length=1, max_length=200),
     if not art:
         raise HTTPException(404, f"No hay Imagen de «{name}».")
     return art
+
+
+@app.get("/api/card/metadata")
+def read_card_metadata(game: str = Query(min_length=1, max_length=50),
+                       name: str = Query(min_length=1, max_length=200),
+                       language: str = Query("", max_length=20),
+                       edition: str = Query("", max_length=50),
+                       foil: bool = Query(False)) -> dict:
+    """La Metadata visual viene del Catálogo que corresponde al Juego."""
+    return build_muchi().searches.read_card_metadata(game, name, language, edition, foil)
+
+
+@app.get("/api/card/autocomplete")
+def autocomplete_cards(game: str = Query(min_length=1, max_length=50),
+                       name: str = Query(min_length=1, max_length=200),
+                       language: str = Query("", max_length=20)) -> dict:
+    """Los Nombres sugeridos vienen del Catálogo del Juego seleccionado."""
+    return {"suggestions": build_muchi().searches.autocomplete_cards(game, name, language)}
 
 
 @app.get("/api/card/suggestions")
@@ -218,7 +243,7 @@ def create_search(request: SearchRequest) -> dict:
                                             f"con Cantidades de 1 a {MAX_QUANTITY}."})
     state = build_muchi().searches.create_search(
         orders=orders, verify_stock=VERIFY_STOCK, stores_only=STORES_ONLY,
-        key=request.key,
+        key=request.key, game=request.game,
     )
     return {
         "state": presenter.build_state(state),
