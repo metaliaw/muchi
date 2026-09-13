@@ -44,7 +44,7 @@ func TestFindOffers(t *testing.T) {
 	}
 }
 
-func TestOffersCarryExactPrintImages(t *testing.T) {
+func TestOffersCarryPrintImages(t *testing.T) {
 	page := `<div id="results">
 		<a data-track-type="store_offer_click" data-store-name="One" data-card-name="Sol Ring" data-variant-key="one" data-price-clp="2800" data-product-url="https://one.test/c21-263" data-offer-title="Sol Ring [C21] #263 ENG"></a>
 		<a data-track-type="store_offer_click" data-store-name="Two" data-card-name="Sol Ring" data-variant-key="two" data-price-clp="2900" data-product-url="https://two.test/c21" data-offer-title="Sol Ring [C21] ENG"></a>
@@ -67,8 +67,8 @@ func TestOffersCarryExactPrintImages(t *testing.T) {
 	if items[0].Image != "https://images.test/c21-263.jpg" {
 		t.Fatalf("exact image=%q", items[0].Image)
 	}
-	if items[1].Image != "" {
-		t.Fatalf("ambiguous image=%q", items[1].Image)
+	if items[1].Image != "https://images.test/c21-263.jpg" {
+		t.Fatalf("first print image=%q", items[1].Image)
 	}
 	if items[2].Image != "https://images.test/soc-1.jpg" {
 		t.Fatalf("edition image=%q", items[2].Image)

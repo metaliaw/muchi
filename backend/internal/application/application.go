@@ -73,7 +73,7 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		SourcesByGame:     buildSourcesByGame(fetcher, storeConfig, store, config.OfferCacheTTL, logger),
 		Stocks:            checker,
 		Cache:             store,
-		CacheNamespace:    search.HashPayload([]any{"search-providers-v2", storeConfig}) + ":",
+		CacheNamespace:    search.HashPayload([]any{"search-providers-v3", storeConfig}) + ":",
 		CacheTTL:          config.OfferCacheTTL,
 		EmptyCacheTTL:     config.OfferCacheEmptyTTL,
 		MaxCards:          config.MaxCardsPerSearch,

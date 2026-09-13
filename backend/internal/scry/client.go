@@ -163,14 +163,9 @@ func (c Client) applyPrintImages(ctx context.Context, name string, items []offer
 	return items
 }
 
-type editionImages struct {
-	image string
-	count int
-}
-
-func indexPrintImages(prints []cardmetadata.Print) (map[string]string, map[string]editionImages) {
+func indexPrintImages(prints []cardmetadata.Print) (map[string]string, map[string]string) {
 	exact := make(map[string]string, len(prints))
-	editions := make(map[string]editionImages)
+	editions := make(map[string]string)
 	for _, print := range prints {
 		edition := strings.ToLower(print.Edition)
 		number := strings.ToLower(print.CollectorNumber)
@@ -178,10 +173,12 @@ func indexPrintImages(prints []cardmetadata.Print) (map[string]string, map[strin
 			continue
 		}
 		exact[edition+":"+number] = print.Image
-		group := editions[edition]
-		group.image = print.Image
-		group.count++
-		editions[edition] = group
+		// La primera Impresión que Scryfall Lista Representa a su Edición
+		// cuando la Oferta Calla el Número. Una Hermana Muestra la Carta;
+		// un Hueco no Muestra nada.
+		if _, seen := editions[edition]; !seen {
+			editions[edition] = print.Image
+		}
 	}
 	return exact, editions
 }
@@ -194,13 +191,9 @@ func readPrinting(title string) (string, string) {
 	return strings.ToLower(parts[1]), strings.ToLower(parts[2])
 }
 
-func selectPrintImage(exact map[string]string, editions map[string]editionImages, edition, number string) string {
+func selectPrintImage(exact, editions map[string]string, edition, number string) string {
 	if number != "" {
 		return exact[edition+":"+number]
 	}
-	group := editions[edition]
-	if group.count == 1 {
-		return group.image
-	}
-	return ""
+	return editions[edition]
 }
