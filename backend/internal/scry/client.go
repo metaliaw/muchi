@@ -37,7 +37,7 @@ func (c Client) Search(ctx context.Context, name string) ([]offer.Offer, error) 
 }
 
 var slugSeparators = regexp.MustCompile(`[^a-z0-9]+`)
-var printingPattern = regexp.MustCompile(`(?i)\[([a-z0-9]+)\](?:\s+#([[:alnum:]★]+))?`)
+var printingPattern = regexp.MustCompile(`(?i)\[([^\[\]]+)\](?:\s+#([[:alnum:]★]+))?`)
 
 // FindOffers Reads the Saved Offers Published on a Scry Card Page.
 func (c Client) FindOffers(ctx context.Context, name string) ([]offer.Offer, error) {
@@ -167,17 +167,24 @@ func indexPrintImages(prints []cardmetadata.Print) (map[string]string, map[strin
 	exact := make(map[string]string, len(prints))
 	editions := make(map[string]string)
 	for _, print := range prints {
-		edition := strings.ToLower(print.Edition)
 		number := strings.ToLower(print.CollectorNumber)
-		if edition == "" || number == "" || print.Image == "" {
+		if number == "" || print.Image == "" {
 			continue
 		}
-		exact[edition+":"+number] = print.Image
-		// La primera Impresión que Scryfall Lista Representa a su Edición
-		// cuando la Oferta Calla el Número. Una Hermana Muestra la Carta;
-		// un Hueco no Muestra nada.
-		if _, seen := editions[edition]; !seen {
-			editions[edition] = print.Image
+		// Una Tienda Escribe `[C21]` y otra `[Fallout]`: el Código y el
+		// Nombre Nombran la misma Edición, y Scryfall Trae los dos.
+		// Indexar ambos Deja que el Título Elija el Idioma que Prefiera.
+		for _, edition := range []string{strings.ToLower(print.Edition), strings.ToLower(print.EditionName)} {
+			if edition == "" {
+				continue
+			}
+			exact[edition+":"+number] = print.Image
+			// La primera Impresión que Scryfall Lista Representa a su
+			// Edición cuando la Oferta Calla el Número. Una Hermana
+			// Muestra la Carta; un Hueco no Muestra nada.
+			if _, seen := editions[edition]; !seen {
+				editions[edition] = print.Image
+			}
 		}
 	}
 	return exact, editions
@@ -188,7 +195,7 @@ func readPrinting(title string) (string, string) {
 	if len(parts) == 0 {
 		return "", ""
 	}
-	return strings.ToLower(parts[1]), strings.ToLower(parts[2])
+	return strings.ToLower(strings.TrimSpace(parts[1])), strings.ToLower(parts[2])
 }
 
 func selectPrintImage(exact, editions map[string]string, edition, number string) string {

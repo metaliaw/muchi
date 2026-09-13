@@ -34,6 +34,7 @@ type Metadata struct {
 
 type Print struct {
 	Edition         string
+	EditionName     string
 	CollectorNumber string
 	Image           string
 }

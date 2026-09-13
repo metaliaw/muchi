@@ -46,6 +46,7 @@ func (s Scryfall) CardPrints(ctx context.Context, name string) ([]Print, error) 
 		}
 		prints = append(prints, Print{
 			Edition:         strings.ToLower(result.Data[index].Set),
+			EditionName:     strings.ToLower(result.Data[index].SetName),
 			CollectorNumber: strings.ToLower(result.Data[index].CollectorNumber),
 			Image:           metadata.Image,
 		})
@@ -167,6 +168,7 @@ type scryfallCard struct {
 	Name            string            `json:"name"`
 	PrintedName     string            `json:"printed_name"`
 	Set             string            `json:"set"`
+	SetName         string            `json:"set_name"`
 	CollectorNumber string            `json:"collector_number"`
 	ScryfallURL     string            `json:"scryfall_uri"`
 	ImageURIs       map[string]string `json:"image_uris"`

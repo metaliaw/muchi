@@ -75,6 +75,32 @@ func TestOffersCarryPrintImages(t *testing.T) {
 	}
 }
 
+func TestOffersMatchEditionsNamedInWords(t *testing.T) {
+	page := `<div id="results">
+		<a data-track-type="store_offer_click" data-store-name="One" data-card-name="Sol Ring" data-variant-key="one" data-price-clp="2800" data-product-url="https://one.test/pip" data-offer-title="Sol Ring [Fallout]"></a>
+		<a data-track-type="store_offer_click" data-store-name="Two" data-card-name="Sol Ring" data-variant-key="two" data-price-clp="2900" data-product-url="https://two.test/mh2" data-offer-title="Sol Ring [Modern Horizons 2] #400"></a>
+	</div>`
+	client := Client{
+		Fetcher: &pageFetcher{data: []byte(page)}, BaseURL: "https://scry.test",
+		Prints: printProvider{prints: []cardmetadata.Print{
+			{Edition: "pip", EditionName: "Fallout", CollectorNumber: "123", Image: "https://images.test/pip-123.jpg"},
+			{Edition: "mh2", EditionName: "Modern Horizons 2", CollectorNumber: "400", Image: "https://images.test/mh2-400.jpg"},
+		}},
+	}
+
+	items, err := client.FindOffers(context.Background(), "Sol Ring")
+
+	if err != nil || len(items) != 2 {
+		t.Fatalf("FindOffers() items=%#v err=%v", items, err)
+	}
+	if items[0].Image != "https://images.test/pip-123.jpg" {
+		t.Fatalf("edition by name image=%q", items[0].Image)
+	}
+	if items[1].Image != "https://images.test/mh2-400.jpg" {
+		t.Fatalf("multiword edition image=%q", items[1].Image)
+	}
+}
+
 func TestPageFailures(t *testing.T) {
 	for _, test := range []struct {
 		name, page string
