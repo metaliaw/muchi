@@ -79,8 +79,10 @@ def build_offer(offer: SearchOffer, muchi_dolar: int,
         "treatment": treatment.build_treatment(offer),
         "pills": build_pills(offer, verified),
         # Lo que hace falta para pedir la Imagen de esta Impresion y no otra.
+        "language": offer.language,
         "edition": offer.edition,
         "finish": offer.finish,
+        "metadata": offer.metadata,
     }
 
 
@@ -108,7 +110,7 @@ def build_state(state: SearchState) -> dict:
         "id": state.id, "status": state.status, "total": state.total,
         "processed": state.processed, "found": state.found,
         "errors": state.errors, "current_card": state.current_card,
-        "done": state.done,
+        "done": state.done, "game": state.game,
     }
 
 
@@ -150,6 +152,7 @@ def build_results(items: tuple[SearchItem, ...], muchi_dolar: int,
             "quantity": item.quantity,
             "status": item.status,
             "offers": len(item.offers),
+            "game": item.game,
         } for item in items],
         "offers": rows,
         "notices": notices,
