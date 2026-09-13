@@ -69,7 +69,7 @@ func TestSearch(t *testing.T) {
 			if item.ID != "tcgmatch:listing-one" || item.PriceAmount != test.price || item.Language != test.language || item.Finish != test.finish || item.Metadata["game"] != test.game {
 				t.Fatalf("offer=%+v", item)
 			}
-			if test.game == "pokemon" && (item.Metadata["set_code"] != "OBF" || item.Metadata["set_id"] != "sv03" || item.Metadata["image"] == "") {
+			if test.game == "pokemon" && (item.Image == "" || item.Metadata["set_code"] != "OBF" || item.Metadata["set_id"] != "sv03" || item.Metadata["image"] == "") {
 				t.Fatalf("pokemon metadata=%v", item.Metadata)
 			}
 		})

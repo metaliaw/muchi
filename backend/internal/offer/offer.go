@@ -18,6 +18,7 @@ type Offer struct {
 	PriceAmount      string            `json:"price_amount"`
 	PriceCurrency    string            `json:"price_currency"`
 	URL              string            `json:"url"`
+	Image            string            `json:"image,omitempty"`
 	VariantID        string            `json:"variant_id,omitempty"`
 	Language         string            `json:"language,omitempty"`
 	Condition        string            `json:"condition,omitempty"`

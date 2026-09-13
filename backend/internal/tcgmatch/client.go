@@ -208,7 +208,7 @@ func buildOffer(entry listing, product catalogProduct, game string) (offer.Offer
 	return offer.Offer{
 		ID: "tcgmatch:" + entry.ID, VariantID: entry.ID, CardName: product.Name,
 		Store: entry.User.Name, PriceAmount: strconv.FormatInt(entry.Price, 10), PriceCurrency: "CLP",
-		URL: "https://tcgmatch.cl/producto/" + entry.ID, Source: "tcgmatch.cl", StockStatus: "available",
+		URL: "https://tcgmatch.cl/producto/" + entry.ID, Image: product.Image, Source: "tcgmatch.cl", StockStatus: "available",
 		Language: entry.Language, Condition: entry.Status, Finish: finish,
 		Metadata: map[string]string{
 			"game": game, "quantity": strconv.Itoa(entry.Quantity), "seller": entry.User.Username,

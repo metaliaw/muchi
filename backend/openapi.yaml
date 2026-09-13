@@ -240,6 +240,7 @@ components:
         price_amount: {type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$"}
         price_currency: {type: string, pattern: "^[A-Z]{3}$"}
         url: {type: string, format: uri}
+        image: {type: string, format: uri}
         variant_id: {type: string}
         language: {type: string}
         condition: {type: string}
