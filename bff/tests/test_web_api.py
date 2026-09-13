@@ -22,12 +22,12 @@ def build_offer(**changes) -> SearchOffer:
 
 class FakeSearches:
     def __init__(self, state=None, items=()):
-        self.state = state or SearchState("abc", "running", 2, 1, 1, 0, "Sol Ring")
+        self.state = state or SearchState("abc", "running", 2, 1, 1, 0, "Sol Ring", "magic")
         self.items = items
         self.created = []
 
-    def create_search(self, orders, verify_stock, stores_only, key):
-        self.created.append((orders, key))
+    def create_search(self, orders, verify_stock, stores_only, key, game="magic"):
+        self.created.append((orders, key, game))
         return self.state
 
     def read_search(self, search_id):
@@ -39,10 +39,25 @@ class FakeSearches:
         return SearchResults(remaining, cursor, False)
 
     def cancel_search(self, search_id, key):
-        return SearchState("abc", "cancelled", 2, 1, 1, 0)
+        return SearchState("abc", "cancelled", 2, 1, 1, 0, "", "magic")
 
     def read_sources(self):
         return [{"source": "scry", "status": "ok"}]
+
+    def read_supported_games(self):
+        return [
+            {"name": "Magic: The Gathering", "reference_key": "magic"},
+            {"name": "Pokémon", "reference_key": "pokemon"},
+        ]
+
+    def read_card_metadata(self, game, name, language="", edition="", foil=False):
+        return {
+            "name": name, "edition": edition or "SVP",
+            "image": f"https://images.example/{game}/{name}.jpg",
+        }
+
+    def autocomplete_cards(self, game, name, language=""):
+        return [name, f"{name} VMAX"]
 
 
 @pytest.fixture
@@ -54,9 +69,9 @@ def client(monkeypatch):
             build_offer(store="Dudosa", amount=Decimal("10"), suspicious=True,
                         suspicious_reason="price_below_40_percent_median"),
             build_offer(store="Gringa", amount=Decimal("3"), currency="USD"),
-        ), id="item-1", position=0, sequence=1),
+        ), id="item-1", position=0, sequence=1, game="magic"),
         SearchItem("Black Lotus", 1, "not_found", (),
-                   id="item-2", position=1, sequence=2),
+               id="item-2", position=1, sequence=2, game="magic"),
     ))
     monkeypatch.setattr(main, "build_muchi", lambda: type("Cast", (), {"searches": searches})())
     return TestClient(main.app), searches
@@ -73,9 +88,11 @@ def test_read_search_orders_offers_and_marks_cheapest(client):
     assert reply["summary"] == {"lowest_clp": 10.0, "offers": 4, "stores": 4}
     assert reply["items"] == [
         {"id": "item-1", "position": 0, "sequence": 1,
-         "name": "Sol Ring", "quantity": 2, "status": "found", "offers": 4},
+         "name": "Sol Ring", "quantity": 2, "status": "found", "offers": 4,
+         "game": "magic"},
         {"id": "item-2", "position": 1, "sequence": 2,
-         "name": "Black Lotus", "quantity": 1, "status": "not_found", "offers": 0},
+         "name": "Black Lotus", "quantity": 1, "status": "not_found", "offers": 0,
+         "game": "magic"},
     ]
     assert (reply["cursor"], reply["has_more"]) == (2, False)
     assert any("Black Lotus" in notice["text"] for notice in reply["notices"])
@@ -118,10 +135,14 @@ def test_cart_skips_suspicious_and_converts_dollars(client):
 
 def test_create_search_parses_the_decklist(client):
     http, searches = client
-    reply = http.post("/api/searches", json={"text": "4 Lightning Bolt", "key": "k" * 10})
+    reply = http.post("/api/searches", json={
+        "text": "4 Lightning Bolt", "game": "pokemon", "key": "k" * 10,
+    })
     assert reply.status_code == 200
-    orders, key = searches.created[0]
-    assert (orders[0].quantity, orders[0].name, key) == (4, "Lightning Bolt", "k" * 10)
+    orders, key, game = searches.created[0]
+    assert (orders[0].quantity, orders[0].name, key, game) == (
+        4, "Lightning Bolt", "k" * 10, "pokemon",
+    )
     assert reply.json()["items"] == [
         {"name": "Lightning Bolt", "quantity": 4, "position": 0,
          "sequence": 0, "status": "queued", "offers": 0},
@@ -130,8 +151,35 @@ def test_create_search_parses_the_decklist(client):
 
 def test_create_search_rejects_lines_it_cannot_read(client):
     http, _ = client
-    reply = http.post("/api/searches", json={"text": "https://tienda.cl/x", "key": "k" * 10})
+    reply = http.post("/api/searches", json={
+        "text": "https://tienda.cl/x", "game": "magic", "key": "k" * 10,
+    })
     assert reply.status_code == 422
+
+
+def test_supported_games_come_from_the_api(client):
+    http, _ = client
+    assert http.get("/api/supported-games").json() == {"games": [
+        {"name": "Magic: The Gathering", "reference_key": "magic"},
+        {"name": "Pokémon", "reference_key": "pokemon"},
+    ]}
+
+
+def test_card_metadata_uses_the_selected_game(client):
+    http, _ = client
+    reply = http.get("/api/card/metadata", params={"game": "pokemon", "name": "Pikachu"})
+    assert reply.json() == {
+        "name": "Pikachu", "edition": "SVP",
+        "image": "https://images.example/pokemon/Pikachu.jpg",
+    }
+
+
+def test_card_autocomplete_uses_the_selected_game(client):
+    http, _ = client
+    reply = http.get("/api/card/autocomplete", params={
+        "game": "pokemon", "name": "Pika",
+    })
+    assert reply.json() == {"suggestions": ["Pika", "Pika VMAX"]}
 
 
 def test_rejected_search_stops_the_polling(client, monkeypatch):

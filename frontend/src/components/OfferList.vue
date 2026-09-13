@@ -7,8 +7,11 @@ const emit = defineEmits(['look'])
 // Lo que identifica la Impresion en venta. Sin Edicion, Scryfall elige ella.
 const printingOf = (offer) => ({
   name: offer.card_name,
+  language: offer.language || '',
   edition: offer.edition || '',
   foil: Boolean(offer.finish && offer.finish.toLowerCase().includes('foil')),
+  image: offer.metadata?.image || '',
+  url: offer.metadata?.url || '',
 })
 
 defineProps({
@@ -25,7 +28,14 @@ defineProps({
     <div v-if="items.length" class="mu-panel mu-lista">
       <h2>Cartas de la Lista</h2>
       <p v-for="item in items" :key="item.position" class="mu-lista-fila">
-        <span><strong>{{ item.quantity }}×</strong> {{ item.name }}</span>
+        <span class="mu-mirable" tabindex="0" role="button"
+              :title="`Mira ${item.name}`"
+            @mouseenter="emit('look', { name: item.name })"
+            @focus="emit('look', { name: item.name })"
+              @click="emit('look', { name: item.name })"
+              @keydown.enter="emit('look', { name: item.name })">
+          <strong>{{ item.quantity }}×</strong> {{ item.name }}
+        </span>
         <span class="mu-caption">{{ item.offers }} Ofertas</span>
       </p>
     </div>
@@ -51,6 +61,8 @@ defineProps({
       <div class="mu-oferta-cab">
         <h3 class="mu-mirable" tabindex="0" role="button"
             :title="`Mira ${offer.card_name}`"
+          @mouseenter="emit('look', printingOf(offer))"
+          @focus="emit('look', printingOf(offer))"
             @click="emit('look', printingOf(offer))"
             @keydown.enter="emit('look', printingOf(offer))">{{ offer.card_name }}</h3>
         <span class="mu-precio">{{ formatAmount(offer.amount, offer.currency) }}</span>

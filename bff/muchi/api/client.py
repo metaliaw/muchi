@@ -17,6 +17,7 @@ def build_search(reply: dict) -> SearchState:
         id=reply["id"], status=reply["status"], total=reply["total"],
         processed=reply["processed"], found=reply["found"],
         errors=reply["errors"], current_card=reply.get("current_card") or "",
+        game=reply.get("game") or "",
     )
 
 
@@ -50,6 +51,7 @@ def build_offer(row: dict) -> SearchOffer:
         variant=read_metadata(row, "variant"), title=read_metadata(row, "title"),
         edition=read_edition(row),
         suspicious_reason=row.get("suspicious_reason") or "",
+        metadata={str(key): str(value) for key, value in (row.get("metadata") or {}).items()},
     )
 
 
@@ -70,6 +72,7 @@ def build_results(reply: dict) -> SearchResults:
         offers=order_offers(build_offer(offer) for offer in row["offers"]),
         error_message=row.get("error_message") or "",
         id=row["id"], position=row["position"], sequence=row["sequence"],
+        game=row.get("game") or "",
     ) for row in ordered)
     return SearchResults(items, reply["cursor"], reply["has_more"])
 
@@ -119,12 +122,13 @@ class SearchProvider:
             raise QueryFailed("La Respuesta no cumple el Contrato de la API.") from None
 
     def create_search(self, orders: list[Order], verify_stock: bool,
-                      stores_only: bool, key: str) -> SearchState:
+                      stores_only: bool, key: str, game: str = "magic") -> SearchState:
         if not 1 <= len(orders) <= 500:
             raise QueryFailed("La Búsqueda admite entre 1 y 500 Cartas.")
         if any(not order.name.strip() or not 1 <= order.quantity <= 99 for order in orders):
             raise QueryFailed("Cada Carta requiere Nombre y Cantidad entre 1 y 99.")
         payload = {
+            "game": game,
             "cards": [{"name": order.name, "quantity": order.quantity} for order in orders],
             "options": {"verify_stock": verify_stock, "stores_only": stores_only},
         }
@@ -151,6 +155,23 @@ class SearchProvider:
     def read_sources(self) -> list[dict]:
         reply = self.request_reply("GET", "/health/sources")
         return self.parse_reply(lambda value: value["sources"], reply)
+
+    def read_supported_games(self) -> list[dict]:
+        reply = self.request_reply("GET", "/supported-games")
+        return self.parse_reply(lambda value: value["games"], reply)
+
+    def read_card_metadata(self, game: str, name: str, language: str = "",
+                           edition: str = "", foil: bool = False) -> dict:
+        return self.request_reply("GET", "/cards/metadata", params={
+            "game": game, "name": name, "language": language,
+            "edition": edition, "foil": str(foil).lower(),
+        })
+
+    def autocomplete_cards(self, game: str, name: str, language: str = "") -> list[str]:
+        reply = self.request_reply("GET", "/cards/autocomplete", params={
+            "game": game, "name": name, "language": language,
+        })
+        return self.parse_reply(lambda value: value["suggestions"], reply)
 
     def find_offers(self, name: str) -> tuple[SearchOffer, ...]:
         reply = self.request_reply("GET", "/cards/offers", params={"name": name})
