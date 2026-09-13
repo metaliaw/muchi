@@ -366,8 +366,16 @@ onUnmounted(stopPolling)
   max-width: 1100px; margin: 22px auto; padding: 0 16px; align-items: start;
 }
 .mu-columna { display: flex; flex-direction: column; gap: 16px; }
-.mu-lateral { display: flex; flex-direction: column; gap: 16px; }
+.mu-lateral {
+  display: flex; flex-direction: column; gap: 16px;
+  position: sticky; top: 16px;
+}
 .mu-historia { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 summary { cursor: pointer; font-weight: 600; }
-@media (max-width: 800px) { .mu-grilla { grid-template-columns: 1fr; } }
+/* En Móvil la Grilla es una sola Columna: el Lateral Suelta el Flote
+   para no Tapar el Contenido al Bajar. */
+@media (max-width: 800px) {
+  .mu-grilla { grid-template-columns: 1fr; }
+  .mu-lateral { position: static; }
+}
 </style>
