@@ -257,6 +257,22 @@ def test_the_exact_printing_wins_when_the_offer_names_its_edition(scry):
     assert fake.asked[0]["params"]["unique"] == "prints"
 
 
+def test_an_edition_with_variants_does_not_assume_the_first_printing(scry):
+    fake = scry(
+        FakeReply(200, {"data": [
+            {"name": "Sol Ring", "image_uris": {"normal": "https://x/first.jpg"}},
+            {"name": "Sol Ring", "image_uris": {"normal": "https://x/second.jpg"}},
+        ]}),
+        FakeReply(200, {"name": "Sol Ring",
+                        "image_uris": {"normal": "https://x/card.jpg"}}),
+    )
+
+    art = NameTranslator().find_art("Sol Ring", edition="sld")
+
+    assert art["image"] == "https://x/card.jpg"
+    assert len(fake.asked) == 2
+
+
 def test_a_foil_offer_asks_for_a_foil_printing(scry):
     fake = scry(FakeReply(200, {"data": [{
         "name": "Sol Ring", "image_uris": {"normal": "https://x/foil.jpg"}}]}))
