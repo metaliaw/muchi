@@ -73,7 +73,7 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		SourcesByGame:     buildSourcesByGame(fetcher, storeConfig, store, config.OfferCacheTTL, logger),
 		Stocks:            checker,
 		Cache:             store,
-		CacheNamespace:    search.HashPayload([]any{"search-providers-v1", storeConfig}) + ":",
+		CacheNamespace:    search.HashPayload([]any{"search-providers-v2", storeConfig}) + ":",
 		CacheTTL:          config.OfferCacheTTL,
 		EmptyCacheTTL:     config.OfferCacheEmptyTTL,
 		MaxCards:          config.MaxCardsPerSearch,
@@ -138,6 +138,7 @@ func buildSourcesByGame(fetcher stores.SourceFetcher, config stores.Config, cach
 
 func buildProviders(fetcher stores.SourceFetcher, config stores.Config) map[search.Game]search.Provider {
 	providers := make(map[search.Game]search.Provider, len(config.Games))
+	prints := cardmetadata.Scryfall{Fetcher: fetcher}
 	for _, provider := range config.SearchProviders {
 		if !provider.Enabled {
 			continue
@@ -148,7 +149,7 @@ func buildProviders(fetcher stores.SourceFetcher, config stores.Config) map[sear
 			}
 			switch provider.Type {
 			case "scry":
-				providers[search.Game(game)] = scry.Client{Fetcher: fetcher, BaseURL: provider.URL, ExcludeCommunity: !provider.Community}
+				providers[search.Game(game)] = scry.Client{Fetcher: fetcher, BaseURL: provider.URL, Prints: prints, ExcludeCommunity: !provider.Community}
 			case "tcgmatch":
 				providers[search.Game(game)] = tcgmatch.Client{Fetcher: fetcher, BaseURL: provider.URL, Game: game}
 			}

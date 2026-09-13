@@ -12,6 +12,11 @@ type AutocompleteProvider interface {
 	Autocomplete(context.Context, string, string) ([]string, error)
 }
 
+// PrintProvider Lists the known Printings of one Card.
+type PrintProvider interface {
+	CardPrints(context.Context, string) ([]Print, error)
+}
+
 type Request struct {
 	Name     string
 	Language string
@@ -25,4 +30,10 @@ type Metadata struct {
 	Edition     string `json:"edition,omitempty"`
 	Image       string `json:"image,omitempty"`
 	URL         string `json:"url,omitempty"`
+}
+
+type Print struct {
+	Edition         string
+	CollectorNumber string
+	Image           string
 }

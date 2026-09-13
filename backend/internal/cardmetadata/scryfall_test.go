@@ -31,6 +31,25 @@ func TestScryfallReturnsArt(t *testing.T) {
 	}
 }
 
+func TestScryfallListsPrintImages(t *testing.T) {
+	fetcher := &fakeFetcher{replies: [][]byte{
+		[]byte(`{"data":[{"set":"C21","collector_number":"263","image_uris":{"normal":"https://cards.scryfall.io/c21-263.jpg"}},{"set":"C21","collector_number":"264","image_uris":{"normal":"https://cards.scryfall.io/c21-264.jpg"}}]}`),
+	}}
+	provider := Scryfall{Fetcher: fetcher}
+
+	prints, err := provider.CardPrints(context.Background(), "Sol Ring")
+
+	if err != nil || len(prints) != 2 {
+		t.Fatalf("CardPrints() prints=%#v err=%v", prints, err)
+	}
+	if prints[0].Edition != "c21" || prints[0].CollectorNumber != "263" || prints[0].Image != "https://cards.scryfall.io/c21-263.jpg" {
+		t.Fatalf("first print=%#v", prints[0])
+	}
+	if !strings.Contains(fetcher.targets[0], "%21%22Sol+Ring%22") || !strings.Contains(fetcher.targets[0], "unique=prints") {
+		t.Fatalf("target=%q", fetcher.targets[0])
+	}
+}
+
 func TestScryfallAutocompletesThreeUniqueNamesInLanguage(t *testing.T) {
 	fetcher := &fakeFetcher{replies: [][]byte{
 		[]byte(`{"data":[{"name":"Sol Ring","printed_name":"Anillo solar"},{"name":"Sol Ring","printed_name":"Anillo solar"},{"name":"Sol Talisman"},{"name":"Solitude"},{"name":"Solar Tide"}]}`),

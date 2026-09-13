@@ -14,6 +14,7 @@ import (
 	"golang.org/x/net/html"
 	"golang.org/x/text/unicode/norm"
 
+	"github.com/cangrejometralleta/muchi-api/internal/cardmetadata"
 	"github.com/cangrejometralleta/muchi-api/internal/offer"
 	"github.com/cangrejometralleta/muchi-api/internal/source"
 )
@@ -25,6 +26,7 @@ type SourceFetcher interface {
 type Client struct {
 	Fetcher SourceFetcher
 	BaseURL string
+	Prints  cardmetadata.PrintProvider
 	// ExcludeCommunity Drops the Offers Scry hosts itself: a Community Seller
 	// holds a page under the Scry Domain, never a Storefront of its own.
 	ExcludeCommunity bool
@@ -35,6 +37,7 @@ func (c Client) Search(ctx context.Context, name string) ([]offer.Offer, error) 
 }
 
 var slugSeparators = regexp.MustCompile(`[^a-z0-9]+`)
+var printingPattern = regexp.MustCompile(`(?i)\[([a-z0-9]+)\](?:\s+#([[:alnum:]★]+))?`)
 
 // FindOffers Reads the Saved Offers Published on a Scry Card Page.
 func (c Client) FindOffers(ctx context.Context, name string) ([]offer.Offer, error) {
@@ -62,6 +65,7 @@ func (c Client) FindOffers(ctx context.Context, name string) ([]offer.Offer, err
 	if c.ExcludeCommunity {
 		items = withoutCommunityOffers(items, base.Host)
 	}
+	items = c.applyPrintImages(ctx, name, items)
 	return items, nil
 }
 
@@ -141,4 +145,62 @@ func buildOffer(attrs map[string]string) (offer.Offer, error) {
 	identity := strings.Join([]string{item.Store, item.URL, item.VariantID}, "|")
 	item.ID = fmt.Sprintf("scry:%x", sha256.Sum256([]byte(identity)))
 	return item, nil
+}
+
+func (c Client) applyPrintImages(ctx context.Context, name string, items []offer.Offer) []offer.Offer {
+	if c.Prints == nil || len(items) == 0 {
+		return items
+	}
+	prints, err := c.Prints.CardPrints(ctx, name)
+	if err != nil {
+		return items
+	}
+	exact, editions := indexPrintImages(prints)
+	for index := range items {
+		edition, number := readPrinting(items[index].Metadata["title"])
+		items[index].Image = selectPrintImage(exact, editions, edition, number)
+	}
+	return items
+}
+
+type editionImages struct {
+	image string
+	count int
+}
+
+func indexPrintImages(prints []cardmetadata.Print) (map[string]string, map[string]editionImages) {
+	exact := make(map[string]string, len(prints))
+	editions := make(map[string]editionImages)
+	for _, print := range prints {
+		edition := strings.ToLower(print.Edition)
+		number := strings.ToLower(print.CollectorNumber)
+		if edition == "" || number == "" || print.Image == "" {
+			continue
+		}
+		exact[edition+":"+number] = print.Image
+		group := editions[edition]
+		group.image = print.Image
+		group.count++
+		editions[edition] = group
+	}
+	return exact, editions
+}
+
+func readPrinting(title string) (string, string) {
+	parts := printingPattern.FindStringSubmatch(title)
+	if len(parts) == 0 {
+		return "", ""
+	}
+	return strings.ToLower(parts[1]), strings.ToLower(parts[2])
+}
+
+func selectPrintImage(exact map[string]string, editions map[string]editionImages, edition, number string) string {
+	if number != "" {
+		return exact[edition+":"+number]
+	}
+	group := editions[edition]
+	if group.count == 1 {
+		return group.image
+	}
+	return ""
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strings"
 )
 
 const scryfallDomain = "api.scryfall.com"
@@ -22,6 +23,34 @@ type Scryfall struct {
 
 func (s Scryfall) CardMetadata(ctx context.Context, request Request) (Metadata, error) {
 	return s.findArt(ctx, request)
+}
+
+func (s Scryfall) CardPrints(ctx context.Context, name string) ([]Print, error) {
+	query := url.Values{
+		"q":      {fmt.Sprintf(`!%q`, name)},
+		"unique": {"prints"},
+	}
+	body, err := s.fetch(ctx, "/cards/search", query)
+	if err != nil {
+		return nil, err
+	}
+	var result cardList
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, err
+	}
+	prints := make([]Print, 0, len(result.Data))
+	for index := range result.Data {
+		metadata := metadataOf(&result.Data[index])
+		if metadata.Image == "" {
+			continue
+		}
+		prints = append(prints, Print{
+			Edition:         strings.ToLower(result.Data[index].Set),
+			CollectorNumber: strings.ToLower(result.Data[index].CollectorNumber),
+			Image:           metadata.Image,
+		})
+	}
+	return prints, nil
 }
 
 func (s Scryfall) findArt(ctx context.Context, request Request) (Metadata, error) {
@@ -135,12 +164,13 @@ type cardList struct {
 }
 
 type scryfallCard struct {
-	Name        string            `json:"name"`
-	PrintedName string            `json:"printed_name"`
-	Set         string            `json:"set"`
-	ScryfallURL string            `json:"scryfall_uri"`
-	ImageURIs   map[string]string `json:"image_uris"`
-	CardFaces   []scryfallCard    `json:"card_faces"`
+	Name            string            `json:"name"`
+	PrintedName     string            `json:"printed_name"`
+	Set             string            `json:"set"`
+	CollectorNumber string            `json:"collector_number"`
+	ScryfallURL     string            `json:"scryfall_uri"`
+	ImageURIs       map[string]string `json:"image_uris"`
+	CardFaces       []scryfallCard    `json:"card_faces"`
 }
 
 func metadataOf(card *scryfallCard) Metadata {
