@@ -698,7 +698,7 @@ func mapStoreError(err error) error {
 
 func buildSearch(input search.CreateInput) search.Job {
 	now := time.Now().UTC()
-	return search.Job{ID: buildID("search"), Status: search.JobQueued, Total: len(input.Cards), CreatedAt: now, UpdatedAt: now}
+	return search.Job{ID: buildID("search"), Game: input.Game, Status: search.JobQueued, Total: len(input.Cards), CreatedAt: now, UpdatedAt: now}
 }
 
 func mustJSON(value any) []byte {

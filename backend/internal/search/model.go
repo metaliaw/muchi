@@ -62,6 +62,7 @@ type CreateInput struct {
 
 type Job struct {
 	ID          string     `json:"id"`
+	Game        Game       `json:"game,omitempty"`
 	Status      JobStatus  `json:"status"`
 	Total       int        `json:"total"`
 	Processed   int        `json:"processed"`
