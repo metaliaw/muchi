@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cangrejometralleta/muchi-api/internal/cardmetadata"
 	"github.com/cangrejometralleta/muchi-api/internal/offer"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 )
@@ -17,6 +18,12 @@ import (
 type fakeStore struct {
 	job  search.Job
 	page search.ResultPage
+}
+
+type fakeMetadata struct{}
+
+func (fakeMetadata) CardMetadata(_ context.Context, request cardmetadata.Request) (cardmetadata.Metadata, error) {
+	return cardmetadata.Metadata{Name: request.Name, Image: "https://images.example/pikachu.jpg"}, nil
 }
 
 func (s *fakeStore) CreateSearch(_ context.Context, _, _ string, input search.CreateInput) (search.Job, error) {
@@ -112,6 +119,22 @@ func TestListSupportedGames(t *testing.T) {
 
 	if response.Code != http.StatusOK || response.Body.String() != `{"games":[{"name":"Magic: The Gathering","reference_key":"magic"},{"name":"Pokémon","reference_key":"pokemon"}]}`+"\n" {
 		t.Fatalf("GET /v1/supported-games status=%d body=%s", response.Code, response.Body.String())
+	}
+}
+
+func TestGetCardMetadataUsesSelectedGame(t *testing.T) {
+	api := API{
+		CardMetadata: map[search.Game]cardmetadata.Provider{search.GamePokemon: fakeMetadata{}},
+		Token:        "secret",
+	}
+	request := httptest.NewRequest(http.MethodGet, "/v1/cards/metadata?game=pokemon&name=Pikachu", nil)
+	request.Header.Set("Authorization", "Bearer secret")
+	response := httptest.NewRecorder()
+
+	api.BuildHandler().ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK || response.Body.String() != `{"name":"Pikachu","image":"https://images.example/pikachu.jpg"}`+"\n" {
+		t.Fatalf("GET /v1/cards/metadata status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 

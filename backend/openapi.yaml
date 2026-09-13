@@ -113,6 +113,22 @@ paths:
                 properties:
                   name: {type: string}
                   offers: {type: array, items: {$ref: "#/components/schemas/Offer"}}
+  /cards/metadata:
+    get:
+      parameters:
+        - name: game
+          in: query
+          schema:
+            allOf: [{$ref: "#/components/schemas/Game"}]
+            default: magic
+        - {name: name, in: query, required: true, schema: {type: string, minLength: 1}}
+        - {name: language, in: query, schema: {type: string}}
+        - {name: edition, in: query, schema: {type: string}}
+        - {name: foil, in: query, schema: {type: boolean, default: false}}
+      responses:
+        "200":
+          description: Presentation metadata for one card in the selected game
+          content: {application/json: {schema: {$ref: "#/components/schemas/CardMetadata"}}}
 components:
   securitySchemes:
     bearerAuth: {type: http, scheme: bearer}
@@ -223,6 +239,14 @@ components:
       properties:
         name: {type: string}
         reference_key: {$ref: "#/components/schemas/Game"}
+    CardMetadata:
+      type: object
+      required: [name]
+      properties:
+        name: {type: string}
+        printed_name: {type: string}
+        image: {type: string, format: uri}
+        url: {type: string, format: uri}
     SourceHealth:
       type: object
       required: [source, consecutive_failures, latency_ms]

@@ -55,8 +55,35 @@ func (a API) BuildHandler() http.Handler {
 	mux.Handle("GET /v1/searches/{search_id}", a.authenticate(http.HandlerFunc(a.getSearch)))
 	mux.Handle("GET /v1/searches/{search_id}/results", a.authenticate(http.HandlerFunc(a.listResults)))
 	mux.Handle("POST /v1/searches/{search_id}/cancel", a.authenticate(http.HandlerFunc(a.cancelSearch)))
+	mux.Handle("GET /v1/cards/metadata", a.authenticate(http.HandlerFunc(a.getCardMetadata)))
 	mux.Handle("GET /v1/cards/offers", a.authenticate(http.HandlerFunc(a.findCardOffers)))
 	return a.identifyRequest(a.recoverPanic(mux))
+}
+
+func (a API) getCardMetadata(w http.ResponseWriter, r *http.Request) {
+	game := search.Game(r.URL.Query().Get("game"))
+	if game == "" {
+		game = search.GameMagic
+	}
+	provider, ok := a.CardMetadata[game]
+	if !ok {
+		http.Error(w, "card metadata is not supported for this game", http.StatusNotFound)
+		return
+	}
+	name := strings.TrimSpace(r.URL.Query().Get("name"))
+	if name == "" {
+		http.Error(w, "card name is required", http.StatusBadRequest)
+		return
+	}
+	metadata, err := provider.CardMetadata(r.Context(), cardmetadata.Request{
+		Name: name, Language: r.URL.Query().Get("language"),
+		Edition: r.URL.Query().Get("edition"), Foil: r.URL.Query().Get("foil") == "true",
+	})
+	if err != nil {
+		a.writeError(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, metadata)
 }
 
 type supportedGameReply struct {
