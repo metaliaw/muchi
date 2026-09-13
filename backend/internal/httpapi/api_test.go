@@ -26,6 +26,10 @@ func (fakeMetadata) CardMetadata(_ context.Context, request cardmetadata.Request
 	return cardmetadata.Metadata{Name: request.Name, Image: "https://images.example/pikachu.jpg"}, nil
 }
 
+func (fakeMetadata) Autocomplete(_ context.Context, name, _ string) ([]string, error) {
+	return []string{name, name + " VMAX"}, nil
+}
+
 func (s *fakeStore) CreateSearch(_ context.Context, _, _ string, input search.CreateInput) (search.Job, error) {
 	s.job = search.Job{ID: "search_one", Status: search.JobQueued, Total: len(input.Cards), CreatedAt: time.Now(), UpdatedAt: time.Now()}
 	return s.job, nil
@@ -135,6 +139,22 @@ func TestGetCardMetadataUsesSelectedGame(t *testing.T) {
 
 	if response.Code != http.StatusOK || response.Body.String() != `{"name":"Pikachu","image":"https://images.example/pikachu.jpg"}`+"\n" {
 		t.Fatalf("GET /v1/cards/metadata status=%d body=%s", response.Code, response.Body.String())
+	}
+}
+
+func TestAutocompleteCardsUsesSelectedGame(t *testing.T) {
+	api := API{
+		Autocomplete: map[search.Game]cardmetadata.AutocompleteProvider{search.GamePokemon: fakeMetadata{}},
+		Token:        "secret",
+	}
+	request := httptest.NewRequest(http.MethodGet, "/v1/cards/autocomplete?game=pokemon&name=Pikachu", nil)
+	request.Header.Set("Authorization", "Bearer secret")
+	response := httptest.NewRecorder()
+
+	api.BuildHandler().ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK || response.Body.String() != `{"suggestions":["Pikachu","Pikachu VMAX"]}`+"\n" {
+		t.Fatalf("GET /v1/cards/autocomplete status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 

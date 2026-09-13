@@ -129,6 +129,26 @@ paths:
         "200":
           description: Presentation metadata for one card in the selected game
           content: {application/json: {schema: {$ref: "#/components/schemas/CardMetadata"}}}
+  /cards/autocomplete:
+    get:
+      parameters:
+        - name: game
+          in: query
+          schema:
+            allOf: [{$ref: "#/components/schemas/Game"}]
+            default: magic
+        - {name: name, in: query, required: true, schema: {type: string, minLength: 1}}
+        - {name: language, in: query, schema: {type: string}}
+      responses:
+        "200":
+          description: Card names matching text in the selected game
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [suggestions]
+                properties:
+                  suggestions: {type: array, items: {type: string}}
 components:
   securitySchemes:
     bearerAuth: {type: http, scheme: bearer}
