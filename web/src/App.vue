@@ -22,6 +22,8 @@ const THEME_KEY = 'muchi_tema'
 // para los milisegundos que van entre que arranca la Página y llega la Config.
 const config = ref({ poll_seconds: 3, adsense_client: 'ca-pub-6368656861543000' })
 const book = ref(null)
+const games = ref([])
+const game = ref('')
 const dark = ref(localStorage.getItem(THEME_KEY) === 'oscuro')
 const message = ref(null)
 
@@ -76,6 +78,9 @@ function applyTheme() {
   localStorage.setItem(THEME_KEY, dark.value ? 'oscuro' : 'claro')
 }
 watch(dark, applyTheme)
+watch(game, () => {
+  watched.value = null
+})
 
 function remember(id, label) {
   const rest = history.value.filter((entry) => entry.id !== id)
@@ -102,7 +107,7 @@ function selectSearch(id, initialState = null, initialItems = []) {
 }
 
 async function submit(text) {
-  pending.value = { text, key: api.newKey() }
+  pending.value = { text, game: game.value, key: api.newKey() }
   await send()
 }
 
@@ -135,7 +140,9 @@ async function send() {
   if (!pending.value) return
   error.value = ''
   try {
-    const reply = await api.createSearch(pending.value.text, pending.value.key)
+    const reply = await api.createSearch(
+      pending.value.text, pending.value.game, pending.value.key
+    )
     remember(reply.state.id, reply.label)
     pending.value = null
     selectSearch(reply.state.id, reply.state, reply.items || [])
@@ -160,6 +167,7 @@ function applyState(incoming) {
     ? Object.keys(incoming).filter((key) => incoming[key] !== current[key])
     : Object.keys(incoming)
   state.value = incoming
+  if (incoming.game) game.value = incoming.game
 }
 
 async function refresh() {
@@ -208,6 +216,8 @@ function summarizeOffers(rows) {
 function applyResults(reply) {
   items.value = replacePositions(items.value, reply.items || [])
     .sort((left, right) => left.position - right.position)
+  const resultGame = items.value.find((item) => item.game)?.game
+  if (resultGame) game.value = resultGame
   offers.value = replacePositions(offers.value, reply.offers || [])
     .sort((left, right) => left.currency.localeCompare(right.currency) || Number(left.amount) - Number(right.amount))
   notices.value = replacePositions(notices.value, reply.notices || [])
@@ -239,6 +249,9 @@ watch(busy, (value) => (value ? startPolling() : stopPolling()))
 onMounted(async () => {
   applyTheme()
   try {
+    const supported = await api.readSupportedGames()
+    games.value = supported.games || []
+    game.value = games.value[0]?.reference_key || ''
     ;[config.value, book.value] = await Promise.all([api.readConfig(), api.readMuchi()])
   } catch (failure) {
     error.value = failure.message
@@ -259,19 +272,23 @@ onUnmounted(stopPolling)
   <main class="mu-grilla">
     <div class="mu-lateral">
       <MuchiPanel :book="book" v-model:dark="dark" :message="message" />
-      <CardArt :card="watched" />
+      <CardArt :card="watched" :game="game" />
       <CommunityPanel :repository-url="config.repository_url" />
     </div>
 
     <div class="mu-columna">
       <SearchForm
         v-model:text="lookupText"
+        v-model:game="game"
+        :games="games"
         :busy="busy" :pending="Boolean(pending)" :error="error"
         :limits="config.limits"
         @search="submit" @retry="send" @resume="selectSearch"
       >
         <template #lookup>
           <CardLookup
+            v-if="game"
+            :game="game"
             @found="loadCard"
             @failed="(text) => say(text, 'angry')"
             @suggest="suggestNames"

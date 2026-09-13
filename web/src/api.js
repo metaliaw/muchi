@@ -21,8 +21,11 @@ async function request(path, options = {}) {
   }
   if (!response.ok) {
     const detail = body?.detail
+    const validation = Array.isArray(detail)
+      ? detail.map((row) => `${row.loc?.at(-1) || 'campo'}: ${row.msg}`).join('; ')
+      : ''
     const error = new Error(
-      (typeof detail === 'string' ? detail : detail?.detail) ||
+      (typeof detail === 'string' ? detail : detail?.detail || validation) ||
         `La Consulta falló: HTTP ${response.status}.`
     )
     // Un 502 se reintenta; un 409 detiene el Ciclo, la Búsqueda ya no existe.
@@ -38,8 +41,9 @@ const post = (path, payload) =>
 
 export const readConfig = () => request('/api/config')
 export const readMuchi = () => request('/api/muchi')
+export const readSupportedGames = () => request('/api/supported-games')
 export const readDecklist = (text, key) => post('/api/decklist', { text, key })
-export const createSearch = (text, key) => post('/api/searches', { text, key })
+export const createSearch = (text, game, key) => post('/api/searches', { text, game, key })
 export const readSearch = (id, after = 0) =>
   request(`/api/searches/${encodeURIComponent(id)}?after=${after}`)
 export const cancelSearch = (id, key) =>
@@ -52,6 +56,13 @@ export const readCardArt = ({ name, language = '', edition = '', foil = false })
   request(`/api/card/art?name=${encodeURIComponent(name)}` +
           `&language=${encodeURIComponent(language)}` +
           `&edition=${encodeURIComponent(edition)}&foil=${foil}`)
+export const readCardMetadata = ({ game, name, language = '', edition = '', foil = false }) =>
+  request(`/api/card/metadata?game=${encodeURIComponent(game)}` +
+          `&name=${encodeURIComponent(name)}&language=${encodeURIComponent(language)}` +
+          `&edition=${encodeURIComponent(edition)}&foil=${foil}`)
+export const readCardAutocomplete = (game, name, language = '') =>
+  request(`/api/card/autocomplete?game=${encodeURIComponent(game)}` +
+          `&name=${encodeURIComponent(name)}&language=${encodeURIComponent(language)}`)
 export const readSuggestions = (name, language) =>
   request(`/api/card/suggestions?name=${encodeURIComponent(name)}` +
           `&language=${encodeURIComponent(language)}`)
