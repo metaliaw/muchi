@@ -84,3 +84,55 @@ func TestStorefrontHeaders(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestStopLongRetryAfter(t *testing.T) {
+	var attempts atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		attempts.Add(1)
+		w.Header().Set("Retry-After", "3600")
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer server.Close()
+	client := Client{HTTP: server.Client(), MaxAttempts: 3, BaseDelay: time.Millisecond}
+	started := time.Now()
+	_, err := client.FetchSource(context.Background(), "test", server.URL)
+	if err == nil || attempts.Load() != 1 || time.Since(started) > time.Second {
+		t.Fatalf("FetchSource() attempts=%d elapsed=%s err=%v", attempts.Load(), time.Since(started), err)
+	}
+}
+
+func TestStopRetryPastDeadline(t *testing.T) {
+	var attempts atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		attempts.Add(1)
+		w.Header().Set("Retry-After", "10")
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer server.Close()
+	client := Client{HTTP: server.Client(), MaxAttempts: 3, BaseDelay: time.Millisecond}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	started := time.Now()
+	_, err := client.FetchSource(ctx, "test", server.URL)
+	if err == nil || attempts.Load() != 1 || time.Since(started) > time.Second {
+		t.Fatalf("FetchSource() attempts=%d elapsed=%s err=%v", attempts.Load(), time.Since(started), err)
+	}
+}
+
+func TestHonorShortRetryAfter(t *testing.T) {
+	var attempts atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if attempts.Add(1) < 2 {
+			w.Header().Set("Retry-After", "1")
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		_, _ = w.Write([]byte("ok"))
+	}))
+	defer server.Close()
+	client := Client{HTTP: server.Client(), MaxAttempts: 2, BaseDelay: time.Millisecond}
+	data, err := client.FetchSource(context.Background(), "test", server.URL)
+	if err != nil || string(data) != "ok" || attempts.Load() != 2 {
+		t.Fatalf("FetchSource() data=%q attempts=%d err=%v", data, attempts.Load(), err)
+	}
+}

@@ -17,6 +17,10 @@ var ErrCircuitOpen = errors.New("source circuit is open")
 // bodyCapFallback keeps an unset MaxBodyBytes from truncating every response to nothing.
 const bodyCapFallback = 4 << 20
 
+// retryAfterCeiling Bounds how long a Source may Hold the Caller.
+// Past it, Retry-After Reads as "come back later", not as a Wait.
+const retryAfterCeiling = 30 * time.Second
+
 // TrafficGate Coordinates calls through https://firebase.google.com/docs/firestore/manage-data/transactions.
 type TrafficGate interface {
 	AwaitSource(context.Context, string) error
@@ -54,7 +58,7 @@ func (c Client) FetchSource(ctx context.Context, domain, target string) ([]byte,
 			return data, nil
 		}
 		lastErr = err
-		if !CanRetry(err) || attempt == c.MaxAttempts {
+		if !CanRetry(err) || attempt == c.MaxAttempts || !canWaitRetry(ctx, retryAfter) {
 			break
 		}
 		if err := waitRetry(ctx, retryAfter, c.BaseDelay, attempt); err != nil {
@@ -134,6 +138,15 @@ func ParseRetryAfter(value string) time.Duration {
 		return 0
 	}
 	return max(time.Until(date), 0)
+}
+
+// canWaitRetry Answers whether the asked Wait Fits the Caller's Budget.
+func canWaitRetry(ctx context.Context, retry time.Duration) bool {
+	if retry > retryAfterCeiling {
+		return false
+	}
+	deadline, ok := ctx.Deadline()
+	return !ok || retry < time.Until(deadline)
 }
 
 func waitRetry(ctx context.Context, retry, base time.Duration, attempt int) error {
