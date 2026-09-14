@@ -16,6 +16,9 @@
 #
 #   MUCHI_INSTAGRAM_URL=https://instagram.com/muchi ./deploy.sh
 #
+# Sin MUCHI_ADSENSE_SLOT el Deploy Avisa y Sigue: el Sitio Sube sin Anuncios.
+# ./check-ads.sh dice si Google ya Asigno un Bloque que Poner ahi.
+#
 # Un .env se exporta entero con `set -a; . ./.env; set +a` antes de llamar.
 #
 # El Token lo comparte muchi-api, que lo guarda en Secret Manager. Rotarlo es
@@ -34,13 +37,15 @@ CONFIG="cloudbuild.yaml"
 
 # --------------------------------------------------------- lo que dice Muchi
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
-    PINK=$'\033[38;5;211m'; DIM=$'\033[2m'; RED=$'\033[31m'; OFF=$'\033[0m'
+    PINK=$'\033[38;5;211m'; DIM=$'\033[2m'; RED=$'\033[31m'
+    YELLOW=$'\033[33m'; OFF=$'\033[0m'
 else
-    PINK=""; DIM=""; RED=""; OFF=""
+    PINK=""; DIM=""; RED=""; YELLOW=""; OFF=""
 fi
 
 say()  { printf '%s~nya~%s %s\n' "$PINK" "$OFF" "$1"; }
 note() { printf '%s      %s%s\n' "$DIM" "$1" "$OFF"; }
+warn() { printf '%s~nya?~%s %s\n' "$YELLOW" "$OFF" "$1"; }
 die()  { printf '%s~nya!~%s %s\n' "$RED" "$OFF" "$1" >&2; exit 1; }
 
 
@@ -77,6 +82,37 @@ check_account() {
 # ------------------------------------------------------- el secreto, primero
 # Se comprueba antes de construir. Un build dura minutos y termina en un
 # Servicio que arranca sin Credenciales: mejor cortar en el segundo uno.
+# ----------------------------------------------------------- la Publicidad
+# Avisa, nunca Detiene. Un Sitio sin Anuncios Sirve igual, y mientras Google
+# Revisa la Cuenta no hay Slot que Poner: Bloquear el Deploy por eso Dejaria
+# a Muchi sin Publicar por una Espera que no Depende de nadie aca.
+#
+# Lo que si Duele es Desplegar sin Anuncios por Olvido y Notarlo una Semana
+# despues, con el Sitio entero corriendo de Gratis.
+#
+# La Pregunta se Responde sin Red: lo unico que Decide si aparece un Anuncio
+# es el Slot que este Deploy esta por Mandar. El Estado en AdSense lo Dice
+# ./check-ads.sh, que Pide ADC con Scope y puede Morir en un 403; eso no tiene
+# lugar dentro de un Deploy.
+check_ads() {
+    local client="${MUCHI_ADSENSE_CLIENT:-}"
+    local slot="${MUCHI_ADSENSE_SLOT:-}"
+
+    if [ -n "$slot" ]; then
+        note "Publicidad: Slot $slot"
+        return 0
+    fi
+
+    warn "Este Deploy va sin Anuncios: MUCHI_ADSENSE_SLOT esta vacio"
+    if [ -z "$client" ]; then
+        note "MUCHI_ADSENSE_CLIENT tambien: el BFF usara su Identificador por Defecto"
+    fi
+    note "./check-ads.sh dice si Google ya Asigno un Bloque"
+    note "con Slot:  MUCHI_ADSENSE_SLOT=xxxxxxxxxx ./deploy.sh"
+    return 0
+}
+
+
 check_secret() {
     gcloud secrets describe "$TOKEN_SECRET" >/dev/null 2>&1 \
         || die "Falta el Secreto '$TOKEN_SECRET'. Lo Crea el deploy.sh de muchi-api"
@@ -182,6 +218,7 @@ push_hosting() {
 
 
 check_account
+check_ads
 check_secret
 prepare_repository
 grant_access
