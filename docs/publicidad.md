@@ -156,6 +156,17 @@ MUCHI_ADSENSE_SLOT=1234567890 ./deploy.sh
 
 Un `.env` entero se exporta con `set -a; . ./.env; set +a` antes de llamar.
 
+`deploy.sh` lo Avisa antes de Subir nada, y nunca Detiene el Despliegue:
+
+```text
+~nya?~ Este Deploy va sin Anuncios: MUCHI_ADSENSE_SLOT esta vacio
+       ./check-ads.sh dice si Google ya Asigno un Bloque
+```
+
+Es un Aviso y no un Error a Propósito: mientras Google Revisa la Cuenta no hay
+Slot que Poner, y Bloquear el Despliegue por esa Espera dejaría a Muchi sin
+Publicar por algo que no Depende de nadie acá.
+
 ## Cuando algo no anda
 
 | Síntoma | Causa probable |
