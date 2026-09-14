@@ -1,8 +1,4 @@
 @echo off
-where bash >nul 2>nul
-if errorlevel 1 (
-  echo Instala Git Bash para Leer el Secreto.
-  exit /b 1
-)
-bash "%~dp0get-secret.sh" %*
+rem Lee el Token de Muchi en Windows. La Logica vive en el .sh y el bash lo busca run-bash.cmd.
+call "%~dp0run-bash.cmd" get-secret.sh %*
 exit /b %errorlevel%
