@@ -1,6 +1,8 @@
 <script setup>
-/** Las Ofertas, ordenadas por Precio dentro de cada Moneda por el BFF. */
+/** Las Ofertas, agrupadas por Tipo de Carta y por Precio dentro de cada una. */
+import { computed } from 'vue'
 import { formatAmount, formatClp } from '../api.js'
+import { groupByCardType } from '../search.js'
 
 const emit = defineEmits(['look'])
 
@@ -14,13 +16,18 @@ const printingOf = (offer) => ({
   url: offer.metadata?.url || '',
 })
 
-defineProps({
+const props = defineProps({
   items: { type: Array, default: () => [] },
   offers: { type: Array, default: () => [] },
   summary: { type: Object, default: null },
   notices: { type: Array, default: () => [] },
   placeholder: { type: String, default: '' },
 })
+
+// Un solo Tipo no es una Agrupación: mostrar un Encabezado para él sería
+// repetir el Nombre que ya está en cada Oferta.
+const groups = computed(() => groupByCardType(props.offers))
+const grouped = computed(() => groups.value.length > 1)
 </script>
 
 <template>
@@ -51,12 +58,19 @@ defineProps({
       <div class="mu-panel mu-ficha">
         <span class="mu-caption">Ofertas</span><strong>{{ summary?.offers }}</strong>
       </div>
+      <div v-if="grouped" class="mu-panel mu-ficha">
+        <span class="mu-caption">Cartas</span><strong>{{ groups.length }}</strong>
+      </div>
       <div class="mu-panel mu-ficha">
         <span class="mu-caption">Tiendas</span><strong>{{ summary?.stores }}</strong>
       </div>
     </div>
 
-    <article v-for="(offer, index) in offers" :key="`${offer.url}-${index}`"
+    <template v-for="group in groups" :key="group.card">
+    <h2 v-if="grouped" class="mu-grupo">{{ group.name }}
+      <span class="mu-caption">{{ group.rows.length }} Ofertas</span>
+    </h2>
+    <article v-for="(offer, index) in group.rows" :key="`${offer.url}-${index}`"
              class="mu-panel mu-oferta" :class="{ mejor: offer.best }">
       <div class="mu-oferta-cab">
         <h3 class="mu-mirable" tabindex="0" role="button"
@@ -76,6 +90,7 @@ defineProps({
       <p v-if="offer.note" class="mu-caption">{{ offer.note }}</p>
       <a :href="offer.url" target="_blank" rel="noopener noreferrer">{{ offer.action }} →</a>
     </article>
+    </template>
 
     <p v-if="!offers.length && placeholder" class="mu-aviso">{{ placeholder }}</p>
   </section>
@@ -92,6 +107,9 @@ defineProps({
 .mu-oferta.mejor { border-color: var(--mu-peri); }
 .mu-oferta-cab { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap; }
 h3 { margin: 0; font-size: 1.05rem; }
+/* El Encabezado separa una Carta de la siguiente sin robarle Peso al Precio. */
+.mu-grupo { display: flex; justify-content: space-between; align-items: baseline;
+            gap: 12px; flex-wrap: wrap; margin: 18px 0 8px; font-size: 1.1rem; }
 /* El Cursor avisa que el Nombre hace algo antes de que nadie lo pulse. */
 .mu-mirable { cursor: pointer; }
 .mu-mirable:hover, .mu-mirable:focus-visible { text-decoration: underline dotted; }

@@ -37,6 +37,10 @@ const {
 const error = ref('')
 const pending = ref(null)
 const lookupText = ref('')
+// El Modo viaja en la URL junto a la Búsqueda: recargar no debe reagrupar las
+// mismas Ofertas de otra manera ni mandar Derivados al Carrito.
+const match = ref(new URLSearchParams(location.search).get('match') === 'includes'
+  ? 'includes' : 'exact')
 // La Carta que se mira: un Nombre, y el Idioma en que se escribió.
 const watched = ref(null)
 const history = ref(JSON.parse(localStorage.getItem('muchi_historial') || '[]'))
@@ -99,12 +103,13 @@ function selectSearch(id, initialState = null, initialItems = []) {
   startSearch(id, initialState, initialItems)
   const url = new URL(location.href)
   url.searchParams.set('search', id)
+  url.searchParams.set('match', match.value)
   history.value.length && window.history.replaceState({}, '', url)
   refresh()
 }
 
 async function submit(text) {
-  pending.value = { text, game: game.value, key: api.newKey() }
+  pending.value = { text, game: game.value, key: api.newKey(), match: match.value }
   await send()
 }
 
@@ -138,7 +143,7 @@ async function send() {
   error.value = ''
   try {
     const reply = await api.createSearch(
-      pending.value.text, pending.value.game, pending.value.key
+      pending.value.text, pending.value.game, pending.value.key, pending.value.match
     )
     remember(reply.state.id, reply.label)
     pending.value = null
@@ -156,7 +161,7 @@ async function refresh() {
   if (!searchId.value || unavailable.value || refreshing) return
   refreshing = true
   try {
-    const reply = await api.readSearch(searchId.value, cursor.value)
+    const reply = await api.readSearch(searchId.value, cursor.value, match.value)
     playGame(applyState(reply.state))
     playGame(applyResults(reply))
     checked.value = new Date().toISOString().slice(11, 19) + ' UTC'
@@ -231,6 +236,7 @@ onUnmounted(stopPolling)
       <SearchForm
         v-model:text="lookupText"
         v-model:game="game"
+        v-model:match="match"
         :games="games"
         :busy="busy" :pending="Boolean(pending)" :error="error"
         :limits="config.limits"
@@ -288,7 +294,7 @@ onUnmounted(stopPolling)
         @look="lookAtCard"
       />
 
-      <CartPanel v-if="offers.length" :search-id="searchId" />
+      <CartPanel v-if="offers.length" :search-id="searchId" :match="match" />
       <SourcesPanel @nerd="sayNerd" />
     </div>
   </main>

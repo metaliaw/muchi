@@ -3,7 +3,11 @@
 import { ref, watch } from 'vue'
 import { formatClp, readCart } from '../api.js'
 
-const props = defineProps({ searchId: { type: String, required: true } })
+const props = defineProps({
+  searchId: { type: String, required: true },
+  // El Carrito vuelve a la Carta pedida: el Modo le dice si hubo Derivados.
+  match: { type: String, default: 'exact' },
+})
 
 const shipping = ref(4000)
 const plan = ref(null)
@@ -16,7 +20,8 @@ async function refresh() {
   loading.value = true
   error.value = ''
   try {
-    plan.value = await readCart(props.searchId, Math.max(0, Number(shipping.value) || 0))
+    plan.value = await readCart(props.searchId, Math.max(0, Number(shipping.value) || 0),
+                                props.match)
   } catch (failure) {
     error.value = failure.message
   } finally {
@@ -24,7 +29,7 @@ async function refresh() {
   }
 }
 
-watch([open, shipping, () => props.searchId], refresh)
+watch([open, shipping, () => props.searchId, () => props.match], refresh)
 </script>
 
 <template>

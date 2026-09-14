@@ -51,7 +51,8 @@ def test_creates_authenticated_search():
     assert kwargs["headers"]["Idempotency-Key"] == "stable-key"
     assert kwargs["json"] == {"game": "pokemon",
                               "cards": [{"name": "Sol Ring", "quantity": 2}],
-                              "options": {"verify_stock": True, "stores_only": False}}
+                              "options": {"verify_stock": True, "stores_only": False,
+                                          "match": "exact"}}
     assert kwargs["allow_redirects"] is False
     assert "private-code" not in repr(provider)
 
