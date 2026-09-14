@@ -44,7 +44,7 @@ func TestConfiguredSources(t *testing.T) {
 			catalogs++
 		}
 	}
-	if lists != 9 || catalogs != 2 || shopifyStores != 3 || jumpsellerStores != 5 || prestashopStores != 1 || len(sources) != 21 {
+	if lists != 9 || catalogs != 3 || shopifyStores != 3 || jumpsellerStores != 5 || prestashopStores != 1 || len(sources) != 22 {
 		t.Fatalf("sources=%d lists=%d catalogs=%d", len(sources), lists, catalogs)
 	}
 	for _, domain := range []string{"gameofmagicsingles.cl", "singles.collectorcenter.cl", "www.cardsouls.cl"} {
@@ -56,7 +56,7 @@ func TestConfiguredSources(t *testing.T) {
 	store := config.Stores["el-wombat-rabioso-tcg"]
 	store.Enabled = false
 	config.Stores["el-wombat-rabioso-tcg"] = store
-	if sources := buildOfferSources(nil, scry.Client{}, config, nil, time.Minute, nil); len(sources) != 12 {
+	if sources := buildOfferSources(nil, scry.Client{}, config, nil, time.Minute, nil); len(sources) != 13 {
 		t.Fatalf("disabled lists still active: %d", len(sources))
 	}
 	for domain, store := range config.Stores {
@@ -65,7 +65,7 @@ func TestConfiguredSources(t *testing.T) {
 			config.Stores[domain] = store
 		}
 	}
-	if sources := buildOfferSources(nil, scry.Client{}, config, nil, time.Minute, nil); len(sources) != 9 {
+	if sources := buildOfferSources(nil, scry.Client{}, config, nil, time.Minute, nil); len(sources) != 10 {
 		t.Fatalf("disabled Shopify stores still active: %d", len(sources))
 	}
 	for domain, store := range config.Stores {
@@ -74,7 +74,7 @@ func TestConfiguredSources(t *testing.T) {
 			config.Stores[domain] = store
 		}
 	}
-	if sources := buildOfferSources(nil, scry.Client{}, config, nil, time.Minute, nil); len(sources) != 4 {
+	if sources := buildOfferSources(nil, scry.Client{}, config, nil, time.Minute, nil); len(sources) != 5 {
 		t.Fatalf("disabled Jumpseller stores still active: %d", len(sources))
 	}
 }
@@ -90,7 +90,7 @@ func TestSourcesWithoutScry(t *testing.T) {
 			t.Fatal("Scry still active")
 		}
 	}
-	if len(sources) != 16 {
+	if len(sources) != 17 {
 		t.Fatalf("sources=%d", len(sources))
 	}
 }
@@ -107,7 +107,7 @@ func TestSlowCatalogsPausedWithScryAvailable(t *testing.T) {
 		}
 	}
 	sources := buildOfferSources(nil, scry.Client{}, config, nil, time.Minute, nil)
-	if len(sources) != 17 {
+	if len(sources) != 18 {
 		t.Fatalf("sources=%d", len(sources))
 	}
 	if _, ok := sources[0].(scry.Client); !ok {

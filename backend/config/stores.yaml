@@ -26,6 +26,7 @@ games:
       - tcgmatch
       - jumpseller
       - prestashop
+      - woocommerce
   one-piece:
     name: One Piece
     reference_key: one-piece
@@ -71,6 +72,14 @@ stores:
       country: Chile
       region: Valparaíso
       commune: Viña del Mar
+    timeout_seconds: 10
+    estimated_response_seconds: 10
+    allow_redirects: true
+    enabled: true
+  konohastore.cl:
+    games: [yugioh]
+    name: "Konoha Store"
+    platform: woocommerce
     timeout_seconds: 10
     estimated_response_seconds: 10
     allow_redirects: true
