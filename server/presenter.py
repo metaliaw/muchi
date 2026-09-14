@@ -86,14 +86,72 @@ def build_offer(offer: SearchOffer, muchi_dolar: int,
     }
 
 
+# Buscar "Kuriboh" con MATCH_INCLUDES trae Winged Kuriboh y Linkuriboh: otras
+# Cartas. Comparar sus Precios entre sí no dice nada, así que cada Tipo de
+# Carta se ordena, se cuenta y se premia por separado.
+MATCH_EXACT = "exact"
+MATCH_INCLUDES = "includes"
+
+
+# El Gemelo de `offer.MatchesCard` de muchi-api. La API ya filtró con ella; el
+# Carrito la repite para volver a la Carta pedida cuando la Búsqueda fue ancha.
+EDITION_BRACKETS = (" | ", " (", " [")
+EDITION_DASHES = (" - ", " \u2013 ", " \u2014 ")
+QUOTE_PAIRS = (("\u201c", "\u201d"), ('"', '"'), ("\u00ab", "\u00bb"))
+
+
+def names_same_card(title: str, asked: str) -> bool:
+    """El Título Nombra la Carta pedida, con o sin su Impresión detrás."""
+    title = " ".join(title.lower().split())
+    asked = " ".join(asked.lower().split())
+    if not asked:
+        return False
+    if title == asked:
+        return True
+    if any(title.startswith(asked + bracket) for bracket in EDITION_BRACKETS):
+        return True
+    if any(opening + asked + closing in title for opening, closing in QUOTE_PAIRS):
+        return True
+    return any(follows_code(title, asked + dash) for dash in EDITION_DASHES)
+
+
+def follows_code(title: str, opening: str) -> bool:
+    """Tras un Guion solo Sigue la misma Carta si lo que viene es un Código."""
+    if not title.startswith(opening):
+        return False
+    tail = title[len(opening):].split()
+    return bool(tail) and any(character.isdigit() for character in tail[0])
+
+
+def read_card_type(offer: SearchOffer, asked: str, match: str) -> str:
+    """El Tipo de Carta al que Pertenece una Oferta.
+
+    En `exact` la Carta es la que se Pidió: sus Impresiones son la misma Carta
+    y compiten entre ellas. En `includes` cada Título es una Carta distinta.
+    """
+    if match == MATCH_INCLUDES:
+        return offer.card_name.strip().lower()
+    return asked.strip().lower()
+
+
 def order_offers(offers: list[SearchOffer]) -> list[SearchOffer]:
-    """Abre por Precio, barata primero, mezclando todas las Cartas.
+    """Abre por Precio, barata primero, dentro de un mismo Tipo de Carta.
 
     Cada Moneda va en su propio Bloque: comparar 4 Dólares contra 4000 Pesos
     por su Número sería mentir, y el Muchi Dólar es un Cambio de Muchi, no el
     Precio que la Tienda publica.
     """
     return sorted(offers, key=lambda offer: (offer.currency, offer.amount))
+
+
+def order_by_card_type(offers: list[SearchOffer], types: dict[int, str]) -> list[SearchOffer]:
+    """Los Tipos en el Orden en que Aparecieron, y adentro de la barata a la cara."""
+    seen: list[str] = []
+    for offer in offers:
+        if types[id(offer)] not in seen:
+            seen.append(types[id(offer)])
+    return sorted(offers, key=lambda offer: (
+        seen.index(types[id(offer)]), offer.currency, offer.amount))
 
 
 def pick_cheapest(offers: list[SearchOffer], muchi_dolar: int) -> SearchOffer | None:
@@ -103,6 +161,19 @@ def pick_cheapest(offers: list[SearchOffer], muchi_dolar: int) -> SearchOffer | 
                 and convert_to_clp(offer, muchi_dolar) is not None]
     return min(eligible, key=lambda offer: convert_to_clp(offer, muchi_dolar),
                default=None)
+
+
+def pick_cheapest_by_type(offers: list[SearchOffer], types: dict[int, str],
+                          muchi_dolar: int) -> set[int]:
+    """Una Oferta premiada por Tipo de Carta, no una sola para toda la Página."""
+    grouped: dict[str, list[SearchOffer]] = {}
+    for offer in offers:
+        grouped.setdefault(types[id(offer)], []).append(offer)
+    best = set()
+    for group in grouped.values():
+        if winner := pick_cheapest(group, muchi_dolar):
+            best.add(id(winner))
+    return best
 
 
 def build_state(state: SearchState) -> dict:
@@ -115,10 +186,11 @@ def build_state(state: SearchState) -> dict:
 
 
 def build_results(items: tuple[SearchItem, ...], muchi_dolar: int,
-                  verified: bool = True) -> dict:
-    """Las Ofertas ya ordenadas, con la más barata marcada y el Resumen listo."""
+                  verified: bool = True, match: str = MATCH_EXACT) -> dict:
+    """Las Ofertas ya ordenadas, con la más barata de cada Tipo de Carta marcada."""
     offers: list[SearchOffer] = []
     positions: dict[int, int] = {}
+    types: dict[int, str] = {}
     notices = []
     for item in items:
         if item.status == "source_error":
@@ -130,15 +202,18 @@ def build_results(items: tuple[SearchItem, ...], muchi_dolar: int,
                             "item_position": item.position,
                             "text": f"{item.name}: sin Ofertas."})
         positions.update((id(offer), item.position) for offer in item.offers)
+        types.update((id(offer), read_card_type(offer, item.name, match))
+                     for offer in item.offers)
         offers.extend(item.offers)
 
-    offers = order_offers(offers)
-    cheapest = pick_cheapest(offers, muchi_dolar)
+    offers = order_by_card_type(offers, types)
+    best = pick_cheapest_by_type(offers, types, muchi_dolar)
     rows = []
     for offer in offers:
         row = build_offer(offer, muchi_dolar, verified)
         row["item_position"] = positions[id(offer)]
-        row["best"] = offer is cheapest
+        row["card_type"] = types[id(offer)]
+        row["best"] = id(offer) in best
         rows.append(row)
     prices = [price for price in
               (convert_to_clp(offer, muchi_dolar) for offer in offers)
@@ -164,14 +239,22 @@ def build_results(items: tuple[SearchItem, ...], muchi_dolar: int,
     }
 
 
-def build_cart(items: tuple[SearchItem, ...], shipping: int, muchi_dolar: int) -> dict:
-    """El Carrito en CLP: solo Ofertas sin Alerta de Precio ni Stock agotado."""
+def build_cart(items: tuple[SearchItem, ...], shipping: int, muchi_dolar: int,
+               match: str = MATCH_EXACT) -> dict:
+    """El Carrito en CLP: solo Ofertas sin Alerta de Precio ni Stock agotado.
+
+    En `includes` la Búsqueda trae Derivados para Mirar, no para Comprar: pedir
+    3 Kuriboh y recibir un Linkuriboh porque salía más barato no es un Carrito,
+    es otra Carta. Así que el Carrito vuelve a la Carta pedida.
+    """
     orders = [Order(item.quantity, item.name) for item in items]
     found: dict[str, list[Offer]] = {}
     converted = 0
     for item in items:
         for offer in item.offers:
             if offer.stock_status == "unavailable" or offer.suspicious:
+                continue
+            if match == MATCH_INCLUDES and not names_same_card(offer.card_name, item.name):
                 continue
             price = convert_to_clp(offer, muchi_dolar)
             if price is None:

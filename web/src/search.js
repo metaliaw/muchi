@@ -14,22 +14,50 @@ export function replacePositions(current, incoming) {
           ...incoming]
 }
 
-/** Marca la más barata sin Alertas y cuenta lo acumulado hasta ahora. */
+/** El Tipo de Carta al que pertenece una Fila. El BFF ya lo nombró. */
+const cardTypeOf = (row) => row.card_type || row.card_name || ''
+
+/** Marca la más barata de cada Tipo de Carta y cuenta lo acumulado hasta ahora.
+ *
+ * Una sola Ganadora para toda la Página premiaría al Linkuriboh de cien Pesos
+ * por encima del Kuriboh que se pidió: son Cartas distintas y sus Precios no
+ * se comparan. Cada Tipo corona la suya.
+ */
 export function summarizeOffers(rows) {
-  const eligible = rows.filter((row) => !row.suspicious && row.stock_status !== 'unavailable' && row.price_clp != null)
-  const cheapest = eligible.reduce((best, row) => !best || row.price_clp < best.price_clp ? row : best, null)
-  rows.forEach((row) => { row.best = row === cheapest })
+  const cheapest = new Map()
+  rows.forEach((row) => {
+    row.best = false
+    if (row.suspicious || row.stock_status === 'unavailable' || row.price_clp == null) return
+    const card = cardTypeOf(row)
+    const best = cheapest.get(card)
+    if (!best || row.price_clp < best.price_clp) cheapest.set(card, row)
+  })
+  cheapest.forEach((row) => { row.best = true })
   const prices = rows.filter((row) => row.price_clp != null).map((row) => row.price_clp)
   return {
     lowest_clp: prices.length ? Math.min(...prices) : null,
     offers: rows.length,
+    cards: cheapest.size || new Set(rows.map(cardTypeOf)).size,
     stores: new Set(rows.map((row) => row.store)).size,
   }
 }
 
-/** Cada Moneda en su Bloque, y adentro de la barata a la cara. */
-const byCurrencyThenAmount = (left, right) =>
-  left.currency.localeCompare(right.currency) || Number(left.amount) - Number(right.amount)
+/** Agrupa las Filas por Tipo de Carta conservando el Orden en que llegaron. */
+export function groupByCardType(rows) {
+  const groups = new Map()
+  rows.forEach((row) => {
+    const card = cardTypeOf(row)
+    if (!groups.has(card)) groups.set(card, { card, name: row.card_name, rows: [] })
+    groups.get(card).rows.push(row)
+  })
+  return [...groups.values()]
+}
+
+/** Los Tipos no se mezclan; adentro, cada Moneda en su Bloque y la barata primero. */
+const byCardThenPrice = (left, right) =>
+  cardTypeOf(left).localeCompare(cardTypeOf(right)) ||
+  left.currency.localeCompare(right.currency) ||
+  Number(left.amount) - Number(right.amount)
 
 /** Todo lo que pertenece a una Búsqueda, declarado y limpiado en un solo Lugar. */
 export function useSearch() {
@@ -78,7 +106,7 @@ export function useSearch() {
     items.value = replacePositions(items.value, reply.items || [])
       .sort((left, right) => left.position - right.position)
     offers.value = replacePositions(offers.value, reply.offers || [])
-      .sort(byCurrencyThenAmount)
+      .sort(byCardThenPrice)
     notices.value = replacePositions(notices.value, reply.notices || [])
     summary.value = summarizeOffers(offers.value)
     cursor.value = reply.cursor
