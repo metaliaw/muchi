@@ -20,10 +20,12 @@ vendor/
 /rules
 /values
 /patterns
-/.agents/agents
-/.agents/skills
-/.claude/agents
-/.claude/skills
-/.codex/agents
+# Lo que un Agente Deja en el Árbol no es del Repositorio. Se Ignoran los
+# Directorios enteros y no sus Hojas, porque la Herramienta que Llegue mañana
+# Va a Escribir un Archivo que hoy no Existe.
+/.agents/
+/.claude/
+/.codex/
+# `.github/` también Aloja Flujos de Trabajo, así que aquí sí van las Hojas.
 /.github/agents
 /.github/skills
