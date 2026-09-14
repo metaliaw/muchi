@@ -34,8 +34,12 @@ func NormalizeCard(name string) string {
 	return strings.Join(strings.Fields(strings.ToLower(name)), " ")
 }
 
-// editionSeparators Open the Tail a Store Appends after the Card Name.
-var editionSeparators = []string{" | ", " (", " [", " - ", " \u2013 ", " \u2014 "}
+// editionBrackets Open a Tail that cannot be Part of a Card Name.
+var editionBrackets = []string{" | ", " (", " ["}
+
+// editionDashes Open a Tail that Must Look like a Code, because a Dash also
+// Lives inside Card Names such as "Kuriboh - Multiply!".
+var editionDashes = []string{" - ", " \u2013 ", " \u2014 "}
 
 // quotePairs Wrap a Card Name a Store Leads with something else, such as a Set Code.
 var quotePairs = [][2]string{{"\u201c", "\u201d"}, {`"`, `"`}, {"\u00ab", "\u00bb"}}
@@ -50,12 +54,28 @@ func MatchesCard(title, name string) bool {
 	if title == name {
 		return true
 	}
-	for _, separator := range editionSeparators {
-		if strings.HasPrefix(title, name+separator) {
+	for _, bracket := range editionBrackets {
+		if strings.HasPrefix(title, name+bracket) {
 			return true
 		}
 	}
-	return quotesCardName(title, name)
+	return followsCode(title, name) || quotesCardName(title, name)
+}
+
+// followsCode Accepts a Dash Tail that Opens with a Collector Code, never with a Word.
+// `Mewtwo - SM214` is the same Card; `Kuriboh - Multiply!` is another one.
+func followsCode(title, name string) bool {
+	for _, dash := range editionDashes {
+		tail, found := strings.CutPrefix(title, name+dash)
+		if !found {
+			continue
+		}
+		fields := strings.Fields(tail)
+		if len(fields) > 0 && strings.ContainsAny(fields[0], "0123456789") {
+			return true
+		}
+	}
+	return false
 }
 
 // quotesCardName Reads the Quoted Form, where the Card Name Sits inside the Title.

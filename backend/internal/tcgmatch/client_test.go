@@ -75,3 +75,40 @@ func TestSearch(t *testing.T) {
 		})
 	}
 }
+
+// TestSearchKeepsTheExactCard Covers a Catalog that Answers by Resemblance.
+func TestSearchKeepsTheExactCard(t *testing.T) {
+	catalog := `{"products":[
+		{"id":1,"name":"Kuriboh","tcg":"yugioh","type":"card"},
+		{"id":2,"name":"Kuriboh (C)","tcg":"yugioh","type":"card"},
+		{"id":3,"name":"Winged Kuriboh","tcg":"yugioh","type":"card"},
+		{"id":4,"name":"Kuribohrn","tcg":"yugioh","type":"card"},
+		{"id":5,"name":"Token: Kuriboh","tcg":"yugioh","type":"card"},
+		{"id":6,"name":"The Flute of Summoning Kuriboh","tcg":"yugioh","type":"card"},
+		{"id":7,"name":"Kuriboh - Multiply!","tcg":"yugioh","type":"card"}
+	]}`
+	client := Client{Fetcher: perProductFetcher{catalog: catalog}, BaseURL: "https://api.tcgmatch.cl", Game: "yugioh"}
+
+	items, err := client.Search(context.Background(), "Kuriboh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	kept := map[string]bool{}
+	for _, item := range items {
+		kept[item.CardName] = true
+	}
+	if len(items) != 2 || !kept["Kuriboh"] || !kept["Kuriboh (C)"] {
+		t.Fatalf("kept=%v offers=%d, want only Kuriboh and Kuriboh (C)", kept, len(items))
+	}
+}
+
+// perProductFetcher Gives every Product its own Listing so Deduplication Keeps them apart.
+type perProductFetcher struct{ catalog string }
+
+func (f perProductFetcher) FetchSource(_ context.Context, _, target string) ([]byte, error) {
+	if strings.Contains(target, "/catalog/search?") {
+		return []byte(f.catalog), nil
+	}
+	id := target[strings.LastIndex(target, "/")+1:]
+	return []byte(`{"success":true,"data":[{"_id":"listing-` + id + `","tcg":"yugioh","language":"english","status":"near-mint","quantity":1,"price":900,"isActive":true,"user":{"name":"Tienda","username":"tienda"}}]}`), nil
+}

@@ -77,7 +77,7 @@ func (c Client) Search(ctx context.Context, name string) ([]offer.Offer, error) 
 	}
 	items := make([]offer.Offer, 0)
 	for _, product := range products {
-		if product.TCG != c.Game || product.Type != "card" {
+		if product.TCG != c.Game || product.Type != "card" || !offer.MatchesCard(product.Name, name) {
 			continue
 		}
 		listings, err := c.readListings(ctx, base, product.ID)

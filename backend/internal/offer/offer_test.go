@@ -67,3 +67,25 @@ func TestMatchCardTitle(t *testing.T) {
 		}
 	}
 }
+
+// TestMatchDashTail Separates a Collector Code from another Card's Name.
+func TestMatchDashTail(t *testing.T) {
+	for _, test := range []struct {
+		title string
+		name  string
+		want  bool
+	}{
+		{"Mewtwo - 052", "Mewtwo", true},
+		{"Mewtwo - SM214", "Mewtwo", true},
+		{"Snorlax - SWSH068 (Prerelease)", "Snorlax", true},
+		{"Gengar - 60/162 (XY BREAKthrough)", "Gengar", true},
+		{"Sol Ring - 212 - uncommon", "Sol Ring", true},
+		{"Kuriboh - Multiply!", "Kuriboh", false},
+		{"Kuriboh - Multiply! (Starlight Rare) (Extended Art)", "Kuriboh", false},
+		{"Kuriboh - ", "Kuriboh", false},
+	} {
+		if got := MatchesCard(test.title, test.name); got != test.want {
+			t.Errorf("MatchesCard(%q, %q) = %t", test.title, test.name, got)
+		}
+	}
+}
