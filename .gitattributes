@@ -1,0 +1,9 @@
+# Windows lee el CRLF. Un .cmd con Saltos de Unix rompe el ultimo Argumento de
+# cada Linea y desarma los Bloques entre Parentesis, con un Error que no
+# menciona los Saltos por ningun lado. Git los normaliza al Clonar, asi que la
+# Regla vive aca y no en el Editor de cada Maquina.
+*.cmd text eol=crlf
+
+# El .sh viaja al contrario: un Shebang con CRLF hace que el Kernel busque un
+# Interprete llamado "bash\r", que no existe.
+*.sh text eol=lf
