@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/cangrejometralleta/muchi-api/internal/cardmetadata"
+
+	"github.com/cangrejometralleta/muchi-api/internal/offer"
 )
 
 type fixtureFetcher struct {
@@ -58,7 +60,7 @@ func TestSearch(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			fetcher := &fixtureFetcher{catalog: test.catalog, listing: test.listing}
-			items, err := (Client{Fetcher: fetcher, BaseURL: "https://api.tcgmatch.cl", Game: test.game}).Search(context.Background(), test.card)
+			items, err := (Client{Fetcher: fetcher, BaseURL: "https://api.tcgmatch.cl", Game: test.game}).Search(context.Background(), offer.CardQuery{Name: test.card})
 			if err != nil || len(items) != 1 {
 				t.Fatalf("Search() items=%v err=%v", items, err)
 			}
@@ -89,7 +91,7 @@ func TestSearchKeepsTheExactCard(t *testing.T) {
 	]}`
 	client := Client{Fetcher: perProductFetcher{catalog: catalog}, BaseURL: "https://api.tcgmatch.cl", Game: "yugioh"}
 
-	items, err := client.Search(context.Background(), "Kuriboh")
+	items, err := client.Search(context.Background(), offer.CardQuery{Name: "Kuriboh"})
 	if err != nil {
 		t.Fatal(err)
 	}

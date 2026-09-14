@@ -29,7 +29,8 @@ type Client struct {
 	MaxPages   int
 }
 
-func (c Client) FindOffers(ctx context.Context, name string) ([]offer.Offer, error) {
+func (c Client) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer.Offer, error) {
+	name := query.Name
 	if c.Fetcher == nil || c.Domain == "" || strings.TrimSpace(name) == "" {
 		return nil, errors.New("invalid PrestaShop client")
 	}

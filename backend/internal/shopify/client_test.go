@@ -40,7 +40,7 @@ func TestFindOffers(t *testing.T) {
 		}
 		return nil, errors.New("unexpected request: " + target)
 	})}
-	items, err := client.FindOffers(context.Background(), "Sol Ring")
+	items, err := client.FindOffers(context.Background(), offer.CardQuery{Name: "Sol Ring"})
 	if err != nil || len(items) != 2 {
 		t.Fatalf("items=%+v err=%v", items, err)
 	}
@@ -75,14 +75,14 @@ func TestInvalidResponses(t *testing.T) {
 					return []byte(test.product), nil
 				}
 			})}
-			if _, err := client.FindOffers(context.Background(), "Sol Ring"); err == nil {
+			if _, err := client.FindOffers(context.Background(), offer.CardQuery{Name: "Sol Ring"}); err == nil {
 				t.Fatal("expected error")
 			}
 		})
 	}
 	failure := errors.New("HTTP 429")
 	client := Client{Domain: "cards.test", Fetcher: fixtureFetcher(func(string) ([]byte, error) { return nil, failure })}
-	if _, err := client.FindOffers(context.Background(), "Sol Ring"); !errors.Is(err, failure) {
+	if _, err := client.FindOffers(context.Background(), offer.CardQuery{Name: "Sol Ring"}); !errors.Is(err, failure) {
 		t.Fatalf("err=%v", err)
 	}
 }

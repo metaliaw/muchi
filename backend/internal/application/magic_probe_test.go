@@ -79,7 +79,7 @@ func TestMagicProbe(t *testing.T) {
 				ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 				defer cancel()
 				found := outcome{counts: map[string]int{}, label: fmt.Sprintf("%T", one)}
-				items, err := one.FindOffers(ctx, "Sol Ring")
+				items, err := one.FindOffers(ctx, offer.CardQuery{Name: "Sol Ring"})
 				if err != nil {
 					found.failed = err.Error()
 				}

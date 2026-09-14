@@ -50,8 +50,9 @@ const (
 )
 
 type Options struct {
-	VerifyStock bool `json:"verify_stock"`
-	StoresOnly  bool `json:"stores_only"`
+	VerifyStock bool            `json:"verify_stock"`
+	StoresOnly  bool            `json:"stores_only"`
+	Match       offer.MatchMode `json:"match,omitempty"`
 }
 
 type CreateInput struct {
@@ -96,6 +97,8 @@ type Item struct {
 	LeaseUntil     *time.Time    `json:"-"`
 	VerifyStock    bool          `json:"-"`
 	StoresOnly     bool          `json:"-"`
+	// Match Travels with the Item because the Worker Reads it back from Storage.
+	Match offer.MatchMode `json:"match,omitempty"`
 }
 
 type Result struct {

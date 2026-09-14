@@ -89,3 +89,51 @@ func TestMatchDashTail(t *testing.T) {
 		}
 	}
 }
+
+// TestReadMatchMode Defaults to the narrow Mode and Refuses an unknown one.
+func TestReadMatchMode(t *testing.T) {
+	for _, test := range []struct {
+		value string
+		want  MatchMode
+		fails bool
+	}{
+		{"", MatchExact, false},
+		{"exact", MatchExact, false},
+		{"includes", MatchIncludes, false},
+		{"contains", "", true},
+		{"EXACT", "", true},
+	} {
+		got, err := ReadMatchMode(test.value)
+		if (err != nil) != test.fails || got != test.want {
+			t.Errorf("ReadMatchMode(%q) = %q, %v", test.value, got, err)
+		}
+	}
+}
+
+// TestQueryWidensWithMode Reads the same Titles under both Modes.
+func TestQueryWidensWithMode(t *testing.T) {
+	titles := []string{"Kuriboh", "Kuriboh (C)", "Winged Kuriboh", "Linkuriboh", "Kuriboh - Multiply!", "Token: Kuriboh", "Sol Ring"}
+	exact := []string{}
+	includes := []string{}
+	for _, title := range titles {
+		if (CardQuery{Name: "Kuriboh", Match: MatchExact}).AcceptsTitle(title) {
+			exact = append(exact, title)
+		}
+		if (CardQuery{Name: "Kuriboh", Match: MatchIncludes}).AcceptsTitle(title) {
+			includes = append(includes, title)
+		}
+	}
+	if len(exact) != 2 || exact[0] != "Kuriboh" || exact[1] != "Kuriboh (C)" {
+		t.Errorf("exact kept %v", exact)
+	}
+	if len(includes) != 6 || includes[5] != "Token: Kuriboh" {
+		t.Errorf("includes kept %v", includes)
+	}
+}
+
+// TestMissingModeStaysNarrow Covers a Query Built without naming a Mode.
+func TestMissingModeStaysNarrow(t *testing.T) {
+	if (CardQuery{Name: "Kuriboh"}).AcceptsTitle("Winged Kuriboh") {
+		t.Error("an unnamed mode widened the match")
+	}
+}

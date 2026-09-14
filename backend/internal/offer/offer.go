@@ -44,6 +44,50 @@ var editionDashes = []string{" - ", " \u2013 ", " \u2014 "}
 // quotePairs Wrap a Card Name a Store Leads with something else, such as a Set Code.
 var quotePairs = [][2]string{{"\u201c", "\u201d"}, {`"`, `"`}, {"\u00ab", "\u00bb"}}
 
+// MatchMode Says how far a Title may Stray from the Card Name.
+type MatchMode string
+
+const (
+	// MatchExact Keeps the Card and its Printings: `Kuriboh`, `Kuriboh (C)`.
+	MatchExact MatchMode = "exact"
+	// MatchIncludes Keeps any Title Carrying the Name: `Winged Kuriboh`, `Linkuriboh`.
+	MatchIncludes MatchMode = "includes"
+)
+
+// ErrInvalidMatch Answers a Match Mode the Catalog does not Offer.
+var ErrInvalidMatch = errors.New("invalid match mode")
+
+// CardQuery Names the Card to Look for and how Wide its Title may be.
+type CardQuery struct {
+	Name  string
+	Match MatchMode
+}
+
+// AcceptsTitle Answers whether a Store Title Belongs to this Query.
+func (q CardQuery) AcceptsTitle(title string) bool {
+	if q.Match == MatchIncludes {
+		return ContainsCard(title, q.Name)
+	}
+	return MatchesCard(title, q.Name)
+}
+
+// ReadMatchMode Reads the Mode a Caller Asked for, Defaulting to the narrow one.
+func ReadMatchMode(value string) (MatchMode, error) {
+	switch MatchMode(value) {
+	case "", MatchExact:
+		return MatchExact, nil
+	case MatchIncludes:
+		return MatchIncludes, nil
+	}
+	return "", ErrInvalidMatch
+}
+
+// ContainsCard Accepts a Title that Carries the Card Name anywhere inside it.
+func ContainsCard(title, name string) bool {
+	name = NormalizeCard(name)
+	return name != "" && strings.Contains(NormalizeCard(title), name)
+}
+
 // MatchesCard Accepts a Title that Names the Card, Wherever the Store Puts it.
 func MatchesCard(title, name string) bool {
 	title = NormalizeCard(title)

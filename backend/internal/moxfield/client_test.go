@@ -52,7 +52,7 @@ func newTestClient(t *testing.T) (*Client, *inventoryFetcher, *inventoryCache) {
 }
 func TestDynamicInventory(t *testing.T) {
 	client, fetcher, cache := newTestClient(t)
-	items, err := client.FindOffers(context.Background(), "Caged Sun")
+	items, err := client.FindOffers(context.Background(), offer.CardQuery{Name: "Caged Sun"})
 	if err != nil || len(items) != 3 {
 		t.Fatalf("offers=%v err=%v", items, err)
 	}
@@ -67,7 +67,7 @@ func TestDynamicInventory(t *testing.T) {
 		t.Fatalf("target=%s", fetcher.target)
 	}
 	// A Different Card Reuses the Full List, not a Cached Single-Card Result.
-	if items, err := client.FindOffers(context.Background(), "Missing"); err != nil || len(items) != 0 {
+	if items, err := client.FindOffers(context.Background(), offer.CardQuery{Name: "Missing"}); err != nil || len(items) != 0 {
 		t.Fatalf("missing=%v err=%v", items, err)
 	}
 	if fetcher.calls != 1 || cache.ttl != 15*time.Minute {
@@ -75,7 +75,7 @@ func TestDynamicInventory(t *testing.T) {
 	}
 	cache.found = false
 	fetcher.data = []byte(`{"boards":{"mainboard":{"cards":{}}}}`)
-	items, err = client.FindOffers(context.Background(), "Caged Sun")
+	items, err = client.FindOffers(context.Background(), offer.CardQuery{Name: "Caged Sun"})
 	if err != nil || len(items) != 0 || fetcher.calls != 2 {
 		t.Fatalf("refresh=%v calls=%d err=%v", items, fetcher.calls, err)
 	}
@@ -83,18 +83,18 @@ func TestDynamicInventory(t *testing.T) {
 func TestInventoryFailures(t *testing.T) {
 	client, fetcher, cache := newTestClient(t)
 	fetcher.err = source.StatusError{Code: 403}
-	_, err := client.FindOffers(context.Background(), "Caged Sun")
+	_, err := client.FindOffers(context.Background(), offer.CardQuery{Name: "Caged Sun"})
 	var status source.StatusError
 	if !errors.As(err, &status) || status.Code != 403 || cache.found {
 		t.Fatalf("err=%v cache=%v", err, cache.found)
 	}
 	fetcher.err = nil
 	fetcher.data = []byte(`<html>Blocked</html>`)
-	if _, err := client.FindOffers(context.Background(), "Caged Sun"); err == nil || cache.found {
+	if _, err := client.FindOffers(context.Background(), offer.CardQuery{Name: "Caged Sun"}); err == nil || cache.found {
 		t.Fatal("HTML cached as empty inventory")
 	}
 	fetcher.data = []byte(`{}`)
-	if _, err := client.FindOffers(context.Background(), "Caged Sun"); err == nil {
+	if _, err := client.FindOffers(context.Background(), offer.CardQuery{Name: "Caged Sun"}); err == nil {
 		t.Fatal("missing boards accepted")
 	}
 }
@@ -149,7 +149,7 @@ func TestConcurrentInventory(t *testing.T) {
 	var group sync.WaitGroup
 	for i := 0; i < 8; i++ {
 		group.Go(func() {
-			items, err := client.FindOffers(context.Background(), "Caged Sun")
+			items, err := client.FindOffers(context.Background(), offer.CardQuery{Name: "Caged Sun"})
 			if err != nil || len(items) != 3 {
 				t.Errorf("offers=%d err=%v", len(items), err)
 			}

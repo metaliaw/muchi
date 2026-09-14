@@ -69,7 +69,7 @@ func TestPaginatedSearch(t *testing.T) {
 		}
 
 	})}
-	items, err := client.FindOffers(context.Background(), "Sol Ring")
+	items, err := client.FindOffers(context.Background(), offer.CardQuery{Name: "Sol Ring"})
 	if err != nil || len(items) != 1 || calls != 1 {
 		t.Fatalf("items=%v calls=%d err=%v", items, calls, err)
 	}
@@ -106,13 +106,13 @@ func TestInvalidData(t *testing.T) {
 	}
 	failure := errors.New("HTTP 429")
 	client := Client{Fetcher: fixtureFetcher(func(string) ([]byte, error) { return nil, failure })}
-	if _, err := client.FindOffers(context.Background(), "Sol Ring"); !errors.Is(err, failure) {
+	if _, err := client.FindOffers(context.Background(), offer.CardQuery{Name: "Sol Ring"}); !errors.Is(err, failure) {
 		t.Fatalf("err=%v", err)
 	}
 	client.Fetcher = fixtureFetcher(func(string) ([]byte, error) {
 		return []byte(`{"products":[{"id":1,"name":"Other","permalink":"other"}]}`), nil
 	})
-	if _, err := client.FindOffers(context.Background(), "Sol Ring"); err == nil {
+	if _, err := client.FindOffers(context.Background(), offer.CardQuery{Name: "Sol Ring"}); err == nil {
 		t.Fatal("repeated page accepted")
 	}
 	for _, pair := range [][3]string{{"1000", "100", "900"}, {"12.50", "0.25", "12.25"}} {
@@ -157,7 +157,7 @@ func TestCancelledSearch(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	client := Client{Fetcher: fixtureFetcher(func(string) ([]byte, error) { t.Fatal("request after cancellation"); return nil, nil })}
-	if _, err := client.FindOffers(ctx, "Sol Ring"); !errors.Is(err, context.Canceled) {
+	if _, err := client.FindOffers(ctx, offer.CardQuery{Name: "Sol Ring"}); !errors.Is(err, context.Canceled) {
 		t.Fatalf("err=%v", err)
 	}
 }

@@ -5,18 +5,23 @@ meta {
 }
 
 get {
-  url: {{baseUrl}}/cards/offers?name=Sol Ring
+  url: {{baseUrl}}/cards/offers?name=Sol Ring&match=exact
   body: none
   auth: inherit
 }
 
 params:query {
   name: Sol Ring
+  ~match: exact
 }
 
 docs {
   Una Carta, sin encolar nada: consulta las Fuentes y responde en la misma
   Llamada. Sirve para probar una Tienda sin esperar a un Worker.
+
+  `match` Elige cuanto Puede Alejarse el Titulo de la Tienda del Nombre
+  Pedido. `exact`, el Default, Trae la Carta y sus Impresiones. `includes`
+  Trae ademas sus Derivados: Winged Kuriboh, Linkuriboh, Token: Kuriboh.
 }
 
 tests {

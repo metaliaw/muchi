@@ -35,7 +35,7 @@ func TestYuGiOhDarkMagicianProbe(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 	started := time.Now()
-	items, err := service.FindCardOffers(ctx, search.GameYuGiOh, "Dark Magician")
+	items, err := service.FindCardOffers(ctx, search.GameYuGiOh, offer.CardQuery{Name: "Dark Magician"})
 	if err != nil {
 		t.Fatal(err)
 	}

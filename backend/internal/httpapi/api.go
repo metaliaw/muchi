@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/cangrejometralleta/muchi-api/internal/cardmetadata"
+	"github.com/cangrejometralleta/muchi-api/internal/offer"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 )
 
@@ -218,12 +219,18 @@ func (a API) findCardOffers(w http.ResponseWriter, r *http.Request) {
 	if game == "" {
 		game = search.GameMagic
 	}
-	items, err := a.Searches.FindCardOffers(r.Context(), game, r.URL.Query().Get("name"))
+	match, err := offer.ReadMatchMode(r.URL.Query().Get("match"))
+	if err != nil {
+		a.writeError(w, r, search.ErrInvalid)
+		return
+	}
+	name := r.URL.Query().Get("name")
+	items, err := a.Searches.FindCardOffers(r.Context(), game, offer.CardQuery{Name: name, Match: match})
 	if err != nil {
 		a.writeError(w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"name": r.URL.Query().Get("name"), "offers": items})
+	writeJSON(w, http.StatusOK, map[string]any{"name": name, "match": match, "offers": items})
 }
 
 func (a API) getHealth(w http.ResponseWriter, r *http.Request) {

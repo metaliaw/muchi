@@ -10,6 +10,8 @@ import (
 	"github.com/cangrejometralleta/muchi-api/internal/shopify"
 	"github.com/cangrejometralleta/muchi-api/internal/source"
 	"github.com/cangrejometralleta/muchi-api/internal/stores"
+
+	"github.com/cangrejometralleta/muchi-api/internal/offer"
 )
 
 func TestLiveSolRing(t *testing.T) {
@@ -26,7 +28,7 @@ func TestLiveSolRing(t *testing.T) {
 				ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 				defer cancel()
 				client := shopify.Client{Domain: domain, Name: store.Name, Fetcher: source.Client{HTTP: &http.Client{Timeout: 15 * time.Second}, MaxAttempts: 2, BaseDelay: time.Second, UserAgent: "muchi-api/1.0"}}
-				items, err := client.FindOffers(ctx, "Sol Ring")
+				items, err := client.FindOffers(ctx, offer.CardQuery{Name: "Sol Ring"})
 				if err != nil || len(items) == 0 {
 					t.Fatalf("offers=%d err=%v", len(items), err)
 				}

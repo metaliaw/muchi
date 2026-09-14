@@ -7,6 +7,8 @@ import (
 
 	"github.com/cangrejometralleta/muchi-api/internal/cardmetadata"
 	"github.com/cangrejometralleta/muchi-api/internal/source"
+
+	"github.com/cangrejometralleta/muchi-api/internal/offer"
 )
 
 type pageFetcher struct {
@@ -31,7 +33,7 @@ const offerPage = `<div id="results"><a data-track-type="store_offer_click" data
 func TestFindOffers(t *testing.T) {
 	fetcher := &pageFetcher{data: []byte(offerPage)}
 	client := Client{Fetcher: fetcher, BaseURL: "https://scry.cl/"}
-	items, err := client.FindOffers(context.Background(), "Sol Ring")
+	items, err := client.FindOffers(context.Background(), offer.CardQuery{Name: "Sol Ring"})
 	if err != nil || len(items) != 1 {
 		t.Fatalf("offers: %v, %v", items, err)
 	}
@@ -59,7 +61,7 @@ func TestOffersCarryPrintImages(t *testing.T) {
 		}},
 	}
 
-	items, err := client.FindOffers(context.Background(), "Sol Ring")
+	items, err := client.FindOffers(context.Background(), offer.CardQuery{Name: "Sol Ring"})
 
 	if err != nil || len(items) != 3 {
 		t.Fatalf("FindOffers() items=%#v err=%v", items, err)
@@ -88,7 +90,7 @@ func TestOffersMatchEditionsNamedInWords(t *testing.T) {
 		}},
 	}
 
-	items, err := client.FindOffers(context.Background(), "Sol Ring")
+	items, err := client.FindOffers(context.Background(), offer.CardQuery{Name: "Sol Ring"})
 
 	if err != nil || len(items) != 2 {
 		t.Fatalf("FindOffers() items=%#v err=%v", items, err)
@@ -126,7 +128,7 @@ func TestOffersMatchEveryStoreTitleShape(t *testing.T) {
 			page := `<div id="results"><a data-track-type="store_offer_click" data-store-name="One" data-card-name="Sol Ring" data-variant-key="one" data-price-clp="2800" data-product-url="https://one.test/x" data-offer-title="` + test.title + `"></a></div>`
 			client := Client{Fetcher: &pageFetcher{data: []byte(page)}, BaseURL: "https://scry.test", Prints: printProvider{prints: prints}}
 
-			items, err := client.FindOffers(context.Background(), "Sol Ring")
+			items, err := client.FindOffers(context.Background(), offer.CardQuery{Name: "Sol Ring"})
 
 			if err != nil || len(items) != 1 {
 				t.Fatalf("FindOffers() items=%#v err=%v", items, err)
@@ -155,12 +157,12 @@ func TestPageFailures(t *testing.T) {
 		})
 	}
 	fetcher := &pageFetcher{err: source.StatusError{Code: 404}}
-	items, err := (Client{Fetcher: fetcher, BaseURL: "https://scry.cl"}).FindOffers(context.Background(), "Missing")
+	items, err := (Client{Fetcher: fetcher, BaseURL: "https://scry.cl"}).FindOffers(context.Background(), offer.CardQuery{Name: "Missing"})
 	if err != nil || len(items) != 0 {
 		t.Fatalf("missing card: %v, %v", items, err)
 	}
 	fetcher.err = source.StatusError{Code: 503}
-	if _, err := (Client{Fetcher: fetcher, BaseURL: "https://scry.cl"}).FindOffers(context.Background(), "Sol Ring"); err == nil {
+	if _, err := (Client{Fetcher: fetcher, BaseURL: "https://scry.cl"}).FindOffers(context.Background(), offer.CardQuery{Name: "Sol Ring"}); err == nil {
 		t.Fatal("expected upstream error")
 	}
 }

@@ -43,7 +43,7 @@ func TestPublicLists(t *testing.T) {
 			t.Run(list.Label, func(t *testing.T) {
 				cache := &measuredCache{}
 				client := moxfield.Client{Cache: cache, TTL: time.Minute, Fetcher: fetcher, StoreID: storeID, Store: store.Name, Label: list.Label, ListURL: list.URL, Rate: list.CLPPerCKUSD}
-				items, err := client.FindOffers(context.Background(), "Sol Ring")
+				items, err := client.FindOffers(context.Background(), offer.CardQuery{Name: "Sol Ring"})
 				if err != nil {
 					t.Fatal(err)
 				}

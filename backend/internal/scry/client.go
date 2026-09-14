@@ -32,14 +32,15 @@ type Client struct {
 	ExcludeCommunity bool
 }
 
-func (c Client) Search(ctx context.Context, name string) ([]offer.Offer, error) {
-	return c.FindOffers(ctx, name)
+func (c Client) Search(ctx context.Context, query offer.CardQuery) ([]offer.Offer, error) {
+	return c.FindOffers(ctx, query)
 }
 
 var slugSeparators = regexp.MustCompile(`[^a-z0-9]+`)
 
 // FindOffers Reads the Saved Offers Published on a Scry Card Page.
-func (c Client) FindOffers(ctx context.Context, name string) ([]offer.Offer, error) {
+func (c Client) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer.Offer, error) {
+	name := query.Name
 	base, err := url.Parse(c.BaseURL)
 	if err != nil || base.Host == "" || (base.Scheme != "https" && base.Scheme != "http") {
 		return nil, errors.New("invalid Scry URL")

@@ -19,7 +19,8 @@ type Client struct {
 	Domain, Name string
 }
 
-func (c Client) FindOffers(ctx context.Context, name string) ([]offer.Offer, error) {
+func (c Client) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer.Offer, error) {
+	name := query.Name
 	if strings.TrimSpace(name) == "" {
 		return nil, errors.New("empty card name")
 	}

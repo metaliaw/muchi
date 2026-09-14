@@ -14,7 +14,7 @@ type stubProvider struct {
 	err   error
 }
 
-func (s stubProvider) Search(context.Context, string) ([]offer.Offer, error) {
+func (s stubProvider) Search(context.Context, offer.CardQuery) ([]offer.Offer, error) {
 	return s.items, s.err
 }
 
@@ -37,7 +37,7 @@ func TestFindProvider(t *testing.T) {
 	wanted := offer.Offer{ID: "one", Store: "store", URL: "https://store.test", PriceAmount: "10.00", PriceCurrency: "USD"}
 	cache := &stubCache{}
 	service := Service{Providers: map[Game]Provider{GameMagic: stubProvider{items: []offer.Offer{wanted}}}, Cache: cache}
-	items, err := service.FindCardOffers(context.Background(), GameMagic, "Sol Ring")
+	items, err := service.FindCardOffers(context.Background(), GameMagic, offer.CardQuery{Name: "Sol Ring"})
 	if err != nil || len(items) != 1 || !cache.saved {
 		t.Fatalf("FindCardOffers() items=%v saved=%v err=%v", items, cache.saved, err)
 	}
@@ -45,7 +45,7 @@ func TestFindProvider(t *testing.T) {
 
 func TestFindProviderRejectsUnconfiguredGame(t *testing.T) {
 	service := Service{Providers: map[Game]Provider{}}
-	if _, err := service.FindCardOffers(context.Background(), GamePokemon, "Charizard"); !errors.Is(err, ErrInvalid) {
+	if _, err := service.FindCardOffers(context.Background(), GamePokemon, offer.CardQuery{Name: "Charizard"}); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("FindCardOffers() error=%v", err)
 	}
 }
@@ -66,5 +66,33 @@ func TestValidateCreate(t *testing.T) {
 	valid.Cards[0].Quantity = 0
 	if err := ValidateCreate(valid, 500, 99); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("ValidateCreate() error = %v", err)
+	}
+}
+
+type keyRecorder struct{ keys []string }
+
+func (r *keyRecorder) LoadOffers(_ context.Context, key string) ([]offer.Offer, bool, error) {
+	r.keys = append(r.keys, key)
+	return nil, false, nil
+}
+
+func (r *keyRecorder) SaveOffers(context.Context, string, []offer.Offer, time.Duration) error {
+	return nil
+}
+
+// TestCacheSeparatesMatchModes Keeps a wide Answer from Serving a narrow Question.
+func TestCacheSeparatesMatchModes(t *testing.T) {
+	recorder := &keyRecorder{}
+	service := Service{
+		Providers: map[Game]Provider{GameMagic: stubProvider{items: []offer.Offer{}}},
+		Cache:     recorder, CacheNamespace: "ns:",
+	}
+	for _, mode := range []offer.MatchMode{offer.MatchExact, offer.MatchIncludes} {
+		if _, err := service.FindCardOffers(context.Background(), GameMagic, offer.CardQuery{Name: "Sol Ring", Match: mode}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(recorder.keys) != 2 || recorder.keys[0] == recorder.keys[1] {
+		t.Fatalf("cache keys=%v, want one per mode", recorder.keys)
 	}
 }

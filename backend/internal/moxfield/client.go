@@ -53,7 +53,7 @@ func ExtractListID(value string) (string, error) {
 	return parts[1], nil
 }
 
-func (c *Client) FindOffers(ctx context.Context, name string) ([]offer.Offer, error) {
+func (c *Client) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer.Offer, error) {
 	id, err := ExtractListID(c.ListURL)
 	if err != nil {
 		return nil, err
@@ -64,7 +64,7 @@ func (c *Client) FindOffers(ctx context.Context, name string) ([]offer.Offer, er
 	}
 	result := make([]offer.Offer, 0)
 	for _, item := range items {
-		if offer.NormalizeCard(item.CardName) == offer.NormalizeCard(name) {
+		if query.AcceptsTitle(item.CardName) {
 			result = append(result, item)
 		}
 	}

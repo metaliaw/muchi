@@ -34,7 +34,7 @@ func TestPokemonSlowpokeProbe(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 	started := time.Now()
-	items, err := service.FindCardOffers(ctx, search.GamePokemon, "Slowpoke")
+	items, err := service.FindCardOffers(ctx, search.GamePokemon, offer.CardQuery{Name: "Slowpoke"})
 	if err != nil {
 		t.Fatal(err)
 	}

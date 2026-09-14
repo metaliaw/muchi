@@ -102,6 +102,12 @@ paths:
           in: query
           required: true
           schema: {type: string, minLength: 1}
+        - name: match
+          in: query
+          description: How wide a store title may stray from the card name
+          schema:
+            allOf: [{$ref: "#/components/schemas/MatchMode"}]
+            default: exact
       responses:
         "200":
           description: Offers for one card
@@ -109,9 +115,10 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [name, offers]
+                required: [name, match, offers]
                 properties:
                   name: {type: string}
+                  match: {$ref: "#/components/schemas/MatchMode"}
                   offers: {type: array, items: {$ref: "#/components/schemas/Offer"}}
   /cards/metadata:
     get:
@@ -187,6 +194,15 @@ components:
           properties:
             verify_stock: {type: boolean}
             stores_only: {type: boolean}
+            match:
+              allOf: [{$ref: "#/components/schemas/MatchMode"}]
+              default: exact
+    MatchMode:
+      type: string
+      enum: [exact, includes]
+      description: >-
+        exact keeps the card and its printings (Kuriboh, Kuriboh (C));
+        includes keeps any title carrying the name (Winged Kuriboh, Linkuriboh).
     Search:
       type: object
       required: [id, status, total, processed, found, not_found, errors, created_at, updated_at]

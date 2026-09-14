@@ -9,6 +9,8 @@ import (
 
 	"github.com/cangrejometralleta/muchi-api/internal/prestashop"
 	"github.com/cangrejometralleta/muchi-api/internal/source"
+
+	"github.com/cangrejometralleta/muchi-api/internal/offer"
 )
 
 func TestLiveDarkMagician(t *testing.T) {
@@ -26,7 +28,7 @@ func TestLiveDarkMagician(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 	started := time.Now()
-	items, err := client.FindOffers(ctx, "Dark Magician")
+	items, err := client.FindOffers(ctx, offer.CardQuery{Name: "Dark Magician"})
 	duration := time.Since(started)
 	if err != nil {
 		t.Fatalf("pages=%d bytes=%d duration=%s err=%v", fetcher.calls, fetcher.bytes, duration, err)

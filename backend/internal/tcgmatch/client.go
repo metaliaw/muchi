@@ -63,7 +63,8 @@ type listing struct {
 	} `json:"user"`
 }
 
-func (c Client) Search(ctx context.Context, name string) ([]offer.Offer, error) {
+func (c Client) Search(ctx context.Context, query offer.CardQuery) ([]offer.Offer, error) {
+	name := query.Name
 	base, err := url.Parse(c.BaseURL)
 	if err != nil || base.Host == "" || (base.Scheme != "https" && base.Scheme != "http") {
 		return nil, errors.New("invalid TCGMatch URL")
@@ -77,7 +78,7 @@ func (c Client) Search(ctx context.Context, name string) ([]offer.Offer, error) 
 	}
 	items := make([]offer.Offer, 0)
 	for _, product := range products {
-		if product.TCG != c.Game || product.Type != "card" || !offer.MatchesCard(product.Name, name) {
+		if product.TCG != c.Game || product.Type != "card" || !query.AcceptsTitle(product.Name) {
 			continue
 		}
 		listings, err := c.readListings(ctx, base, product.ID)

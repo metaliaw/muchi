@@ -31,7 +31,8 @@ type productReply struct {
 	} `json:"prices"`
 }
 
-func (c Catalog) FindOffers(ctx context.Context, name string) ([]offer.Offer, error) {
+func (c Catalog) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer.Offer, error) {
+	name := query.Name
 	items := make([]offer.Offer, 0)
 	for page := 1; ; page++ {
 		target := fmt.Sprintf("https://%s/wp-json/wc/store/v1/products?search=%s&per_page=100&page=%d", c.Domain, url.QueryEscape(name), page)
@@ -44,7 +45,7 @@ func (c Catalog) FindOffers(ctx context.Context, name string) ([]offer.Offer, er
 			return nil, fmt.Errorf("decode store catalog %s: %w", c.Domain, err)
 		}
 		for _, product := range products {
-			if !offer.MatchesCard(html.UnescapeString(product.Name), name) {
+			if !query.AcceptsTitle(html.UnescapeString(product.Name)) {
 				continue
 			}
 			item, err := c.buildOffer(product)
