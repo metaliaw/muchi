@@ -6,8 +6,11 @@ data/
 .env
 .pytest_cache/
 .DS_Store
+# Lo que un Agente Deja en el Árbol no es del Repositorio, y cada Herramienta
+# Escribe en su propio Directorio.
 .claude/
 .agents/
+.codex/
 skills-lock.json
 .firebase/
 firebase-debug*.log
