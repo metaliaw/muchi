@@ -2,6 +2,7 @@
 /** Muchi Presenta Búsquedas y Resultados persistidos por la API. */
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import * as api from './api.js'
+import { useSearch } from './search.js'
 import MuchiPanel from './components/MuchiPanel.vue'
 import CardLookup from './components/CardLookup.vue'
 import CardArt from './components/CardArt.vue'
@@ -27,16 +28,12 @@ const game = ref('')
 const dark = ref(localStorage.getItem(THEME_KEY) === 'oscuro')
 const message = ref(null)
 
-const searchId = ref(new URLSearchParams(location.search).get('search') || '')
-const state = ref(null)
-const items = ref([])
-const offers = ref([])
-const summary = ref(null)
-const notices = ref([])
-const cursor = ref(0)
-const hasMore = ref(false)
-const checked = ref('')
-const unavailable = ref('')
+// La Búsqueda vive en su propio Módulo: sus Refs, su Limpieza y la Mezcla de
+// las Páginas se declaran una sola vez ahí.
+const {
+  id: searchId, state, items, offers, summary, notices, cursor, hasMore,
+  checked, unavailable, start: startSearch, applyState, applyResults,
+} = useSearch()
 const error = ref('')
 const pending = ref(null)
 const lookupText = ref('')
@@ -87,6 +84,11 @@ watch(game, () => {
   watched.value = null
 })
 
+// La Búsqueda nombra su Juego; el Selector lo sigue. Vacío no dice nada.
+function playGame(named) {
+  if (named) game.value = named
+}
+
 function remember(id, label) {
   const rest = history.value.filter((entry) => entry.id !== id)
   history.value = [{ id, label: label || id }, ...rest].slice(0, 20)
@@ -94,17 +96,7 @@ function remember(id, label) {
 }
 
 function selectSearch(id, initialState = null, initialItems = []) {
-  searchId.value = id
-  state.value = initialState
-  stateChanges.value = []
-  items.value = initialItems
-  offers.value = []
-  summary.value = null
-  notices.value = []
-  cursor.value = 0
-  hasMore.value = false
-  unavailable.value = ''
-  checked.value = ''
+  startSearch(id, initialState, initialItems)
   const url = new URL(location.href)
   url.searchParams.set('search', id)
   history.value.length && window.history.replaceState({}, '', url)
@@ -160,30 +152,13 @@ async function send() {
   }
 }
 
-// Las Llaves del Estado que Cambiaron en el último Ciclo. La Vista las usa
-// para Reaccionar solo a lo Nuevo; vacío significa "nada se movió".
-const stateChanges = ref([])
-
-// Compara el Estado recibido con el que ya se muestra. El Servidor manda el
-// Estado entero en cada Ciclo; el Delta se Siente aquí, no en la Red.
-function applyState(incoming) {
-  const current = state.value
-  stateChanges.value = current
-    ? Object.keys(incoming).filter((key) => incoming[key] !== current[key])
-    : Object.keys(incoming)
-  state.value = incoming
-  if (incoming.game) game.value = incoming.game
-}
-
 async function refresh() {
   if (!searchId.value || unavailable.value || refreshing) return
   refreshing = true
   try {
     const reply = await api.readSearch(searchId.value, cursor.value)
-    applyState(reply.state)
-    applyResults(reply)
-    cursor.value = reply.cursor
-    hasMore.value = reply.has_more
+    playGame(applyState(reply.state))
+    playGame(applyResults(reply))
     checked.value = new Date().toISOString().slice(11, 19) + ' UTC'
     remember(reply.state.id)
     if (reply.state.done && !reply.has_more) stopPolling()
@@ -200,39 +175,10 @@ async function refresh() {
   }
 }
 
-function replacePositions(current, incoming) {
-  const positions = new Set(incoming.map((row) => row.position ?? row.item_position))
-  return [...current.filter((row) => !positions.has(row.position ?? row.item_position)),
-          ...incoming]
-}
-
-function summarizeOffers(rows) {
-  const eligible = rows.filter((row) => !row.suspicious && row.stock_status !== 'unavailable' && row.price_clp != null)
-  const cheapest = eligible.reduce((best, row) => !best || row.price_clp < best.price_clp ? row : best, null)
-  rows.forEach((row) => { row.best = row === cheapest })
-  const prices = rows.filter((row) => row.price_clp != null).map((row) => row.price_clp)
-  return {
-    lowest_clp: prices.length ? Math.min(...prices) : null,
-    offers: rows.length,
-    stores: new Set(rows.map((row) => row.store)).size,
-  }
-}
-
-function applyResults(reply) {
-  items.value = replacePositions(items.value, reply.items || [])
-    .sort((left, right) => left.position - right.position)
-  const resultGame = items.value.find((item) => item.game)?.game
-  if (resultGame) game.value = resultGame
-  offers.value = replacePositions(offers.value, reply.offers || [])
-    .sort((left, right) => left.currency.localeCompare(right.currency) || Number(left.amount) - Number(right.amount))
-  notices.value = replacePositions(notices.value, reply.notices || [])
-  summary.value = summarizeOffers(offers.value)
-}
-
 async function cancel() {
   try {
     const reply = await api.cancelSearch(searchId.value, api.newKey())
-    applyState(reply.state)
+    playGame(applyState(reply.state))
     say('Ya paré de buscar', 'idle')
   } catch (failure) {
     error.value = failure.message
