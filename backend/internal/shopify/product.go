@@ -28,21 +28,6 @@ type productReply struct {
 	} `json:"options"`
 }
 
-// matchesCard Allows Edition Suffixes without Matching Different Card Names.
-func matchesCard(title, name string) bool {
-	title = offer.NormalizeCard(title)
-	name = offer.NormalizeCard(name)
-	if title == name {
-		return true
-	}
-	for _, separator := range []string{" (", " [", " - ", " — "} {
-		if strings.HasPrefix(title, name+separator) {
-			return true
-		}
-	}
-	return false
-}
-
 func (c Client) buildOffers(product productReply, path, name, currency string) ([]offer.Offer, error) {
 	items := make([]offer.Offer, 0, len(product.Variants))
 	for _, variant := range product.Variants {

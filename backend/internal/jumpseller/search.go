@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/cangrejometralleta/muchi-api/internal/offer"
 )
 
 // findProducts Tracks Product IDs because Different Products May Share Permalinks.
@@ -44,7 +46,7 @@ func (c Client) findProducts(ctx context.Context, name string) ([]string, error)
 			}
 			seen[product.ID] = true
 			added++
-			if !matchesCard(product.Name, name) {
+			if !offer.MatchesCard(product.Name, name) {
 				continue
 			}
 			if product.Permalink == "" || strings.ContainsAny(product.Permalink, "/\\.") {

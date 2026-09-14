@@ -103,7 +103,7 @@ func (c Client) parseProduct(node *html.Node, wanted string) (offer.Offer, bool)
 	priceNode := descendantWithClass(node, "price")
 	linkNode := firstElement(titleNode, "a")
 	title := nodeText(linkNode)
-	if id == "" || !matchesCard(title, wanted) || priceNode == nil || linkNode == nil {
+	if id == "" || !offer.MatchesCard(title, wanted) || priceNode == nil || linkNode == nil {
 		return offer.Offer{}, false
 	}
 	amount := digits(nodeText(priceNode))
@@ -126,20 +126,6 @@ func (c Client) parseProduct(node *html.Node, wanted string) (offer.Offer, bool)
 	}
 	item := offer.Offer{ID: c.Domain + ":" + id, CardName: title, Store: store, PriceAmount: amount, PriceCurrency: currency, URL: link, Source: c.Domain, StockStatus: status}
 	return item, offer.ValidateOffer(item) == nil
-}
-
-func matchesCard(title, name string) bool {
-	title = offer.NormalizeCard(title)
-	name = offer.NormalizeCard(name)
-	if title == name {
-		return true
-	}
-	for _, separator := range []string{" | ", " (", " [", " - ", " — "} {
-		if strings.HasPrefix(title, name+separator) {
-			return true
-		}
-	}
-	return false
 }
 
 func hasNextPage(document *html.Node) bool {

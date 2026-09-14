@@ -45,7 +45,7 @@ func (c Client) FindOffers(ctx context.Context, name string) ([]offer.Offer, err
 		if err != nil {
 			return nil, err
 		}
-		if !matchesCard(product.Title, name) {
+		if !offer.MatchesCard(product.Title, name) {
 			continue
 		}
 		offers, err := c.buildOffers(product, link, name, currency)

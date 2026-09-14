@@ -89,12 +89,12 @@ func TestInvalidResponses(t *testing.T) {
 
 func TestMatchCard(t *testing.T) {
 	for _, title := range []string{"Sol Ring", "Sol Ring (2683) [Secret Lair Drop Series]", "Sol Ring - 212 - uncommon", "Sol Ring (0356) [FIC-356]"} {
-		if !matchesCard(title, "Sol Ring") {
+		if !offer.MatchesCard(title, "Sol Ring") {
 			t.Errorf("rejected %s", title)
 		}
 	}
 	for _, title := range []string{"Sol Ring Token", "Sol Ringlet", "Other Sol Ring"} {
-		if matchesCard(title, "Sol Ring") {
+		if offer.MatchesCard(title, "Sol Ring") {
 			t.Errorf("accepted %s", title)
 		}
 	}

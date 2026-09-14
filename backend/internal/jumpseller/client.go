@@ -34,7 +34,7 @@ func (c Client) FindOffers(ctx context.Context, name string) ([]offer.Offer, err
 			return nil, err
 		}
 		for _, item := range products {
-			if matchesCard(item.CardName, name) && item.StockStatus == "available" {
+			if offer.MatchesCard(item.CardName, name) && item.StockStatus == "available" {
 				item.CardName = name
 				items = append(items, item)
 			}
@@ -73,20 +73,6 @@ func (c Client) CheckStock(ctx context.Context, item offer.Offer) (string, error
 		}
 	}
 	return "unknown", nil
-}
-
-func matchesCard(title, name string) bool {
-	title = offer.NormalizeCard(title)
-	name = offer.NormalizeCard(name)
-	if title == name {
-		return true
-	}
-	for _, separator := range []string{" | ", " (", " [", " - ", " — "} {
-		if strings.HasPrefix(title, name+separator) {
-			return true
-		}
-	}
-	return false
 }
 
 // requestGate Serializes Jumpseller Reads within one Process.
