@@ -43,13 +43,14 @@ export const readConfig = () => request('/api/config')
 export const readMuchi = () => request('/api/muchi')
 export const readSupportedGames = () => request('/api/supported-games')
 export const readDecklist = (text, key) => post('/api/decklist', { text, key })
-export const createSearch = (text, game, key) => post('/api/searches', { text, game, key })
-export const readSearch = (id, after = 0) =>
-  request(`/api/searches/${encodeURIComponent(id)}?after=${after}`)
+export const createSearch = (text, game, key, match = 'exact') =>
+  post('/api/searches', { text, game, key, match })
+export const readSearch = (id, after = 0, match = 'exact') =>
+  request(`/api/searches/${encodeURIComponent(id)}?after=${after}&match=${match}`)
 export const cancelSearch = (id, key) =>
   post(`/api/searches/${encodeURIComponent(id)}/cancel`, { key })
-export const readCart = (id, shipping) =>
-  request(`/api/searches/${encodeURIComponent(id)}/cart?shipping=${shipping}`)
+export const readCart = (id, shipping, match = 'exact') =>
+  request(`/api/searches/${encodeURIComponent(id)}/cart?shipping=${shipping}&match=${match}`)
 export const readSources = () => request('/api/sources')
 export const readLanguages = () => request('/api/languages')
 export const readCardArt = ({ name, language = '', edition = '', foil = false }) =>
