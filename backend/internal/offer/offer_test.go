@@ -41,3 +41,29 @@ func TestRejectOffer(t *testing.T) {
 		t.Fatal("ValidateOffer() accepted relative URL")
 	}
 }
+
+func TestMatchCardTitle(t *testing.T) {
+	for _, test := range []struct {
+		title string
+		name  string
+		want  bool
+	}{
+		{"Sol Ring", "Sol Ring", true},
+		{"sol ring", "Sol Ring", true},
+		{"Sol Ring (Commander 2019)", "Sol Ring", true},
+		{"Kuriboh [LDS3-EN100]", "Kuriboh", true},
+		{"Dark Magician | MAGO-EN001", "Dark Magician", true},
+		{`MAMO-EN002 "Kuriboh - Multiply!" Ultra Rare`, "Kuriboh - Multiply!", true},
+		{"RA05-EN083 “Dark Magician” (Stamp Artwork) Starlight Rare", "Dark Magician", true},
+		{"MAMO-SP001 “Dark Magician, the Pharaoh’s Servant” Ultra Rare (Español)", "Dark Magician", false},
+		{"LDS3-EN100 “Winged Kuriboh” Common Effect Monster", "Kuriboh", false},
+		{"MZMU-EN050 “Darkuriboh” Super Rare", "Kuriboh", false},
+		{"Sol Ring Token", "Sol Ring", false},
+		{"Solar Ring", "Sol Ring", false},
+		{"Sol Ring", "", false},
+	} {
+		if got := MatchesCard(test.title, test.name); got != test.want {
+			t.Errorf("MatchesCard(%q, %q) = %t", test.title, test.name, got)
+		}
+	}
+}

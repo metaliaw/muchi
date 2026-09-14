@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html"
 	"net/url"
 	"strconv"
 	"strings"
@@ -43,7 +44,7 @@ func (c Catalog) FindOffers(ctx context.Context, name string) ([]offer.Offer, er
 			return nil, fmt.Errorf("decode store catalog %s: %w", c.Domain, err)
 		}
 		for _, product := range products {
-			if offer.NormalizeCard(product.Name) != offer.NormalizeCard(name) {
+			if !offer.MatchesCard(html.UnescapeString(product.Name), name) {
 				continue
 			}
 			item, err := c.buildOffer(product)
@@ -72,7 +73,7 @@ func (c Catalog) buildOffer(product productReply) (offer.Offer, error) {
 		status = "available"
 	}
 	item := offer.Offer{
-		ID: fmt.Sprintf("%s:%d", c.Domain, product.ID), CardName: product.Name,
+		ID: fmt.Sprintf("%s:%d", c.Domain, product.ID), CardName: html.UnescapeString(product.Name),
 		Store: store, PriceAmount: price, PriceCurrency: product.Prices.Currency,
 		URL: product.URL, Source: c.Domain, StockStatus: status,
 	}

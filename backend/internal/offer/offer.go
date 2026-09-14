@@ -34,6 +34,40 @@ func NormalizeCard(name string) string {
 	return strings.Join(strings.Fields(strings.ToLower(name)), " ")
 }
 
+// editionSeparators Open the Tail a Store Appends after the Card Name.
+var editionSeparators = []string{" | ", " (", " [", " - ", " \u2013 ", " \u2014 "}
+
+// quotePairs Wrap a Card Name a Store Leads with something else, such as a Set Code.
+var quotePairs = [][2]string{{"\u201c", "\u201d"}, {`"`, `"`}, {"\u00ab", "\u00bb"}}
+
+// MatchesCard Accepts a Title that Names the Card, Wherever the Store Puts it.
+func MatchesCard(title, name string) bool {
+	title = NormalizeCard(title)
+	name = NormalizeCard(name)
+	if name == "" {
+		return false
+	}
+	if title == name {
+		return true
+	}
+	for _, separator := range editionSeparators {
+		if strings.HasPrefix(title, name+separator) {
+			return true
+		}
+	}
+	return quotesCardName(title, name)
+}
+
+// quotesCardName Reads the Quoted Form, where the Card Name Sits inside the Title.
+func quotesCardName(title, name string) bool {
+	for _, pair := range quotePairs {
+		if strings.Contains(title, pair[0]+name+pair[1]) {
+			return true
+		}
+	}
+	return false
+}
+
 func ValidateOffer(item Offer) error {
 	link, err := url.ParseRequestURI(item.URL)
 	valid := item.Store != "" && item.Source != "" && item.PriceAmount != "" && err == nil
