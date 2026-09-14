@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import Literal
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
@@ -42,6 +43,9 @@ app = FastAPI(title="Muchi Front", docs_url="/api/docs", openapi_url="/api/opena
 class SearchRequest(BaseModel):
     text: str = Field(min_length=1, max_length=20000)
     game: str = Field("magic", min_length=1, max_length=50)
+    # `includes` Ensancha la Búsqueda a los Derivados del Nombre. Vale para una
+    # Carta, no para una Lista: el Front manda solo la primera Línea.
+    match: Literal["exact", "includes"] = "exact"
     # La Clave de Idempotencia la elige el Front: reintentar un Envío que no
     # supo su Suerte no debe crear una segunda Búsqueda.
     key: str = Field(min_length=8, max_length=100)
@@ -243,7 +247,7 @@ def create_search(request: SearchRequest) -> dict:
                                             f"con Cantidades de 1 a {MAX_QUANTITY}."})
     state = build_muchi().searches.create_search(
         orders=orders, verify_stock=VERIFY_STOCK, stores_only=STORES_ONLY,
-        key=request.key, game=request.game,
+        key=request.key, game=request.game, match=request.match,
     )
     return {
         "state": presenter.build_state(state),
@@ -256,13 +260,18 @@ def create_search(request: SearchRequest) -> dict:
 
 
 @app.get("/api/searches/{search_id}")
-def read_search(search_id: str, after: int = Query(0, ge=0)) -> dict:
-    """Estado y Ofertas en una sola Consulta: el Front pregunta una vez por Ciclo."""
+def read_search(search_id: str, after: int = Query(0, ge=0),
+                match: Literal["exact", "includes"] = "exact") -> dict:
+    """Estado y Ofertas en una sola Consulta: el Front pregunta una vez por Ciclo.
+
+    `match` no Cambia lo que la API Devuelve; Cambia cómo se Agrupa. La API no
+    Recuerda el Modo en el Estado, así que el Front lo Repite en cada Ciclo.
+    """
     searches = build_muchi().searches
     state = searches.read_search(search_id)
     page = searches.read_results(search_id, after)
     results = presenter.build_results(page.items, load_rate_settings().muchi_dolar,
-                                      verified=VERIFY_STOCK)
+                                      verified=VERIFY_STOCK, match=match)
     return {"state": presenter.build_state(state), **results,
             "cursor": page.cursor, "has_more": page.has_more}
 
@@ -274,10 +283,12 @@ def cancel_search(search_id: str, request: CancelRequest) -> dict:
 
 
 @app.get("/api/searches/{search_id}/cart")
-def read_cart(search_id: str, shipping: int = Query(4000, ge=0, le=1_000_000)) -> dict:
+def read_cart(search_id: str, shipping: int = Query(4000, ge=0, le=1_000_000),
+              match: Literal["exact", "includes"] = "exact") -> dict:
     searches = build_muchi().searches
     items = read_all_results(searches, search_id)
-    return presenter.build_cart(items, shipping, load_rate_settings().muchi_dolar)
+    return presenter.build_cart(items, shipping, load_rate_settings().muchi_dolar,
+                                match=match)
 
 
 def read_all_results(searches, search_id: str):

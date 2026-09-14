@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from muchi.mtg.ports import CardNotFound, QueryFailed, SearchRejected, TranslationFailed
 from muchi.mtg.search import SearchItem, SearchOffer, SearchResults, SearchState
-from server import main
+from server import main, presenter
 
 
 def build_offer(**changes) -> SearchOffer:
@@ -26,8 +26,9 @@ class FakeSearches:
         self.items = items
         self.created = []
 
-    def create_search(self, orders, verify_stock, stores_only, key, game="magic"):
-        self.created.append((orders, key, game))
+    def create_search(self, orders, verify_stock, stores_only, key, game="magic",
+                      match="exact"):
+        self.created.append((orders, key, game, match))
         return self.state
 
     def read_search(self, search_id):
@@ -139,9 +140,9 @@ def test_create_search_parses_the_decklist(client):
         "text": "4 Lightning Bolt", "game": "pokemon", "key": "k" * 10,
     })
     assert reply.status_code == 200
-    orders, key, game = searches.created[0]
-    assert (orders[0].quantity, orders[0].name, key, game) == (
-        4, "Lightning Bolt", "k" * 10, "pokemon",
+    orders, key, game, match = searches.created[0]
+    assert (orders[0].quantity, orders[0].name, key, game, match) == (
+        4, "Lightning Bolt", "k" * 10, "pokemon", "exact",
     )
     assert reply.json()["items"] == [
         {"name": "Lightning Bolt", "quantity": 4, "position": 0,
@@ -464,3 +465,70 @@ def test_the_polling_rhythm_reaches_the_front(client):
     """El Front no elige el Ritmo: lo lee de la Configuración."""
     reply, _ = client
     assert reply.get("/api/config").json()["poll_seconds"] == 3
+
+
+def test_create_search_carries_the_match_mode(client):
+    """El Modo ancho Viaja a la API; sin Pedirlo, la Búsqueda es angosta."""
+    http, searches = client
+    http.post("/api/searches", json={
+        "text": "Kuriboh", "game": "yugioh", "key": "k" * 10, "match": "includes",
+    })
+    assert searches.created[0][3] == "includes"
+
+
+def test_create_search_refuses_an_unknown_match_mode(client):
+    http, _ = client
+    reply = http.post("/api/searches", json={
+        "text": "Kuriboh", "game": "yugioh", "key": "k" * 10, "match": "contains",
+    })
+    assert reply.status_code == 422
+
+
+def kuriboh_items():
+    """Una Búsqueda ancha: la Carta pedida y dos Derivados que no son ella."""
+    return (SearchItem("Kuriboh", 3, "found", (
+        build_offer(card_name="Kuriboh", store="Uno", amount=Decimal("900")),
+        build_offer(card_name="Kuriboh", store="Dos", amount=Decimal("1200")),
+        build_offer(card_name="Winged Kuriboh", store="Tres", amount=Decimal("300")),
+        build_offer(card_name="Winged Kuriboh", store="Cuatro", amount=Decimal("500")),
+        build_offer(card_name="Linkuriboh", store="Cinco", amount=Decimal("100")),
+    ), id="item-1", position=0, sequence=1, game="yugioh"),)
+
+
+def test_each_card_type_crowns_its_own_cheapest():
+    """La más barata es por Tipo de Carta: un Linkuriboh no gana a un Kuriboh."""
+    results = presenter.build_results(kuriboh_items(), 1000, match="includes")
+    best = {row["card_name"] for row in results["offers"] if row["best"]}
+    assert best == {"Kuriboh", "Winged Kuriboh", "Linkuriboh"}
+    crowned = {(row["card_name"], row["store"]) for row in results["offers"] if row["best"]}
+    assert crowned == {("Kuriboh", "Uno"), ("Winged Kuriboh", "Tres"), ("Linkuriboh", "Cinco")}
+
+
+def test_offers_sort_by_price_inside_each_card_type():
+    """Los Tipos no se Mezclan, y adentro de cada uno manda el Precio."""
+    results = presenter.build_results(kuriboh_items(), 1000, match="includes")
+    shown = [(row["card_type"], Decimal(row["amount"])) for row in results["offers"]]
+    assert [card for card, _ in shown] == [
+        "kuriboh", "kuriboh", "winged kuriboh", "winged kuriboh", "linkuriboh",
+    ]
+    assert [price for _, price in shown] == [
+        Decimal("900"), Decimal("1200"), Decimal("300"), Decimal("500"), Decimal("100"),
+    ]
+
+
+def test_an_exact_search_keeps_its_printings_together():
+    """En `exact` las Impresiones son la misma Carta y compiten entre ellas."""
+    items = (SearchItem("Kuriboh", 1, "found", (
+        build_offer(card_name="Kuriboh", store="Uno", amount=Decimal("900")),
+        build_offer(card_name="Kuriboh (C)", store="Dos", amount=Decimal("400")),
+    ), id="item-1", position=0, sequence=1, game="yugioh"),)
+    results = presenter.build_results(items, 1000, match="exact")
+    assert {row["card_type"] for row in results["offers"]} == {"kuriboh"}
+    assert sum(1 for row in results["offers"] if row["best"]) == 1
+
+
+def test_the_cart_buys_the_card_that_was_asked_for():
+    """Pedir 3 Kuriboh y recibir un Linkuriboh barato no es un Carrito."""
+    cart = presenter.build_cart(kuriboh_items(), 0, 1000, match="includes")
+    bought = {line["title"] for store in cart["stores"] for line in store["lines"]}
+    assert bought == {"Kuriboh"}
