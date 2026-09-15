@@ -15,7 +15,7 @@ func (f fixtureFetcher) FetchSource(_ context.Context, _, target string) ([]byte
 	return f(target)
 }
 
-const productFixture = `{"id":1,"title":"Sol Ring (0356) [FIC-356]","options":[{"name":"Condition","position":1},{"name":"Language","position":2}],"variants":[{"id":10,"title":"NM / English","price":350000,"available":true,"options":["NM","English"]},{"id":11,"price":400000,"available":false},{"id":12,"price":450000,"available":true}]}`
+const productFixture = `{"id":1,"title":"Sol Ring (0356) [FIC-356]","type":"Final Fantasy Commander","featured_image":"//cdn.shopify.com/sol-ring.jpg","options":[{"name":"Condition","position":1},{"name":"Language","position":2}],"variants":[{"id":10,"title":"NM / English","price":350000,"available":true,"options":["NM","English"]},{"id":11,"price":400000,"available":false},{"id":12,"price":450000,"available":true}]}`
 
 func TestFindOffers(t *testing.T) {
 	calls := map[string]int{}
@@ -44,7 +44,7 @@ func TestFindOffers(t *testing.T) {
 	if err != nil || len(items) != 2 {
 		t.Fatalf("items=%+v err=%v", items, err)
 	}
-	if items[0].PriceAmount != "3500" || items[0].PriceCurrency != "CLP" || items[0].Condition != "NM" || items[0].Language != "English" || items[0].URL == items[1].URL || calls["/products/ring.js"] != 1 {
+	if items[0].PriceAmount != "3500" || items[0].PriceCurrency != "CLP" || items[0].Condition != "NM" || items[0].Language != "English" || items[0].Image != "https://cdn.shopify.com/sol-ring.jpg" || items[0].Metadata["edition"] != "Final Fantasy Commander" || items[0].URL == items[1].URL || calls["/products/ring.js"] != 1 {
 		t.Fatalf("items=%+v calls=%v", items, calls)
 	}
 	for _, test := range []struct{ id, status string }{{"10", "available"}, {"11", "unavailable"}, {"99", "unknown"}, {"", "unknown"}} {

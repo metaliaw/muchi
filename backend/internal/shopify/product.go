@@ -19,10 +19,12 @@ type variantReply struct {
 }
 
 type productReply struct {
-	ID       int64          `json:"id"`
-	Title    string         `json:"title"`
-	Variants []variantReply `json:"variants"`
-	Options  []struct {
+	ID            int64          `json:"id"`
+	Title         string         `json:"title"`
+	Type          string         `json:"type"`
+	FeaturedImage string         `json:"featured_image"`
+	Variants      []variantReply `json:"variants"`
+	Options       []struct {
 		Name     string `json:"name"`
 		Position int    `json:"position"`
 	} `json:"options"`
@@ -45,13 +47,21 @@ func (c Client) buildOffers(product productReply, path, currency string) ([]offe
 		item := offer.Offer{
 			ID: c.Domain + ":" + id, VariantID: id, CardName: product.Title, Store: store,
 			PriceAmount: formatPrice(*variant.Price), PriceCurrency: currency,
-			URL: "https://" + c.Domain + path + "?variant=" + id, Source: c.Domain, StockStatus: "available",
-			Metadata: map[string]string{"title": product.Title, "variant": variant.Title, "sku": variant.SKU, "product_id": strconv.FormatInt(product.ID, 10)},
+			URL: "https://" + c.Domain + path + "?variant=" + id, Image: readImageURL(product.FeaturedImage),
+			Source: c.Domain, StockStatus: "available",
+			Metadata: map[string]string{"title": product.Title, "edition": product.Type, "variant": variant.Title, "sku": variant.SKU, "product_id": strconv.FormatInt(product.ID, 10)},
 		}
 		applyOptions(&item, product, variant)
 		items = append(items, item)
 	}
 	return items, nil
+}
+
+func readImageURL(value string) string {
+	if strings.HasPrefix(value, "//") {
+		return "https:" + value
+	}
+	return value
 }
 
 // formatPrice Removes Shopify's Hundredths, including for Zero-Decimal Currencies.
