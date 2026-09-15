@@ -38,6 +38,14 @@ def read_edition(row: dict) -> str:
     return ""
 
 
+def read_locations(row: dict) -> tuple[str, ...]:
+    locations = row.get("locations") or []
+    if not isinstance(locations, list):
+        raise ValueError("Invalid locations")
+    return tuple(str(location).strip() for location in locations
+                 if str(location).strip())
+
+
 def build_offer(row: dict) -> SearchOffer:
     amount = Decimal(row["price_amount"])
     if not amount.is_finite() or amount < 0:
@@ -50,6 +58,7 @@ def build_offer(row: dict) -> SearchOffer:
         language=row.get("language") or "", condition=row.get("condition") or "",
         variant=read_metadata(row, "variant"), title=read_metadata(row, "title"),
         edition=read_edition(row), card_key=row.get("card_key") or "",
+        locations=read_locations(row),
         suspicious_reason=row.get("suspicious_reason") or "",
         metadata={str(key): str(value) for key, value in (row.get("metadata") or {}).items()},
     )

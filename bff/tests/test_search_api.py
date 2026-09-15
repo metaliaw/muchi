@@ -86,6 +86,19 @@ def test_offer_keeps_embedded_card_metadata():
     assert offer.edition == "OBF"
 
 
+def test_offer_keeps_pickup_locations():
+    reply = result_reply()
+    reply["items"][0]["offers"][0]["locations"] = [
+        "Puerto Montt - Shuffle Store", "Osorno - Argama Cards",
+    ]
+
+    offer = make_provider(reply).read_results("search-1").items[0].offers[0]
+
+    assert offer.locations == (
+        "Puerto Montt - Shuffle Store", "Osorno - Argama Cards",
+    )
+
+
 def test_retry_keeps_idempotency():
     provider = make_provider(search_reply(), 202)
     provider.session.request.side_effect = requests.Timeout("private-code")
