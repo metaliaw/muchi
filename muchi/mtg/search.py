@@ -43,6 +43,9 @@ class SearchItem:
     position: int = 0
     sequence: int = 0
     game: str = ""
+    # Las Fuentes que se Cayeron mientras otras Respondian. Una Carta con
+    # `found` y una Tienda caida no es lo mismo que una Carta completa.
+    faults: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
