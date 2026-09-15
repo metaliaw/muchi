@@ -27,8 +27,9 @@ class SearchOffer:
     # La Carta que Nombra la Oferta, sin su Impresion. La API la Calcula; vacia
     # cuando Responde una Version anterior, y ahi manda el Titulo.
     card_key: str = ""
-    # La Edicion va ultima: las Pruebas arman esta Forma por Posicion.
+    # La Edicion conserva su Posicion: las Pruebas arman esta Forma por Posicion.
     edition: str = ""
+    locations: tuple[str, ...] = ()
     metadata: dict[str, str] = field(default_factory=dict)
 
 
