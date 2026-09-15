@@ -51,7 +51,6 @@ const (
 
 type Options struct {
 	VerifyStock bool            `json:"verify_stock"`
-	StoresOnly  bool            `json:"stores_only"`
 	Match       offer.MatchMode `json:"match,omitempty"`
 }
 
@@ -108,7 +107,6 @@ type Item struct {
 	// desde el Almacén, en otro Proceso. Con `json:"-"` se Perdían al Escribir
 	// y el Worker las Leía siempre en falso.
 	VerifyStock bool            `json:"verify_stock,omitempty"`
-	StoresOnly  bool            `json:"stores_only,omitempty"`
 	Match       offer.MatchMode `json:"match,omitempty"`
 	// Faults Name the Sources that Fell while others Answered. Sin ellos un
 	// Resultado incompleto Llega Marcado `found` y nadie lo Nota.

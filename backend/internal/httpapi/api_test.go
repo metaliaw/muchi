@@ -54,7 +54,7 @@ func (*fakeStore) ListSourceHealth(context.Context) ([]search.SourceHealth, erro
 func TestCreateSearch(t *testing.T) {
 	store := &fakeStore{}
 	api := API{Searches: search.Service{Searches: store, MaxCards: 500, MaxQuantity: 99}, Health: store, Token: "secret"}
-	body := `{"game":"magic","cards":[{"name":"Sol Ring","quantity":1}],"options":{"verify_stock":true,"stores_only":true}}`
+	body := `{"game":"magic","cards":[{"name":"Sol Ring","quantity":1}],"options":{"verify_stock":true}}`
 	request := httptest.NewRequest(http.MethodPost, "/v1/searches", strings.NewReader(body))
 	request.Header.Set("Authorization", "Bearer secret")
 	request.Header.Set("Idempotency-Key", "request-one")
@@ -186,5 +186,22 @@ func TestRejectResultPage(t *testing.T) {
 	api.BuildHandler().ServeHTTP(response, request)
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("invalid result page status=%d body=%s", response.Code, response.Body.String())
+	}
+}
+
+// TestARetiredOptionIsRefused Covers the Contract, not just the Code: the
+// Decoder Refuses Unknown Fields, so a Client still Sending `stores_only`
+// Learns it in the Answer instead of Believing it was Honoured.
+func TestARetiredOptionIsRefused(t *testing.T) {
+	body := `{"game":"magic","cards":[{"name":"Sol Ring","quantity":1}],"options":{"verify_stock":true,"stores_only":true}}`
+	store := &fakeStore{}
+	api := API{Searches: search.Service{Searches: store, MaxCards: 500, MaxQuantity: 99}, Health: store, Token: "secret"}
+	request := httptest.NewRequest(http.MethodPost, "/v1/searches", strings.NewReader(body))
+	request.Header.Set("Authorization", "Bearer secret")
+	request.Header.Set("Idempotency-Key", "retired-option")
+	response := httptest.NewRecorder()
+	api.BuildHandler().ServeHTTP(response, request)
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("POST /v1/searches status = %d, want 400", response.Code)
 	}
 }

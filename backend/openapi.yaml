@@ -198,10 +198,9 @@ components:
         options:
           type: object
           additionalProperties: false
-          required: [verify_stock, stores_only]
+          required: [verify_stock]
           properties:
             verify_stock: {type: boolean}
-            stores_only: {type: boolean}
             match:
               allOf: [{$ref: "#/components/schemas/MatchMode"}]
               default: exact

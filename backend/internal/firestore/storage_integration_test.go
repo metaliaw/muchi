@@ -139,7 +139,7 @@ func createTestSearch(t *testing.T, store *Store, suffix string) search.Job {
 			{Name: "Sol Ring", Quantity: 1},
 			{Name: "Anger", Quantity: 1},
 		},
-		Options: search.Options{VerifyStock: true, StoresOnly: true},
+		Options: search.Options{VerifyStock: true},
 	}
 	job, err := store.CreateSearch(context.Background(), "create-"+suffix, search.HashPayload(input), input)
 	if err != nil {

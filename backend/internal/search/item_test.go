@@ -15,7 +15,7 @@ func TestAnItemKeepsItsOptionsThroughStorage(t *testing.T) {
 		ID: "item-1", SearchID: "search-1", Game: GameMagic,
 		OriginalName: "Sol Ring", NormalizedName: "sol ring", Quantity: 1,
 		Status: ItemPending, Offers: []offer.Offer{},
-		VerifyStock: true, StoresOnly: true, Match: offer.MatchIncludes,
+		VerifyStock: true, Match: offer.MatchIncludes,
 	}
 	data, err := json.Marshal(stored)
 	if err != nil {
@@ -27,9 +27,6 @@ func TestAnItemKeepsItsOptionsThroughStorage(t *testing.T) {
 	}
 	if !read.VerifyStock {
 		t.Error("verify_stock did not reach the worker")
-	}
-	if !read.StoresOnly {
-		t.Error("stores_only did not reach the worker")
 	}
 	if read.Match != offer.MatchIncludes {
 		t.Errorf("match = %q", read.Match)
