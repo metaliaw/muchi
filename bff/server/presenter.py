@@ -176,6 +176,19 @@ def pick_cheapest_by_type(offers: list[SearchOffer], types: dict[int, str],
     return best
 
 
+def name_fallen_sources(card: str, faults: tuple[str, ...]) -> str:
+    """Una Tienda caida se Dice por su Nombre y sin su Excusa.
+
+    La Razon Trae el Cuerpo de la Respuesta — mil bytes de HTML cuando la
+    Tienda sirve una Pagina de Mantencion. Eso es para el Log; quien Busca solo
+    Necesita saber que este Precio se Comparo con una Tienda menos.
+    """
+    tiendas = ", ".join(faults)
+    if len(faults) == 1:
+        return f"{card}: no se pudo consultar {tiendas}; faltan sus Ofertas."
+    return f"{card}: no se pudieron consultar {tiendas}; faltan sus Ofertas."
+
+
 def build_state(state: SearchState) -> dict:
     return {
         "id": state.id, "status": state.status, "total": state.total,
@@ -201,6 +214,10 @@ def build_results(items: tuple[SearchItem, ...], muchi_dolar: int,
             notices.append({"level": "caption", "card": item.name,
                             "item_position": item.position,
                             "text": f"{item.name}: sin Ofertas."})
+        if item.faults:
+            notices.append({"level": "warning", "card": item.name,
+                            "item_position": item.position,
+                            "text": name_fallen_sources(item.name, item.faults)})
         positions.update((id(offer), item.position) for offer in item.offers)
         types.update((id(offer), read_card_type(offer, item.name, match))
                      for offer in item.offers)

@@ -557,3 +557,24 @@ def test_an_offer_without_a_key_falls_back_to_its_title():
     ), id="item-1", position=0, sequence=1, game="yugioh"),)
     results = presenter.build_results(items, 1000, match="includes")
     assert {row["card_type"] for row in results["offers"]} == {"winged kuriboh", "linkuriboh"}
+
+
+def test_a_fallen_store_is_named_to_whoever_searched():
+    """Una Carta con Ofertas y una Tienda caída no es una Carta completa."""
+    items = (SearchItem("Kuriboh", 1, "found", (
+        build_offer(card_name="Kuriboh", store="Uno", amount=Decimal("900")),
+    ), id="item-1", position=0, sequence=1, game="yugioh",
+        faults=("v3.netdecker.cl",)),)
+    notices = presenter.build_results(items, 1000)["notices"]
+    warnings = [n for n in notices if n["level"] == "warning"]
+    assert len(warnings) == 1
+    assert "v3.netdecker.cl" in warnings[0]["text"]
+    assert "<!doctype" not in warnings[0]["text"]
+
+
+def test_a_complete_answer_warns_about_nobody():
+    items = (SearchItem("Kuriboh", 1, "found", (
+        build_offer(card_name="Kuriboh", store="Uno", amount=Decimal("900")),
+    ), id="item-1", position=0, sequence=1, game="yugioh"),)
+    notices = presenter.build_results(items, 1000)["notices"]
+    assert [n for n in notices if n["level"] == "warning"] == []
