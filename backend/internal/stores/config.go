@@ -34,24 +34,26 @@ type SearchProviderConfig struct {
 }
 
 type StoreConfig struct {
-	Games                    []string       `yaml:"games"`
-	Platform                 string         `yaml:"platform"`
-	Location                 StoreLocation  `yaml:"location"`
-	UnavailableSelectors     []string       `yaml:"unavailable_selectors"`
-	UnavailableText          []string       `yaml:"unavailable_text"`
-	ScopeSelector            string         `yaml:"scope_selector"`
-	TimeoutSeconds           int            `yaml:"timeout_seconds"`
-	EstimatedResponseSeconds int            `yaml:"estimated_response_seconds"`
-	AllowRedirects           bool           `yaml:"allow_redirects"`
-	Enabled                  bool           `yaml:"enabled"`
-	Name                     string         `yaml:"name"`
-	Lists                    []MoxfieldList `yaml:"lists"`
+	Games                    []string        `yaml:"games"`
+	Platform                 string          `yaml:"platform"`
+	Locations                []StoreLocation `yaml:"locations"`
+	UnavailableSelectors     []string        `yaml:"unavailable_selectors"`
+	UnavailableText          []string        `yaml:"unavailable_text"`
+	ScopeSelector            string          `yaml:"scope_selector"`
+	TimeoutSeconds           int             `yaml:"timeout_seconds"`
+	EstimatedResponseSeconds int             `yaml:"estimated_response_seconds"`
+	AllowRedirects           bool            `yaml:"allow_redirects"`
+	Enabled                  bool            `yaml:"enabled"`
+	Name                     string          `yaml:"name"`
+	Lists                    []MoxfieldList  `yaml:"lists"`
 }
 
 type StoreLocation struct {
-	Country string `yaml:"country"`
-	Region  string `yaml:"region"`
-	Commune string `yaml:"commune"`
+	Country  string `yaml:"country"`
+	Region   string `yaml:"region"`
+	City     string `yaml:"city"`
+	District string `yaml:"district"`
+	Pickup   string `yaml:"pickup"`
 }
 
 // MoxfieldList Prices a public https://moxfield.com deck as store inventory.
@@ -107,6 +109,18 @@ func ValidateConfig(config Config) error {
 		}
 		if err := validateLists(store.Lists); err != nil {
 			return err
+		}
+		if err := validateLocations(store.Locations); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateLocations(locations []StoreLocation) error {
+	for _, location := range locations {
+		if location.City == "" || location.District != "" && location.Pickup != "" {
+			return errors.New("invalid store location")
 		}
 	}
 	return nil

@@ -1,6 +1,7 @@
 package application
 
 import (
+	"slices"
 	"testing"
 	"time"
 
@@ -44,10 +45,10 @@ func TestConfiguredSources(t *testing.T) {
 			catalogs++
 		}
 	}
-	if lists != 9 || catalogs != 3 || shopifyStores != 3 || jumpsellerStores != 5 || prestashopStores != 1 || len(sources) != 22 {
+	if lists != 9 || catalogs != 3 || shopifyStores != 4 || jumpsellerStores != 5 || prestashopStores != 1 || len(sources) != 23 {
 		t.Fatalf("sources=%d lists=%d catalogs=%d", len(sources), lists, catalogs)
 	}
-	for _, domain := range []string{"gameofmagicsingles.cl", "singles.collectorcenter.cl", "www.cardsouls.cl"} {
+	for _, domain := range []string{"gameofmagicsingles.cl", "singles.collectorcenter.cl", "www.cardsouls.cl", "www.oasisgames.cl"} {
 		store, found := config.Stores[domain]
 		if !found || !store.Enabled || store.Platform != "shopify" {
 			t.Fatalf("Shopify store missing: %s", domain)
@@ -56,7 +57,7 @@ func TestConfiguredSources(t *testing.T) {
 	store := config.Stores["el-wombat-rabioso-tcg"]
 	store.Enabled = false
 	config.Stores["el-wombat-rabioso-tcg"] = store
-	if sources := buildOfferSources(nil, scry.Client{}, config, nil, time.Minute, nil); len(sources) != 13 {
+	if sources := buildOfferSources(nil, scry.Client{}, config, nil, time.Minute, nil); len(sources) != 14 {
 		t.Fatalf("disabled lists still active: %d", len(sources))
 	}
 	for domain, store := range config.Stores {
@@ -79,6 +80,28 @@ func TestConfiguredSources(t *testing.T) {
 	}
 }
 
+func TestConfiguredLocationNamesItsStore(t *testing.T) {
+	config := stores.Config{Stores: map[string]stores.StoreConfig{
+		"cards.test": {
+			Name: "Cards Test",
+			Locations: []stores.StoreLocation{
+				{Country: "Chile", Region: "Valparaíso", City: "Viña del Mar"},
+				{Country: "Chile", Region: "Valparaíso", City: "Quilpué", Pickup: "Mesa 1"},
+			},
+		},
+		"nowhere.test": {},
+	}}
+
+	locations := buildStoreLocations(config)
+	wanted := []string{"Viña del Mar", "Quilpué - Mesa 1"}
+	if !slices.Equal(locations["cards.test"], wanted) || !slices.Equal(locations["Cards Test"], wanted) {
+		t.Fatalf("locations=%v", locations)
+	}
+	if _, found := locations["nowhere.test"]; found {
+		t.Fatalf("empty location published: %v", locations)
+	}
+}
+
 func TestSourcesWithoutScry(t *testing.T) {
 	config, err := stores.LoadStoreConfig("../../config/stores.yaml", nil)
 	if err != nil {
@@ -90,7 +113,7 @@ func TestSourcesWithoutScry(t *testing.T) {
 			t.Fatal("Scry still active")
 		}
 	}
-	if len(sources) != 17 {
+	if len(sources) != 18 {
 		t.Fatalf("sources=%d", len(sources))
 	}
 }
@@ -107,7 +130,7 @@ func TestSlowCatalogsPausedWithScryAvailable(t *testing.T) {
 		}
 	}
 	sources := buildOfferSources(nil, scry.Client{}, config, nil, time.Minute, nil)
-	if len(sources) != 18 {
+	if len(sources) != 19 {
 		t.Fatalf("sources=%d", len(sources))
 	}
 	if _, ok := sources[0].(scry.Client); !ok {

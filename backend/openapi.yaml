@@ -281,6 +281,10 @@ components:
         language: {type: string}
         condition: {type: string}
         finish: {type: string}
+        locations:
+          type: array
+          description: Verified pickup locations, formatted for display.
+          items: {type: string}
         source: {type: string}
         stock_status: {type: string, enum: [available, unavailable, unknown]}
         suspicious:

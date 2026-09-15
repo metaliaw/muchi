@@ -46,3 +46,29 @@ func TestLiveSolRing(t *testing.T) {
 		}
 	}
 }
+
+func TestLiveOasisGames(t *testing.T) {
+	if os.Getenv("MUCHI_TEST_SHOPIFY_LIVE") != "1" {
+		t.Skip("set MUCHI_TEST_SHOPIFY_LIVE=1")
+	}
+	client := shopify.Client{
+		Domain: "www.oasisgames.cl", Name: "Oasis Games",
+		Fetcher: source.Client{
+			HTTP: &http.Client{Timeout: 15 * time.Second}, MaxAttempts: 2,
+			BaseDelay: time.Second, UserAgent: "muchi-api/1.0",
+		},
+	}
+	for _, name := range []string{"Sol Ring", "Pikachu ex"} {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+		items, err := client.FindOffers(ctx, offer.CardQuery{Name: name})
+		cancel()
+		if err != nil || len(items) == 0 {
+			t.Fatalf("card=%q offers=%d err=%v", name, len(items), err)
+		}
+		for _, item := range items {
+			if item.PriceCurrency != "CLP" || item.StockStatus != "available" || item.Image == "" {
+				t.Fatalf("card=%q offer=%+v", name, item)
+			}
+		}
+	}
+}

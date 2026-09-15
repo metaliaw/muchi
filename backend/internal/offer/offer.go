@@ -12,17 +12,18 @@ import (
 var ErrInvalidOffer = errors.New("invalid offer")
 
 type Offer struct {
-	ID            string `json:"id"`
-	CardName      string `json:"card_name"`
-	Store         string `json:"store"`
-	PriceAmount   string `json:"price_amount"`
-	PriceCurrency string `json:"price_currency"`
-	URL           string `json:"url"`
-	Image         string `json:"image,omitempty"`
-	VariantID     string `json:"variant_id,omitempty"`
-	Language      string `json:"language,omitempty"`
-	Condition     string `json:"condition,omitempty"`
-	Finish        string `json:"finish,omitempty"`
+	ID            string   `json:"id"`
+	CardName      string   `json:"card_name"`
+	Store         string   `json:"store"`
+	PriceAmount   string   `json:"price_amount"`
+	PriceCurrency string   `json:"price_currency"`
+	URL           string   `json:"url"`
+	Image         string   `json:"image,omitempty"`
+	VariantID     string   `json:"variant_id,omitempty"`
+	Language      string   `json:"language,omitempty"`
+	Condition     string   `json:"condition,omitempty"`
+	Finish        string   `json:"finish,omitempty"`
+	Locations     []string `json:"locations,omitempty"`
 	// CardKey Names the Card the Offer is for, with the Printing Dropped.
 	// The Caller Groups by it; the Title Stays for Reading.
 	CardKey          string            `json:"card_key,omitempty"`

@@ -3,6 +3,7 @@ package search
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -43,6 +44,23 @@ func TestFindProvider(t *testing.T) {
 	items, _, err := service.FindCardOffers(context.Background(), GameMagic, offer.CardQuery{Name: "Sol Ring"})
 	if err != nil || len(items) != 1 || !cache.saved {
 		t.Fatalf("FindCardOffers() items=%v saved=%v err=%v", items, cache.saved, err)
+	}
+}
+
+func TestAnOfferCarriesItsConfiguredLocation(t *testing.T) {
+	wanted := offer.Offer{
+		ID: "one", Store: "Netdecker", Source: "v3.netdecker.cl",
+		URL: "https://v3.netdecker.cl/card", PriceAmount: "1000", PriceCurrency: "CLP",
+	}
+	service := Service{
+		Providers:      map[Game]Provider{GameYuGiOh: stubProvider{items: []offer.Offer{wanted}}},
+		StoreLocations: map[string][]string{"v3.netdecker.cl": {"Viña del Mar", "Quilpué - Mesa 1"}},
+	}
+
+	items, _, err := service.FindCardOffers(context.Background(), GameYuGiOh, offer.CardQuery{Name: "Kuriboh"})
+	locations := []string{"Viña del Mar", "Quilpué - Mesa 1"}
+	if err != nil || len(items) != 1 || !slices.Equal(items[0].Locations, locations) {
+		t.Fatalf("items=%+v err=%v", items, err)
 	}
 }
 
@@ -139,6 +157,44 @@ func TestAFullAnswerNamesNobody(t *testing.T) {
 	_, faults, err := service.FindCardOffers(context.Background(), GameMagic, offer.CardQuery{Name: "Sol Ring"})
 	if err != nil || len(faults) != 0 {
 		t.Fatalf("faults=%+v err=%v", faults, err)
+	}
+}
+
+func TestADirectStoreOverridesItsAggregator(t *testing.T) {
+	aggregated := offer.Offer{
+		ID: "aggregated", Store: "Oasis Games", Source: "scry.cl",
+		URL: "https://www.oasisgames.cl/products/sol-ring?variant=10", PriceAmount: "1200", PriceCurrency: "CLP",
+	}
+	direct := aggregated
+	direct.ID, direct.Source, direct.PriceAmount = "direct", "www.oasisgames.cl", "1000"
+	service := Service{
+		Providers: map[Game]Provider{GameMagic: stubProvider{items: []offer.Offer{aggregated}}},
+		SourcesByGame: map[Game][]OfferSource{GameMagic: {
+			stubSource{name: "www.oasisgames.cl", items: []offer.Offer{direct}},
+		}},
+	}
+
+	items, _, err := service.FindCardOffers(context.Background(), GameMagic, offer.CardQuery{Name: "Sol Ring"})
+	if err != nil || len(items) != 1 || items[0].ID != "direct" {
+		t.Fatalf("items=%+v err=%v", items, err)
+	}
+}
+
+func TestAnAggregatorBacksUpAFailedStore(t *testing.T) {
+	aggregated := offer.Offer{
+		ID: "aggregated", Store: "Oasis Games", Source: "scry.cl",
+		URL: "https://www.oasisgames.cl/products/sol-ring?variant=10", PriceAmount: "1200", PriceCurrency: "CLP",
+	}
+	service := Service{
+		Providers: map[Game]Provider{GameMagic: stubProvider{items: []offer.Offer{aggregated}}},
+		SourcesByGame: map[Game][]OfferSource{GameMagic: {
+			stubSource{name: "www.oasisgames.cl", err: errors.New("store unavailable")},
+		}},
+	}
+
+	items, faults, err := service.FindCardOffers(context.Background(), GameMagic, offer.CardQuery{Name: "Sol Ring"})
+	if err != nil || len(items) != 1 || items[0].ID != "aggregated" || len(faults) != 1 {
+		t.Fatalf("items=%+v faults=%+v err=%v", items, faults, err)
 	}
 }
 

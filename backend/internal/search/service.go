@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -29,6 +30,7 @@ type Service struct {
 	MaxCards          int
 	MaxQuantity       int
 	SuspiciousPercent int
+	StoreLocations    map[string][]string
 	// PrintsByGame Lends a Card its Printings. Only a Game with a Catalog of
 	// Images Appears here; the rest Keep whatever Image their Source Sent.
 	PrintsByGame map[Game]PrintLibrary
@@ -87,12 +89,25 @@ func (s Service) collectOffers(ctx context.Context, game Game, query offer.CardQ
 		return nil, faults, err
 	}
 	items = offer.NameCards(offer.DeduplicateOffers(items))
+	items = s.applyStoreLocations(items)
 	items = s.applyPrintImages(ctx, game, query.Name, items)
 	items = offer.MarkSuspicious(items, s.SuspiciousPercent, query)
 	if err == nil {
 		s.saveOfferCache(ctx, key, items)
 	}
 	return items, faults, nil
+}
+
+// applyStoreLocations Adds only Locations verified in Store Configuration.
+func (s Service) applyStoreLocations(items []offer.Offer) []offer.Offer {
+	for position := range items {
+		locations := s.StoreLocations[items[position].Source]
+		if len(locations) == 0 {
+			locations = s.StoreLocations[items[position].Store]
+		}
+		items[position].Locations = locations
+	}
+	return items
 }
 
 // applyPrintImages Gives an Offer the Picture of the Printing its Title Names.
@@ -151,7 +166,8 @@ func queryGameSources(ctx context.Context, provider Provider, hasProvider bool, 
 		}
 	}
 	if len(sources) > 0 {
-		found, storeFaults, err := querySources(ctx, sources, query)
+		found, storeFaults, direct, err := querySources(ctx, sources, query)
+		items = preferDirectOffers(items, direct)
 		items = append(items, found...)
 		faults = append(faults, storeFaults...)
 		if err != nil {
@@ -159,6 +175,26 @@ func queryGameSources(ctx context.Context, provider Provider, hasProvider bool, 
 		}
 	}
 	return items, faults, lastErr
+}
+
+// preferDirectOffers Drops Aggregated Offers when their Store Answered Directly.
+func preferDirectOffers(items []offer.Offer, direct map[string]bool) []offer.Offer {
+	kept := items[:0]
+	for _, item := range items {
+		if direct[readOfferHost(item)] {
+			continue
+		}
+		kept = append(kept, item)
+	}
+	return kept
+}
+
+func readOfferHost(item offer.Offer) string {
+	link, err := url.Parse(item.URL)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimPrefix(strings.ToLower(link.Hostname()), "www.")
 }
 
 func (s Service) loadOfferCache(ctx context.Context, key string) ([]offer.Offer, bool) {
@@ -206,7 +242,7 @@ func HashPayload(value any) string {
 	return hex.EncodeToString(sum[:])
 }
 
-func querySources(ctx context.Context, sources []OfferSource, query offer.CardQuery) ([]offer.Offer, []SourceFault, error) {
+func querySources(ctx context.Context, sources []OfferSource, query offer.CardQuery) ([]offer.Offer, []SourceFault, map[string]bool, error) {
 	results := make([][]offer.Offer, len(sources))
 	errors := make([]error, len(sources))
 	turns := make(chan struct{}, maxConcurrentSources)
@@ -216,7 +252,19 @@ func querySources(ctx context.Context, sources []OfferSource, query offer.CardQu
 		go querySource(ctx, &group, turns, source, query, &results[index], &errors[index])
 	}
 	group.Wait()
-	return combineSources(sources, results, errors)
+	items, faults, err := combineSources(sources, results, errors)
+	return items, faults, readDirectHosts(sources, errors), err
+}
+
+func readDirectHosts(sources []OfferSource, errors []error) map[string]bool {
+	result := make(map[string]bool)
+	for index, source := range sources {
+		name := strings.ToLower(source.SourceName())
+		if errors[index] == nil && strings.Contains(name, ".") && !strings.ContainsAny(name, ":/") {
+			result[strings.TrimPrefix(name, "www.")] = true
+		}
+	}
+	return result
 }
 
 func querySource(ctx context.Context, group *sync.WaitGroup, turns chan struct{}, source OfferSource, query offer.CardQuery, items *[]offer.Offer, sourceErr *error) {

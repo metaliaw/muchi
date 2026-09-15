@@ -60,6 +60,10 @@ stores:
     games: [yugioh]
     name: "Decks Cards"
     platform: jumpseller
+    locations:
+      - country: Chile
+        region: Región Metropolitana
+        city: Colina
     timeout_seconds: 10
     estimated_response_seconds: 145
     allow_redirects: true
@@ -68,10 +72,10 @@ stores:
     games: [yugioh]
     name: "Netdecker"
     platform: prestashop
-    location:
-      country: Chile
-      region: Valparaíso
-      commune: Viña del Mar
+    locations:
+      - country: Chile
+        region: Valparaíso
+        city: Viña del Mar
     timeout_seconds: 10
     estimated_response_seconds: 10
     allow_redirects: true
@@ -102,6 +106,11 @@ stores:
     games: [magic]
     name: "OnPlay Singles"
     platform: woocommerce
+    locations:
+      - country: Chile
+        region: Región Metropolitana
+        city: Santiago
+        district: Santiago Centro
     unavailable_selectors:
       - "div.product.outofstock"
       - "p.stock.out-of-stock"
@@ -116,6 +125,10 @@ stores:
     games: [magic]
     name: "Game of Magic Singles"
     platform: shopify
+    locations:
+      - country: Chile
+        region: Biobío
+        city: Concepción
     timeout_seconds: 10
     allow_redirects: true
     enabled: true
@@ -123,6 +136,11 @@ stores:
     games: [magic]
     name: "Collector Center"
     platform: shopify
+    locations:
+      - country: Chile
+        region: Región Metropolitana
+        city: Santiago
+        district: Providencia
     timeout_seconds: 10
     allow_redirects: true
     enabled: true
@@ -130,6 +148,39 @@ stores:
     games: [magic]
     name: "CardSouls"
     platform: shopify
+    locations:
+      - country: Chile
+        region: Los Lagos
+        city: Puerto Montt
+        pickup: Shuffle Store
+      - country: Chile
+        region: Los Lagos
+        city: Puerto Montt
+        pickup: JuEDH Store
+      - country: Chile
+        region: Los Lagos
+        city: Puerto Montt
+        pickup: Winterland
+      - country: Chile
+        region: Los Lagos
+        city: Osorno
+        pickup: El Templo del Pudú
+      - country: Chile
+        region: Los Lagos
+        city: Osorno
+        pickup: Argama Cards
+    timeout_seconds: 10
+    allow_redirects: true
+    enabled: true
+  www.oasisgames.cl:
+    games: [magic, pokemon]
+    name: "Oasis Games"
+    platform: shopify
+    locations:
+      - country: Chile
+        region: Región Metropolitana
+        city: Santiago
+        district: Las Condes
     timeout_seconds: 10
     allow_redirects: true
     enabled: true
@@ -137,6 +188,10 @@ stores:
     games: [magic]
     name: "Cartas La Fortaleza"
     platform: jumpseller
+    locations:
+      - country: Chile
+        region: Magallanes
+        city: Punta Arenas
     timeout_seconds: 10
     allow_redirects: true
     enabled: false
@@ -144,6 +199,10 @@ stores:
     games: [magic]
     name: "ChronoMagic"
     platform: jumpseller
+    locations:
+      - country: Chile
+        region: Región Metropolitana
+        city: Santiago
     timeout_seconds: 10
     allow_redirects: true
     enabled: false
@@ -151,6 +210,11 @@ stores:
     games: [magic]
     name: "GameQuest"
     platform: jumpseller
+    locations:
+      - country: Chile
+        region: Región Metropolitana
+        city: Santiago
+        district: Providencia
     timeout_seconds: 10
     allow_redirects: true
     enabled: false
@@ -158,6 +222,11 @@ stores:
     games: [magic]
     name: "Magic4Ever"
     platform: jumpseller
+    locations:
+      - country: Chile
+        region: Región Metropolitana
+        city: Santiago
+        district: Santiago Centro
     timeout_seconds: 10
     allow_redirects: true
     enabled: false

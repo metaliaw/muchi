@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/cangrejometralleta/muchi-api/internal/cardmetadata"
@@ -74,12 +75,13 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		SourcesByGame:     buildSourcesByGame(fetcher, storeConfig, store, config.OfferCacheTTL, logger),
 		Stocks:            checker,
 		Cache:             store,
-		CacheNamespace:    search.HashPayload([]any{"search-providers-v6", storeConfig}) + ":",
+		CacheNamespace:    search.HashPayload([]any{"search-providers-v7", storeConfig}) + ":",
 		CacheTTL:          config.OfferCacheTTL,
 		EmptyCacheTTL:     config.OfferCacheEmptyTTL,
 		MaxCards:          config.MaxCardsPerSearch,
 		MaxQuantity:       config.MaxQuantityPerCard,
 		SuspiciousPercent: config.SuspiciousPricePercent,
+		StoreLocations:    buildStoreLocations(storeConfig),
 	}
 	if dispatch && config.TaskURL != "" {
 		queue, err := taskqueue.OpenQueue(
@@ -93,6 +95,43 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		return Runtime{Service: service, Store: store, Queue: queue, CardMetadataProviders: cardMetadataProviders, AutocompleteProviders: autocompleteProviders, SupportedGames: supportedGames}, nil
 	}
 	return Runtime{Service: service, Store: store, CardMetadataProviders: cardMetadataProviders, AutocompleteProviders: autocompleteProviders, SupportedGames: supportedGames}, nil
+}
+
+func buildStoreLocations(config stores.Config) map[string][]string {
+	result := make(map[string][]string)
+	for domain, store := range config.Stores {
+		locations := formatStoreLocations(store.Locations)
+		if len(locations) == 0 {
+			continue
+		}
+		result[domain] = locations
+		if store.Name != "" {
+			result[store.Name] = locations
+		}
+	}
+	return result
+}
+
+func formatStoreLocations(locations []stores.StoreLocation) []string {
+	result := make([]string, 0, len(locations))
+	for _, location := range locations {
+		detail := location.District
+		if detail == "" {
+			detail = location.Pickup
+		}
+		result = append(result, strings.Join(removeEmpty([]string{location.City, detail}), " - "))
+	}
+	return result
+}
+
+func removeEmpty(values []string) []string {
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		if value != "" {
+			result = append(result, value)
+		}
+	}
+	return result
 }
 
 func buildSourcesByGame(fetcher stores.SourceFetcher, config stores.Config, cache moxfield.InventoryCache, ttl time.Duration, logger *slog.Logger) map[search.Game][]search.OfferSource {
