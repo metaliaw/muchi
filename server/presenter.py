@@ -130,7 +130,7 @@ def read_card_type(offer: SearchOffer, asked: str, match: str) -> str:
     y compiten entre ellas. En `includes` cada Título es una Carta distinta.
     """
     if match == MATCH_INCLUDES:
-        return offer.card_name.strip().lower()
+        return offer.card_key or offer.card_name.strip().lower()
     return asked.strip().lower()
 
 
