@@ -41,3 +41,16 @@ func TestOneCardFromThreeSources(t *testing.T) {
 		t.Fatalf("keys=%v, want one card", keys)
 	}
 }
+
+// TestOnePokemonPrintingGroupsItsOffers Keeps another Edition in another Group.
+func TestOnePokemonPrintingGroupsItsOffers(t *testing.T) {
+	items := NameCards([]Offer{
+		{CardName: "Slowpoke", Metadata: map[string]string{"product_id": "704786"}},
+		{CardName: "Slowpoke", Metadata: map[string]string{"product_id": "704786"}},
+		{CardName: "Slowpoke", Metadata: map[string]string{"product_id": "197654"}},
+	})
+
+	if items[0].CardKey != items[1].CardKey || items[0].CardKey == items[2].CardKey {
+		t.Fatalf("card keys=%q, %q, %q", items[0].CardKey, items[1].CardKey, items[2].CardKey)
+	}
+}

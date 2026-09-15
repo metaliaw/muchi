@@ -23,6 +23,7 @@ type Offer struct {
 	Language      string   `json:"language,omitempty"`
 	Condition     string   `json:"condition,omitempty"`
 	Finish        string   `json:"finish,omitempty"`
+	Edition       string   `json:"edition,omitempty"`
 	Locations     []string `json:"locations,omitempty"`
 	// CardKey Names the Card the Offer is for, with the Printing Dropped.
 	// The Caller Groups by it; the Title Stays for Reading.
@@ -157,13 +158,21 @@ func (q CardQuery) PriceGroupOf(item Offer) string {
 	return NormalizeCard(q.Name)
 }
 
-// NameCards Tells every Offer which Card it is for, so nobody has to Read the
-// Title again to Find out.
+// NameCards Tells every Offer which Card or known Printing it is for, so nobody
+// has to Read the Title again to Find out.
 func NameCards(items []Offer) []Offer {
 	for index := range items {
-		items[index].CardKey = ReadCardKey(items[index].CardName)
+		items[index].CardKey = readOfferKey(items[index])
 	}
 	return items
+}
+
+func readOfferKey(item Offer) string {
+	card := ReadCardKey(item.CardName)
+	if product := item.Metadata["product_id"]; product != "" {
+		return strings.Join([]string{card, product}, "|")
+	}
+	return card
 }
 
 // MatchesCard Accepts a Title that Names the Card, Wherever the Store Puts it.

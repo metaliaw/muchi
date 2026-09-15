@@ -42,6 +42,7 @@ func TestPokemonSlowpokeProbe(t *testing.T) {
 	semantic := map[string]map[string]bool{}
 	for _, item := range items {
 		bySource[item.Source]++
+		t.Logf("card=%q set_id=%q set_code=%q image=%q", item.CardName, item.Metadata["set_id"], item.Metadata["set_code"], item.Image)
 		key := strings.Join([]string{offer.NormalizeCard(item.CardName), strings.ToLower(item.Store), item.PriceAmount, item.PriceCurrency, strings.ToLower(item.Language)}, "|")
 		if semantic[key] == nil {
 			semantic[key] = map[string]bool{}
