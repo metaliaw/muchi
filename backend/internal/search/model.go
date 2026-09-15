@@ -100,12 +100,16 @@ type Item struct {
 	ErrorCode      string        `json:"error_code,omitempty"`
 	ErrorMessage   string        `json:"error_message,omitempty"`
 	Offers         []offer.Offer `json:"offers"`
-	LeaseOwner     string        `json:"-"`
-	LeaseUntil     *time.Time    `json:"-"`
-	VerifyStock    bool          `json:"-"`
-	StoresOnly     bool          `json:"-"`
-	// Match Travels with the Item because the Worker Reads it back from Storage.
-	Match offer.MatchMode `json:"match,omitempty"`
+	// El Arriendo lo Guarda el Registro de Firestore, no el Payload: Cambia en
+	// cada Reclamo y no Viaja con el Item.
+	LeaseOwner string     `json:"-"`
+	LeaseUntil *time.Time `json:"-"`
+	// Las Opciones Viajan Serializadas porque el Worker Lee el Item de vuelta
+	// desde el Almacén, en otro Proceso. Con `json:"-"` se Perdían al Escribir
+	// y el Worker las Leía siempre en falso.
+	VerifyStock bool            `json:"verify_stock,omitempty"`
+	StoresOnly  bool            `json:"stores_only,omitempty"`
+	Match       offer.MatchMode `json:"match,omitempty"`
 	// Faults Name the Sources that Fell while others Answered. Sin ellos un
 	// Resultado incompleto Llega Marcado `found` y nadie lo Nota.
 	Faults []SourceFault `json:"faults,omitempty"`
