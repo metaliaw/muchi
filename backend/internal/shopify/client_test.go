@@ -102,3 +102,30 @@ func TestMatchCard(t *testing.T) {
 		t.Fatal("fractional price")
 	}
 }
+
+// TestOfferKeepsTheStoreTitle Covers a Store Title that Differs from the Search.
+// Naming the Offer after the Question Hides which Printing it really is, and
+// leaves every Offer of a wide Search Wearing the same Name.
+func TestOfferKeepsTheStoreTitle(t *testing.T) {
+	client := Client{Domain: "cards.test", Fetcher: fixtureFetcher(func(target string) ([]byte, error) {
+		u, _ := url.Parse(target)
+		switch u.Path {
+		case "/search":
+			return []byte(`<input name="q"><a href="/products/ring">Ring</a>`), nil
+		case "/cart.js":
+			return []byte(`{"currency":"CLP"}`), nil
+		case "/products/ring.js":
+			return []byte(productFixture), nil
+		}
+		return nil, errors.New("unexpected request: " + target)
+	})}
+	items, err := client.FindOffers(context.Background(), offer.CardQuery{Name: "Sol Ring"})
+	if err != nil || len(items) == 0 {
+		t.Fatalf("items=%d err=%v", len(items), err)
+	}
+	for _, item := range items {
+		if item.CardName != "Sol Ring (0356) [FIC-356]" {
+			t.Fatalf("CardName = %q, want the store title", item.CardName)
+		}
+	}
+}

@@ -73,6 +73,11 @@ func TestPaginatedSearch(t *testing.T) {
 	if err != nil || len(items) != 1 || calls != 1 {
 		t.Fatalf("items=%v calls=%d err=%v", items, calls, err)
 	}
+	// El Nombre Buscado Entra a la Consulta, no a la Respuesta: la Oferta
+	// Conserva el Titulo de la Tienda para que se Sepa que Impresion es.
+	if items[0].CardName == "Sol Ring" {
+		t.Fatalf("CardName = %q, the search overwrote the store title", items[0].CardName)
+	}
 }
 
 func TestVariantStock(t *testing.T) {

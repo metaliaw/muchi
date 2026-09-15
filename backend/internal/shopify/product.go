@@ -28,7 +28,7 @@ type productReply struct {
 	} `json:"options"`
 }
 
-func (c Client) buildOffers(product productReply, path, name, currency string) ([]offer.Offer, error) {
+func (c Client) buildOffers(product productReply, path, currency string) ([]offer.Offer, error) {
 	items := make([]offer.Offer, 0, len(product.Variants))
 	for _, variant := range product.Variants {
 		if !variant.Available {
@@ -43,7 +43,7 @@ func (c Client) buildOffers(product productReply, path, name, currency string) (
 			store = c.Domain
 		}
 		item := offer.Offer{
-			ID: c.Domain + ":" + id, VariantID: id, CardName: name, Store: store,
+			ID: c.Domain + ":" + id, VariantID: id, CardName: product.Title, Store: store,
 			PriceAmount: formatPrice(*variant.Price), PriceCurrency: currency,
 			URL: "https://" + c.Domain + path + "?variant=" + id, Source: c.Domain, StockStatus: "available",
 			Metadata: map[string]string{"title": product.Title, "variant": variant.Title, "sku": variant.SKU, "product_id": strconv.FormatInt(product.ID, 10)},

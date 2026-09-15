@@ -49,7 +49,7 @@ func (c Client) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer.
 		if !query.AcceptsTitle(product.Title) {
 			continue
 		}
-		offers, err := c.buildOffers(product, link, name, currency)
+		offers, err := c.buildOffers(product, link, currency)
 		if err != nil {
 			return nil, err
 		}

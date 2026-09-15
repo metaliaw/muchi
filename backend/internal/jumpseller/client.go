@@ -36,7 +36,6 @@ func (c Client) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer.
 		}
 		for _, item := range products {
 			if offer.MatchesCard(item.CardName, name) && item.StockStatus == "available" {
-				item.CardName = name
 				items = append(items, item)
 			}
 		}
