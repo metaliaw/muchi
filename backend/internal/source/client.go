@@ -9,6 +9,7 @@ import (
 	"math/rand/v2"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -43,11 +44,27 @@ type StatusError struct {
 	Body string
 }
 
+// bodyHint Bounds how much of a Failed Body the Message Carries. A Maintenance
+// Page is a Kilobyte of HTML, and that Kilobyte Travelled into every Log Line
+// and into the Fault the API Answers with.
+const bodyHint = 120
+
 func (e StatusError) Error() string {
-	if e.Body == "" {
+	hint := readBodyHint(e.Body)
+	if hint == "" {
 		return fmt.Sprintf("source returned HTTP %d", e.Code)
 	}
-	return fmt.Sprintf("source returned HTTP %d: %s", e.Code, e.Body)
+	return fmt.Sprintf("source returned HTTP %d: %s", e.Code, hint)
+}
+
+// readBodyHint Leaves one readable Line: the Body Keeps its Shape in the Store,
+// not in the Message that Names the Failure.
+func readBodyHint(body string) string {
+	hint := strings.Join(strings.Fields(body), " ")
+	if len(hint) <= bodyHint {
+		return hint
+	}
+	return hint[:bodyHint] + "…"
 }
 
 func (c Client) FetchSource(ctx context.Context, domain, target string) ([]byte, error) {

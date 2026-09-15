@@ -136,3 +136,23 @@ func TestHonorShortRetryAfter(t *testing.T) {
 		t.Fatalf("FetchSource() data=%q attempts=%d err=%v", data, attempts.Load(), err)
 	}
 }
+
+// TestStatusErrorStaysReadable Keeps a Maintenance Page out of every Log Line
+// and out of the Fault the API Answers with.
+func TestStatusErrorStaysReadable(t *testing.T) {
+	page := "<!doctype html>\n<html>\n  <head>\n    <title></title>\n  </head>\n  <body>\n" +
+		strings.Repeat("    <p>Estaremos de vuelta en breve.</p>\n", 20) + "</body>\n</html>\n"
+	message := StatusError{Code: 503, Body: page}.Error()
+	if strings.Contains(message, "\n") {
+		t.Fatalf("message spans lines: %q", message)
+	}
+	if len(message) > 200 {
+		t.Fatalf("message is %d bytes: %q", len(message), message)
+	}
+	if !strings.Contains(message, "503") {
+		t.Fatalf("message lost the status: %q", message)
+	}
+	if got := (StatusError{Code: 404}).Error(); got != "source returned HTTP 404" {
+		t.Fatalf("empty body message = %q", got)
+	}
+}
