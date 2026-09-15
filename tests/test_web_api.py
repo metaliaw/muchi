@@ -26,8 +26,7 @@ class FakeSearches:
         self.items = items
         self.created = []
 
-    def create_search(self, orders, verify_stock, stores_only, key, game="magic",
-                      match="exact"):
+    def create_search(self, orders, verify_stock, key, game="magic", match="exact"):
         self.created.append((orders, key, game, match))
         return self.state
 

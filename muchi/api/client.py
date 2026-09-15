@@ -133,7 +133,7 @@ class SearchProvider:
             raise QueryFailed("La Respuesta no cumple el Contrato de la API.") from None
 
     def create_search(self, orders: list[Order], verify_stock: bool,
-                      stores_only: bool, key: str, game: str = "magic",
+                      key: str, game: str = "magic",
                       match: str = "exact") -> SearchState:
         if not 1 <= len(orders) <= 500:
             raise QueryFailed("La Búsqueda admite entre 1 y 500 Cartas.")
@@ -142,8 +142,7 @@ class SearchProvider:
         payload = {
             "game": game,
             "cards": [{"name": order.name, "quantity": order.quantity} for order in orders],
-            "options": {"verify_stock": verify_stock, "stores_only": stores_only,
-                        "match": match},
+            "options": {"verify_stock": verify_stock, "match": match},
         }
         reply = self.request_reply("POST", "/searches", payload=payload, key=key)
         return self.parse_reply(build_search, reply)

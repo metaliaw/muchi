@@ -41,7 +41,7 @@ def make_provider(reply, status=200):
 def test_creates_authenticated_search():
     provider = make_provider(search_reply(), 202)
     state = provider.create_search(
-        [Order(2, "Sol Ring")], True, False, "stable-key", "pokemon",
+        [Order(2, "Sol Ring")], True, "stable-key", "pokemon",
     )
     assert state.id == "search-1"
     assert state.game == "pokemon"
@@ -51,8 +51,7 @@ def test_creates_authenticated_search():
     assert kwargs["headers"]["Idempotency-Key"] == "stable-key"
     assert kwargs["json"] == {"game": "pokemon",
                               "cards": [{"name": "Sol Ring", "quantity": 2}],
-                              "options": {"verify_stock": True, "stores_only": False,
-                                          "match": "exact"}}
+                              "options": {"verify_stock": True, "match": "exact"}}
     assert kwargs["allow_redirects"] is False
     assert "private-code" not in repr(provider)
 
@@ -91,10 +90,10 @@ def test_retry_keeps_idempotency():
     provider = make_provider(search_reply(), 202)
     provider.session.request.side_effect = requests.Timeout("private-code")
     with pytest.raises(QueryFailed) as caught:
-        provider.create_search([Order(1, "Card")], True, True, "same-key")
+        provider.create_search([Order(1, "Card")], True, "same-key")
     assert "private-code" not in str(caught.value)
     provider.session.request.side_effect = None
-    provider.create_search([Order(1, "Card")], True, True, "same-key")
+    provider.create_search([Order(1, "Card")], True, "same-key")
     assert [call.kwargs["headers"]["Idempotency-Key"]
             for call in provider.session.request.call_args_list] == ["same-key", "same-key"]
 
