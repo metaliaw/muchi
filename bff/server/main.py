@@ -27,12 +27,9 @@ from muchi.paths import ROOT
 
 from server import presenter
 
-# El Contrato pide ambas Opciones en cada Pedido. Se envían fijas: la API
-# comprueba el Stock de las Ofertas más baratas y hoy ignora "stores_only".
 # La Re-verificación pega una segunda Vez por Oferta: nace Apagada, y
 # MUCHI_VERIFY_STOCK=1 la Enciende el Día que la Certeza pese más que la Carga.
 VERIFY_STOCK = os.getenv("MUCHI_VERIFY_STOCK", "0").strip() in {"1", "true", "si", "yes"}
-STORES_ONLY = True
 WEB_DIST = ROOT / "web" / "dist"
 ADSENSE_AUTHORITY = "f08c47fec0942fa0"
 ADSENSE_CLIENT = "ca-pub-6368656861543000"
@@ -246,7 +243,7 @@ def create_search(request: SearchRequest) -> dict:
         raise HTTPException(422, {"detail": f"Ingresa entre 1 y {MAX_CARDS} Cartas, "
                                             f"con Cantidades de 1 a {MAX_QUANTITY}."})
     state = build_muchi().searches.create_search(
-        orders=orders, verify_stock=VERIFY_STOCK, stores_only=STORES_ONLY,
+        orders=orders, verify_stock=VERIFY_STOCK,
         key=request.key, game=request.game, match=request.match,
     )
     return {
