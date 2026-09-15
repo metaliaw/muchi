@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cangrejometralleta/muchi-api/internal/cardmetadata"
 	"github.com/cangrejometralleta/muchi-api/internal/offer"
 )
 
@@ -138,5 +139,77 @@ func TestAFullAnswerNamesNobody(t *testing.T) {
 	_, faults, err := service.FindCardOffers(context.Background(), GameMagic, offer.CardQuery{Name: "Sol Ring"})
 	if err != nil || len(faults) != 0 {
 		t.Fatalf("faults=%+v err=%v", faults, err)
+	}
+}
+
+type stubLibrary struct {
+	prints []cardmetadata.Print
+	err    error
+	calls  int
+}
+
+func (l *stubLibrary) CardPrints(context.Context, string) ([]cardmetadata.Print, error) {
+	l.calls++
+	return l.prints, l.err
+}
+
+func storeOffer(id, title, image string) offer.Offer {
+	return offer.Offer{
+		ID: id, CardName: title, Store: "store", URL: "https://store.test/" + id,
+		PriceAmount: "2800", PriceCurrency: "CLP", Image: image,
+		Metadata: map[string]string{"title": title},
+	}
+}
+
+// TestAStoreOfferBorrowsThePrintImage Covers the Gap the Probes Kept Showing:
+// a Store Publishes a Title and a Price, never an Image.
+func TestAStoreOfferBorrowsThePrintImage(t *testing.T) {
+	library := &stubLibrary{prints: []cardmetadata.Print{
+		{Edition: "c21", CollectorNumber: "263", Image: "https://images.test/c21-263.jpg"},
+	}}
+	service := Service{
+		SourcesByGame: map[Game][]OfferSource{GameMagic: {stubSource{name: "store.cl", items: []offer.Offer{
+			storeOffer("one", "Sol Ring [C21] #263", ""),
+			storeOffer("two", "Sol Ring — Near Mint", ""),
+			storeOffer("three", "Sol Ring [C21] #263", "https://own.test/picture.jpg"),
+		}}}},
+		PrintsByGame: map[Game]PrintLibrary{GameMagic: library},
+	}
+	items, _, err := service.FindCardOffers(context.Background(), GameMagic, offer.CardQuery{Name: "Sol Ring"})
+	if err != nil || len(items) != 3 {
+		t.Fatalf("items=%d err=%v", len(items), err)
+	}
+	found := map[string]string{}
+	for _, item := range items {
+		found[item.ID] = item.Image
+	}
+	if found["one"] != "https://images.test/c21-263.jpg" {
+		t.Errorf("the title named a printing and got %q", found["one"])
+	}
+	if found["two"] != "" {
+		t.Errorf("a title naming no edition invented %q", found["two"])
+	}
+	if found["three"] != "https://own.test/picture.jpg" {
+		t.Errorf("the source's own picture was overwritten with %q", found["three"])
+	}
+	if library.calls != 1 {
+		t.Errorf("asked the print list %d times for one card", library.calls)
+	}
+}
+
+// TestAGameWithoutAPrintListAsksNobody Keeps Pokemon and Yu-Gi-Oh out of Scryfall.
+func TestAGameWithoutAPrintListAsksNobody(t *testing.T) {
+	library := &stubLibrary{}
+	service := Service{
+		SourcesByGame: map[Game][]OfferSource{GameYuGiOh: {stubSource{name: "store.cl", items: []offer.Offer{
+			storeOffer("one", "Kuriboh", ""),
+		}}}},
+		PrintsByGame: map[Game]PrintLibrary{GameMagic: library},
+	}
+	if _, _, err := service.FindCardOffers(context.Background(), GameYuGiOh, offer.CardQuery{Name: "Kuriboh"}); err != nil {
+		t.Fatal(err)
+	}
+	if library.calls != 0 {
+		t.Fatalf("asked the Magic print list %d times for Yu-Gi-Oh", library.calls)
 	}
 }

@@ -14,7 +14,6 @@ import (
 	"golang.org/x/net/html"
 	"golang.org/x/text/unicode/norm"
 
-	"github.com/cangrejometralleta/muchi-api/internal/cardmetadata"
 	"github.com/cangrejometralleta/muchi-api/internal/offer"
 	"github.com/cangrejometralleta/muchi-api/internal/source"
 )
@@ -26,7 +25,6 @@ type SourceFetcher interface {
 type Client struct {
 	Fetcher SourceFetcher
 	BaseURL string
-	Prints  cardmetadata.PrintProvider
 	// ExcludeCommunity Drops the Offers Scry hosts itself: a Community Seller
 	// holds a page under the Scry Domain, never a Storefront of its own.
 	ExcludeCommunity bool
@@ -65,7 +63,6 @@ func (c Client) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer.
 	if c.ExcludeCommunity {
 		items = withoutCommunityOffers(items, base.Host)
 	}
-	items = c.applyPrintImages(ctx, name, items)
 	return items, nil
 }
 
@@ -145,91 +142,6 @@ func buildOffer(attrs map[string]string) (offer.Offer, error) {
 	identity := strings.Join([]string{item.Store, item.URL, item.VariantID}, "|")
 	item.ID = fmt.Sprintf("scry:%x", sha256.Sum256([]byte(identity)))
 	return item, nil
-}
-
-func (c Client) applyPrintImages(ctx context.Context, name string, items []offer.Offer) []offer.Offer {
-	if c.Prints == nil || len(items) == 0 {
-		return items
-	}
-	prints, err := c.Prints.CardPrints(ctx, name)
-	if err != nil {
-		return items
-	}
-	exact, editions := indexPrintImages(prints)
-	for index := range items {
-		items[index].Image = matchPrintImage(exact, editions, items[index].Metadata["title"], name)
-	}
-	return items
-}
-
-func indexPrintImages(prints []cardmetadata.Print) (map[string]string, map[string]string) {
-	exact := make(map[string]string, len(prints))
-	editions := make(map[string]string)
-	for _, print := range prints {
-		number := strings.ToLower(print.CollectorNumber)
-		if number == "" || print.Image == "" {
-			continue
-		}
-		// Una Tienda Escribe `[C21]` y otra `[Fallout]`: el Código y el
-		// Nombre Nombran la misma Edición, y Scryfall Trae los dos.
-		// Indexar ambos Deja que el Título Elija el Idioma que Prefiera.
-		for _, edition := range []string{strings.ToLower(print.Edition), strings.ToLower(print.EditionName)} {
-			if edition == "" {
-				continue
-			}
-			exact[edition+":"+number] = print.Image
-			// La primera Impresión que Scryfall Lista Representa a su
-			// Edición cuando la Oferta Calla el Número. Una Hermana
-			// Muestra la Carta; un Hueco no Muestra nada.
-			if _, seen := editions[edition]; !seen {
-				editions[edition] = print.Image
-			}
-		}
-	}
-	return exact, editions
-}
-
-// matchPrintImage Finds the Image for whatever Shape a Store Chose to Write.
-// Every Store Writes its own: `[C21] #263`, `| C20`, `(C19 #221)`,
-// `[C14-270]`, `[MKC - 237]`, `- 214 -`. Guessing the Shape Needs one Rule
-// per Store; Asking instead which Word *is* an Edition Scryfall Listed for
-// this Card Needs none, and Never Invents one.
-func matchPrintImage(exact, editions map[string]string, title, name string) string {
-	words := titleWords(strings.TrimPrefix(strings.ToLower(title), strings.ToLower(name)))
-	edition := longestEdition(words, editions)
-	if edition == "" {
-		return ""
-	}
-	// Every numeric Word is a Candidate Number, and a wrong Guess Costs
-	// nothing: only a Pair the Print List Confirms Wins. When none does,
-	// the Edition alone Answers with its first Impresión.
-	for _, word := range words {
-		if image := exact[edition+":"+word]; image != "" {
-			return image
-		}
-	}
-	return editions[edition]
-}
-
-var wordPattern = regexp.MustCompile(`[\p{L}\p{N}★]+`)
-
-func titleWords(title string) []string {
-	return wordPattern.FindAllString(title, -1)
-}
-
-// longestEdition Prefers `modern horizons 2` over a bare `2`, so a Name of
-// several Words Wins against a Fragment of itself.
-func longestEdition(words []string, editions map[string]string) string {
-	const longestEditionName = 6
-	for length := longestEditionName; length >= 1; length-- {
-		for start := 0; start+length <= len(words); start++ {
-			candidate := strings.Join(words[start:start+length], " ")
-			if _, known := editions[candidate]; known {
-				return candidate
-			}
-		}
-	}
-	return ""
 }
 
 // SourceName Identifies this Provider the Way the Health Report Names it.

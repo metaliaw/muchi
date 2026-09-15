@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/cangrejometralleta/muchi-api/internal/cardmetadata"
 	"github.com/cangrejometralleta/muchi-api/internal/offer"
 )
 
@@ -34,6 +35,11 @@ type OfferSource interface {
 	FindOffers(context.Context, offer.CardQuery) ([]offer.Offer, error)
 	// SourceName Lets a Failure Say which Source Failed.
 	SourceName() string
+}
+
+// PrintLibrary Lists the Printings of a Card, each with its Image.
+type PrintLibrary interface {
+	CardPrints(context.Context, string) ([]cardmetadata.Print, error)
 }
 
 // StockChecker Verifies availability using https://schema.org/availability.

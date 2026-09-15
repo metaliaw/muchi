@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cangrejometralleta/muchi-api/internal/cardmetadata"
 	"github.com/cangrejometralleta/muchi-api/internal/offer"
 )
 
@@ -28,6 +29,9 @@ type Service struct {
 	MaxCards          int
 	MaxQuantity       int
 	SuspiciousPercent int
+	// PrintsByGame Lends a Card its Printings. Only a Game with a Catalog of
+	// Images Appears here; the rest Keep whatever Image their Source Sent.
+	PrintsByGame map[Game]PrintLibrary
 }
 
 func (s Service) CreateSearch(ctx context.Context, key string, input CreateInput) (Job, error) {
@@ -83,11 +87,55 @@ func (s Service) collectOffers(ctx context.Context, game Game, query offer.CardQ
 		return nil, faults, err
 	}
 	items = offer.NameCards(offer.DeduplicateOffers(items))
+	items = s.applyPrintImages(ctx, game, query.Name, items)
 	items = offer.MarkSuspicious(items, s.SuspiciousPercent, query)
 	if err == nil {
 		s.saveOfferCache(ctx, key, items)
 	}
 	return items, faults, nil
+}
+
+// applyPrintImages Gives an Offer the Picture of the Printing its Title Names.
+// A Store Publishes a Title and a Price, not an Image; the Printing List has
+// the Image and the Title Says which Printing. Only an Offer Arriving without
+// one is Filled: a Source that Sent its own Picture Knows better.
+func (s Service) applyPrintImages(ctx context.Context, game Game, name string, items []offer.Offer) []offer.Offer {
+	library, found := s.PrintsByGame[game]
+	if !found || library == nil || !anyImageMissing(items) {
+		return items
+	}
+	prints, err := library.CardPrints(ctx, name)
+	if err != nil {
+		return items
+	}
+	index := cardmetadata.IndexPrints(prints)
+	if index.Empty() {
+		return items
+	}
+	for position := range items {
+		if items[position].Image == "" {
+			items[position].Image = index.ImageFor(readOfferTitle(items[position]), name)
+		}
+	}
+	return items
+}
+
+// readOfferTitle Prefers the Title the Store Published, because the Edition
+// Lives there and not always in the Card Name.
+func readOfferTitle(item offer.Offer) string {
+	if title := item.Metadata["title"]; title != "" {
+		return title
+	}
+	return item.CardName
+}
+
+func anyImageMissing(items []offer.Offer) bool {
+	for _, item := range items {
+		if item.Image == "" {
+			return true
+		}
+	}
+	return false
 }
 
 func queryGameSources(ctx context.Context, provider Provider, hasProvider bool, sources []OfferSource, query offer.CardQuery) ([]offer.Offer, []SourceFault, error) {
