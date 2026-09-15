@@ -92,6 +92,8 @@ def build_offer(offer: SearchOffer, muchi_dolar: int,
 # Carta se ordena, se cuenta y se premia por separado.
 MATCH_EXACT = "exact"
 MATCH_INCLUDES = "includes"
+POKEMON_FUNCTION_FIELDS = ("functional_key", "functional_id", "card_function")
+POKEMON_TYPE_FIELDS = ("pokemon_type", "type")
 
 
 # El Gemelo de `offer.MatchesCard` de muchi-api. La API ya filtró con ella; el
@@ -124,14 +126,30 @@ def follows_code(title: str, opening: str) -> bool:
     return bool(tail) and any(character.isdigit() for character in tail[0])
 
 
-def read_card_type(offer: SearchOffer, asked: str, match: str) -> str:
+def read_metadata_value(offer: SearchOffer, fields: tuple[str, ...]) -> str:
+    """Lee la primera Identidad no vacía publicada en Metadata."""
+    return next((str(offer.metadata.get(field) or "").strip().lower()
+                 for field in fields if offer.metadata.get(field)), "")
+
+
+def read_card_type(offer: SearchOffer, asked: str, match: str,
+                   game: str = "") -> str:
     """El Tipo de Carta al que Pertenece una Oferta.
 
-    En `exact` la Carta es la que se Pidió: sus Impresiones son la misma Carta
-    y compiten entre ellas. En `includes` cada Título es una Carta distinta.
+    La API puede Nombrar la Carta funcional: sus Ediciones e Impresiones
+    comparten esa Identidad. Sin ella, `exact` usa la Carta pedida e `includes`
+    conserva cada Título distinto.
     """
+    base = offer.card_key or asked.strip().lower()
+    if game == "pokemon":
+        function = read_metadata_value(offer, POKEMON_FUNCTION_FIELDS)
+        kind = function or read_metadata_value(offer, POKEMON_TYPE_FIELDS)
+        if kind:
+            return f"{base}|{kind}"
+    if offer.card_key:
+        return base
     if match == MATCH_INCLUDES:
-        return offer.card_key or offer.card_name.strip().lower()
+        return offer.card_name.strip().lower()
     return asked.strip().lower()
 
 
@@ -205,6 +223,7 @@ def build_results(items: tuple[SearchItem, ...], muchi_dolar: int,
     offers: list[SearchOffer] = []
     positions: dict[int, int] = {}
     types: dict[int, str] = {}
+    labels: dict[int, str] = {}
     notices = []
     for item in items:
         if item.status == "source_error":
@@ -220,8 +239,10 @@ def build_results(items: tuple[SearchItem, ...], muchi_dolar: int,
                             "item_position": item.position,
                             "text": name_fallen_sources(item.name, item.faults)})
         positions.update((id(offer), item.position) for offer in item.offers)
-        types.update((id(offer), read_card_type(offer, item.name, match))
+        types.update((id(offer), read_card_type(offer, item.name, match, item.game))
                      for offer in item.offers)
+        labels.update((id(offer), read_metadata_value(offer, POKEMON_TYPE_FIELDS))
+                      for offer in item.offers if item.game == "pokemon")
         offers.extend(item.offers)
 
     offers = order_by_card_type(offers, types)
@@ -231,6 +252,10 @@ def build_results(items: tuple[SearchItem, ...], muchi_dolar: int,
         row = build_offer(offer, muchi_dolar, verified)
         row["item_position"] = positions[id(offer)]
         row["card_type"] = types[id(offer)]
+        kind = labels.get(id(offer), "")
+        row["card_label"] = (f"{offer.card_name} · {kind.title()}"
+                             if kind else offer.card_name)
+        # El Front conserva esta Decisión; no vuelve a comparar Precios.
         row["best"] = id(offer) in best
         rows.append(row)
     prices = [price for price in

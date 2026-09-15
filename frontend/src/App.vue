@@ -64,6 +64,7 @@ function hashSearch(id) {
 }
 
 const showSponsor = computed(() => sponsorReady.value && hashSearch(searchId.value) % 4 === 0)
+const advertiseSections = computed(() => match.value === 'includes' || game.value === 'pokemon')
 
 const placeholder = computed(() => {
   if (unavailable.value) return 'No hay Ofertas recibidas para mostrar.'
@@ -272,7 +273,7 @@ onUnmounted(stopPolling)
         @cancel="cancel"
       >
         <SponsorSpot
-          v-if="showSponsor || !googleReady"
+          v-if="(showSponsor || !googleReady) && (!advertiseSections || !offers.length)"
           :key="`promo-${searchId}`"
           :searching="!state.done"
           :sponsor-name="showSponsor ? config.sponsor_name : ''"
@@ -280,7 +281,7 @@ onUnmounted(stopPolling)
           :sponsor-url="showSponsor ? config.sponsor_url : ''"
         />
         <AdSpot
-          v-else
+          v-else-if="!advertiseSections || !offers.length"
           :key="`google-${searchId}`"
           :environment="config.environment"
           :client="config.adsense_client"
@@ -291,8 +292,27 @@ onUnmounted(stopPolling)
       <OfferList
         v-if="state" :items="items" :offers="offers" :summary="summary"
         :notices="notices" :placeholder="placeholder"
+        :advertise-groups="advertiseSections"
         @look="lookAtCard"
-      />
+      >
+        <template #advertisement="{ group }">
+          <SponsorSpot
+            v-if="showSponsor || !googleReady"
+            :key="`promo-${searchId}-${group.card}`"
+            :searching="!state.done"
+            :sponsor-name="showSponsor ? config.sponsor_name : ''"
+            :sponsor-text="showSponsor ? config.sponsor_text : ''"
+            :sponsor-url="showSponsor ? config.sponsor_url : ''"
+          />
+          <AdSpot
+            v-else
+            :key="`google-${searchId}-${group.card}`"
+            :environment="config.environment"
+            :client="config.adsense_client"
+            :slot="config.adsense_slot"
+          />
+        </template>
+      </OfferList>
 
       <CartPanel v-if="offers.length" :search-id="searchId" :match="match" />
       <SourcesPanel @nerd="sayNerd" />

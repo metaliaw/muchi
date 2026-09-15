@@ -17,27 +17,13 @@ export function replacePositions(current, incoming) {
 /** El Tipo de Carta al que pertenece una Fila. El BFF ya lo nombró. */
 const cardTypeOf = (row) => row.card_type || row.card_name || ''
 
-/** Marca la más barata de cada Tipo de Carta y cuenta lo acumulado hasta ahora.
- *
- * Una sola Ganadora para toda la Página premiaría al Linkuriboh de cien Pesos
- * por encima del Kuriboh que se pidió: son Cartas distintas y sus Precios no
- * se comparan. Cada Tipo corona la suya.
- */
+/** Cuenta lo acumulado sin reemplazar la Ganadora validada por el BFF. */
 export function summarizeOffers(rows) {
-  const cheapest = new Map()
-  rows.forEach((row) => {
-    row.best = false
-    if (row.suspicious || row.stock_status === 'unavailable' || row.price_clp == null) return
-    const card = cardTypeOf(row)
-    const best = cheapest.get(card)
-    if (!best || row.price_clp < best.price_clp) cheapest.set(card, row)
-  })
-  cheapest.forEach((row) => { row.best = true })
   const prices = rows.filter((row) => row.price_clp != null).map((row) => row.price_clp)
   return {
     lowest_clp: prices.length ? Math.min(...prices) : null,
     offers: rows.length,
-    cards: cheapest.size || new Set(rows.map(cardTypeOf)).size,
+    cards: new Set(rows.map(cardTypeOf)).size,
     stores: new Set(rows.map((row) => row.store)).size,
   }
 }
@@ -47,7 +33,9 @@ export function groupByCardType(rows) {
   const groups = new Map()
   rows.forEach((row) => {
     const card = cardTypeOf(row)
-    if (!groups.has(card)) groups.set(card, { card, name: row.card_name, rows: [] })
+    if (!groups.has(card)) {
+      groups.set(card, { card, name: row.card_label || row.card_name, rows: [] })
+    }
     groups.get(card).rows.push(row)
   })
   return [...groups.values()]
