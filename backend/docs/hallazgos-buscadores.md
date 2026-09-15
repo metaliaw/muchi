@@ -12,9 +12,12 @@ de ese texto la carta, la edición, la imagen y el grupo de precios comparables.
 Cada deducción que se equivoca produce un defecto distinto, y varios se tapaban
 entre sí.
 
-El front aporta menos hallazgos y todos derivan del mismo hecho: una búsqueda
-ancha trae cartas distintas, no variantes de una. Ordenar, coronar y comprar
-sobre una lista mezclada deja de tener sentido apenas eso ocurre.
+Este documento cubre la API. Los hallazgos del front viven en su propio
+repositorio, porque allá está el código que los explica y allá envejecerían mal
+si se copiaran acá: `docs/hallazgos-buscadores.md` de
+[metaliaw/muchi](https://github.com/metaliaw/muchi). Los cinco nacen de un cambio
+de esta API —`match=includes` trae cartas distintas, no variantes de una— y esa
+sección los enumera.
 
 Este documento registra qué se encontró, qué lo cerró y qué queda abierto. El
 modelo de identidad que lo sustenta está en
@@ -232,66 +235,6 @@ El número a mano en `search-providers-vN` es la única parte que puede decir «
 ya no se calcula igual». **Subirlo es obligatorio cada vez que cambia una regla
 que altera las ofertas**, aunque no cambie `config/stores.yaml`.
 
-## Hallazgos en el Front
-
-Los hallazgos del front viven en `metaliaw/muchi`. Se registran aquí porque todos
-nacen de un cambio en esta API: `match=includes` trae cartas distintas, no
-variantes de una.
-
-`server/presenter.py` decide y `web/src/search.js` es su gemelo del otro lado de
-la frontera; el BFF manda una página por ciclo y el front acumula, así que la
-misma decisión está escrita dos veces.
-
-| ID | Hallazgo | Estado |
-| --- | --- | --- |
-| F1 | Una sola «más barata» para toda la página | Cerrado `a1bc9d8` |
-| F2 | El carrito compraba la carta equivocada | Cerrado `a1bc9d8` |
-| F3 | Agrupar por texto parte una carta en varias | Cerrado `57e571e` |
-| F4 | Nadie sabía que faltaba una tienda | Cerrado `b972a65` |
-| F5 | La copia del contrato llevaba 130 líneas de atraso | Cerrado `03a4d92` |
-
-### F1. Una sola «más barata» para toda la página
-
-`order_offers` declaraba en su docstring que mezclaba todas las cartas, y
-`pick_cheapest` coronaba una sola oferta para toda la respuesta. Con derivados, un
-`Linkuriboh` de 100 ganaba sobre el `Kuriboh` de 900 que se había pedido.
-
-Cada tipo de carta corona la suya, y la vista los separa con encabezado cuando hay
-más de uno.
-
-### F2. El carrito compraba la carta equivocada
-
-`build_cart` agrupaba por el nombre pedido y dejaba entrar toda oferta del ítem.
-Sobre la misma búsqueda, el optimizador armaba un carrito de 4700 con un
-`Winged Kuriboh LV9` en vez de uno de 5000 con el `Kuriboh` pedido.
-
-Los derivados son para mirar, no para comprar de a tres: en `includes` el carrito
-vuelve a la carta pedida, filtrando con el gemelo de `offer.MatchesCard`.
-
-### F3. Agrupar por texto parte una carta en varias
-
-`read_card_type` bajaba el título a minúsculas y lo usaba como carta. El front
-estaba resolviendo con texto una pregunta que solo la API puede responder, porque
-es la que conoce las reglas de calce. Ahora lee `card_key` (B4) y cae al título
-cuando viene vacía, para tolerar un despliegue desfasado entre las dos puntas.
-
-### F4. Nadie sabía que faltaba una tienda
-
-La API ya decía qué fuente se había caído (B8) y el front no lo leía. Una búsqueda
-con una tienda menos llegaba `found` con sus ofertas y se veía completa.
-
-La vista no cambió: `notices` ya existía y ya se dibujaba. Faltaba llenarlo. El
-front se queda con el nombre de la fuente y descarta la razón, porque la razón
-trae el cuerpo de la respuesta.
-
-### F5. La copia del contrato llevaba 130 líneas de atraso
-
-`docs/api/openapi.yaml` del front declara en su primera línea que es una copia y
-que se sincroniza desde aquí. Le faltaban `/supported-games`, la paginación de
-resultados, `match`, `card_key`, `faults` y `SourceFault`, y seguía declarando
-`stores_only` como requerida. Una copia que envejece en silencio es peor que no
-tenerla.
-
 ## Lo que Queda Abierto
 
 Ordenado por lo que destraba a lo demás.
@@ -312,11 +255,8 @@ Ordenado por lo que destraba a lo demás.
    `Jumpseller pagination repeated products` tras unos 85 segundos. El contador
    sube antes del calce, así que no lo provoca ninguna regla de comparación. Desde
    B8 al menos se ve en `faults`.
-5. **Ningún `deploy.sh` corre las pruebas**, en ninguno de los dos repositorios.
-   El guardián existe y hay que llamarlo a mano.
-6. **El front no tiene runner de JS.** `web/src/search.js` es el gemelo de
-   `server/presenter.py` y solo el lado Python está probado. Nada impide que los
-   gemelos deriven, como derivaron las tres copias de B3.
+5. **`deploy.sh` no corre las pruebas.** `./build.sh` existe, pasa y valida, pero
+   ningún `deploy-*.sh` lo llama: hay que hacerlo a mano antes de desplegar.
 
 ## Qué Dejó Esta Ronda como Método
 
@@ -329,3 +269,9 @@ Ordenado por lo que destraba a lo demás.
   y el de producción no coincidían.
 - **Desplegar el consumidor antes que el contrato** cuando se retira un campo, por
   `DisallowUnknownFields`.
+
+## Ver También
+
+Los hallazgos del front —cómo se ordenan, coronan y compran las ofertas que esta
+API devuelve— están en `docs/hallazgos-buscadores.md` de
+[metaliaw/muchi](https://github.com/metaliaw/muchi).
