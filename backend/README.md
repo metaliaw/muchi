@@ -20,6 +20,9 @@ combinan agregadores y tiendas desde el YAML, cómo se elige cada adaptador y c�
 se tratan tiempos y duplicados.
 La [identidad de cartas entre juegos y ediciones](docs/identidad-cartas-juegos-ediciones.md)
 describe qué identifica una búsqueda, una impresión y una variante comercial.
+Los [hallazgos en los buscadores](docs/hallazgos-buscadores.md) registran los
+defectos encontrados en la costura entre el título que publica una tienda y la
+carta que el código deduce de él, con lo que queda abierto.
 
 Las listas Moxfield se resuelven automáticamente por la API v3 a partir de cada
 `lists[].url`. Para agregar una tienda, define `name`, `enabled: true` y sus listas
