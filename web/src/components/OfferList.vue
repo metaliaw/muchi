@@ -1,6 +1,6 @@
 <script setup>
 /** Las Ofertas, agrupadas por Tipo de Carta y por Precio dentro de cada una. */
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { formatAmount, formatClp } from '../api.js'
 import { groupByCardType } from '../search.js'
 
@@ -22,11 +22,38 @@ const props = defineProps({
   summary: { type: Object, default: null },
   notices: { type: Array, default: () => [] },
   placeholder: { type: String, default: '' },
+  advertiseGroups: { type: Boolean, default: false },
+})
+
+const edition = ref('')
+const editions = computed(() => [...new Set(props.offers
+  .map((offer) => offer.edition)
+  .filter(Boolean))].sort())
+const editionOffers = computed(() => edition.value
+  ? props.offers.filter((offer) => offer.edition === edition.value)
+  : props.offers)
+const variantOf = (offer) => {
+  const name = offer.card_name.toLowerCase()
+  if (name.includes('master ball pattern')) return 'master-ball'
+  if (name.includes('poke ball pattern')) return 'poke-ball'
+  return 'normal'
+}
+const variantNames = { normal: 'Normal', 'poke-ball': 'Poké Ball', 'master-ball': 'Master Ball' }
+const variant = ref('')
+const variants = computed(() => [...new Set(editionOffers.value.map(variantOf))])
+const visibleOffers = computed(() => variant.value
+  ? editionOffers.value.filter((offer) => variantOf(offer) === variant.value)
+  : editionOffers.value)
+watch(editions, (values) => {
+  if (edition.value && !values.includes(edition.value)) edition.value = ''
+})
+watch(variants, (values) => {
+  if (variant.value && !values.includes(variant.value)) variant.value = ''
 })
 
 // Un solo Tipo no es una Agrupación: mostrar un Encabezado para él sería
 // repetir el Nombre que ya está en cada Oferta.
-const groups = computed(() => groupByCardType(props.offers))
+const groups = computed(() => groupByCardType(visibleOffers.value))
 const grouped = computed(() => groups.value.length > 1)
 </script>
 
@@ -50,6 +77,23 @@ const grouped = computed(() => groups.value.length > 1)
     <p v-for="notice in notices" :key="notice.text"
        :class="notice.level === 'warning' ? 'mu-aviso' : 'mu-caption'">{{ notice.text }}</p>
 
+    <div v-if="editions.length > 1 || variants.length > 1" class="mu-filtros">
+      <label v-if="editions.length > 1" class="mu-filtro">
+        <span>Edición</span>
+        <select v-model="edition">
+          <option value="">Todas</option>
+          <option v-for="value in editions" :key="value" :value="value">{{ value }}</option>
+        </select>
+      </label>
+      <label v-if="variants.length > 1" class="mu-filtro">
+        <span>Variante</span>
+        <select v-model="variant">
+          <option value="">Todas</option>
+          <option v-for="value in variants" :key="value" :value="value">{{ variantNames[value] }}</option>
+        </select>
+      </label>
+    </div>
+
     <div v-if="offers.length" class="mu-fichas">
       <div class="mu-panel mu-ficha">
         <span class="mu-caption">Menor Observado</span>
@@ -67,9 +111,10 @@ const grouped = computed(() => groups.value.length > 1)
     </div>
 
     <template v-for="group in groups" :key="group.card">
-    <h2 v-if="grouped" class="mu-grupo">{{ group.name }}
+    <h2 v-if="grouped || advertiseGroups" class="mu-grupo">{{ group.name }}
       <span class="mu-caption">{{ group.rows.length }} Ofertas</span>
     </h2>
+    <slot v-if="advertiseGroups" name="advertisement" :group="group" />
     <article v-for="(offer, index) in group.rows" :key="`${offer.url}-${index}`"
              class="mu-panel mu-oferta" :class="{ mejor: offer.best }">
       <div class="mu-oferta-cab">
@@ -111,6 +156,9 @@ const grouped = computed(() => groups.value.length > 1)
 .mu-lista { margin-bottom: 14px; }
 .mu-lista h2 { margin-top: 0; }
 .mu-lista-fila { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.mu-filtros { display: flex; gap: 14px; flex-wrap: wrap; margin: 14px 0; }
+.mu-filtro { display: flex; align-items: center; gap: 8px; width: fit-content; font-weight: 700; }
+.mu-filtro select { min-width: 120px; padding: 7px 30px 7px 9px; border: 1px solid var(--mu-linea); border-radius: 4px; background: var(--mu-papel); color: var(--mu-tinta); font: inherit; }
 .mu-fichas { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 14px 0; }
 .mu-ficha { display: flex; flex-direction: column; gap: 4px; }
 .mu-ficha strong { font-size: 1.4rem; }
