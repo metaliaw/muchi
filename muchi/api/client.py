@@ -65,6 +65,16 @@ def order_offers(offers) -> tuple[SearchOffer, ...]:
     return tuple(sorted(offers, key=lambda offer: (offer.currency, offer.amount)))
 
 
+def read_faults(row: dict) -> tuple[str, ...]:
+    """Solo el Nombre de la Fuente. La Razon es para el Log, no para quien Busca."""
+    names = []
+    for fault in row.get("faults") or ():
+        name = str(fault.get("source") or "").strip()
+        if name and name not in names:
+            names.append(name)
+    return tuple(names)
+
+
 def build_results(reply: dict) -> SearchResults:
     ordered = sorted(reply["items"], key=lambda row: row["position"])
     items = tuple(SearchItem(
@@ -73,6 +83,7 @@ def build_results(reply: dict) -> SearchResults:
         error_message=row.get("error_message") or "",
         id=row["id"], position=row["position"], sequence=row["sequence"],
         game=row.get("game") or "",
+        faults=read_faults(row),
     ) for row in ordered)
     return SearchResults(items, reply["cursor"], reply["has_more"])
 
