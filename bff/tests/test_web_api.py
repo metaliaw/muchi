@@ -84,7 +84,7 @@ def test_read_search_orders_offers_and_marks_cheapest(client):
     amounts = [(offer["currency"], offer["amount"]) for offer in reply["offers"]]
     assert amounts == [("CLP", "10"), ("CLP", "1500"), ("CLP", "4000"), ("USD", "3")]
     best = [offer["store"] for offer in reply["offers"] if offer["best"]]
-    assert best == ["Otra"]
+    assert best == ["Dudosa"]
     assert reply["summary"] == {"lowest_clp": 10.0, "offers": 4, "stores": 4}
     assert reply["items"] == [
         {"id": "item-1", "position": 0, "sequence": 1,
@@ -98,14 +98,12 @@ def test_read_search_orders_offers_and_marks_cheapest(client):
     assert any("Black Lotus" in notice["text"] for notice in reply["notices"])
 
 
-def test_suspicious_offer_explains_itself_in_words(client):
+def test_suspicious_measure_is_disabled(client):
     http, _ = client
     reply = http.get("/api/searches/abc").json()
     dudosa = next(offer for offer in reply["offers"] if offer["store"] == "Dudosa")
-    assert "⚠ Precio bajo el 40% de la Mediana de su Moneda" in [
-        pill["text"] for pill in dudosa["pills"]
-    ]
-    assert dudosa["note"] and dudosa["action"] == "Verificar"
+    assert not dudosa["suspicious"]
+    assert dudosa["note"] == "" and dudosa["action"] == "Ver"
 
 
 def test_unverified_offers_show_no_stock_badge(client):
@@ -122,15 +120,24 @@ def test_unverified_offers_show_no_stock_badge(client):
                for pill in offer["pills"])
 
 
-def test_cart_skips_suspicious_and_converts_dollars(client):
+def test_cart_uses_low_prices_and_converts_dollars(client):
     http, _ = client
     plan = http.get("/api/searches/abc/cart?shipping=4000").json()
     assert plan["muchi_dolar"] == 1000
     assert plan["converted_offers"] == 1
-    # La Oferta sospechosa de 10 pesos no entra: el Carrito toma la de 1500.
-    assert plan["cards_cost"] == 3000
-    assert plan["total"] == 7000
+    assert plan["cards_cost"] == 20
+    assert plan["total"] == 4020
     assert plan["missing"] == ["Black Lotus"]
+
+
+def test_api_warning_is_ignored():
+    """La Bandera recibida se conserva fuera de la Presentación y el Carrito."""
+    items = (SearchItem("Sol Ring", 1, "found", (
+        build_offer(amount=Decimal("1000"), suspicious=True),
+        build_offer(store="Otra", amount=Decimal("1200")),
+    ), id="item-1", position=0, sequence=1, game="magic"),)
+    rows = presenter.build_results(items, 1000)["offers"]
+    assert all(not row["suspicious"] for row in rows)
 
 
 def test_create_search_parses_the_decklist(client):

@@ -6,7 +6,6 @@ mismo modo, sea cual sea la Interfaz que los consuma.
 """
 from __future__ import annotations
 
-import re
 from decimal import Decimal
 
 from muchi.mtg import optimizer, treatment
@@ -17,21 +16,11 @@ from muchi.mtg.search import SearchItem, SearchOffer, SearchState
 # scry.cl indexan Precios, no Inventario. No es Ausencia de Carta.
 STOCK_LABELS = {"available": "En Stock", "unavailable": "Agotado",
                 "unknown": "No confirmado"}
-SUSPICIOUS_REASON = re.compile(r"price_below_(\d+)_percent_median")
-SUSPICIOUS_NOTE = ("Muy por debajo de las otras Ofertas; verifica la Variante "
-                   "y el Precio final.")
 # Los Acabados van en Dorado; el resto del Tratamiento, en Gris.
 FOIL_TAGS = ("Foil", "Etched")
 # El Muchi Dólar solo convierte Dólares. Una Oferta en otra Moneda se muestra
 # con su Valor original y queda fuera del Carrito, porque nadie sabe cuánto es.
 MUCHI_DOLAR_CURRENCY = "USD"
-
-
-def read_suspicious_note(reason: str) -> str:
-    """Traduce el Código de la API. Hoy solo emite uno; el resto pasa crudo."""
-    if match := SUSPICIOUS_REASON.fullmatch(reason):
-        return f"Precio bajo el {match[1]}% de la Mediana de su Moneda"
-    return reason or "Precio fuera de Rango"
 
 
 def convert_to_clp(offer: SearchOffer, muchi_dolar: int) -> Decimal | None:
@@ -54,9 +43,6 @@ def build_pills(offer: SearchOffer, verified: bool = True) -> list[dict]:
         label = STOCK_LABELS.get(offer.stock_status, offer.stock_status)
         pills.append({"kind": "tienda" if offer.stock_status == "available" else "cond",
                       "text": label})
-    if offer.suspicious:
-        pills.append({"kind": "cond",
-                      "text": f"⚠ {read_suspicious_note(offer.suspicious_reason)}"})
     return pills
 
 
@@ -73,9 +59,10 @@ def build_offer(offer: SearchOffer, muchi_dolar: int,
         "stock_status": offer.stock_status,
         "stock_label": (STOCK_LABELS.get(offer.stock_status, offer.stock_status)
                         if verified else ""),
-        "suspicious": offer.suspicious,
-        "note": SUSPICIOUS_NOTE if offer.suspicious else "",
-        "action": "Verificar" if offer.suspicious else "Ver",
+        # El Contrato conserva el Campo mientras la Medición está desactivada.
+        "suspicious": False,
+        "note": "",
+        "action": "Ver",
         "treatment": treatment.build_treatment(offer),
         "pills": build_pills(offer, verified),
         # Lo que hace falta para pedir la Imagen de esta Impresion y no otra.
@@ -174,9 +161,9 @@ def order_by_card_type(offers: list[SearchOffer], types: dict[int, str]) -> list
 
 
 def pick_cheapest(offers: list[SearchOffer], muchi_dolar: int) -> SearchOffer | None:
-    """La Oferta más barata que Muchi recomendaría: sin Alertas ni Agotados."""
+    """La Oferta más barata que Muchi recomendaría: sin Agotados."""
     eligible = [offer for offer in offers
-                if not offer.suspicious and offer.stock_status != "unavailable"
+                if offer.stock_status != "unavailable"
                 and convert_to_clp(offer, muchi_dolar) is not None]
     return min(eligible, key=lambda offer: convert_to_clp(offer, muchi_dolar),
                default=None)
@@ -295,7 +282,7 @@ def build_cart(items: tuple[SearchItem, ...], shipping: int, muchi_dolar: int,
     converted = 0
     for item in items:
         for offer in item.offers:
-            if offer.stock_status == "unavailable" or offer.suspicious:
+            if offer.stock_status == "unavailable":
                 continue
             if match == MATCH_INCLUDES and not names_same_card(offer.card_name, item.name):
                 continue
