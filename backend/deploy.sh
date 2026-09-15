@@ -12,6 +12,9 @@ case "${1:-}" in
 	;;
 esac
 
+./build.sh
+export MUCHI_BUILD_VERIFIED=1
+
 ./deploy-infra.sh "$@"
 ./deploy-worker.sh "$@"
 ./deploy-sweeper.sh "$@"

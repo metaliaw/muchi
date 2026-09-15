@@ -44,8 +44,15 @@ prepare_deploy() {
 	if ! "$DRY_RUN"; then
 		[ -n "$(gcloud auth list --filter=status:ACTIVE --format='value(account)')" ] || fail_deploy 'Ejecuta gcloud auth login.'
 	fi
+	verify_deploy
 	printf '🐱 %s\nProyecto: %s\nRegión: %s\n' "$DEPLOY_COMPONENT" "$PROJECT" "$REGION"
 	if "$DRY_RUN"; then printf '%s\n' '⚠️ Vista Previa: GCP sin Cambios'; fi
+}
+
+verify_deploy() {
+	[ "${MUCHI_BUILD_VERIFIED:-}" = 1 ] && return
+	./build.sh
+	export MUCHI_BUILD_VERIFIED=1
 }
 
 cloud() {
