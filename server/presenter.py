@@ -82,6 +82,7 @@ def build_offer(offer: SearchOffer, muchi_dolar: int,
         "language": offer.language,
         "edition": offer.edition,
         "finish": offer.finish,
+        "locations": list(offer.locations),
         "metadata": offer.metadata,
     }
 
