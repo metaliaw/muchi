@@ -45,10 +45,11 @@ func (w Worker) processNext(ctx context.Context) error {
 	go w.renewLease(work, item.ID)
 
 	query := offer.CardQuery{Name: item.NormalizedName, Match: item.Match}
-	items, sourceErr := w.Service.collectOffers(work, item.Game, query)
+	items, faults, sourceErr := w.Service.collectOffers(work, item.Game, query)
 	if item.VerifyStock {
 		items = w.verifyStocks(work, items)
 	}
+	item.Faults = faults
 	item = applyItemResult(item, items, sourceErr)
 	return w.Store.CompleteSearchItem(ctx, item, items)
 }

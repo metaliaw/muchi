@@ -33,7 +33,7 @@ func TestMatchModeProbe(t *testing.T) {
 	}
 	for _, mode := range []offer.MatchMode{offer.MatchExact, offer.MatchIncludes} {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-		items, err := service.FindCardOffers(ctx, search.GameYuGiOh, offer.CardQuery{Name: "Kuriboh", Match: mode})
+		items, _, err := service.FindCardOffers(ctx, search.GameYuGiOh, offer.CardQuery{Name: "Kuriboh", Match: mode})
 		cancel()
 		if err != nil {
 			t.Fatalf("mode=%s err=%v", mode, err)

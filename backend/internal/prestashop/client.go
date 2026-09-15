@@ -206,3 +206,6 @@ func digits(value string) string {
 	}
 	return result.String()
 }
+
+// SourceName Identifies this Store the Way the Health Report Names it.
+func (c Client) SourceName() string { return c.Domain }

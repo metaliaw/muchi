@@ -18,6 +18,8 @@ func (s stubProvider) Search(context.Context, offer.CardQuery) ([]offer.Offer, e
 	return s.items, s.err
 }
 
+func (s stubProvider) SourceName() string { return "stub" }
+
 type stubCache struct {
 	items []offer.Offer
 	found bool
@@ -37,7 +39,7 @@ func TestFindProvider(t *testing.T) {
 	wanted := offer.Offer{ID: "one", Store: "store", URL: "https://store.test", PriceAmount: "10.00", PriceCurrency: "USD"}
 	cache := &stubCache{}
 	service := Service{Providers: map[Game]Provider{GameMagic: stubProvider{items: []offer.Offer{wanted}}}, Cache: cache}
-	items, err := service.FindCardOffers(context.Background(), GameMagic, offer.CardQuery{Name: "Sol Ring"})
+	items, _, err := service.FindCardOffers(context.Background(), GameMagic, offer.CardQuery{Name: "Sol Ring"})
 	if err != nil || len(items) != 1 || !cache.saved {
 		t.Fatalf("FindCardOffers() items=%v saved=%v err=%v", items, cache.saved, err)
 	}
@@ -45,7 +47,7 @@ func TestFindProvider(t *testing.T) {
 
 func TestFindProviderRejectsUnconfiguredGame(t *testing.T) {
 	service := Service{Providers: map[Game]Provider{}}
-	if _, err := service.FindCardOffers(context.Background(), GamePokemon, offer.CardQuery{Name: "Charizard"}); !errors.Is(err, ErrInvalid) {
+	if _, _, err := service.FindCardOffers(context.Background(), GamePokemon, offer.CardQuery{Name: "Charizard"}); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("FindCardOffers() error=%v", err)
 	}
 }
@@ -88,11 +90,53 @@ func TestCacheSeparatesMatchModes(t *testing.T) {
 		Cache:     recorder, CacheNamespace: "ns:",
 	}
 	for _, mode := range []offer.MatchMode{offer.MatchExact, offer.MatchIncludes} {
-		if _, err := service.FindCardOffers(context.Background(), GameMagic, offer.CardQuery{Name: "Sol Ring", Match: mode}); err != nil {
+		if _, _, err := service.FindCardOffers(context.Background(), GameMagic, offer.CardQuery{Name: "Sol Ring", Match: mode}); err != nil {
 			t.Fatal(err)
 		}
 	}
 	if len(recorder.keys) != 2 || recorder.keys[0] == recorder.keys[1] {
 		t.Fatalf("cache keys=%v, want one per mode", recorder.keys)
+	}
+}
+
+type stubSource struct {
+	name  string
+	items []offer.Offer
+	err   error
+}
+
+func (s stubSource) FindOffers(context.Context, offer.CardQuery) ([]offer.Offer, error) {
+	return s.items, s.err
+}
+
+func (s stubSource) SourceName() string { return s.name }
+
+// TestAPartialAnswerNamesWhatFell Covers the Case that Cost two Hand Probes:
+// one Store Falls, another Answers, and the Reply Looks complete.
+func TestAPartialAnswerNamesWhatFell(t *testing.T) {
+	wanted := offer.Offer{ID: "one", Store: "store", URL: "https://store.test", PriceAmount: "10", PriceCurrency: "CLP"}
+	service := Service{SourcesByGame: map[Game][]OfferSource{GameMagic: {
+		stubSource{name: "good.cl", items: []offer.Offer{wanted}},
+		stubSource{name: "broken.cl", err: errors.New("pagination repeated products")},
+	}}}
+	items, faults, err := service.FindCardOffers(context.Background(), GameMagic, offer.CardQuery{Name: "Sol Ring"})
+	if err != nil || len(items) != 1 {
+		t.Fatalf("items=%d err=%v", len(items), err)
+	}
+	if len(faults) != 1 || faults[0].Source != "broken.cl" || faults[0].Reason == "" {
+		t.Fatalf("faults=%+v, want broken.cl named", faults)
+	}
+}
+
+// TestAFullAnswerNamesNobody Keeps the Field from Crying Wolf.
+func TestAFullAnswerNamesNobody(t *testing.T) {
+	service := Service{SourcesByGame: map[Game][]OfferSource{GameMagic: {
+		stubSource{name: "good.cl", items: []offer.Offer{{
+			ID: "one", Store: "store", URL: "https://store.test", PriceAmount: "10", PriceCurrency: "CLP",
+		}}},
+	}}}
+	_, faults, err := service.FindCardOffers(context.Background(), GameMagic, offer.CardQuery{Name: "Sol Ring"})
+	if err != nil || len(faults) != 0 {
+		t.Fatalf("faults=%+v err=%v", faults, err)
 	}
 }

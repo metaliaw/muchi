@@ -55,20 +55,20 @@ func (s Service) CancelSearch(ctx context.Context, id, key string) (Job, error) 
 	return s.Searches.CancelSearch(ctx, id, key, hash)
 }
 
-func (s Service) FindCardOffers(ctx context.Context, game Game, query offer.CardQuery) ([]offer.Offer, error) {
+func (s Service) FindCardOffers(ctx context.Context, game Game, query offer.CardQuery) ([]offer.Offer, []SourceFault, error) {
 	query.Name = strings.TrimSpace(query.Name)
 	if query.Name == "" || !validGame(game) {
-		return nil, ErrInvalid
+		return nil, nil, ErrInvalid
 	}
 	return s.collectOffers(ctx, game, query)
 }
 
 // collectOffers Keys the Cache by Match Mode too: a wide Answer must never
 // Serve a narrow Question.
-func (s Service) collectOffers(ctx context.Context, game Game, query offer.CardQuery) ([]offer.Offer, error) {
+func (s Service) collectOffers(ctx context.Context, game Game, query offer.CardQuery) ([]offer.Offer, []SourceFault, error) {
 	key := s.CacheNamespace + string(game) + ":" + string(query.Match) + ":" + offer.NormalizeCard(query.Name)
 	if items, found := s.loadOfferCache(ctx, key); found {
-		return items, nil
+		return items, nil, nil
 	}
 	sources := s.SourcesByGame[game]
 	if len(sources) == 0 {
@@ -76,34 +76,41 @@ func (s Service) collectOffers(ctx context.Context, game Game, query offer.CardQ
 	}
 	provider, hasProvider := s.Providers[game]
 	if !hasProvider && len(sources) == 0 {
-		return nil, ErrInvalid
+		return nil, nil, ErrInvalid
 	}
-	items, err := queryGameSources(ctx, provider, hasProvider, sources, query)
+	items, faults, err := queryGameSources(ctx, provider, hasProvider, sources, query)
 	if err != nil && len(items) == 0 {
-		return nil, err
+		return nil, faults, err
 	}
 	items = offer.NameCards(offer.DeduplicateOffers(items))
 	items = offer.MarkSuspicious(items, s.SuspiciousPercent, query)
 	if err == nil {
 		s.saveOfferCache(ctx, key, items)
 	}
-	return items, nil
+	return items, faults, nil
 }
 
-func queryGameSources(ctx context.Context, provider Provider, hasProvider bool, sources []OfferSource, query offer.CardQuery) ([]offer.Offer, error) {
-	results := make([][]offer.Offer, 0, len(sources)+1)
-	errors := make([]error, 0, len(sources)+1)
+func queryGameSources(ctx context.Context, provider Provider, hasProvider bool, sources []OfferSource, query offer.CardQuery) ([]offer.Offer, []SourceFault, error) {
+	var items []offer.Offer
+	var faults []SourceFault
+	var lastErr error
 	if hasProvider {
-		items, err := provider.Search(ctx, query)
-		results = append(results, items)
-		errors = append(errors, err)
+		found, err := provider.Search(ctx, query)
+		items = append(items, found...)
+		if err != nil {
+			faults = append(faults, SourceFault{provider.SourceName(), err.Error()})
+			lastErr = err
+		}
 	}
 	if len(sources) > 0 {
-		items, err := querySources(ctx, sources, query)
-		results = append(results, items)
-		errors = append(errors, err)
+		found, storeFaults, err := querySources(ctx, sources, query)
+		items = append(items, found...)
+		faults = append(faults, storeFaults...)
+		if err != nil {
+			lastErr = err
+		}
 	}
-	return combineSources(results, errors)
+	return items, faults, lastErr
 }
 
 func (s Service) loadOfferCache(ctx context.Context, key string) ([]offer.Offer, bool) {
@@ -151,7 +158,7 @@ func HashPayload(value any) string {
 	return hex.EncodeToString(sum[:])
 }
 
-func querySources(ctx context.Context, sources []OfferSource, query offer.CardQuery) ([]offer.Offer, error) {
+func querySources(ctx context.Context, sources []OfferSource, query offer.CardQuery) ([]offer.Offer, []SourceFault, error) {
 	results := make([][]offer.Offer, len(sources))
 	errors := make([]error, len(sources))
 	turns := make(chan struct{}, maxConcurrentSources)
@@ -161,7 +168,7 @@ func querySources(ctx context.Context, sources []OfferSource, query offer.CardQu
 		go querySource(ctx, &group, turns, source, query, &results[index], &errors[index])
 	}
 	group.Wait()
-	return combineSources(results, errors)
+	return combineSources(sources, results, errors)
 }
 
 func querySource(ctx context.Context, group *sync.WaitGroup, turns chan struct{}, source OfferSource, query offer.CardQuery, items *[]offer.Offer, sourceErr *error) {
@@ -176,14 +183,18 @@ func querySource(ctx context.Context, group *sync.WaitGroup, turns chan struct{}
 	*items, *sourceErr = source.FindOffers(ctx, query)
 }
 
-func combineSources(results [][]offer.Offer, errors []error) ([]offer.Offer, error) {
+// combineSources Keeps every Failure by Name. A Source that Fell while others
+// Answered used to Vanish, and a partial Answer Looked exactly like a full one.
+func combineSources(sources []OfferSource, results [][]offer.Offer, errors []error) ([]offer.Offer, []SourceFault, error) {
 	var result []offer.Offer
+	var faults []SourceFault
 	var lastErr error
 	for index, items := range results {
 		if errors[index] != nil {
+			faults = append(faults, SourceFault{sources[index].SourceName(), errors[index].Error()})
 			lastErr = errors[index]
 		}
 		result = append(result, items...)
 	}
-	return result, lastErr
+	return result, faults, lastErr
 }

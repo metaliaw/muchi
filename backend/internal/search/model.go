@@ -55,6 +55,13 @@ type Options struct {
 	Match       offer.MatchMode `json:"match,omitempty"`
 }
 
+// SourceFault Names a Source that Failed while others Answered. Sin esto una
+// Respuesta incompleta se Ve igual que una completa.
+type SourceFault struct {
+	Source string `json:"source"`
+	Reason string `json:"reason"`
+}
+
 type CreateInput struct {
 	Game    Game        `json:"game"`
 	Cards   []CardInput `json:"cards"`
@@ -99,6 +106,9 @@ type Item struct {
 	StoresOnly     bool          `json:"-"`
 	// Match Travels with the Item because the Worker Reads it back from Storage.
 	Match offer.MatchMode `json:"match,omitempty"`
+	// Faults Name the Sources that Fell while others Answered. Sin ellos un
+	// Resultado incompleto Llega Marcado `found` y nadie lo Nota.
+	Faults []SourceFault `json:"faults,omitempty"`
 }
 
 type Result struct {

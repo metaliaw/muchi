@@ -26,11 +26,14 @@ type TaskQueue interface {
 // Provider Searches one Game through its configured external Catalog.
 type Provider interface {
 	Search(context.Context, offer.CardQuery) ([]offer.Offer, error)
+	SourceName() string
 }
 
 // OfferSource Finds Offers in one directly configured Store.
 type OfferSource interface {
 	FindOffers(context.Context, offer.CardQuery) ([]offer.Offer, error)
+	// SourceName Lets a Failure Say which Source Failed.
+	SourceName() string
 }
 
 // StockChecker Verifies availability using https://schema.org/availability.

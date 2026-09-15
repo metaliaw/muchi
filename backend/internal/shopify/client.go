@@ -122,3 +122,6 @@ func (c Client) CheckStock(ctx context.Context, item offer.Offer) (string, error
 	}
 	return "unknown", nil
 }
+
+// SourceName Identifies this Store the Way the Health Report Names it.
+func (c Client) SourceName() string { return c.Domain }

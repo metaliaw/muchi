@@ -115,11 +115,19 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [name, match, offers]
+                required: [name, match, offers, faults]
                 properties:
                   name: {type: string}
                   match: {$ref: "#/components/schemas/MatchMode"}
                   offers: {type: array, items: {$ref: "#/components/schemas/Offer"}}
+                  faults:
+                    type: array
+                    description: >-
+                      Sources that failed while others answered. Empty on a full
+                      answer; never absent, so a caller cannot forget to read it.
+                      A non-empty list means the offers are incomplete, and the
+                      answer is not cached.
+                    items: {$ref: "#/components/schemas/SourceFault"}
   /cards/metadata:
     get:
       parameters:
@@ -197,6 +205,12 @@ components:
             match:
               allOf: [{$ref: "#/components/schemas/MatchMode"}]
               default: exact
+    SourceFault:
+      type: object
+      required: [source, reason]
+      properties:
+        source: {type: string, description: The source as /v1/health/sources names it}
+        reason: {type: string}
     MatchMode:
       type: string
       enum: [exact, includes]

@@ -225,12 +225,19 @@ func (a API) findCardOffers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	name := r.URL.Query().Get("name")
-	items, err := a.Searches.FindCardOffers(r.Context(), game, offer.CardQuery{Name: name, Match: match})
+	items, faults, err := a.Searches.FindCardOffers(r.Context(), game, offer.CardQuery{Name: name, Match: match})
 	if err != nil {
 		a.writeError(w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"name": name, "match": match, "offers": items})
+	// `faults` Viaja aunque Venga vacío: un Campo que Aparece sólo cuando hay
+	// Problemas Enseña a no Mirarlo.
+	if faults == nil {
+		faults = []search.SourceFault{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"name": name, "match": match, "offers": items, "faults": faults,
+	})
 }
 
 func (a API) getHealth(w http.ResponseWriter, r *http.Request) {

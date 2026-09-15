@@ -102,3 +102,6 @@ func (c Client) fetchPage(ctx context.Context, path string) ([]byte, error) {
 	}
 	return c.Fetcher.FetchSource(ctx, c.Domain, "https://"+c.Domain+path)
 }
+
+// SourceName Identifies this Store the Way the Health Report Names it.
+func (c Client) SourceName() string { return c.Domain }

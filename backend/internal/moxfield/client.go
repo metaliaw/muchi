@@ -106,3 +106,6 @@ func (c *Client) fetchInventory(ctx context.Context, id string) ([]offer.Offer, 
 	}
 	return items, err
 }
+
+// SourceName Names the List, not the Store: one Store may Hold several.
+func (c *Client) SourceName() string { return c.StoreID + ":" + c.Label }

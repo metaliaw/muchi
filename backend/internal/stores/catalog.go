@@ -96,3 +96,6 @@ func formatPrice(value string, minor int) (string, error) {
 	point := len(digits) - minor
 	return digits[:point] + "." + digits[point:], nil
 }
+
+// SourceName Identifies this Store the Way the Health Report Names it.
+func (c Catalog) SourceName() string { return c.Domain }

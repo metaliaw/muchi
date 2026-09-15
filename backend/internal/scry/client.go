@@ -231,3 +231,11 @@ func longestEdition(words []string, editions map[string]string) string {
 	}
 	return ""
 }
+
+// SourceName Identifies this Provider the Way the Health Report Names it.
+func (c Client) SourceName() string {
+	if base, err := url.Parse(c.BaseURL); err == nil && base.Host != "" {
+		return base.Host
+	}
+	return c.BaseURL
+}
