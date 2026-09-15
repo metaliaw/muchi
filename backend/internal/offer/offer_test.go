@@ -21,7 +21,7 @@ func TestSelectOffers(t *testing.T) {
 		{ID: "middle", PriceAmount: "10.00", PriceCurrency: "USD"},
 		{ID: "high", PriceAmount: "11.00", PriceCurrency: "USD"},
 	}
-	items = MarkSuspicious(items, 30, CardQuery{Name: "Sol Ring"})
+	items = MarkSuspicious(NameCards(items), 30, CardQuery{Name: "Sol Ring"})
 	if !items[0].Suspicious || items[0].SuspiciousReason == "" {
 		t.Fatal("cheap offer was not marked suspicious")
 	}
@@ -153,7 +153,7 @@ func kuribohPrices() []Offer {
 
 // TestSuspicionJudgesEachCardApart Keeps a Starlight Rare from Condemning a Common.
 func TestSuspicionJudgesEachCardApart(t *testing.T) {
-	items := MarkSuspicious(kuribohPrices(), 40, CardQuery{Name: "Kuriboh", Match: MatchIncludes})
+	items := MarkSuspicious(NameCards(kuribohPrices()), 40, CardQuery{Name: "Kuriboh", Match: MatchIncludes})
 	flagged := []string{}
 	for _, item := range items {
 		if item.Suspicious {
@@ -170,7 +170,7 @@ func TestSuspicionStillCatchesAnOutlier(t *testing.T) {
 	items := append(kuribohPrices(), Offer{
 		ID: "wk-1", CardName: "Winged Kuriboh", PriceAmount: "1", PriceCurrency: "CLP",
 	})
-	items = MarkSuspicious(items, 40, CardQuery{Name: "Kuriboh", Match: MatchIncludes})
+	items = MarkSuspicious(NameCards(items), 40, CardQuery{Name: "Kuriboh", Match: MatchIncludes})
 	for _, item := range items {
 		if item.Suspicious != (item.ID == "wk-1") {
 			t.Errorf("offer %s suspicious=%t", item.ID, item.Suspicious)
@@ -186,7 +186,7 @@ func TestExactSearchComparesEveryPrinting(t *testing.T) {
 		{ID: "plain", CardName: "Kuriboh", PriceAmount: "1000", PriceCurrency: "CLP"},
 		{ID: "rare", CardName: "Kuriboh [LDS3-EN100]", PriceAmount: "1200", PriceCurrency: "CLP"},
 	}
-	items = MarkSuspicious(items, 40, CardQuery{Name: "Kuriboh", Match: MatchExact})
+	items = MarkSuspicious(NameCards(items), 40, CardQuery{Name: "Kuriboh", Match: MatchExact})
 	if !items[0].Suspicious {
 		t.Fatal("a ten-peso outlier survived a narrow search")
 	}

@@ -252,6 +252,13 @@ components:
       properties:
         id: {type: string}
         card_name: {type: string}
+        card_key:
+          type: string
+          description: >-
+            The card this offer is for, with the printing dropped and lowercased.
+            `Winged Kuriboh`, `LDS3-EN100 "Winged Kuriboh" Common` and
+            `Winged Kuriboh (PUR)` all answer `winged kuriboh`, so one card sold
+            by three sources groups as one. Group by this; show `card_name`.
         store: {type: string}
         price_amount: {type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$"}
         price_currency: {type: string, pattern: "^[A-Z]{3}$"}

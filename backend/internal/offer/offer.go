@@ -12,17 +12,20 @@ import (
 var ErrInvalidOffer = errors.New("invalid offer")
 
 type Offer struct {
-	ID               string            `json:"id"`
-	CardName         string            `json:"card_name"`
-	Store            string            `json:"store"`
-	PriceAmount      string            `json:"price_amount"`
-	PriceCurrency    string            `json:"price_currency"`
-	URL              string            `json:"url"`
-	Image            string            `json:"image,omitempty"`
-	VariantID        string            `json:"variant_id,omitempty"`
-	Language         string            `json:"language,omitempty"`
-	Condition        string            `json:"condition,omitempty"`
-	Finish           string            `json:"finish,omitempty"`
+	ID            string `json:"id"`
+	CardName      string `json:"card_name"`
+	Store         string `json:"store"`
+	PriceAmount   string `json:"price_amount"`
+	PriceCurrency string `json:"price_currency"`
+	URL           string `json:"url"`
+	Image         string `json:"image,omitempty"`
+	VariantID     string `json:"variant_id,omitempty"`
+	Language      string `json:"language,omitempty"`
+	Condition     string `json:"condition,omitempty"`
+	Finish        string `json:"finish,omitempty"`
+	// CardKey Names the Card the Offer is for, with the Printing Dropped.
+	// The Caller Groups by it; the Title Stays for Reading.
+	CardKey          string            `json:"card_key,omitempty"`
 	Source           string            `json:"source"`
 	StockStatus      string            `json:"stock_status"`
 	Suspicious       bool              `json:"suspicious"`
@@ -88,15 +91,78 @@ func ContainsCard(title, name string) bool {
 	return name != "" && strings.Contains(NormalizeCard(title), name)
 }
 
+// ReadCardKey Reduces a Store Title to the Card it Names, Dropping the Printing.
+// `Winged Kuriboh`, `LDS3-EN100 \u201cWinged Kuriboh\u201d Common` and
+// `Winged Kuriboh (PUR)` Answer the same Thing, so three Sources Selling one
+// Card Stop Looking like three Cards.
+func ReadCardKey(title string) string {
+	title = NormalizeCard(plainDashes(title))
+	if quoted := readQuotedName(title); quoted != "" {
+		return quoted
+	}
+	return trimPrintingTail(title)
+}
+
+// plainDashes Levels the three Dashes a Store may Type, because `Kuriboh -
+// Multiply!` and `Kuriboh \u2013 Multiply!` are one Card Written twice.
+func plainDashes(title string) string {
+	return strings.NewReplacer("\u2013", "-", "\u2014", "-").Replace(title)
+}
+
+// readQuotedName Returns the Name a Store Wrapped in Quotes, or an empty String.
+func readQuotedName(title string) string {
+	for _, pair := range quotePairs {
+		opening := strings.Index(title, pair[0])
+		if opening < 0 {
+			continue
+		}
+		rest := title[opening+len(pair[0]):]
+		if closing := strings.Index(rest, pair[1]); closing > 0 {
+			return rest[:closing]
+		}
+	}
+	return ""
+}
+
+// trimPrintingTail Cuts the Edition a Store Appends, and only when it is one.
+func trimPrintingTail(title string) string {
+	shortest := title
+	for _, bracket := range editionBrackets {
+		if cut := strings.Index(title, bracket); cut > 0 && cut < len(shortest) {
+			shortest = title[:cut]
+		}
+	}
+	for _, dash := range editionDashes {
+		cut := strings.Index(title, dash)
+		if cut <= 0 || cut >= len(shortest) {
+			continue
+		}
+		fields := strings.Fields(title[cut+len(dash):])
+		if len(fields) > 0 && strings.ContainsAny(fields[0], "0123456789") {
+			shortest = title[:cut]
+		}
+	}
+	return shortest
+}
+
 // PriceGroupOf Names the Set of Offers whose Prices Compare with this one.
 // Under MatchExact every Offer is the same Card and its Printings compete.
 // Under MatchIncludes each Title is another Card, and a Starlight Rare of one
 // must not Judge a Common of another.
 func (q CardQuery) PriceGroupOf(item Offer) string {
 	if q.Match == MatchIncludes {
-		return NormalizeCard(item.CardName)
+		return item.CardKey
 	}
 	return NormalizeCard(q.Name)
+}
+
+// NameCards Tells every Offer which Card it is for, so nobody has to Read the
+// Title again to Find out.
+func NameCards(items []Offer) []Offer {
+	for index := range items {
+		items[index].CardKey = ReadCardKey(items[index].CardName)
+	}
+	return items
 }
 
 // MatchesCard Accepts a Title that Names the Card, Wherever the Store Puts it.

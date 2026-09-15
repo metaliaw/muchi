@@ -82,7 +82,8 @@ func (s Service) collectOffers(ctx context.Context, game Game, query offer.CardQ
 	if err != nil && len(items) == 0 {
 		return nil, err
 	}
-	items = offer.MarkSuspicious(offer.DeduplicateOffers(items), s.SuspiciousPercent, query)
+	items = offer.NameCards(offer.DeduplicateOffers(items))
+	items = offer.MarkSuspicious(items, s.SuspiciousPercent, query)
 	if err == nil {
 		s.saveOfferCache(ctx, key, items)
 	}
