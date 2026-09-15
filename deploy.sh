@@ -26,6 +26,8 @@
 #
 set -euo pipefail
 
+cd -- "$(dirname -- "$0")"
+
 SERVICE="muchi-web"
 # La misma Region que la API: el BFF la consulta en cada Busqueda, y ese salto
 # lo paga el Usuario esperando.
@@ -199,15 +201,6 @@ push_service() {
 }
 
 
-# Firebase sirve los Archivos estáticos y deriva el BFF al Servicio recién
-# publicado. Compilar después de Cloud Run evita adelantar el Front al Servidor.
-build_hosting() {
-    say "Compilando el Front para Firebase Hosting"
-    npm --prefix web ci
-    npm --prefix web run build
-}
-
-
 push_hosting() {
     say "Publicando Firebase Hosting"
     firebase deploy --only hosting --project "$PROJECT"
@@ -217,11 +210,12 @@ push_hosting() {
 }
 
 
+say "Verificando Tests y Build antes del Deploy"
+sh ./build.sh
 check_account
 check_ads
 check_secret
 prepare_repository
 grant_access
 push_service
-build_hosting
 push_hosting
