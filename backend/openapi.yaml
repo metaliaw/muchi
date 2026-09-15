@@ -263,7 +263,12 @@ components:
         finish: {type: string}
         source: {type: string}
         stock_status: {type: string, enum: [available, unavailable, unknown]}
-        suspicious: {type: boolean}
+        suspicious:
+          type: boolean
+          description: >-
+            Priced far below the median of its peers. Peers are the offers of
+            the same card in the same currency, so a wide `includes` search
+            never judges one card by another card's prices.
         suspicious_reason: {type: string}
         metadata: {type: object, additionalProperties: {type: string}}
     Game:

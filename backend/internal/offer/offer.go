@@ -88,6 +88,17 @@ func ContainsCard(title, name string) bool {
 	return name != "" && strings.Contains(NormalizeCard(title), name)
 }
 
+// PriceGroupOf Names the Set of Offers whose Prices Compare with this one.
+// Under MatchExact every Offer is the same Card and its Printings compete.
+// Under MatchIncludes each Title is another Card, and a Starlight Rare of one
+// must not Judge a Common of another.
+func (q CardQuery) PriceGroupOf(item Offer) string {
+	if q.Match == MatchIncludes {
+		return NormalizeCard(item.CardName)
+	}
+	return NormalizeCard(q.Name)
+}
+
 // MatchesCard Accepts a Title that Names the Card, Wherever the Store Puts it.
 func MatchesCard(title, name string) bool {
 	title = NormalizeCard(title)
@@ -167,38 +178,51 @@ func SelectStockOffers(items []Offer, limit int) []Offer {
 	return result
 }
 
-// MarkSuspicious Flags an Offer priced below percent of its Currency Median.
-func MarkSuspicious(items []Offer, percent int) []Offer {
-	groups := groupOfferPrices(items)
+// MarkSuspicious Flags an Offer priced below percent of the Median of its Peers.
+// Peers are Offers of the same Card in the same Currency: a Price only Judges
+// another Price when both Name the same Thing.
+func MarkSuspicious(items []Offer, percent int, query CardQuery) []Offer {
+	groups := groupOfferPrices(items, query)
 	medians := findPriceMedians(groups)
 
-	return applySuspicious(items, medians, percent)
+	return applySuspicious(items, medians, percent, query)
 }
 
-func groupOfferPrices(items []Offer) map[string][]int {
-	groups := make(map[string][]int)
+// priceGroup Keys a Median by what makes two Prices comparable.
+type priceGroup struct {
+	card     string
+	currency string
+}
+
+func groupOfferPrices(items []Offer, query CardQuery) map[priceGroup][]int {
+	groups := make(map[priceGroup][]int)
 	for _, item := range items {
-		if cents, err := parseCents(item.PriceAmount); err == nil {
-			groups[item.PriceCurrency] = append(groups[item.PriceCurrency], cents)
+		cents, err := parseCents(item.PriceAmount)
+		if err != nil {
+			continue
 		}
+		peers := priceGroup{query.PriceGroupOf(item), item.PriceCurrency}
+		groups[peers] = append(groups[peers], cents)
 	}
 	return groups
 }
 
-func findPriceMedians(groups map[string][]int) map[string]int {
-	medians := make(map[string]int, len(groups))
-	for currency, prices := range groups {
+func findPriceMedians(groups map[priceGroup][]int) map[priceGroup]int {
+	medians := make(map[priceGroup]int, len(groups))
+	for group, prices := range groups {
 		sort.Ints(prices)
-		medians[currency] = prices[len(prices)/2]
+		medians[group] = prices[len(prices)/2]
 	}
 	return medians
 }
 
-func applySuspicious(items []Offer, medians map[string]int, percent int) []Offer {
+func applySuspicious(items []Offer, medians map[priceGroup]int, percent int,
+	query CardQuery) []Offer {
 	reason := fmt.Sprintf("price_below_%d_percent_median", percent)
 	for index := range items {
 		cents, err := parseCents(items[index].PriceAmount)
-		median := medians[items[index].PriceCurrency]
+		peers := priceGroup{query.PriceGroupOf(items[index]), items[index].PriceCurrency}
+		median := medians[peers]
 		pricedLow := err == nil && median > 0 && cents*100 < median*percent
 		if pricedLow {
 			items[index].Suspicious = true

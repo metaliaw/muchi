@@ -21,7 +21,7 @@ func TestSelectOffers(t *testing.T) {
 		{ID: "middle", PriceAmount: "10.00", PriceCurrency: "USD"},
 		{ID: "high", PriceAmount: "11.00", PriceCurrency: "USD"},
 	}
-	items = MarkSuspicious(items, 30)
+	items = MarkSuspicious(items, 30, CardQuery{Name: "Sol Ring"})
 	if !items[0].Suspicious || items[0].SuspiciousReason == "" {
 		t.Fatal("cheap offer was not marked suspicious")
 	}
@@ -135,5 +135,59 @@ func TestQueryWidensWithMode(t *testing.T) {
 func TestMissingModeStaysNarrow(t *testing.T) {
 	if (CardQuery{Name: "Kuriboh"}).AcceptsTitle("Winged Kuriboh") {
 		t.Error("an unnamed mode widened the match")
+	}
+}
+
+// kuribohPrices Reproduces what Production Showed: a wide Search where one Card
+// Costs four hundred thousand and another Costs three hundred.
+func kuribohPrices() []Offer {
+	return []Offer{
+		{ID: "wk-300", CardName: "Winged Kuriboh", PriceAmount: "300", PriceCurrency: "CLP"},
+		{ID: "wk-500", CardName: "Winged Kuriboh", PriceAmount: "500", PriceCurrency: "CLP"},
+		{ID: "wk-4000", CardName: "Winged Kuriboh", PriceAmount: "4000", PriceCurrency: "CLP"},
+		{ID: "mult-5000", CardName: "Kuriboh - Multiply!", PriceAmount: "5000", PriceCurrency: "CLP"},
+		{ID: "mult-8000", CardName: "Kuriboh - Multiply!", PriceAmount: "8000", PriceCurrency: "CLP"},
+		{ID: "mult-400000", CardName: "Kuriboh - Multiply!", PriceAmount: "400000", PriceCurrency: "CLP"},
+	}
+}
+
+// TestSuspicionJudgesEachCardApart Keeps a Starlight Rare from Condemning a Common.
+func TestSuspicionJudgesEachCardApart(t *testing.T) {
+	items := MarkSuspicious(kuribohPrices(), 40, CardQuery{Name: "Kuriboh", Match: MatchIncludes})
+	flagged := []string{}
+	for _, item := range items {
+		if item.Suspicious {
+			flagged = append(flagged, item.ID)
+		}
+	}
+	if len(flagged) != 0 {
+		t.Fatalf("flagged %v; every price is normal for its own card", flagged)
+	}
+}
+
+// TestSuspicionStillCatchesAnOutlier Proves the Rule did not simply Stop Working.
+func TestSuspicionStillCatchesAnOutlier(t *testing.T) {
+	items := append(kuribohPrices(), Offer{
+		ID: "wk-1", CardName: "Winged Kuriboh", PriceAmount: "1", PriceCurrency: "CLP",
+	})
+	items = MarkSuspicious(items, 40, CardQuery{Name: "Kuriboh", Match: MatchIncludes})
+	for _, item := range items {
+		if item.Suspicious != (item.ID == "wk-1") {
+			t.Errorf("offer %s suspicious=%t", item.ID, item.Suspicious)
+		}
+	}
+}
+
+// TestExactSearchComparesEveryPrinting Keeps today's Reach when the Search is narrow:
+// the Titles differ, but they are one Card and they judge each other.
+func TestExactSearchComparesEveryPrinting(t *testing.T) {
+	items := []Offer{
+		{ID: "common", CardName: "Kuriboh (C)", PriceAmount: "10", PriceCurrency: "CLP"},
+		{ID: "plain", CardName: "Kuriboh", PriceAmount: "1000", PriceCurrency: "CLP"},
+		{ID: "rare", CardName: "Kuriboh [LDS3-EN100]", PriceAmount: "1200", PriceCurrency: "CLP"},
+	}
+	items = MarkSuspicious(items, 40, CardQuery{Name: "Kuriboh", Match: MatchExact})
+	if !items[0].Suspicious {
+		t.Fatal("a ten-peso outlier survived a narrow search")
 	}
 }
