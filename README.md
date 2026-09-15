@@ -243,6 +243,10 @@ Puedes añadir `MUCHI_API_SEARCH_ID` para verificar una Búsqueda existente.
   como el Contrato.
 - [El Front y su Frontera](docs/migracion-web.md): qué dibuja el Front, qué
   decide el BFF, sus Rutas y el Despliegue en Cloud Run.
+- [Hallazgos en los Buscadores](docs/hallazgos-buscadores.md): los Supuestos que
+  se cayeron cuando una Búsqueda empezó a traer Cartas distintas y no Variantes
+  de una, qué los cerró y qué queda abierto. Los del otro lado de la Frontera
+  viven en el Repositorio de la API.
 - [La Publicidad, de Punta a Punta](docs/publicidad.md): los Identificadores, el
   Flujo hasta el primer Anuncio, lo que la Revisión de Google mira y qué hacer
   cuando algo no anda.
