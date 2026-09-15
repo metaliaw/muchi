@@ -49,7 +49,7 @@ def build_offer(row: dict) -> SearchOffer:
         source=row["source"], finish=row.get("finish") or "",
         language=row.get("language") or "", condition=row.get("condition") or "",
         variant=read_metadata(row, "variant"), title=read_metadata(row, "title"),
-        edition=read_edition(row),
+        edition=read_edition(row), card_key=row.get("card_key") or "",
         suspicious_reason=row.get("suspicious_reason") or "",
         metadata={str(key): str(value) for key, value in (row.get("metadata") or {}).items()},
     )

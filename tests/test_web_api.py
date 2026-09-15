@@ -532,3 +532,28 @@ def test_the_cart_buys_the_card_that_was_asked_for():
     cart = presenter.build_cart(kuriboh_items(), 0, 1000, match="includes")
     bought = {line["title"] for store in cart["stores"] for line in store["lines"]}
     assert bought == {"Kuriboh"}
+
+
+def test_one_card_from_three_sources_is_one_group():
+    """Cada Fuente Escribe el Título a su manera; la API dice cuál Carta es."""
+    items = (SearchItem("Kuriboh", 1, "found", (
+        build_offer(card_name="Winged Kuriboh", card_key="winged kuriboh",
+                    store="Uno", amount=Decimal("300")),
+        build_offer(card_name='LDS3-EN100 "Winged Kuriboh" Common',
+                    card_key="winged kuriboh", store="Dos", amount=Decimal("400")),
+        build_offer(card_name="Winged Kuriboh (PUR)", card_key="winged kuriboh",
+                    store="Tres", amount=Decimal("500")),
+    ), id="item-1", position=0, sequence=1, game="yugioh"),)
+    results = presenter.build_results(items, 1000, match="includes")
+    assert {row["card_type"] for row in results["offers"]} == {"winged kuriboh"}
+    assert sum(1 for row in results["offers"] if row["best"]) == 1
+
+
+def test_an_offer_without_a_key_falls_back_to_its_title():
+    """Una API anterior no manda `card_key`; el Título sigue sirviendo."""
+    items = (SearchItem("Kuriboh", 1, "found", (
+        build_offer(card_name="Winged Kuriboh", store="Uno", amount=Decimal("300")),
+        build_offer(card_name="Linkuriboh", store="Dos", amount=Decimal("100")),
+    ), id="item-1", position=0, sequence=1, game="yugioh"),)
+    results = presenter.build_results(items, 1000, match="includes")
+    assert {row["card_type"] for row in results["offers"]} == {"winged kuriboh", "linkuriboh"}
