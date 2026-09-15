@@ -428,6 +428,14 @@ def test_an_offer_publishes_what_identifies_its_printing(client):
     assert "edition" in row and "finish" in row
 
 
+def test_an_offer_publishes_its_pickup_locations():
+    offer = build_offer(locations=("Santiago - Providencia", "Santiago - Las Condes"))
+
+    row = presenter.build_offer(offer, muchi_dolar=1000)
+
+    assert row["locations"] == ["Santiago - Providencia", "Santiago - Las Condes"]
+
+
 # ---------------------------------------------------------------- los Topes
 def build_list(count: int) -> str:
     return "\n".join(f"1 Carta{index:04d}" for index in range(count))
