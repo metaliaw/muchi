@@ -258,24 +258,30 @@ onUnmounted(stopPolling)
   </header>
 
   <main class="mu-grilla">
-    <!-- En Móvil Muchi y el Aviso Bajan a un Muelle fijo al pie; la Carta se
-         Queda arriba de la Lista, pegada, y las dos se Miran a la vez. -->
-    <div class="mu-muelle" :class="{ abierto: dockOpen, dijo: Boolean(message) }">
-      <button class="mu-muelle__tirador" type="button"
-              :aria-expanded="dockOpen" @click="dockOpen = !dockOpen"
-              :aria-label="dockOpen ? 'Guardar a Muchi' : 'Llamar a Muchi'">
-        <span class="mu-muelle__gato" aria-hidden="true">🐱</span>
-        <span class="mu-muelle__dicho">{{ message?.text || 'Muchi · Código Abierto' }}</span>
-        <span class="mu-muelle__flecha" aria-hidden="true">{{ dockOpen ? '▼' : '▲' }}</span>
-      </button>
-      <div class="mu-muelle__cuerpo">
-        <MuchiPanel :book="book" v-model:dark="dark" :message="message" />
-        <CommunityPanel :repository-url="config.repository_url" />
-      </div>
+    <!-- El Aviso se Lee una vez y se Queda quieto. Muchi y la Carta Acompañan
+         el Recorrido: Flotan juntos en Escritorio, y en Móvil Muchi Espera en
+         la Esquina mientras la Carta se Pega arriba de la Lista. -->
+    <div class="mu-abierto">
+      <CommunityPanel :repository-url="config.repository_url" />
     </div>
 
-    <div class="mu-tarjeta" :class="{ vacia: !watched }">
-      <CardArt :card="watched" :game="game" />
+    <div class="mu-flotante">
+      <div class="mu-muelle" :class="{ abierto: dockOpen, dijo: Boolean(message) }">
+        <button class="mu-muelle__tirador" type="button"
+                :aria-expanded="dockOpen" @click="dockOpen = !dockOpen"
+                :aria-label="dockOpen ? 'Guardar a Muchi' : 'Llamar a Muchi'">
+          <span class="mu-muelle__gato" aria-hidden="true">🐱</span>
+          <span class="mu-muelle__dicho">{{ message?.text || 'Muchi' }}</span>
+          <span class="mu-muelle__flecha" aria-hidden="true">{{ dockOpen ? '▼' : '▲' }}</span>
+        </button>
+        <div class="mu-muelle__cuerpo">
+          <MuchiPanel :book="book" v-model:dark="dark" :message="message" />
+        </div>
+      </div>
+
+      <div class="mu-tarjeta" :class="{ vacia: !watched }">
+        <CardArt :card="watched" :game="game" />
+      </div>
     </div>
 
     <div class="mu-columna">
@@ -385,16 +391,18 @@ onUnmounted(stopPolling)
 .mu-hero p { margin: 4px 0 0; opacity: .9; }
 .mu-grilla {
   display: grid; grid-template-columns: 260px 1fr; gap: 16px 20px;
-  grid-template-areas: "muchi lista" "carta lista" "abierto lista";
+  grid-template-areas: "abierto lista" "flotante lista";
   max-width: 1100px; margin: 22px auto; padding: 0 16px; align-items: start;
 }
-/* En Escritorio el Muelle se Desarma: sus dos Paneles Entran a la Rejilla por
-   su cuenta y la Carta se Mete entre ellos, donde estaba antes. */
+.mu-abierto { grid-area: abierto; }
+/* Muchi y la Carta Acompañan el Recorrido de la Lista. Flotan juntos, en un
+   solo Bloque: dos Pegados por separado se Taparían uno al otro al Bajar. */
+.mu-flotante {
+  grid-area: flotante; position: sticky; top: 16px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+/* En Escritorio el Muelle es un Panel más: sin Barra ni Tirador. */
 .mu-muelle, .mu-muelle__cuerpo { display: contents; }
-.mu-muelle__cuerpo > :first-child { grid-area: muchi; }
-.mu-muelle__cuerpo > :last-child { grid-area: abierto; }
-/* La Carta Acompaña el Recorrido de la Lista en vez de quedarse arriba. */
-.mu-tarjeta { grid-area: carta; position: sticky; top: 16px; }
 .mu-columna { grid-area: lista; display: flex; flex-direction: column; gap: 16px; }
 .mu-historia { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 summary { cursor: pointer; font-weight: 600; }
@@ -406,8 +414,15 @@ summary { cursor: pointer; font-weight: 600; }
    Pastillas se Parten, y la Carta se Mira con lupa. */
 @media (max-width: 800px) {
   /* La Carta Manda arriba y la Lista Corre debajo: la Pantalla se Parte en dos
-     y quien Mira una Impresión sigue viendo los Precios. */
-  .mu-grilla { grid-template-columns: 1fr; grid-template-areas: "carta" "lista"; }
+     y quien Mira una Impresión sigue viendo los Precios. El Aviso Cierra la
+     Página: se Lee una vez, y no antes que el Buscador. */
+  .mu-grilla {
+    grid-template-columns: 1fr;
+    grid-template-areas: "carta" "lista" "abierto";
+  }
+  /* El Bloque flotante se Desarma: Muchi se Va a la Esquina por su cuenta y la
+     Carta se Pega arriba de la Lista. */
+  .mu-flotante { display: contents; }
   /* El Muelle Vuelve a ser un Bloque para poder Fijarse al pie. */
   .mu-muelle { display: flex; flex-direction: column; }
   .mu-muelle__cuerpo { display: none; flex-direction: column; gap: 16px; }
