@@ -7,7 +7,7 @@ import MuchiPanel from './components/MuchiPanel.vue'
 import CardLookup from './components/CardLookup.vue'
 import CardArt from './components/CardArt.vue'
 import CommunityPanel from './components/CommunityPanel.vue'
-import SiteFooter from './components/SiteFooter.vue'
+import SiteLinks from './components/SiteLinks.vue'
 import SearchForm from './components/SearchForm.vue'
 import SearchProgress from './components/SearchProgress.vue'
 import OfferList from './components/OfferList.vue'
@@ -243,8 +243,14 @@ onUnmounted(stopPolling)
   <GoogleAdsense :client="config.adsense_client" />
 
   <header class="mu-hero">
-    <h1><a href="/">🐱 Muchi</a></h1>
-    <p>Busca Cartas y cotiza tu Lista</p>
+    <div class="mu-hero__nombre">
+      <h1><a href="/">🐱 Muchi</a></h1>
+      <p>Busca Cartas y cotiza tu Lista</p>
+    </div>
+    <SiteLinks
+      :donation-url="config.donation_url"
+      :socials="config.socials || []"
+    />
   </header>
 
   <main class="mu-grilla">
@@ -351,18 +357,20 @@ onUnmounted(stopPolling)
     </div>
   </main>
 
-  <SiteFooter
-    :donation-url="config.donation_url"
-    :socials="config.socials || []"
-  />
 </template>
 
 <style scoped>
 .mu-hero {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
   background: linear-gradient(135deg, var(--mu-acento), var(--mu-peri));
   color: #fff; padding: 26px 24px; border-radius: 0 0 28px 28px;
   box-shadow: var(--mu-sombra);
 }
+/* El Nombre Manda a la Izquierda; los Enlaces Acompañan a la Derecha y, cuando
+   no Caben, Bajan a su propia Línea sin Perder ese Lado. */
+.mu-hero__nombre { min-width: 0; }
+.mu-hero > :last-child { margin-left: auto; }
 .mu-hero h1 { margin: 0; font-size: 2.4rem; font-weight: 800; letter-spacing: -1px; }
 .mu-hero h1 a { color: inherit; text-decoration: none; }
 .mu-hero p { margin: 4px 0 0; opacity: .9; }
@@ -408,10 +416,7 @@ summary { cursor: pointer; font-weight: 600; }
   .mu-muelle__tirador span:first-child {
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  /* Cerrado Ocupa una Línea; abierto Crece hasta donde la Lista sigue Asomando.
-     Abierto también Pasa por encima del Pie: es un Panel de paso, y el Pie
-     Espera su Turno en vez de Flotar sobre la Carta. */
-  .mu-muelle.abierto { z-index: 40; }
+  /* Cerrado Ocupa una Línea; abierto Crece hasta donde la Lista sigue Asomando. */
   .mu-muelle__cuerpo { display: none; }
   .mu-muelle.abierto .mu-muelle__cuerpo {
     display: flex; max-height: 62vh; overflow-y: auto; padding-bottom: 4px;
