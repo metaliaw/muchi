@@ -541,34 +541,31 @@ def test_an_exact_search_keeps_its_printings_together():
     assert sum(1 for row in results["offers"] if row["best"]) == 1
 
 
-def test_each_pokemon_type_crowns_its_own_cheapest():
-    """La Función separa Tipos y reúne sus Ediciones antes de Comparar."""
+def test_one_pokemon_card_groups_editions():
+    """La Carta funcional reúne Ediciones antes de Comparar."""
     items = (SearchItem("Slowpoke", 1, "found", (
         build_offer(card_name="Slowpoke", card_key="slowpoke", edition="SV1",
-                    metadata={"functional_id": "704786", "type": "water"},
                     store="Uno", amount=Decimal("900")),
         build_offer(card_name="Slowpoke", card_key="slowpoke", edition="SV2",
-                    metadata={"functional_id": "704786", "type": "water"},
                     store="Dos", amount=Decimal("700")),
-        build_offer(card_name="Slowpoke", card_key="slowpoke", edition="SV3",
-                    metadata={"functional_id": "197654", "type": "psychic"},
+        build_offer(card_name="Slowpoke ex", card_key="slowpoke ex", edition="SV3",
                     store="Tres", amount=Decimal("400")),
     ), id="item-1", position=0, sequence=1, game="pokemon"),)
     results = presenter.build_results(items, 1000, match="exact")
     assert {row["card_type"] for row in results["offers"]} == {
-        "slowpoke|704786", "slowpoke|197654",
+        "slowpoke", "slowpoke ex",
     }
     first_type = [row for row in results["offers"]
-                  if row["card_type"] == "slowpoke|704786"]
+                  if row["card_type"] == "slowpoke"]
     assert {row["edition"] for row in first_type} == {"SV1", "SV2"}
     assert {(row["card_type"], row["store"])
             for row in results["offers"] if row["best"]} == {
-        ("slowpoke|704786", "Dos"), ("slowpoke|197654", "Tres"),
+        ("slowpoke", "Dos"), ("slowpoke ex", "Tres"),
     }
 
 
-def test_pokemon_type_separates_cards_without_a_functional_id():
-    """El Tipo publicado abre Secciones cuando la API aún no Nombra la Función."""
+def test_pokemon_metadata_does_not_split_one_functional_card():
+    """La Edición y el Tipo no Fragmentan la Identidad que publicó la API."""
     items = (SearchItem("Slowpoke", 1, "found", (
         build_offer(card_name="Slowpoke", card_key="slowpoke",
                     metadata={"pokemon_type": "water"}),
@@ -576,12 +573,8 @@ def test_pokemon_type_separates_cards_without_a_functional_id():
                     metadata={"pokemon_type": "psychic"}),
     ), id="item-1", position=0, sequence=1, game="pokemon"),)
     rows = presenter.build_results(items, 1000)["offers"]
-    assert {row["card_type"] for row in rows} == {
-        "slowpoke|water", "slowpoke|psychic",
-    }
-    assert {row["card_label"] for row in rows} == {
-        "Slowpoke · Water", "Slowpoke · Psychic",
-    }
+    assert {row["card_type"] for row in rows} == {"slowpoke"}
+    assert {row["card_label"] for row in rows} == {"Slowpoke"}
 
 
 def test_pokemon_treatment_and_language_share_a_section():
@@ -595,7 +588,7 @@ def test_pokemon_treatment_and_language_share_a_section():
                     metadata={"functional_id": "25", "type": "lightning"}),
     ), id="item-1", position=0, sequence=1, game="pokemon"),)
     rows = presenter.build_results(items, 1000)["offers"]
-    assert {row["card_type"] for row in rows} == {"pikachu|25"}
+    assert {row["card_type"] for row in rows} == {"pikachu"}
     assert sum(row["best"] for row in rows) == 1
 
 
