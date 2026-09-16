@@ -6,11 +6,12 @@ mismo modo, sea cual sea la Interfaz que los consuma.
 """
 from __future__ import annotations
 
+from dataclasses import replace
 from decimal import Decimal
 
 from muchi.mtg import optimizer, treatment
 from muchi.mtg.models import Offer, Order
-from muchi.mtg.search import SearchItem, SearchOffer, SearchState
+from muchi.mtg.search import SearchItem, SearchOffer, SearchState, StockCheck
 
 # La API marca "unknown" cuando la Fuente no publica Stock: Agregadores como
 # scry.cl indexan Precios, no Inventario. No es Ausencia de Carta.
@@ -58,12 +59,29 @@ def build_pills(offer: SearchOffer, verified: bool = True) -> list[dict]:
     for tag in treatment.build_treatment(offer).split(treatment.SEPARATOR):
         if tag:
             pills.append({"kind": "foil" if tag in FOIL_TAGS else "cond", "text": tag})
-    # Sin Re-verificación, el Stock es Ruido: toda Oferta diría lo mismo.
-    if verified:
-        label = STOCK_LABELS.get(offer.stock_status, offer.stock_status)
-        pills.append({"kind": "tienda" if offer.stock_status == "available" else "cond",
-                      "text": label})
+    # Sin Re-verificación, el Stock es Ruido: toda Oferta diría lo mismo. Una
+    # Oferta comprobada una por una sí lo declara, aunque la Flag esté apagada.
+    if label := name_stock(offer.stock_status, offer.stock_quantity, verified):
+        available = offer.stock_status == "available" and offer.stock_quantity != 0
+        pills.append({"kind": "tienda" if available else "cond", "text": label})
     return pills
+
+
+def name_stock(status: str, quantity: int | None = None,
+               verified: bool = True) -> str:
+    """Lo que se puede Decir del Stock: la Cantidad cuando se Sabe, si no la Etiqueta.
+
+    Sin Cantidad y sin Re-verificación no se Dice nada: una Etiqueta que toda
+    Oferta repetiría no Informa. Cero Unidades es Agotado, lo diga o no la
+    Tienda en su Estado.
+    """
+    if not verified and quantity is None:
+        return ""
+    if quantity == 0 or status == "unavailable":
+        return STOCK_LABELS["unavailable"]
+    if quantity is not None:
+        return f"{quantity} {'Unidad' if quantity == 1 else 'Unidades'}"
+    return STOCK_LABELS.get(status, status)
 
 
 def build_offer(offer: SearchOffer, muchi_dolar: int,
@@ -77,8 +95,10 @@ def build_offer(offer: SearchOffer, muchi_dolar: int,
         "price_clp": None if price is None else float(price),
         "url": offer.url,
         "stock_status": offer.stock_status,
-        "stock_label": (STOCK_LABELS.get(offer.stock_status, offer.stock_status)
-                        if verified else ""),
+        "stock_label": name_stock(offer.stock_status, offer.stock_quantity, verified),
+        "stock_quantity": offer.stock_quantity,
+        # El Nombre con el que se vuelve a Preguntar por esta Oferta.
+        "offer_id": offer.offer_id,
         # El Contrato conserva el Campo mientras la Medición está desactivada.
         "suspicious": False,
         "note": "",
@@ -185,6 +205,79 @@ def pick_cheapest_by_type(offers: list[SearchOffer], types: dict[int, str],
         if winner := pick_cheapest(group, muchi_dolar):
             best.add(id(winner))
     return best
+
+
+def plan_stock_checks(items: tuple[SearchItem, ...], muchi_dolar: int,
+                      match: str = MATCH_EXACT,
+                      limit: int = 5) -> dict[str, list[str]]:
+    """Por cada Tipo de Carta, a quién preguntarle Stock y en qué Orden.
+
+    El Orden es el mismo con el que se premia la más barata, porque la Pregunta
+    existe para sostener esa Marca: si la barata no tiene, la Corona pasa a la
+    siguiente. Una Oferta sin Cambio a Pesos no compite por la Corona, y una ya
+    Agotada no necesita que se le pregunte de nuevo.
+    """
+    types: dict[int, str] = {}
+    offers: list[SearchOffer] = []
+    for item in items:
+        types.update((id(offer), read_card_type(offer, item.name, match))
+                     for offer in item.offers)
+        offers.extend(item.offers)
+    plan: dict[str, list[str]] = {}
+    for offer in order_by_card_type(offers, types):
+        if not offer.offer_id or offer.stock_status == "unavailable":
+            continue
+        if convert_to_clp(offer, muchi_dolar) is None:
+            continue
+        candidates = plan.setdefault(types[id(offer)], [])
+        if len(candidates) < limit:
+            candidates.append(offer.offer_id)
+    return plan
+
+
+def crown_checked_offers(plan: dict[str, list[str]],
+                         checks: dict[str, StockCheck]) -> dict[str, str]:
+    """La Corona de cada Tipo de Carta: la primera que la Tienda Confirmo.
+
+    Una Tienda que no Declara Stock no Niega, pero tampoco Confirma. Entre una
+    Duda barata y un Si caro, la Corona es del Si: la Recomendacion existe para
+    que alguien Compre, y una Carta que no Llega no es una Compra barata. La
+    Duda solo Corona cuando nadie Confirmo, y una Carta sin ninguna Oferta en
+    pie se queda sin Corona: mentir una Recomendacion es peor que no darla.
+    """
+    crowned = {}
+    for card_type, candidates in plan.items():
+        checked = [checks[offer_id] for offer_id in candidates if offer_id in checks]
+        winner = next((check for check in checked if check.confirmed), None)
+        winner = winner or next((check for check in checked if check.available), None)
+        if winner:
+            crowned[card_type] = winner.offer_id
+    return crowned
+
+
+def refresh_offer(offer: SearchOffer, check: StockCheck) -> SearchOffer:
+    """La misma Oferta con lo que la Tienda acaba de Decir de su Stock."""
+    return replace(offer, stock_status=check.stock_status,
+                   stock_quantity=check.stock_quantity)
+
+
+def build_stock_answer(offers: dict[str, SearchOffer], plan: dict[str, list[str]],
+                       checks: dict[str, StockCheck], muchi_dolar: int) -> dict:
+    """Lo Comprobado, ya presentado, y a quién le toca la Corona ahora.
+
+    Las Filas vuelven enteras —Pastillas incluidas— porque el Stock cambia la
+    Etiqueta y el Color de la Pastilla, y esas son Decisiones de acá. El Front
+    reemplaza la Fila que comparte `offer_id` y no vuelve a decidir nada.
+    """
+    crowned = crown_checked_offers(plan, checks)
+    return {
+        "offers": [build_offer(refresh_offer(offers[offer_id], check), muchi_dolar)
+                   for offer_id, check in checks.items() if offer_id in offers],
+        "best": [{"card_type": card_type, "offer_id": offer_id}
+                 for card_type, offer_id in crowned.items()],
+        # Un Tipo sin Corona ya no Recomienda: el Front apaga la Marca vieja.
+        "uncrowned": [card_type for card_type in plan if card_type not in crowned],
+    }
 
 
 def name_fallen_sources(card: str, faults: tuple[str, ...]) -> str:

@@ -31,6 +31,12 @@ class SearchOffer:
     edition: str = ""
     locations: tuple[str, ...] = ()
     metadata: dict[str, str] = field(default_factory=dict)
+    # El Nombre que la API le da a esta Oferta. Sin el, nadie puede volver a
+    # preguntar por ella: una URL repetida no Distingue dos Impresiones.
+    offer_id: str = ""
+    # Cuantas Unidades declara la Tienda. None es "no lo sabemos"; 0 es
+    # "lo preguntamos y no hay". Son Estados distintos y se muestran distinto.
+    stock_quantity: int | None = None
 
 
 @dataclass(frozen=True)
@@ -47,6 +53,26 @@ class SearchItem:
     # Las Fuentes que se Cayeron mientras otras Respondian. Una Carta con
     # `found` y una Tienda caida no es lo mismo que una Carta completa.
     faults: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class StockCheck:
+    """Lo que la Tienda contesto cuando se le volvio a preguntar por una Oferta."""
+    offer_id: str
+    stock_status: str
+    stock_quantity: int | None = None
+
+    @property
+    def available(self) -> bool:
+        """Agotado es Ausencia; `unknown` no lo es: la Tienda no Nego, no Supo."""
+        if self.stock_status == "unavailable":
+            return False
+        return self.stock_quantity is None or self.stock_quantity > 0
+
+    @property
+    def confirmed(self) -> bool:
+        """La Tienda Dijo que si Tiene. `unknown` sigue siendo una Duda."""
+        return self.stock_status == "available" and self.available
 
 
 @dataclass(frozen=True)
@@ -80,6 +106,8 @@ class SearchService(Protocol):
     def read_search(self, search_id: str) -> SearchState: ...
     def read_results(self, search_id: str, after: int = 0) -> SearchResults: ...
     def cancel_search(self, search_id: str, key: str) -> SearchState: ...
+    def check_stock(self, search_id: str,
+                    offer_ids: tuple[str, ...]) -> tuple[StockCheck, ...]: ...
     def read_sources(self) -> list[dict]: ...
     def read_supported_games(self) -> list[dict]: ...
     def read_card_metadata(self, game: str, name: str, language: str = "",
