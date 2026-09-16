@@ -35,6 +35,9 @@ const {
   checked, unavailable, stocked, start: startSearch, applyState, applyResults,
   applyStock,
 } = useSearch()
+// El Muelle nace Cerrado: quien Busca quiere ver Ofertas, y Muchi y la Carta
+// Esperan a un Toque. Solo Existe en Móvil; en Escritorio el Lateral los Muestra.
+const dockOpen = ref(false)
 const error = ref('')
 const pending = ref(null)
 const lookupText = ref('')
@@ -197,6 +200,8 @@ async function confirmStock() {
   }
 }
 
+watch(watched, (card) => { if (card) dockOpen.value = true })
+
 async function cancel() {
   try {
     const reply = await api.cancelSearch(searchId.value, api.newKey())
@@ -244,8 +249,19 @@ onUnmounted(stopPolling)
 
   <main class="mu-grilla">
     <div class="mu-lateral">
-      <MuchiPanel :book="book" v-model:dark="dark" :message="message" />
-      <CardArt :card="watched" :game="game" />
+      <!-- En Móvil estos dos Bajan a un Muelle fijo al pie: la Lista se Queda
+           con el Ancho completo y Muchi y la Carta siguen a la Vista. -->
+      <div class="mu-muelle" :class="{ abierto: dockOpen }">
+        <button class="mu-muelle__tirador" type="button"
+                :aria-expanded="dockOpen" @click="dockOpen = !dockOpen">
+          <span>🐱 Muchi<span v-if="watched"> · 🃏 {{ watched.name }}</span></span>
+          <span aria-hidden="true">{{ dockOpen ? '▼' : '▲' }}</span>
+        </button>
+        <div class="mu-muelle__cuerpo">
+          <MuchiPanel :book="book" v-model:dark="dark" :message="message" />
+          <CardArt :card="watched" :game="game" />
+        </div>
+      </div>
       <CommunityPanel :repository-url="config.repository_url" />
     </div>
 
@@ -361,10 +377,44 @@ onUnmounted(stopPolling)
 }
 .mu-historia { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 summary { cursor: pointer; font-weight: 600; }
+.mu-muelle { display: flex; flex-direction: column; gap: 16px; }
+.mu-muelle__cuerpo { display: flex; flex-direction: column; gap: 16px; }
+/* En Escritorio el Muelle es el Lateral de siempre: sin Barra ni Tirador. */
+.mu-muelle__tirador { display: none; }
 /* En Móvil la Grilla es una sola Columna: el Lateral Suelta el Flote
-   para no Tapar el Contenido al Bajar. */
+   para no Tapar el Contenido al Bajar, y Muchi y la Carta Bajan al Muelle.
+   Dos Columnas de verdad dejarían cada Oferta en 200px: el Precio y las
+   Pastillas se Parten, y la Carta se Mira con lupa. */
 @media (max-width: 800px) {
   .mu-grilla { grid-template-columns: 1fr; }
-  .mu-lateral { position: static; }
+  /* Quien Llega quiere Buscar: el Lateral Pasa detrás de la Lista, y de él
+     solo la Comunidad sigue en el Flujo. */
+  .mu-columna { order: 1; }
+  .mu-lateral { position: static; order: 2; }
+  .mu-muelle {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; gap: 10px;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+    background: var(--mu-papel);
+    border-top: 2px solid var(--mu-rosa-cl);
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -6px 20px rgba(110, 90, 104, .22);
+  }
+  .mu-muelle__tirador {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    width: 100%; padding: 8px 4px; border: 0; border-radius: 12px;
+    background: none; color: var(--mu-tinta); font: inherit; font-weight: 700;
+    cursor: pointer; text-align: left;
+  }
+  .mu-muelle__tirador span:first-child {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  /* Cerrado Ocupa una Línea; abierto Crece hasta donde la Lista sigue Asomando.
+     Abierto también Pasa por encima del Pie: es un Panel de paso, y el Pie
+     Espera su Turno en vez de Flotar sobre la Carta. */
+  .mu-muelle.abierto { z-index: 40; }
+  .mu-muelle__cuerpo { display: none; }
+  .mu-muelle.abierto .mu-muelle__cuerpo {
+    display: flex; max-height: 62vh; overflow-y: auto; padding-bottom: 4px;
+  }
 }
 </style>
