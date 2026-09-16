@@ -200,7 +200,11 @@ async function confirmStock() {
   }
 }
 
-watch(watched, (card) => { if (card) dockOpen.value = true })
+// Mirar una Carta ya no Abre el Muelle: la Carta se Muestra sola arriba de la
+// Lista, y Muchi encima de ella sería un Gato tapando lo que le pediste ver.
+// Se Abre solo con un Toque, o cuando algo Salió mal y hay que Contarlo. Lo
+// demás que Muchi Dice Cabe en la Barra, sin Robarle la Pantalla a nadie.
+watch(message, (said) => { if (said?.state === 'angry') dockOpen.value = true })
 
 async function cancel() {
   try {
@@ -259,7 +263,7 @@ onUnmounted(stopPolling)
     <div class="mu-muelle" :class="{ abierto: dockOpen }">
       <button class="mu-muelle__tirador" type="button"
               :aria-expanded="dockOpen" @click="dockOpen = !dockOpen">
-        <span>🐱 Muchi · Código Abierto</span>
+        <span>🐱 {{ message?.text || 'Muchi · Código Abierto' }}</span>
         <span aria-hidden="true">{{ dockOpen ? '▼' : '▲' }}</span>
       </button>
       <div class="mu-muelle__cuerpo">
