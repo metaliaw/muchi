@@ -42,7 +42,7 @@ const genericText = computed(() => props.searching
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 12px 18px;
   align-items: center;
-  padding: 14px 18px;
+  padding: 18px 20px;
   border: 1px dashed var(--mu-tinta-sw);
   border-radius: 14px;
   background: color-mix(in srgb, var(--mu-blanco) 55%, transparent);
