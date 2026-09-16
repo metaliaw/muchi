@@ -21,9 +21,14 @@ const AUTHORS = [
     <p class="mu-comunidad__eyebrow">Código abierto</p>
     <h2>Aprende con Muchi</h2>
     <p>Revisa cómo está hecha y ayúdanos a mejorarla.</p>
-    <nav v-if="repositoryUrl" aria-label="Participar en Muchi" class="mu-comunidad__enlaces">
-      <a :href="repositoryUrl" target="_blank" rel="noopener noreferrer">Ver el código</a>
-      <a :href="newIssueUrl" target="_blank" rel="noopener noreferrer">Comentar</a>
+    <!-- La Dirección Llega con la Configuración, un Instante después del primer
+         Pintado. El `nav` se Queda igual: si Apareciera recién con ella,
+         Empujaría hacia abajo a Muchi y a la Carta con la Página ya a la Vista. -->
+    <nav aria-label="Participar en Muchi" class="mu-comunidad__enlaces">
+      <template v-if="repositoryUrl">
+        <a :href="repositoryUrl" target="_blank" rel="noopener noreferrer">Ver el código</a>
+        <a :href="newIssueUrl" target="_blank" rel="noopener noreferrer">Comentar</a>
+      </template>
     </nav>
 
     <p class="mu-comunidad__firma">
@@ -64,6 +69,10 @@ p { margin: 0; }
   margin-top: 8px;
   flex-wrap: wrap;
   font-size: .9rem;
+  /* Un Renglón Reservado, Lleguen o no los Enlaces. La Medida es la misma
+     `line-height` del Cuerpo: reservar de menos Deja un Salto pequeño, que se
+     Ve igual. */
+  min-height: 1.5em;
 }
 .mu-comunidad__enlaces a + a::before { content: "· "; color: var(--mu-tinta-sw); }
 .mu-comunidad__enlaces a { font-weight: 700; }
