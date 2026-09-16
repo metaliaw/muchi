@@ -44,6 +44,13 @@ html[data-tema='oscuro'] {
 
 * { box-sizing: border-box; }
 
+/* La Barra de Desplazamiento Aparece cuando la Página Crece, y al Aparecer se
+   Lleva quince Píxeles de Ancho. Con la Ventana cerca del Corte entre
+   Escritorio y Móvil, esos quince Píxeles Cambian el Diseño entero con la
+   Página ya Cargada: Muchi Dejaba de ser un Panel y Pasaba a su Botón de
+   Esquina, como si Desapareciera. El Hueco se Reserva desde el principio. */
+html { scrollbar-gutter: stable; }
+
 body {
   margin: 0;
   background: var(--mu-papel);
