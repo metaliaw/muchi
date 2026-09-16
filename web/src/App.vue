@@ -392,9 +392,18 @@ onUnmounted(stopPolling)
 .mu-grilla {
   display: grid; grid-template-columns: 260px 1fr; gap: 16px 20px;
   grid-template-areas: "abierto lista" "flotante lista";
+  /* La Lista Cruza las dos Filas. Sin esto, el Alto extra de las Ofertas
+     Engorda la Fila del Aviso y Muchi Arranca más abajo. */
+  grid-template-rows: max-content 1fr;
   max-width: 1100px; margin: 22px auto; padding: 0 16px; align-items: start;
 }
-.mu-abierto { grid-area: abierto; }
+.mu-abierto {
+  grid-area: abierto;
+  /* Un Anuncio que todavía Aterriza aquí no puede Abrir la Fila: Muchi
+     Empieza debajo del Aviso, y cada Pixel de más lo Empuja fuera. */
+  max-height: 240px;
+  overflow: hidden;
+}
 /* Muchi y la Carta Acompañan el Recorrido de la Lista. Flotan juntos, en un
    solo Bloque: dos Pegados por separado se Taparían uno al otro al Bajar. */
 .mu-flotante {
@@ -409,10 +418,16 @@ onUnmounted(stopPolling)
 /* Lo que Muchi no Puso ahí va al Final del Bloque, nunca delante de Muchi ni
    de la Carta. No se Esconde: se Ordena. */
 .mu-flotante > :not(.mu-muelle):not(.mu-tarjeta) { order: 9; }
-/* Un Anuncio que Aterriza suelto en la Rejilla Toma su propia Fila entera, en
-   vez de Robarle el Ancho a la Columna de Muchi o a la de las Ofertas. */
+/* Un Anuncio suelto en la Rejilla no Abre una Fila encima de Muchi. El Slot
+   de las Ofertas Vive dentro de AdSpot, no como Hijo de la Grilla. */
 .mu-grilla > ins,
-.mu-grilla > .google-auto-placed { grid-column: 1 / -1; }
+.mu-grilla > .google-auto-placed {
+  grid-column: 1 / -1;
+  max-height: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
 /* En Escritorio el Muelle es un Panel más: sin Barra ni Tirador. */
 .mu-muelle, .mu-muelle__cuerpo { display: contents; }
 .mu-columna { grid-area: lista; display: flex; flex-direction: column; gap: 16px; }
