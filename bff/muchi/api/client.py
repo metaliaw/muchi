@@ -9,7 +9,8 @@ import requests
 
 from muchi.mtg.models import Order
 from muchi.mtg.ports import QueryFailed, SearchRejected
-from muchi.mtg.search import SearchItem, SearchOffer, SearchResults, SearchState
+from muchi.mtg.search import (SearchItem, SearchOffer, SearchResults, SearchState,
+                              StockCheck)
 
 
 def build_search(reply: dict) -> SearchState:
@@ -46,6 +47,16 @@ def read_locations(row: dict) -> tuple[str, ...]:
                  if str(location).strip())
 
 
+def read_quantity(row: dict) -> int | None:
+    """Las Unidades declaradas. Ausente es "no se Pregunto", no es Cero."""
+    quantity = row.get("stock_quantity")
+    if quantity is None:
+        return None
+    if type(quantity) is not int or quantity < 0:
+        raise ValueError("Invalid stock quantity")
+    return quantity
+
+
 def build_offer(row: dict) -> SearchOffer:
     amount = Decimal(row["price_amount"])
     if not amount.is_finite() or amount < 0:
@@ -59,6 +70,8 @@ def build_offer(row: dict) -> SearchOffer:
         variant=read_metadata(row, "variant"), title=read_metadata(row, "title"),
         edition=read_edition(row), card_key=row.get("card_key") or "",
         locations=read_locations(row),
+        offer_id=str(row.get("id") or ""),
+        stock_quantity=read_quantity(row),
         suspicious_reason=row.get("suspicious_reason") or "",
         metadata={str(key): str(value) for key, value in (row.get("metadata") or {}).items()},
     )
@@ -95,6 +108,14 @@ def build_results(reply: dict) -> SearchResults:
         faults=read_faults(row),
     ) for row in ordered)
     return SearchResults(items, reply["cursor"], reply["has_more"])
+
+
+def build_stock_checks(reply: dict) -> tuple[StockCheck, ...]:
+    return tuple(StockCheck(
+        offer_id=str(row["id"]),
+        stock_status=row["stock_status"],
+        stock_quantity=read_quantity(row),
+    ) for row in reply["offers"])
 
 
 @dataclass
@@ -172,6 +193,22 @@ class SearchProvider:
             "POST", f"/searches/{quote(search_id, safe='')}/cancel", key=key,
         )
         return self.parse_reply(build_search, reply)
+
+    def check_stock(self, search_id: str,
+                    offer_ids: tuple[str, ...]) -> tuple[StockCheck, ...]:
+        """Le Pide a la API que vuelva a mirar el Stock de estas Ofertas.
+
+        La Consulta a la Tienda vive del otro Lado de la Frontera: el Worker ya
+        Sabe hablarle a cada Proveedor, y repetir esa Logica aca la publicaria
+        dos veces. El BFF solo Decide a quien preguntar y en que Orden.
+        """
+        if not offer_ids:
+            return ()
+        reply = self.request_reply(
+            "POST", f"/searches/{quote(search_id, safe='')}/stock",
+            payload={"offers": list(offer_ids)},
+        )
+        return self.parse_reply(build_stock_checks, reply)
 
     def read_sources(self) -> list[dict]:
         reply = self.request_reply("GET", "/health/sources")
