@@ -20,17 +20,10 @@ const AUTHORS = [
   <aside class="mu-panel mu-comunidad">
     <p class="mu-comunidad__eyebrow">Código abierto</p>
     <h2>Aprende con Muchi</h2>
-    <p>
-      Revisa cómo está hecha la parte visible, conoce sus criterios y ayúdanos
-      a mejorarla.
-    </p>
+    <p>Revisa cómo está hecha y ayúdanos a mejorarla.</p>
     <nav v-if="repositoryUrl" aria-label="Participar en Muchi" class="mu-comunidad__enlaces">
-      <a :href="repositoryUrl" target="_blank" rel="noopener noreferrer">
-        Ver el código
-      </a>
-      <a :href="newIssueUrl" target="_blank" rel="noopener noreferrer">
-        Enviar un comentario
-      </a>
+      <a :href="repositoryUrl" target="_blank" rel="noopener noreferrer">Ver el código</a>
+      <a :href="newIssueUrl" target="_blank" rel="noopener noreferrer">Comentar</a>
     </nav>
 
     <p class="mu-comunidad__firma">
@@ -44,6 +37,9 @@ const AUTHORS = [
 <style scoped>
 .mu-comunidad {
   box-shadow: none;
+  /* Abre la Columna y lo que Sigue Flota: cada Línea de más acá Empuja a Muchi
+     y a la Carta un Renglón más abajo del primer Vistazo. */
+  padding: 14px 16px;
   /* Al lado hay Paneles blancos: un 9% se perdia contra ellos. El Tinte
      sube y el Desvanecido se estira, para que el Panel se distinga sin
      gritar. Mismo Color, el de siempre. */
@@ -59,18 +55,21 @@ const AUTHORS = [
   letter-spacing: .09em;
   text-transform: uppercase;
 }
-h2 { margin: 0 0 6px; font-size: 1rem; }
+h2 { margin: 0 0 4px; font-size: 1rem; }
 p { margin: 0; }
+/* Los dos Enlaces Caben en una Línea: apilados Gastaban un Renglón cada uno. */
 .mu-comunidad__enlaces {
   display: flex;
-  gap: 8px 14px;
-  margin-top: 12px;
+  gap: 6px 12px;
+  margin-top: 8px;
   flex-wrap: wrap;
+  font-size: .9rem;
 }
+.mu-comunidad__enlaces a + a::before { content: "· "; color: var(--mu-tinta-sw); }
 .mu-comunidad__enlaces a { font-weight: 700; }
 /* Los dos Nombres se separan solos: una Coma escrita a mano se rompe cuando
    alguien suma o quita a alguien. */
-.mu-comunidad__firma { margin-top: 10px; font-size: .82rem; }
+.mu-comunidad__firma { margin-top: 8px; font-size: .78rem; }
 .mu-comunidad__firma a { font-weight: 700; }
 .mu-comunidad__firma a + a::before { content: ' y '; font-weight: 400; }
 .mu-comunidad__firma a:first-of-type { margin-left: 3px; }
