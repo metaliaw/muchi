@@ -73,7 +73,7 @@ def read_health() -> dict:
 
 
 # Cada Red es un Nombre, un Icono y la Variable que la enciende. Una Red sin
-# Direccion no existe: el Pie solo muestra las que alguien configuro.
+# Direccion no existe: la Barra solo muestra las que alguien configuro.
 # Un Mazo de Commander tiene cien Cartas, y de ahí salen los dos Topes: 99
 # copias más el Comandante. Cien Entradas cubren el Mazo entero y sobran,
 # porque las Tierras básicas se repiten en una sola Línea.

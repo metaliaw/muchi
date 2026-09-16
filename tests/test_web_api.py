@@ -404,21 +404,21 @@ def test_art_refuses_a_language_that_is_not_offered(translating):
     assert translator.looked == []
 
 
-# ------------------------------------------------------------------- el Pie
+# --------------------------------------------------------------- las Redes
 def test_config_names_the_repository_for_the_footer(client):
     reply, _ = client
     assert reply.get("/api/config").json()["repository_url"].startswith("https://github.com/")
 
 
 def test_a_network_without_an_address_does_not_exist(client, monkeypatch):
-    """El Pie solo muestra las Redes que alguien configuró."""
+    """La Barra solo muestra las Redes que alguien configuró."""
     reply, _ = client
     for _, _, variable in main.SOCIALS:
         monkeypatch.delenv(variable, raising=False)
     assert reply.get("/api/config").json()["socials"] == []
 
 
-def test_configured_networks_reach_the_footer(client, monkeypatch):
+def test_configured_networks_reach_the_bar(client, monkeypatch):
     reply, _ = client
     for _, _, variable in main.SOCIALS:
         monkeypatch.delenv(variable, raising=False)

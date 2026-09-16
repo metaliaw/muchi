@@ -7,62 +7,34 @@ const props = defineProps({
   socials: { type: Array, default: () => [] },
 })
 
-// El Maquetado: cada Ranura que el Pie sabe mostrar, con su Icono y su
-// Nombre. La que no tiene Dirección se ve apagada y no lleva a ninguna
-// parte, para que el Diseño se vea entero antes de existir del todo.
-const SLOTS = [
-  { name: 'Instagram', icon: '📸' },
-  { name: 'Discord', icon: '💬' },
-  { name: 'X', icon: '𝕏' },
-  { name: 'YouTube', icon: '▶️' },
-  { name: 'TikTok', icon: '🎵' },
-]
+// Una Ranura sin Dirección no Existe. Un Icono apagado que no Lleva a ninguna
+// parte Promete una Cuenta que nadie abrió todavía, y quien lo Pulsa Descubre
+// que no Pasa nada.
+const redes = computed(() => props.socials.filter((red) => red.url))
 
-const DONATIONS = [
-  { name: 'Ko-fi', icon: '☕' },
-  { name: 'PayPal', icon: '💳' },
-  { name: 'Mercado Pago', icon: '🪙' },
-]
-
-const byName = computed(() =>
-  Object.fromEntries(props.socials.map((red) => [red.name, red.url])))
-
-const redes = computed(() =>
-  SLOTS.map((slot) => ({ ...slot, url: byName.value[slot.name] || '' })))
-
-// La primera Ranura de Apoyo se lleva la Dirección configurada; las otras
-// esperan la suya.
-const apoyos = computed(() =>
-  DONATIONS.map((slot, index) => ({
-    ...slot, url: index === 0 ? props.donationUrl : '',
-  })))
+const apoyos = computed(() => (props.donationUrl
+  ? [{ name: 'Ko-fi', icon: '☕', url: props.donationUrl }]
+  : []))
 </script>
 
 <template>
-  <nav class="mu-insignias" aria-label="Apoyar y participar en Muchi">
-    <component
+  <nav v-if="redes.length || apoyos.length" class="mu-insignias"
+       aria-label="Apoyar y participar en Muchi">
+    <a
       v-for="red in redes" :key="red.name"
-      :is="red.url ? 'a' : 'span'"
-      class="mu-icono" :class="{ pronto: !red.url }"
-      :href="red.url || null"
-      :title="red.url ? red.name : `${red.name} — pronto`"
-      :aria-label="red.url ? red.name : `${red.name}, pronto`"
-      :target="red.url ? '_blank' : null"
-      :rel="red.url ? 'noopener noreferrer' : null"
-    >{{ red.icon }}</component>
+      class="mu-icono" :href="red.url" :title="red.name" :aria-label="red.name"
+      target="_blank" rel="noopener noreferrer"
+    >{{ red.icon }}</a>
 
-    <span class="mu-corte" aria-hidden="true"></span>
+    <span v-if="redes.length && apoyos.length" class="mu-corte" aria-hidden="true"></span>
 
-    <component
+    <a
       v-for="apoyo in apoyos" :key="apoyo.name"
-      :is="apoyo.url ? 'a' : 'span'"
-      class="mu-icono apoyo" :class="{ pronto: !apoyo.url }"
-      :href="apoyo.url || null"
-      :title="apoyo.url ? `Ayuda a Muchi por ${apoyo.name}` : `${apoyo.name} — pronto`"
-      :aria-label="apoyo.url ? `Ayuda a Muchi por ${apoyo.name}` : `${apoyo.name}, pronto`"
-      :target="apoyo.url ? '_blank' : null"
-      :rel="apoyo.url ? 'noopener noreferrer' : null"
-    >{{ apoyo.icon }}</component>
+      class="mu-icono apoyo" :href="apoyo.url"
+      :title="`Ayuda a Muchi por ${apoyo.name}`"
+      :aria-label="`Ayuda a Muchi por ${apoyo.name}`"
+      target="_blank" rel="noopener noreferrer"
+    >{{ apoyo.icon }}</a>
   </nav>
 </template>
 
@@ -85,11 +57,9 @@ const apoyos = computed(() =>
 a.mu-icono:hover { background: var(--mu-rosa-lav); transform: translateY(-1px); }
 a.mu-icono { transition: background .15s, transform .15s; }
 .mu-icono.apoyo { background: var(--mu-rosa-lav); }
-/* Una Ranura sin Dirección se ve, pero no promete nada. */
-.mu-icono.pronto { opacity: .35; filter: grayscale(1); cursor: default; background: none; }
 
-/* En Móvil los ocho Iconos no Caben junto al Nombre: Encogen y la Fila entera
-   se Va a la Derecha, debajo del Título, sin Partirse en dos Grupos. */
+/* En Móvil los Iconos Encogen y la Fila entera se Va a la Derecha, debajo del
+   Título, sin Partirse en dos Grupos. */
 @media (max-width: 560px) {
   .mu-insignias { gap: 4px; padding: 6px 10px; flex-wrap: nowrap; }
   .mu-icono { width: 26px; height: 26px; font-size: .92rem; }
