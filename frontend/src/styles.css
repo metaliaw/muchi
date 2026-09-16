@@ -15,6 +15,8 @@
   --mu-foil-fg:  #8A6A11;
   --mu-cond-bg:  #F4F1F5;
   --mu-cond-fg:  #7C6C78;
+  --mu-edic-bg:  #E4ECF8;
+  --mu-edic-fg:  #4C6299;
   --mu-sombra:   0 6px 20px rgba(110, 90, 104, .18);
   --mu-sombra-sw:0 3px 12px rgba(110, 90, 104, .12);
 }
@@ -34,6 +36,8 @@ html[data-tema='oscuro'] {
   --mu-foil-fg:  #F0D68B;
   --mu-cond-bg:  #332B36;
   --mu-cond-fg:  #C9BAC5;
+  --mu-edic-bg:  #29334A;
+  --mu-edic-fg:  #AFC0EC;
   --mu-sombra:   0 6px 20px rgba(0, 0, 0, .45);
   --mu-sombra-sw:0 3px 12px rgba(0, 0, 0, .35);
 }
@@ -127,4 +131,5 @@ textarea:focus, input:focus { outline: 2px solid var(--mu-acento); outline-offse
 html[data-tema='oscuro'] .mu-pill.tienda { color: var(--mu-tinta); }
 .mu-pill.foil   { background: var(--mu-foil-bg); color: var(--mu-foil-fg); }
 .mu-pill.cond   { background: var(--mu-cond-bg); color: var(--mu-cond-fg); }
+.mu-pill.edicion{ background: var(--mu-edic-bg); color: var(--mu-edic-fg); }
 .mu-pill.mejor  { background: var(--mu-niebla);  color: var(--mu-peri); }

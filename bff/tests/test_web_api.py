@@ -435,6 +435,29 @@ def test_an_offer_publishes_what_identifies_its_printing(client):
     assert "edition" in row and "finish" in row
 
 
+def test_an_offer_wears_its_edition_as_a_pill():
+    """La Edición Distingue una Impresión de otra: va en una Pastilla propia."""
+    offer = build_offer(edition="Modern Horizons 3 Commander")
+
+    row = presenter.build_offer(offer, muchi_dolar=1000)
+
+    assert {"kind": "edicion", "text": "Modern Horizons 3 Commander"} in row["pills"]
+
+
+def test_an_edition_code_is_read_in_capitals():
+    """`c21` no es una Palabra: es el Código de una Edición."""
+    row = presenter.build_offer(build_offer(edition="c21"), muchi_dolar=1000)
+
+    assert {"kind": "edicion", "text": "C21"} in row["pills"]
+
+
+def test_a_catalog_name_is_not_an_edition():
+    """`MTG Single` Nombra el Catálogo de la Tienda, no la Edición de la Carta."""
+    for noise in ("MTG Single", "Magic: The Gathering Singles", ""):
+        row = presenter.build_offer(build_offer(edition=noise), muchi_dolar=1000)
+        assert not [pill for pill in row["pills"] if pill["kind"] == "edicion"]
+
+
 def test_an_offer_publishes_its_pickup_locations():
     offer = build_offer(locations=("Santiago - Providencia", "Santiago - Las Condes"))
 
