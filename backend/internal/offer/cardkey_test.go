@@ -42,12 +42,12 @@ func TestOneCardFromThreeSources(t *testing.T) {
 	}
 }
 
-// TestOnePokemonPrintingGroupsItsOffers Keeps another Edition in another Group.
-func TestOnePokemonPrintingGroupsItsOffers(t *testing.T) {
+// TestOnePokemonCardGroupsEditions Keeps Printings below the functional Card.
+func TestOnePokemonCardGroupsEditions(t *testing.T) {
 	items := NameCards([]Offer{
-		{CardName: "Slowpoke", Metadata: map[string]string{"product_id": "704786"}},
-		{CardName: "Slowpoke", Metadata: map[string]string{"product_id": "704786"}},
-		{CardName: "Slowpoke", Metadata: map[string]string{"product_id": "197654"}},
+		{CardName: "Slowpoke", Edition: "PRE", Metadata: map[string]string{"product_id": "610373"}},
+		{CardName: "Slowpoke", Edition: "HIF", Metadata: map[string]string{"product_id": "197654"}},
+		{CardName: "Slowpoke ex", Edition: "MEG", Metadata: map[string]string{"product_id": "704786"}},
 	})
 
 	if items[0].CardKey != items[1].CardKey || items[0].CardKey == items[2].CardKey {
