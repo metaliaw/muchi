@@ -132,14 +132,18 @@ const grouped = computed(() => groups.value.length > 1)
         </span>
         <span v-if="offer.best" class="mu-pill mejor">🐾 el mas barato</span>
       </div>
-      <details v-if="offer.locations?.length" class="mu-retiros">
-        <summary>Retiro: {{ offer.locations[0] }}
-          <span v-if="offer.locations.length > 1">
+      <!-- Un solo Lugar no se Pliega: abrir un Detalle vacio no Muestra nada. -->
+      <p v-if="offer.locations?.length === 1" class="mu-retiros">
+        <span aria-hidden="true">📍</span> Retiro: {{ offer.locations[0] }}
+      </p>
+      <details v-else-if="offer.locations?.length" class="mu-retiros">
+        <summary><span aria-hidden="true">📍</span> Retiro: {{ offer.locations[0] }}
+          <span class="mu-retiros__mas">
             · +{{ offer.locations.length - 1 }}
             {{ offer.locations.length === 2 ? 'retiro' : 'retiros' }}
           </span>
         </summary>
-        <ul v-if="offer.locations.length > 1">
+        <ul>
           <li v-for="location in offer.locations" :key="location">{{ location }}</li>
         </ul>
       </details>
@@ -173,8 +177,9 @@ h3 { margin: 0; font-size: 1.05rem; }
 .mu-mirable { cursor: pointer; }
 .mu-mirable:hover, .mu-mirable:focus-visible { text-decoration: underline dotted; }
 .mu-precio { font-weight: 800; color: var(--mu-acento); }
-.mu-retiros { width: fit-content; margin: 6px 0 4px; color: var(--mu-tinta-sw); font-size: .82rem; }
+.mu-retiros { width: fit-content; margin: 8px 0 4px; color: var(--mu-tinta); font-size: .88rem; }
 .mu-retiros summary { cursor: pointer; }
 .mu-retiros summary::marker { color: var(--mu-peri); }
+.mu-retiros__mas { color: var(--mu-tinta-sw); }
 .mu-retiros ul { margin: 4px 0 0; padding-left: 20px; }
 </style>
