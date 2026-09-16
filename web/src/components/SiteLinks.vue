@@ -1,5 +1,5 @@
 <script setup>
-/** El Pie flota sobre el Contenido: Apoyo, Código y Redes como Iconos. */
+/** Los Enlaces de Muchi en la Barra de arriba: Redes y Apoyo, como Iconos. */
 import { computed } from 'vue'
 
 const props = defineProps({
@@ -39,46 +39,38 @@ const apoyos = computed(() =>
 </script>
 
 <template>
-  <footer class="mu-pie">
-    <nav class="mu-insignias" aria-label="Apoyar y participar en Muchi">
-      <component
-        v-for="red in redes" :key="red.name"
-        :is="red.url ? 'a' : 'span'"
-        class="mu-icono" :class="{ pronto: !red.url }"
-        :href="red.url || null"
-        :title="red.url ? red.name : `${red.name} — pronto`"
-        :aria-label="red.url ? red.name : `${red.name}, pronto`"
-        :target="red.url ? '_blank' : null"
-        :rel="red.url ? 'noopener noreferrer' : null"
-      >{{ red.icon }}</component>
+  <nav class="mu-insignias" aria-label="Apoyar y participar en Muchi">
+    <component
+      v-for="red in redes" :key="red.name"
+      :is="red.url ? 'a' : 'span'"
+      class="mu-icono" :class="{ pronto: !red.url }"
+      :href="red.url || null"
+      :title="red.url ? red.name : `${red.name} — pronto`"
+      :aria-label="red.url ? red.name : `${red.name}, pronto`"
+      :target="red.url ? '_blank' : null"
+      :rel="red.url ? 'noopener noreferrer' : null"
+    >{{ red.icon }}</component>
 
-      <span class="mu-corte" aria-hidden="true"></span>
+    <span class="mu-corte" aria-hidden="true"></span>
 
-      <component
-        v-for="apoyo in apoyos" :key="apoyo.name"
-        :is="apoyo.url ? 'a' : 'span'"
-        class="mu-icono apoyo" :class="{ pronto: !apoyo.url }"
-        :href="apoyo.url || null"
-        :title="apoyo.url ? `Ayuda a Muchi por ${apoyo.name}` : `${apoyo.name} — pronto`"
-        :aria-label="apoyo.url ? `Ayuda a Muchi por ${apoyo.name}` : `${apoyo.name}, pronto`"
-        :target="apoyo.url ? '_blank' : null"
-        :rel="apoyo.url ? 'noopener noreferrer' : null"
-      >{{ apoyo.icon }}</component>
-    </nav>
-  </footer>
+    <component
+      v-for="apoyo in apoyos" :key="apoyo.name"
+      :is="apoyo.url ? 'a' : 'span'"
+      class="mu-icono apoyo" :class="{ pronto: !apoyo.url }"
+      :href="apoyo.url || null"
+      :title="apoyo.url ? `Ayuda a Muchi por ${apoyo.name}` : `${apoyo.name} — pronto`"
+      :aria-label="apoyo.url ? `Ayuda a Muchi por ${apoyo.name}` : `${apoyo.name}, pronto`"
+      :target="apoyo.url ? '_blank' : null"
+      :rel="apoyo.url ? 'noopener noreferrer' : null"
+    >{{ apoyo.icon }}</component>
+  </nav>
 </template>
 
 <style scoped>
-/* Flota abajo a la Derecha, sobre el Contenido. El Pie no ocupa Alto en el
-   Flujo: el Cuerpo le deja Aire al final para que no tape la última Fila. */
-.mu-pie {
-  position: fixed;
-  right: 16px;
-  bottom: 16px;
-  z-index: 30;
-}
+/* Viven en la Barra de arriba, a la Derecha del Nombre. Antes Flotaban fijos
+   sobre el Contenido, y en Móvil se Peleaban el Borde de abajo con el Muelle. */
 .mu-insignias {
-  display: flex; align-items: center; gap: 6px;
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   padding: 7px 12px; border-radius: 999px;
   background: var(--mu-blanco);
   border: 2px solid var(--mu-rosa-cl);
@@ -96,14 +88,10 @@ a.mu-icono { transition: background .15s, transform .15s; }
 /* Una Ranura sin Dirección se ve, pero no promete nada. */
 .mu-icono.pronto { opacity: .35; filter: grayscale(1); cursor: default; background: none; }
 
-/* En Móvil el Muelle de Muchi Ocupa el Borde de abajo: el Pie se Sube encima
-   de él en vez de Pelearle el mismo Centímetro. */
-@media (max-width: 800px) {
-  .mu-pie { bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
-}
-
+/* En Móvil los ocho Iconos no Caben junto al Nombre: Encogen y la Fila entera
+   se Va a la Derecha, debajo del Título, sin Partirse en dos Grupos. */
 @media (max-width: 560px) {
-  .mu-pie { right: 8px; left: 8px; }
-  .mu-insignias { justify-content: center; flex-wrap: wrap; }
+  .mu-insignias { gap: 4px; padding: 6px 10px; flex-wrap: nowrap; }
+  .mu-icono { width: 26px; height: 26px; font-size: .92rem; }
 }
 </style>

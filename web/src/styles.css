@@ -51,13 +51,13 @@ body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   font-size: 15px;
   line-height: 1.5;
-  /* El Pie flota fijo abajo: sin este Aire taparía la última Fila. */
-  padding-bottom: 72px;
+  padding-bottom: 24px;
 }
 
-/* En Móvil el Muelle se Suma al Pie, y los dos Piden su propio Aire. */
+/* En Móvil el Muelle Flota sobre el Borde de abajo: sin este Aire taparía la
+   última Fila. Los Enlaces ya no Piden el suyo, ahora Viven en la Barra. */
 @media (max-width: 800px) {
-  body { padding-bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
+  body { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
 }
 
 a { color: var(--mu-acento); }
