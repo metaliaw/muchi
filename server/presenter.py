@@ -18,6 +18,12 @@ STOCK_LABELS = {"available": "En Stock", "unavailable": "Agotado",
                 "unknown": "No confirmado"}
 # Los Acabados van en Dorado; el resto del Tratamiento, en Gris.
 FOIL_TAGS = ("Foil", "Etched")
+# Una Tienda que llama "MTG Single" a su Edicion no Nombro una Edicion: Nombro
+# su Catalogo. Esa Palabra no Distingue una Impresion de otra, asi que no Vale
+# una Pastilla.
+EDITION_NOISE = ("single", "singles")
+# Una Edicion de hasta cuatro Letras es un Codigo: `c21`, `otc`, `mh3`.
+EDITION_CODE_LENGTH = 4
 # El Muchi Dólar solo convierte Dólares. Una Oferta en otra Moneda se muestra
 # con su Valor original y queda fuera del Carrito, porque nadie sabe cuánto es.
 MUCHI_DOLAR_CURRENCY = "USD"
@@ -32,9 +38,23 @@ def convert_to_clp(offer: SearchOffer, muchi_dolar: int) -> Decimal | None:
     return None
 
 
+def name_edition(offer: SearchOffer) -> str:
+    """La Edicion que Distingue esta Impresion, o nada cuando solo Repite el Juego."""
+    edition = offer.edition.strip()
+    words = edition.lower().replace(":", " ").split()
+    if not words or words[-1] in EDITION_NOISE:
+        return ""
+    # `cmm` es un Codigo de Edicion, no una Palabra: se Lee en Mayusculas.
+    if len(words) == 1 and len(edition) <= EDITION_CODE_LENGTH:
+        return edition.upper()
+    return edition
+
+
 def build_pills(offer: SearchOffer, verified: bool = True) -> list[dict]:
-    """Las Pastillas de una Oferta: quién la vende, cómo viene y su Stock."""
+    """Las Pastillas de una Oferta: quién la vende, de qué Edición, cómo viene y su Stock."""
     pills = [{"kind": "tienda", "text": offer.store}]
+    if edition := name_edition(offer):
+        pills.append({"kind": "edicion", "text": edition})
     for tag in treatment.build_treatment(offer).split(treatment.SEPARATOR):
         if tag:
             pills.append({"kind": "foil" if tag in FOIL_TAGS else "cond", "text": tag})
