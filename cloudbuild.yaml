@@ -12,21 +12,17 @@ substitutions:
   _TOKEN_SECRET: muchi-api-token
   _ADSENSE_CLIENT: ''
   _ADSENSE_SLOT: ''
-  # La Barra, el Apoyo y la Re-verificacion. Todos son Identificadores publicos o
-  # Interruptores: ninguno es un Secreto, y por eso viajan como Variables y no
-  # por Secret Manager. Vacios por Defecto, asi un deploy sin ellos no inventa
-  # un Patrocinador ni enciende una Visita extra por Oferta.
+  # El Apoyo, el Patrocinio y la Re-verificacion. Todos son Identificadores
+  # publicos o Interruptores: ninguno es un Secreto, y por eso viajan como
+  # Variables y no por Secret Manager. Vacios por Defecto, asi un deploy sin
+  # ellos no inventa un Patrocinador ni enciende una Visita extra por Oferta.
+  #
+  # Las Redes ya no estan aca: viven en config/socials.yaml, que viaja con la
+  # Imagen. Una Direccion publica no necesita una Sustitucion de Build.
   _DONATION_URL: ''
   _SPONSOR_NAME: ''
   _SPONSOR_TEXT: ''
   _SPONSOR_URL: ''
-  # Las Cuentas que existen hoy. El resto sigue vacio, y una Red sin Direccion
-  # no se Muestra: un Icono apagado Promete una Cuenta que nadie abrio.
-  _INSTAGRAM_URL: 'https://www.instagram.com/muchi_tgc'
-  _TIKTOK_URL: 'https://www.tiktok.com/@muchi_tgc'
-  _DISCORD_URL: ''
-  _X_URL: ''
-  _YOUTUBE_URL: ''
   _VERIFY_STOCK: ''
   # SHORT_SHA solo lo llena un Trigger; en un submit manual queda vacío y la
   # Etiqueta de la Imagen sale rota. deploy.sh pasa el SHA del Commit.
@@ -72,5 +68,5 @@ steps:
       # El ^|^ cambia el Separador de la Lista: el Texto del Patrocinador lleva
       # Comas, y con el Separador por Defecto una Coma partiria el Valor en dos
       # Variables rotas. Ninguna URL contiene una Barra vertical.
-      - --set-env-vars=^|^MUCHI_ENV=production|MUCHI_API_URL=${_API_URL}|MUCHI_ADSENSE_CLIENT=${_ADSENSE_CLIENT}|MUCHI_ADSENSE_SLOT=${_ADSENSE_SLOT}|MUCHI_DONATION_URL=${_DONATION_URL}|MUCHI_SPONSOR_NAME=${_SPONSOR_NAME}|MUCHI_SPONSOR_TEXT=${_SPONSOR_TEXT}|MUCHI_SPONSOR_URL=${_SPONSOR_URL}|MUCHI_INSTAGRAM_URL=${_INSTAGRAM_URL}|MUCHI_DISCORD_URL=${_DISCORD_URL}|MUCHI_X_URL=${_X_URL}|MUCHI_YOUTUBE_URL=${_YOUTUBE_URL}|MUCHI_TIKTOK_URL=${_TIKTOK_URL}|MUCHI_VERIFY_STOCK=${_VERIFY_STOCK}
+      - --set-env-vars=^|^MUCHI_ENV=production|MUCHI_API_URL=${_API_URL}|MUCHI_ADSENSE_CLIENT=${_ADSENSE_CLIENT}|MUCHI_ADSENSE_SLOT=${_ADSENSE_SLOT}|MUCHI_DONATION_URL=${_DONATION_URL}|MUCHI_SPONSOR_NAME=${_SPONSOR_NAME}|MUCHI_SPONSOR_TEXT=${_SPONSOR_TEXT}|MUCHI_SPONSOR_URL=${_SPONSOR_URL}|MUCHI_VERIFY_STOCK=${_VERIFY_STOCK}
       - --set-secrets=MUCHI_API_TOKEN=${_TOKEN_SECRET}:latest

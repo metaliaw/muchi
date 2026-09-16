@@ -26,7 +26,7 @@ from muchi.mtg.search import StockCheck
 from muchi.mtg.settings import load_offer_settings, load_rate_settings
 from muchi.paths import ROOT
 
-from server import presenter
+from server import links, presenter
 
 # La Re-verificación pega una segunda Vez por Oferta: nace Apagada, y
 # MUCHI_VERIFY_STOCK=1 la Enciende el Día que la Certeza pese más que la Carga.
@@ -72,8 +72,6 @@ def read_health() -> dict:
     return {"status": "ok"}
 
 
-# Cada Red es un Nombre, un Icono y la Variable que la enciende. Una Red sin
-# Direccion no existe: la Barra solo muestra las que alguien configuro.
 # Un Mazo de Commander tiene cien Cartas, y de ahí salen los dos Topes: 99
 # copias más el Comandante. Cien Entradas cubren el Mazo entero y sobran,
 # porque las Tierras básicas se repiten en una sola Línea.
@@ -84,21 +82,6 @@ MAX_CARDS = 100
 MAX_QUANTITY = 99
 
 REPOSITORY_URL = "https://github.com/metaliaw/muchi"
-
-SOCIALS = (
-    ("Instagram", "📸", "MUCHI_INSTAGRAM_URL"),
-    ("Discord", "💬", "MUCHI_DISCORD_URL"),
-    ("X", "𝕏", "MUCHI_X_URL"),
-    ("YouTube", "▶️", "MUCHI_YOUTUBE_URL"),
-    ("TikTok", "🎵", "MUCHI_TIKTOK_URL"),
-)
-
-
-def read_socials() -> list[dict]:
-    return [{"name": name, "icon": icon, "url": url}
-            for name, icon, variable in SOCIALS
-            if (url := os.getenv(variable, "").strip())]
-
 
 @app.get("/api/config")
 def read_config() -> dict:
@@ -116,7 +99,7 @@ def read_config() -> dict:
         "adsense_client": os.getenv("MUCHI_ADSENSE_CLIENT", "") or ADSENSE_CLIENT,
         "adsense_slot": os.getenv("MUCHI_ADSENSE_SLOT", ""),
         "repository_url": REPOSITORY_URL,
-        "socials": read_socials(),
+        "socials": links.read_socials(),
     }
 
 
