@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from muchi.mtg.ports import CardNotFound, QueryFailed, SearchRejected, TranslationFailed
 from muchi.mtg.search import (SearchItem, SearchOffer, SearchResults, SearchState,
                               StockCheck)
-from server import main, presenter
+from server import links, main, presenter
 
 
 def build_offer(**changes) -> SearchOffer:
@@ -410,26 +410,39 @@ def test_config_names_the_repository_for_the_footer(client):
     assert reply.get("/api/config").json()["repository_url"].startswith("https://github.com/")
 
 
-def test_a_network_without_an_address_does_not_exist(client, monkeypatch):
-    """La Barra solo muestra las Redes que alguien configuró."""
-    reply, _ = client
-    for _, _, variable in main.SOCIALS:
-        monkeypatch.delenv(variable, raising=False)
-    assert reply.get("/api/config").json()["socials"] == []
+def test_a_network_without_an_address_does_not_exist():
+    """La Barra solo muestra las Redes que Llevan a alguna parte."""
+    redes = links.validate_networks({"networks": [
+        {"name": "Instagram", "icon": "📸", "url": "https://instagram.com/muchi"},
+        {"name": "Discord", "icon": "💬", "url": ""},
+    ]})
+
+    assert [red["name"] for red in redes if red["url"]] == ["Instagram"]
 
 
-def test_configured_networks_reach_the_bar(client, monkeypatch):
+def test_the_networks_keep_the_order_of_the_file():
+    """El Archivo Dice el Orden; la Barra no lo Reordena por su cuenta."""
+    assert [red["name"] for red in links.load_socials()][:2] == ["Instagram", "TikTok"]
+
+
+def test_a_network_out_of_https_stops_the_start():
+    """Media Barra no Sirve: un Archivo malo se Nota al Arrancar, no al Mirarla."""
+    for broken in ({"networks": [{"name": "X", "icon": "𝕏", "url": "http://x.com"}]},
+                   {"networks": [{"name": "", "icon": "📸", "url": ""}]},
+                   {"networks": [{"name": "X", "icon": "𝕏", "handle": "@muchi"}]},
+                   {"redes": []}):
+        with pytest.raises(ValueError):
+            links.validate_networks(broken)
+
+
+def test_configured_networks_reach_the_bar(client):
+    """Lo que el Archivo Declara es lo que el Front Recibe."""
     reply, _ = client
-    for _, _, variable in main.SOCIALS:
-        monkeypatch.delenv(variable, raising=False)
-    monkeypatch.setenv("MUCHI_INSTAGRAM_URL", "https://instagram.com/muchi")
-    monkeypatch.setenv("MUCHI_DISCORD_URL", "  ")
 
     rows = reply.get("/api/config").json()["socials"]
 
-    # Discord llegó en blanco: eso no es una Dirección.
-    assert rows == [{"name": "Instagram", "icon": "📸",
-                     "url": "https://instagram.com/muchi"}]
+    assert rows == [dict(red) for red in links.load_socials() if red["url"]]
+    assert all(row["url"].startswith("https://") for row in rows)
 
 
 def test_art_carries_the_edition_of_the_offer_that_was_clicked(translating):
