@@ -47,6 +47,8 @@ export const createSearch = (text, game, key, match = 'exact') =>
   post('/api/searches', { text, game, key, match })
 export const readSearch = (id, after = 0, match = 'exact') =>
   request(`/api/searches/${encodeURIComponent(id)}?after=${after}&match=${match}`)
+export const checkStock = (id, match = 'exact') =>
+  request(`/api/searches/${encodeURIComponent(id)}/stock?match=${match}`)
 export const cancelSearch = (id, key) =>
   post(`/api/searches/${encodeURIComponent(id)}/cancel`, { key })
 export const readCart = (id, shipping, match = 'exact') =>

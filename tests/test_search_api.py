@@ -16,7 +16,7 @@ def search_reply(status="running"):
 
 
 def offer_reply():
-    return dict(card_name="Sol Ring", store="Store", price_amount="1.69",
+    return dict(id="offer-1", card_name="Sol Ring", store="Store", price_amount="1.69",
                 price_currency="USD", url="https://example.com/card", source="scryfall",
                 stock_status="unknown", suspicious=True, suspicious_reason="gap")
 
@@ -84,6 +84,47 @@ def test_offer_keeps_embedded_card_metadata():
 
     assert offer.metadata["image"] == "https://images.example/pikachu.jpg"
     assert offer.edition == "OBF"
+
+
+def test_offer_keeps_the_name_the_api_gave_it():
+    """Sin el Id de la API, nadie puede volver a preguntar por esta Oferta."""
+    offer = make_provider(result_reply()).read_results("search-1").items[0].offers[0]
+
+    assert offer.offer_id == "offer-1"
+    assert offer.stock_quantity is None
+
+
+def test_checking_stock_asks_the_api_for_those_offers():
+    """La Visita a la Tienda es de la API: el BFF solo Dice por quién preguntar."""
+    provider = make_provider({"offers": [
+        {"id": "offer-1", "stock_status": "unavailable", "stock_quantity": 0},
+        {"id": "offer-2", "stock_status": "available", "stock_quantity": 3},
+    ]})
+
+    checks = provider.check_stock("search 1", ("offer-1", "offer-2"))
+
+    args, kwargs = provider.session.request.call_args
+    assert args == ("POST", "https://example.com/v1/searches/search%201/stock")
+    assert kwargs["json"] == {"offers": ["offer-1", "offer-2"]}
+    assert [check.available for check in checks] == [False, True]
+    assert checks[1].stock_quantity == 3
+
+
+def test_checking_no_offers_visits_no_store():
+    """Una Lista vacía de Candidatas no es una Consulta: es nada que preguntar."""
+    provider = make_provider({"offers": []})
+
+    assert provider.check_stock("search-1", ()) == ()
+    assert provider.session.request.call_args is None
+
+
+def test_an_unknown_stock_is_not_a_denial():
+    """La Tienda que no Declara Stock no Negó: sigue compitiendo por la Corona."""
+    provider = make_provider({"offers": [{"id": "offer-1", "stock_status": "unknown"}]})
+
+    check, = provider.check_stock("search-1", ("offer-1",))
+
+    assert check.stock_quantity is None and check.available
 
 
 def test_offer_keeps_pickup_locations():

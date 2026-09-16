@@ -32,7 +32,8 @@ const message = ref(null)
 // las Páginas se declaran una sola vez ahí.
 const {
   id: searchId, state, items, offers, summary, notices, cursor, hasMore,
-  checked, unavailable, start: startSearch, applyState, applyResults,
+  checked, unavailable, stocked, start: startSearch, applyState, applyResults,
+  applyStock,
 } = useSearch()
 const error = ref('')
 const pending = ref(null)
@@ -167,7 +168,10 @@ async function refresh() {
     playGame(applyResults(reply))
     checked.value = new Date().toISOString().slice(11, 19) + ' UTC'
     remember(reply.state.id)
-    if (reply.state.done && !reply.has_more) stopPolling()
+    if (reply.state.done && !reply.has_more) {
+      stopPolling()
+      confirmStock()
+    }
   } catch (failure) {
     if (failure.retriable) {
       // Los Resultados recibidos se conservan y se reintenta la Consulta.
@@ -178,6 +182,18 @@ async function refresh() {
     }
   } finally {
     refreshing = false
+  }
+}
+
+// El Precio no Sirve si la Carta no Está. Cerrada la Búsqueda, Muchi vuelve a
+// preguntar por la más barata de cada Carta y Corona a la primera que sí Tiene.
+// Que la Pregunta falle no Borra los Precios: la Corona se queda como estaba.
+async function confirmStock() {
+  if (!searchId.value || stocked.value) return
+  try {
+    applyStock(await api.checkStock(searchId.value, match.value))
+  } catch {
+    say('No pude confirmar el Stock; los Precios siguen en pie', 'idle')
   }
 }
 

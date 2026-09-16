@@ -59,6 +59,8 @@ export function useSearch() {
   const hasMore = ref(false)
   const checked = ref('')
   const unavailable = ref('')
+  // Si el Stock de esta Búsqueda ya se comprobó Oferta por Oferta.
+  const stocked = ref(false)
   // Las Llaves del Estado que Cambiaron en el último Ciclo. La Vista las usa
   // para Reaccionar solo a lo Nuevo; vacío significa "nada se movió".
   const stateChanges = ref([])
@@ -75,6 +77,7 @@ export function useSearch() {
     hasMore.value = false
     unavailable.value = ''
     checked.value = ''
+    stocked.value = false
   }
 
   // Compara el Estado recibido con el que ya se muestra. El Servidor manda el
@@ -102,6 +105,22 @@ export function useSearch() {
     return items.value.find((item) => item.game)?.game || ''
   }
 
+  /** Escribe las Filas que el BFF comprobó, y mueve la Corona con ellas. */
+  function applyStock(answer) {
+    const fresh = new Map((answer.offers || []).map((row) => [row.offer_id, row]))
+    const crowned = new Map((answer.best || []).map((row) => [row.card_type, row.offer_id]))
+    const asked = new Set([...crowned.keys(), ...(answer.uncrowned || [])])
+    offers.value = offers.value.map((row) => {
+      // Un Tipo que nadie comprobó conserva la Corona que trajo el BFF.
+      const best = asked.has(row.card_type)
+        ? crowned.get(row.card_type) === row.offer_id
+        : row.best
+      return { ...row, ...(fresh.get(row.offer_id) || {}), best }
+    })
+    stocked.value = asked.size > 0
+  }
+
   return { id, state, items, offers, summary, notices, cursor, hasMore, checked,
-           unavailable, stateChanges, start, applyState, applyResults }
+           unavailable, stocked, stateChanges, start, applyState, applyResults,
+           applyStock }
 }
