@@ -162,9 +162,23 @@ func (q CardQuery) PriceGroupOf(item Offer) string {
 // has to Read the Title again to Find out.
 func NameCards(items []Offer) []Offer {
 	for index := range items {
-		items[index].CardKey = ReadCardKey(items[index].CardName)
+		items[index].CardKey = readOfferKey(items[index])
 	}
 	return items
+}
+
+func readOfferKey(item Offer) string {
+	card := ReadCardKey(item.CardName)
+	if item.Metadata["game"] != "pokemon" {
+		return card
+	}
+	if function := item.Metadata["functional_key"]; function != "" {
+		return strings.Join([]string{card, function}, "|")
+	}
+	if product := item.Metadata["product_id"]; product != "" {
+		return strings.Join([]string{card, "printing", product}, "|")
+	}
+	return card
 }
 
 // MatchesCard Accepts a Title that Names the Card, Wherever the Store Puts it.

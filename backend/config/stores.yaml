@@ -54,6 +54,12 @@ search_providers:
     enabled: true
     games: [pokemon, yugioh, one-piece]
     stores: []
+  tcgdex:
+    type: tcgdex
+    url: https://api.tcgdex.net/v2/en
+    enabled: true
+    games: [pokemon]
+    stores: []
 
 stores:
   www.deckscards.cl:

@@ -104,6 +104,72 @@ func TestSearchKeepsTheExactCard(t *testing.T) {
 	}
 }
 
+func TestPokemonSearchNamesFunctionsAcrossEditions(t *testing.T) {
+	fetcher := pokemonFunctionFetcher{}
+	client := Client{
+		Fetcher: fetcher, BaseURL: "https://api.tcgmatch.cl", Game: "pokemon",
+		PokemonCatalogURL: "https://api.tcgdex.net/v2/en",
+	}
+
+	items, err := client.Search(context.Background(), offer.CardQuery{Name: "Slowpoke"})
+	if err != nil || len(items) != 3 {
+		t.Fatalf("Search() items=%d err=%v", len(items), err)
+	}
+	first := items[0].Metadata["functional_key"]
+	second := items[1].Metadata["functional_key"]
+	third := items[2].Metadata["functional_key"]
+	if first == "" || first != second || first == third {
+		t.Fatalf("functional keys=%q, %q, %q", first, second, third)
+	}
+}
+
+type pokemonFunctionFetcher struct{}
+
+func (pokemonFunctionFetcher) FetchSource(_ context.Context, _, target string) ([]byte, error) {
+	switch {
+	case strings.Contains(target, "api.tcgmatch.cl/catalog/search"):
+		return []byte(`{"products":[
+			{"id":1,"name":"Slowpoke","tcg":"pokemon","type":"card","setName":"One","cardCode":"001/100"},
+			{"id":2,"name":"Slowpoke","tcg":"pokemon","type":"card","setName":"Two","cardCode":"002/100"},
+			{"id":3,"name":"Slowpoke","tcg":"pokemon","type":"card","setName":"Three","cardCode":"003/100"}
+		]}`), nil
+	case strings.Contains(target, "api.tcgdex.net/v2/en/cards?name=Slowpoke"):
+		return []byte(`[
+			{"id":"one-001","localId":"001"},
+			{"id":"two-002","localId":"002"},
+			{"id":"three-003","localId":"003"}
+		]`), nil
+	case strings.HasSuffix(target, "/cards/one-001"):
+		return []byte(pokemonCardFixture("one-001", "001", "One", "Tail Whap")), nil
+	case strings.HasSuffix(target, "/cards/two-002"):
+		return []byte(pokemonCardFixture("two-002", "002", "Two", "Tail Whap")), nil
+	case strings.HasSuffix(target, "/cards/three-003"):
+		return []byte(pokemonCardFixture("three-003", "003", "Three", "Rest")), nil
+	default:
+		id := target[strings.LastIndex(target, "/")+1:]
+		return []byte(`{"success":true,"data":[{"_id":"listing-` + id + `","tcg":"pokemon","language":"english","status":"near-mint","quantity":1,"price":900,"isActive":true,"user":{"name":"Tienda","username":"tienda"}}]}`), nil
+	}
+}
+
+func pokemonCardFixture(id, localID, set, attack string) string {
+	return `{"id":"` + id + `","localId":"` + localID + `","name":"Slowpoke","hp":70,"types":["Water"],"attacks":[{"cost":["Water"],"name":"` + attack + `","damage":10}],"set":{"name":"` + set + `"}}`
+}
+
+func TestPokemonSetNamesIgnoreCatalogSeriesPrefixes(t *testing.T) {
+	for source, want := range map[string]string{
+		"SV: Prismatic Evolutions":        "prismatic evolutions",
+		"SV01: Scarlet & Violet Base Set": "scarlet & violet",
+		"SV: Scarlet & Violet 151":        "151",
+		"SM - Guardians Rising":           "guardians rising",
+		"XY - BREAKpoint":                 "breakpoint",
+		"Pokémon GO":                      "pokemon go",
+	} {
+		if got := normalizePokemonValue(source); got != want {
+			t.Errorf("normalizePokemonValue(%q)=%q, want %q", source, got, want)
+		}
+	}
+}
+
 // perProductFetcher Gives every Product its own Listing so Deduplication Keeps them apart.
 type perProductFetcher struct{ catalog string }
 

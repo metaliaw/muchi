@@ -40,9 +40,16 @@ func TestPokemonSlowpokeProbe(t *testing.T) {
 	}
 	bySource := map[string]int{}
 	semantic := map[string]map[string]bool{}
+	functions := map[string]bool{}
+	products := map[string]bool{}
 	for _, item := range items {
 		bySource[item.Source]++
-		t.Logf("card=%q set_id=%q set_code=%q image=%q", item.CardName, item.Metadata["set_id"], item.Metadata["set_code"], item.Image)
+		functions[item.CardKey] = true
+		product := item.Metadata["product_id"]
+		if !products[product] {
+			t.Logf("card=%q card_key=%q set_id=%q set_code=%q", item.CardName, item.CardKey, item.Metadata["set_id"], item.Metadata["set_code"])
+			products[product] = true
+		}
 		key := strings.Join([]string{offer.NormalizeCard(item.CardName), strings.ToLower(item.Store), item.PriceAmount, item.PriceCurrency, strings.ToLower(item.Language)}, "|")
 		if semantic[key] == nil {
 			semantic[key] = map[string]bool{}
@@ -61,7 +68,7 @@ func TestPokemonSlowpokeProbe(t *testing.T) {
 		sources = append(sources, name)
 	}
 	sort.Strings(sources)
-	t.Logf("duration=%s offers=%d cross_source_duplicates=%d", time.Since(started), len(items), duplicates)
+	t.Logf("duration=%s offers=%d functions=%d cross_source_duplicates=%d", time.Since(started), len(items), len(functions), duplicates)
 	for _, name := range sources {
 		t.Logf("source=%s offers=%d", name, bySource[name])
 	}

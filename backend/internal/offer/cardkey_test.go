@@ -45,12 +45,23 @@ func TestOneCardFromThreeSources(t *testing.T) {
 // TestOnePokemonCardGroupsEditions Keeps Printings below the functional Card.
 func TestOnePokemonCardGroupsEditions(t *testing.T) {
 	items := NameCards([]Offer{
-		{CardName: "Slowpoke", Edition: "PRE", Metadata: map[string]string{"product_id": "610373"}},
-		{CardName: "Slowpoke", Edition: "HIF", Metadata: map[string]string{"product_id": "197654"}},
-		{CardName: "Slowpoke ex", Edition: "MEG", Metadata: map[string]string{"product_id": "704786"}},
+		{CardName: "Slowpoke", Edition: "PRE", Metadata: map[string]string{"game": "pokemon", "product_id": "610373", "functional_key": "tail-whap"}},
+		{CardName: "Slowpoke", Edition: "HIF", Metadata: map[string]string{"game": "pokemon", "product_id": "197654", "functional_key": "tail-whap"}},
+		{CardName: "Slowpoke", Edition: "MEG", Metadata: map[string]string{"game": "pokemon", "product_id": "704786", "functional_key": "rest"}},
 	})
 
 	if items[0].CardKey != items[1].CardKey || items[0].CardKey == items[2].CardKey {
 		t.Fatalf("card keys=%q, %q, %q", items[0].CardKey, items[1].CardKey, items[2].CardKey)
+	}
+}
+
+func TestUnresolvedPokemonCardKeepsItsPrinting(t *testing.T) {
+	items := NameCards([]Offer{
+		{CardName: "Slowpoke", Metadata: map[string]string{"game": "pokemon", "product_id": "610373"}},
+		{CardName: "Slowpoke", Metadata: map[string]string{"game": "pokemon", "product_id": "197654"}},
+	})
+
+	if items[0].CardKey == items[1].CardKey {
+		t.Fatalf("unresolved keys=%q, %q", items[0].CardKey, items[1].CardKey)
 	}
 }

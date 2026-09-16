@@ -49,8 +49,8 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		return Runtime{}, err
 	}
 	fetcher := buildSourceClient(config, store, logger)
-	tcgmatchMetadata := tcgmatch.Client{Fetcher: fetcher, BaseURL: storeConfig.SearchProviders["tcgmatch"].URL, Game: string(search.GamePokemon)}
-	tcgmatchYuGiOh := tcgmatch.Client{Fetcher: fetcher, BaseURL: storeConfig.SearchProviders["tcgmatch"].URL, Game: string(search.GameYuGiOh)}
+	tcgmatchMetadata := buildTCGMatch(fetcher, storeConfig, string(search.GamePokemon))
+	tcgmatchYuGiOh := buildTCGMatch(fetcher, storeConfig, string(search.GameYuGiOh))
 	cardMetadataProviders := map[search.Game]cardmetadata.Provider{
 		search.GameMagic:   cardmetadata.Scryfall{Fetcher: fetcher},
 		search.GamePokemon: tcgmatchMetadata,
@@ -75,7 +75,7 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		SourcesByGame:     buildSourcesByGame(fetcher, storeConfig, store, config.OfferCacheTTL, logger),
 		Stocks:            checker,
 		Cache:             store,
-		CacheNamespace:    search.HashPayload([]any{"search-providers-v7", storeConfig}) + ":",
+		CacheNamespace:    search.HashPayload([]any{"search-providers-v8", storeConfig}) + ":",
 		CacheTTL:          config.OfferCacheTTL,
 		EmptyCacheTTL:     config.OfferCacheEmptyTTL,
 		MaxCards:          config.MaxCardsPerSearch,
@@ -200,11 +200,19 @@ func buildProviders(fetcher stores.SourceFetcher, config stores.Config) map[sear
 			case "scry":
 				providers[search.Game(game)] = scry.Client{Fetcher: fetcher, BaseURL: provider.URL, ExcludeCommunity: !provider.Community}
 			case "tcgmatch":
-				providers[search.Game(game)] = tcgmatch.Client{Fetcher: fetcher, BaseURL: provider.URL, Game: game}
+				providers[search.Game(game)] = buildTCGMatch(fetcher, config, game)
 			}
 		}
 	}
 	return providers
+}
+
+func buildTCGMatch(fetcher stores.SourceFetcher, config stores.Config, game string) tcgmatch.Client {
+	client := tcgmatch.Client{Fetcher: fetcher, BaseURL: config.SearchProviders["tcgmatch"].URL, Game: game}
+	if game == string(search.GamePokemon) {
+		client.PokemonCatalogURL = config.SearchProviders["tcgdex"].URL
+	}
+	return client
 }
 
 func buildSourceClient(config config.Config, gate source.TrafficGate, logger *slog.Logger) source.Client {

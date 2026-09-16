@@ -21,9 +21,10 @@ type SourceFetcher interface {
 }
 
 type Client struct {
-	Fetcher SourceFetcher
-	BaseURL string
-	Game    string
+	Fetcher           SourceFetcher
+	BaseURL           string
+	Game              string
+	PokemonCatalogURL string
 }
 
 type catalogReply struct {
@@ -38,7 +39,10 @@ type catalogProduct struct {
 	Image     string   `json:"image"`
 	SetID     string   `json:"setId"`
 	SetCode   string   `json:"setCode"`
+	SetName   string   `json:"setName"`
+	CardCode  string   `json:"cardCode"`
 	Languages []string `json:"languages"`
+	Function  string   `json:"-"`
 }
 
 type listingsReply struct {
@@ -75,6 +79,9 @@ func (c Client) Search(ctx context.Context, query offer.CardQuery) ([]offer.Offe
 	products, err := c.searchCatalog(ctx, base, name)
 	if err != nil {
 		return nil, err
+	}
+	if c.Game == "pokemon" {
+		c.namePokemonFunctions(ctx, products)
 	}
 	items := make([]offer.Offer, 0)
 	for _, product := range products {
@@ -214,7 +221,8 @@ func buildOffer(entry listing, product catalogProduct, game string) (offer.Offer
 		Metadata: map[string]string{
 			"game": game, "quantity": strconv.Itoa(entry.Quantity), "seller": entry.User.Username,
 			"product_id": strconv.FormatInt(product.ID, 10), "set_id": product.SetID,
-			"set_code": product.SetCode, "image": product.Image,
+			"set_code": product.SetCode, "card_code": product.CardCode, "image": product.Image,
+			"functional_key": product.Function,
 		},
 	}, true
 }
