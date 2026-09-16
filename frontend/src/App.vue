@@ -222,7 +222,7 @@ onUnmounted(stopPolling)
   <GoogleAdsense :client="config.adsense_client" />
 
   <header class="mu-hero">
-    <h1>🐱 Muchi</h1>
+    <h1><a href="/">🐱 Muchi</a></h1>
     <p>Busca Cartas y cotiza tu Lista</p>
   </header>
 
@@ -332,6 +332,7 @@ onUnmounted(stopPolling)
   box-shadow: var(--mu-sombra);
 }
 .mu-hero h1 { margin: 0; font-size: 2.4rem; font-weight: 800; letter-spacing: -1px; }
+.mu-hero h1 a { color: inherit; text-decoration: none; }
 .mu-hero p { margin: 4px 0 0; opacity: .9; }
 .mu-grilla {
   display: grid; grid-template-columns: 260px 1fr; gap: 20px;
