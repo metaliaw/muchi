@@ -52,16 +52,17 @@ watch([() => props.card, () => props.game], async ([wanted, game]) => {
     <p v-else-if="busy" class="mu-caption">Buscando la Imagen…</p>
     <p v-else-if="failed" class="mu-caption">{{ failed }}</p>
 
-    <a v-else-if="art?.url" :href="art.url" target="_blank" rel="noopener noreferrer">
+    <component v-else-if="art?.image" class="mu-mirada"
+               :is="art.url ? 'a' : 'div'"
+               :href="art.url || null"
+               :target="art.url ? '_blank' : null"
+               :rel="art.url ? 'noopener noreferrer' : null">
       <img :src="art.image" :alt="art.printed_name || art.name" loading="lazy" />
-      <span class="mu-caption">{{ art.printed_name || art.name }}</span>
-      <span v-if="art.edition" class="mu-caption">Edición: {{ art.edition }}</span>
-    </a>
-    <template v-else-if="art?.image">
-      <img :src="art.image" :alt="art.printed_name || art.name" loading="lazy" />
-      <span class="mu-caption">{{ art.printed_name || art.name }}</span>
-      <span v-if="art.edition" class="mu-caption">Edición: {{ art.edition }}</span>
-    </template>
+      <div>
+        <span class="mu-caption">{{ art.printed_name || art.name }}</span>
+        <span v-if="art.edition" class="mu-caption">Edición: {{ art.edition }}</span>
+      </div>
+    </component>
   </section>
 </template>
 
@@ -70,4 +71,13 @@ h2 { margin-top: 0; font-size: 1.05rem; }
 img { width: 100%; border-radius: 12px; display: block; }
 .mu-caption { display: block; margin-top: 6px; }
 a { text-decoration: none; }
+
+/* Pegada arriba de la Lista, la Carta Comparte Pantalla con las Ofertas: se
+   Tiende de Lado y la Imagen Cede el Alto que los Precios Necesitan. */
+@media (max-width: 800px) {
+  h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .mu-mirada { display: flex; gap: 12px; align-items: center; }
+  img { width: auto; max-height: 22vh; }
+  .mu-caption { margin-top: 0; }
+}
 </style>

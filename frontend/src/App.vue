@@ -254,21 +254,22 @@ onUnmounted(stopPolling)
   </header>
 
   <main class="mu-grilla">
-    <div class="mu-lateral">
-      <!-- En Móvil estos dos Bajan a un Muelle fijo al pie: la Lista se Queda
-           con el Ancho completo y Muchi y la Carta siguen a la Vista. -->
-      <div class="mu-muelle" :class="{ abierto: dockOpen }">
-        <button class="mu-muelle__tirador" type="button"
-                :aria-expanded="dockOpen" @click="dockOpen = !dockOpen">
-          <span>🐱 Muchi<span v-if="watched"> · 🃏 {{ watched.name }}</span></span>
-          <span aria-hidden="true">{{ dockOpen ? '▼' : '▲' }}</span>
-        </button>
-        <div class="mu-muelle__cuerpo">
-          <MuchiPanel :book="book" v-model:dark="dark" :message="message" />
-          <CardArt :card="watched" :game="game" />
-        </div>
+    <!-- En Móvil Muchi y el Aviso Bajan a un Muelle fijo al pie; la Carta se
+         Queda arriba de la Lista, pegada, y las dos se Miran a la vez. -->
+    <div class="mu-muelle" :class="{ abierto: dockOpen }">
+      <button class="mu-muelle__tirador" type="button"
+              :aria-expanded="dockOpen" @click="dockOpen = !dockOpen">
+        <span>🐱 Muchi · Código Abierto</span>
+        <span aria-hidden="true">{{ dockOpen ? '▼' : '▲' }}</span>
+      </button>
+      <div class="mu-muelle__cuerpo">
+        <MuchiPanel :book="book" v-model:dark="dark" :message="message" />
+        <CommunityPanel :repository-url="config.repository_url" />
       </div>
-      <CommunityPanel :repository-url="config.repository_url" />
+    </div>
+
+    <div class="mu-tarjeta" :class="{ vacia: !watched }">
+      <CardArt :card="watched" :game="game" />
     </div>
 
     <div class="mu-columna">
@@ -375,18 +376,20 @@ onUnmounted(stopPolling)
 .mu-hero h1 a { color: inherit; text-decoration: none; }
 .mu-hero p { margin: 4px 0 0; opacity: .9; }
 .mu-grilla {
-  display: grid; grid-template-columns: 260px 1fr; gap: 20px;
+  display: grid; grid-template-columns: 260px 1fr; gap: 16px 20px;
+  grid-template-areas: "muchi lista" "carta lista" "abierto lista";
   max-width: 1100px; margin: 22px auto; padding: 0 16px; align-items: start;
 }
-.mu-columna { display: flex; flex-direction: column; gap: 16px; }
-.mu-lateral {
-  display: flex; flex-direction: column; gap: 16px;
-  position: sticky; top: 16px;
-}
+/* En Escritorio el Muelle se Desarma: sus dos Paneles Entran a la Rejilla por
+   su cuenta y la Carta se Mete entre ellos, donde estaba antes. */
+.mu-muelle, .mu-muelle__cuerpo { display: contents; }
+.mu-muelle__cuerpo > :first-child { grid-area: muchi; }
+.mu-muelle__cuerpo > :last-child { grid-area: abierto; }
+/* La Carta Acompaña el Recorrido de la Lista en vez de quedarse arriba. */
+.mu-tarjeta { grid-area: carta; position: sticky; top: 16px; }
+.mu-columna { grid-area: lista; display: flex; flex-direction: column; gap: 16px; }
 .mu-historia { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 summary { cursor: pointer; font-weight: 600; }
-.mu-muelle { display: flex; flex-direction: column; gap: 16px; }
-.mu-muelle__cuerpo { display: flex; flex-direction: column; gap: 16px; }
 /* En Escritorio el Muelle es el Lateral de siempre: sin Barra ni Tirador. */
 .mu-muelle__tirador { display: none; }
 /* En Móvil la Grilla es una sola Columna: el Lateral Suelta el Flote
@@ -394,13 +397,22 @@ summary { cursor: pointer; font-weight: 600; }
    Dos Columnas de verdad dejarían cada Oferta en 200px: el Precio y las
    Pastillas se Parten, y la Carta se Mira con lupa. */
 @media (max-width: 800px) {
-  .mu-grilla { grid-template-columns: 1fr; }
-  /* Quien Llega quiere Buscar: el Lateral Pasa detrás de la Lista, y de él
-     solo la Comunidad sigue en el Flujo. */
-  .mu-columna { order: 1; }
-  .mu-lateral { position: static; order: 2; }
+  /* La Carta Manda arriba y la Lista Corre debajo: la Pantalla se Parte en dos
+     y quien Mira una Impresión sigue viendo los Precios. */
+  .mu-grilla { grid-template-columns: 1fr; grid-template-areas: "carta" "lista"; }
+  /* El Muelle Vuelve a ser un Bloque para poder Fijarse al pie. */
+  .mu-muelle { display: flex; flex-direction: column; }
+  .mu-muelle__cuerpo { display: none; flex-direction: column; gap: 16px; }
+  .mu-tarjeta {
+    position: sticky; top: 0; z-index: 10;
+    margin: 0 -16px; padding: 0 16px 8px; background: var(--mu-papel);
+  }
+  /* Sin Carta mirada no hay nada que Fijar: la Lista se Queda con la Pantalla. */
+  .mu-tarjeta.vacia { display: none; }
   .mu-muelle {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; gap: 10px;
+    /* `top` Vuelve a auto: Heredado del Lateral pegajoso, Estiraba el Muelle
+       de Borde a Borde y Tapaba la Página entera. */
+    position: fixed; top: auto; left: 0; right: 0; bottom: 0; z-index: 20; gap: 10px;
     padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
     background: var(--mu-papel);
     border-top: 2px solid var(--mu-rosa-cl);
@@ -417,7 +429,6 @@ summary { cursor: pointer; font-weight: 600; }
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   /* Cerrado Ocupa una Línea; abierto Crece hasta donde la Lista sigue Asomando. */
-  .mu-muelle__cuerpo { display: none; }
   .mu-muelle.abierto .mu-muelle__cuerpo {
     display: flex; max-height: 62vh; overflow-y: auto; padding-bottom: 4px;
   }
