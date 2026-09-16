@@ -9,23 +9,21 @@ vendor/
 # See .agents/skills/bye-bye-bye/SKILL.md — Never Commit or Push the Handoff.
 /.handoff.md
 
-# The Canon Arrives as a Cache, and a Cache is not Carried.
-# AGENTS.md Names the Address; OneTwoUpdate Recreates the Rest.
-# See rules/the-head-is-the-canon.md — the Head is the Claim.
-/.canon/
+# El Canon Vive entero en `.agents`, sin Clon intermedio. Sigue siendo una
+# Cache: se Ignora, no se Carga. AGENTS.md Nombra la Direccion y el Commit.
+# Ver rules/the-head-is-the-canon.md — la Cabeza es la Afirmacion.
+/.agents/
+
+# Las Entradas de cada Cliente Resuelven dentro de `.agents`. Son Enlaces,
+# asi que no Llevan Barra: el Patron con Barra solo Casa con un Directorio.
+/.claude/
+/.codex/
+/.github/agents
+/.github/skills
+/rules
+/values
+/patterns
 /RULES.md
 /VALUES.md
 /PATTERNS.md
 /.canonignore
-/rules
-/values
-/patterns
-# Lo que un Agente Deja en el Árbol no es del Repositorio. Se Ignoran los
-# Directorios enteros y no sus Hojas, porque la Herramienta que Llegue mañana
-# Va a Escribir un Archivo que hoy no Existe.
-/.agents/
-/.claude/
-/.codex/
-# `.github/` también Aloja Flujos de Trabajo, así que aquí sí van las Hojas.
-/.github/agents
-/.github/skills
