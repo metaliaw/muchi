@@ -209,7 +209,7 @@ def pick_cheapest_by_type(offers: list[SearchOffer], types: dict[int, str],
 
 def plan_stock_checks(items: tuple[SearchItem, ...], muchi_dolar: int,
                       match: str = MATCH_EXACT,
-                      limit: int = 5) -> dict[str, list[str]]:
+                      limit: int = 3) -> dict[str, list[str]]:
     """Por cada Tipo de Carta, a quién preguntarle Stock y en qué Orden.
 
     El Orden es el mismo con el que se premia la más barata, porque la Pregunta
