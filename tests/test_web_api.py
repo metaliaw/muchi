@@ -5,7 +5,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from muchi.mtg.ports import CardNotFound, QueryFailed, SearchRejected, TranslationFailed
-from muchi.mtg.search import SearchItem, SearchOffer, SearchResults, SearchState
+from muchi.mtg.search import (SearchItem, SearchOffer, SearchResults, SearchState,
+                              StockCheck)
 from server import main, presenter
 
 
@@ -25,6 +26,9 @@ class FakeSearches:
         self.state = state or SearchState("abc", "running", 2, 1, 1, 0, "Sol Ring", "magic")
         self.items = items
         self.created = []
+        # Lo que cada Oferta contesta cuando se le pregunta, y lo que se preguntó.
+        self.stock = {}
+        self.asked = []
 
     def create_search(self, orders, verify_stock, key, game="magic", match="exact"):
         self.created.append((orders, key, game, match))
@@ -40,6 +44,11 @@ class FakeSearches:
 
     def cancel_search(self, search_id, key):
         return SearchState("abc", "cancelled", 2, 1, 1, 0, "", "magic")
+
+    def check_stock(self, search_id, offer_ids):
+        self.asked.append(offer_ids)
+        return tuple(StockCheck(offer_id, *self.stock.get(offer_id, ("available", None)))
+                     for offer_id in offer_ids)
 
     def read_sources(self):
         return [{"source": "scry", "status": "ok"}]
@@ -64,11 +73,13 @@ class FakeSearches:
 def client(monkeypatch):
     searches = FakeSearches(items=(
         SearchItem("Sol Ring", 2, "found", (
-            build_offer(amount=Decimal("4000")),
-            build_offer(store="Otra", amount=Decimal("1500")),
+            build_offer(amount=Decimal("4000"), offer_id="of-4000"),
+            build_offer(store="Otra", amount=Decimal("1500"), offer_id="of-1500"),
             build_offer(store="Dudosa", amount=Decimal("10"), suspicious=True,
-                        suspicious_reason="price_below_40_percent_median"),
-            build_offer(store="Gringa", amount=Decimal("3"), currency="USD"),
+                        suspicious_reason="price_below_40_percent_median",
+                        offer_id="of-10"),
+            build_offer(store="Gringa", amount=Decimal("3"), currency="USD",
+                        offer_id="of-usd"),
         ), id="item-1", position=0, sequence=1, game="magic"),
         SearchItem("Black Lotus", 1, "not_found", (),
                id="item-2", position=1, sequence=2, game="magic"),
@@ -464,6 +475,107 @@ def test_an_offer_publishes_its_pickup_locations():
     row = presenter.build_offer(offer, muchi_dolar=1000)
 
     assert row["locations"] == ["Santiago - Providencia", "Santiago - Las Condes"]
+
+
+# ------------------------------------------------------- el Stock comprobado
+def test_the_crown_moves_to_the_next_offer_with_stock(client):
+    """La barata sin Stock no Recomienda: la Corona pasa a la siguiente barata."""
+    http, searches = client
+    searches.stock = {"of-10": ("unavailable", 0), "of-1500": ("available", 2)}
+
+    answer = http.get("/api/searches/abc/stock").json()
+
+    assert searches.asked == [("of-10",), ("of-1500",)]
+    assert answer["best"] == [{"card_type": "sol ring", "offer_id": "of-1500"}]
+    assert answer["uncrowned"] == []
+    coronada = next(row for row in answer["offers"] if row["offer_id"] == "of-1500")
+    assert coronada["stock_label"] == "2 Unidades"
+    assert {"kind": "tienda", "text": "2 Unidades"} in coronada["pills"]
+    agotada = next(row for row in answer["offers"] if row["offer_id"] == "of-10")
+    assert agotada["stock_label"] == "Agotado"
+
+
+def test_a_checked_offer_stops_the_round(client):
+    """Si la más barata Tiene, nadie más recibe una Visita."""
+    http, searches = client
+
+    answer = http.get("/api/searches/abc/stock").json()
+
+    assert searches.asked == [("of-10",)]
+    assert answer["best"] == [{"card_type": "sol ring", "offer_id": "of-10"}]
+
+
+def test_a_confirmed_yes_beats_a_cheaper_doubt(client):
+    """Una Tienda que no Declara Stock no Niega, pero tampoco Confirma.
+
+    La barata queda en Duda y la siguiente Confirma: la Corona es del Sí. Una
+    Carta que no llega no es una Compra barata.
+    """
+    http, searches = client
+    searches.stock = {"of-10": ("unknown", None), "of-1500": ("available", 1)}
+
+    answer = http.get("/api/searches/abc/stock").json()
+
+    assert searches.asked == [("of-10",), ("of-1500",)]
+    assert answer["best"] == [{"card_type": "sol ring", "offer_id": "of-1500"}]
+
+
+def test_a_doubt_still_crowns_when_nobody_confirms(client):
+    """Si ninguna Tienda Confirma, la Duda más barata sigue siendo la Corona."""
+    http, searches = client
+    searches.stock = {"of-10": ("unknown", None), "of-1500": ("unavailable", 0),
+                      "of-4000": ("unknown", None), "of-usd": ("unknown", None)}
+
+    answer = http.get("/api/searches/abc/stock").json()
+
+    assert answer["best"] == [{"card_type": "sol ring", "offer_id": "of-10"}]
+
+
+def test_a_card_without_stock_anywhere_loses_its_crown(client):
+    """Ninguna Oferta con Stock es Ninguna Recomendación, no la menos mala."""
+    http, searches = client
+    searches.stock = {name: ("unavailable", 0)
+                      for name in ("of-10", "of-1500", "of-4000", "of-usd")}
+
+    answer = http.get("/api/searches/abc/stock").json()
+
+    assert answer["best"] == []
+    assert answer["uncrowned"] == ["sol ring"]
+
+
+def test_only_offers_that_can_be_compared_are_asked():
+    """Sin Cambio a Pesos no hay Corona que defender: a esa Oferta no se la molesta.
+
+    Tampoco a la que ya se declaró Agotada, ni a la que la API no supo Nombrar:
+    volver a preguntar por ellas gasta una Visita a la Tienda sin cambiar nada.
+    """
+    item = SearchItem("Sol Ring", 1, "found", (
+        build_offer(store="Euro", amount=Decimal("2"), currency="EUR", offer_id="of-eur"),
+        build_offer(store="Agotada", amount=Decimal("100"), offer_id="of-cero",
+                    stock_status="unavailable"),
+        build_offer(store="Anonima", amount=Decimal("200"), offer_id=""),
+        build_offer(store="Tienda", amount=Decimal("300"), offer_id="of-300"),
+    ), id="i-1", position=0, sequence=1)
+
+    plan = presenter.plan_stock_checks((item,), muchi_dolar=1000)
+
+    assert plan == {"sol ring": ["of-300"]}
+
+
+def test_a_checked_offer_declares_its_units(client):
+    """Comprobar de a una Declara Stock aunque la Re-verificación esté apagada."""
+    row = presenter.build_offer(build_offer(stock_quantity=3), muchi_dolar=1000,
+                                verified=False)
+
+    assert row["stock_quantity"] == 3 and row["stock_label"] == "3 Unidades"
+    assert {"kind": "tienda", "text": "3 Unidades"} in row["pills"]
+
+
+def test_zero_units_is_sold_out_whatever_the_status_says(client):
+    """Cero Unidades es Agotado: la Cantidad manda sobre la Etiqueta."""
+    row = presenter.build_offer(build_offer(stock_quantity=0), muchi_dolar=1000)
+
+    assert row["stock_label"] == "Agotado"
 
 
 # ---------------------------------------------------------------- los Topes

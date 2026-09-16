@@ -74,6 +74,13 @@ Muchi publica los Criterios que cambian lo que una Persona ve o compra:
   Dólares no se comparan como si fueran la misma Unidad.
 - Las Ofertas con Precio sospechoso o Stock agotado quedan fuera del Carrito.
   Un Stock desconocido se muestra como `No confirmado`, no como disponible.
+- Cerrada la Búsqueda, Muchi vuelve a preguntar por el Stock de la más barata
+  de cada Carta y corona a la primera que sí lo Tiene. La Visita a la Tienda la
+  hace la API; el BFF solo decide a quién preguntar y en qué Orden. Entre una
+  Oferta barata que la Tienda no Declara y una más cara que sí Confirma, corona
+  la que Confirma, y una Carta donde todas Negaron se queda sin Recomendación en
+  vez de recibir una falsa. [Comprobar el Stock](api/pedido-stock.md) describe
+  la Conversación y las tres Respuestas posibles.
 - Solo CLP y USD participan en el Carrito. Los Dólares se convierten con el
   [Muchi Dólar](../config/rates.defaults.yaml), cuyo Valor es público.
 - El Carrito considera el Precio de las Cartas y un Envío por Tienda. Utiliza

@@ -22,7 +22,8 @@ from muchi.api.settings import load_api_settings
 from muchi.mtg import cast as muchi_cast
 from muchi.mtg import decklist, phrases
 from muchi.mtg.ports import CardNotFound, QueryFailed, SearchRejected, TranslationFailed
-from muchi.mtg.settings import load_rate_settings
+from muchi.mtg.search import StockCheck
+from muchi.mtg.settings import load_offer_settings, load_rate_settings
 from muchi.paths import ROOT
 
 from server import presenter
@@ -271,6 +272,40 @@ def read_search(search_id: str, after: int = Query(0, ge=0),
                                       verified=VERIFY_STOCK, match=match)
     return {"state": presenter.build_state(state), **results,
             "cursor": page.cursor, "has_more": page.has_more}
+
+
+@app.get("/api/searches/{search_id}/stock")
+def check_stock(search_id: str,
+                match: Literal["exact", "includes"] = "exact") -> dict:
+    """Comprueba la más barata de cada Carta y Corona la primera que sí Tiene.
+
+    Pregunta por Rondas: la primera Candidata de cada Tipo de Carta viaja en
+    una sola Consulta, y solo los Tipos cuya Candidata no Tenía pasan a la
+    siguiente. Así el Costo crece con la Mala Suerte, no con el Largo de la
+    Lista, y `stock_check_limit` le pone Techo.
+    """
+    searches = build_muchi().searches
+    items = read_all_results(searches, search_id)
+    limit = load_offer_settings().stock_check_limit
+    plan = presenter.plan_stock_checks(items, load_rate_settings().muchi_dolar,
+                                       match=match, limit=limit)
+    checks: dict[str, StockCheck] = {}
+    pending = dict(plan)
+    for turn in range(limit):
+        asking = {card_type: candidates[turn] for card_type, candidates in pending.items()
+                  if len(candidates) > turn}
+        if not asking:
+            break
+        for check in searches.check_stock(search_id, tuple(asking.values())):
+            checks[check.offer_id] = check
+        # Una Duda no Cierra la Ronda: se sigue preguntando por si alguna
+        # Tienda Confirma, y la Duda barata espera su turno como Reserva.
+        pending = {card_type: plan[card_type] for card_type, offer_id in asking.items()
+                   if not (offer_id in checks and checks[offer_id].confirmed)}
+    offers = {offer.offer_id: offer for item in items for offer in item.offers
+              if offer.offer_id}
+    return presenter.build_stock_answer(offers, plan, checks,
+                                        load_rate_settings().muchi_dolar)
 
 
 @app.post("/api/searches/{search_id}/cancel")
