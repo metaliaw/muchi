@@ -260,11 +260,13 @@ onUnmounted(stopPolling)
   <main class="mu-grilla">
     <!-- En Móvil Muchi y el Aviso Bajan a un Muelle fijo al pie; la Carta se
          Queda arriba de la Lista, pegada, y las dos se Miran a la vez. -->
-    <div class="mu-muelle" :class="{ abierto: dockOpen }">
+    <div class="mu-muelle" :class="{ abierto: dockOpen, dijo: Boolean(message) }">
       <button class="mu-muelle__tirador" type="button"
-              :aria-expanded="dockOpen" @click="dockOpen = !dockOpen">
-        <span>🐱 {{ message?.text || 'Muchi · Código Abierto' }}</span>
-        <span aria-hidden="true">{{ dockOpen ? '▼' : '▲' }}</span>
+              :aria-expanded="dockOpen" @click="dockOpen = !dockOpen"
+              :aria-label="dockOpen ? 'Guardar a Muchi' : 'Llamar a Muchi'">
+        <span class="mu-muelle__gato" aria-hidden="true">🐱</span>
+        <span class="mu-muelle__dicho">{{ message?.text || 'Muchi · Código Abierto' }}</span>
+        <span class="mu-muelle__flecha" aria-hidden="true">{{ dockOpen ? '▼' : '▲' }}</span>
       </button>
       <div class="mu-muelle__cuerpo">
         <MuchiPanel :book="book" v-model:dark="dark" :message="message" />
@@ -429,8 +431,25 @@ summary { cursor: pointer; font-weight: 600; }
     background: none; color: var(--mu-tinta); font: inherit; font-weight: 700;
     cursor: pointer; text-align: left;
   }
-  .mu-muelle__tirador span:first-child {
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  .mu-muelle__dicho { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* Cerrado no es una Barra: es un Botón redondo en la Esquina. Mientras hay
+     una Carta a la Vista, Muchi Espera ahí en vez de Ocupar un Borde entero. */
+  .mu-muelle:not(.abierto) {
+    left: auto; right: 12px; width: auto;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    padding: 0; border-radius: 999px;
+  }
+  .mu-muelle:not(.abierto) .mu-muelle__dicho,
+  .mu-muelle:not(.abierto) .mu-muelle__flecha { display: none; }
+  .mu-muelle:not(.abierto) .mu-muelle__tirador {
+    width: 54px; height: 54px; padding: 0;
+    justify-content: center; font-size: 1.5rem;
+  }
+  /* Un Punto Avisa que Muchi Dijo algo, sin Abrirse encima de la Carta. */
+  .mu-muelle:not(.abierto).dijo .mu-muelle__gato::after {
+    content: ""; position: absolute; top: 10px; right: 10px;
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--mu-acento); border: 2px solid var(--mu-papel);
   }
   /* Cerrado Ocupa una Línea; abierto Crece hasta donde la Lista sigue Asomando. */
   .mu-muelle.abierto .mu-muelle__cuerpo {
