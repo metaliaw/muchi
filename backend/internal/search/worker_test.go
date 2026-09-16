@@ -44,9 +44,9 @@ func (s *oneItemStore) ListResults(context.Context, string, ResultPage) (Result,
 
 type countingChecker struct{ calls atomic.Int32 }
 
-func (c *countingChecker) CheckStock(context.Context, offer.Offer) (string, error) {
+func (c *countingChecker) CheckStock(context.Context, offer.Offer) (offer.StockReading, error) {
 	c.calls.Add(1)
-	return "unavailable", nil
+	return offer.CountStock("unavailable", 0), nil
 }
 
 func workerFor(item Item, checker StockChecker) (Worker, *oneItemStore) {

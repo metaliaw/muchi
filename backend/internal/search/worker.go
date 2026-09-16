@@ -105,9 +105,10 @@ func (w Worker) checkOffer(ctx context.Context, items []offer.Offer, id string) 
 		if items[index].ID != id {
 			continue
 		}
-		status, err := w.Service.Stocks.CheckStock(ctx, items[index])
+		reading, err := w.Service.Stocks.CheckStock(ctx, items[index])
 		if err == nil {
-			items[index].StockStatus = status
+			items[index].StockStatus = reading.Status
+			items[index].StockQuantity = reading.Quantity
 		}
 		return
 	}

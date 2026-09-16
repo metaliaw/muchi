@@ -37,11 +37,11 @@ func TestLiveSolRing(t *testing.T) {
 						t.Fatalf("offer=%+v", item)
 					}
 				}
-				status, err := client.CheckStock(ctx, items[0])
-				if err != nil || status != "available" {
-					t.Fatalf("stock=%s err=%v", status, err)
+				reading, err := client.CheckStock(ctx, items[0])
+				if err != nil || reading.Status != "available" {
+					t.Fatalf("stock=%s err=%v", reading.Status, err)
 				}
-				t.Logf("Sol Ring: %d Offers; First Price: %s CLP; Variant Stock: %s", len(items), items[0].PriceAmount, status)
+				t.Logf("Sol Ring: %d Offers; First Price: %s CLP; Variant Stock: %s", len(items), items[0].PriceAmount, reading.Status)
 			})
 		}
 	}

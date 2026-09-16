@@ -79,6 +79,43 @@ paths:
         "200":
           description: Partial or final results
           content: {application/json: {schema: {$ref: "#/components/schemas/SearchResults"}}}
+  /searches/{search_id}/stock:
+    parameters:
+      - {$ref: "#/components/parameters/SearchID"}
+    post:
+      description: >-
+        Visits the stores again for offers this search already found, and
+        answers what each one says about its stock right now. A price outlives
+        a search; stock does not, so a caller crowning the cheapest offer asks
+        here before trusting it. Offers are named by the id the search gave
+        them: a url of the caller's choosing is refused, so this is never a
+        proxy. Readings come back in the order asked, one per offer, at most
+        fifty per request.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [offers]
+              properties:
+                offers:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items: {type: string}
+      responses:
+        "200":
+          description: One stock reading per offer asked
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [offers]
+                properties:
+                  offers: {type: array, items: {$ref: "#/components/schemas/OfferStock"}}
+        "404": {$ref: "#/components/responses/NotFound"}
   /searches/{search_id}/cancel:
     parameters:
       - {$ref: "#/components/parameters/SearchID"}
@@ -259,6 +296,19 @@ components:
         error_code: {type: string}
         error_message: {type: string}
         offers: {type: array, items: {$ref: "#/components/schemas/Offer"}}
+    OfferStock:
+      type: object
+      required: [id, stock_status]
+      properties:
+        id: {type: string}
+        stock_status: {type: string, enum: [available, unavailable, unknown]}
+        stock_quantity:
+          type: integer
+          minimum: 0
+          description: >-
+            Units the store declares. Absent means the store never said; zero
+            means it said none. A store that would not answer reads `unknown`
+            and no count, so the caller moves to the next cheapest offer.
     Offer:
       type: object
       required: [id, card_name, store, price_amount, price_currency, url, source, stock_status, suspicious]
@@ -287,6 +337,13 @@ components:
           items: {type: string}
         source: {type: string}
         stock_status: {type: string, enum: [available, unavailable, unknown]}
+        stock_quantity:
+          type: integer
+          minimum: 0
+          description: >-
+            Units the store declares. Absent means the store never said; zero
+            means it said none. Only some platforms publish a count: shopify
+            says whether a variant sells, not how many remain.
         suspicious:
           type: boolean
           description: >-

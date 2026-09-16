@@ -48,9 +48,10 @@ func TestFindOffers(t *testing.T) {
 		t.Fatalf("items=%+v calls=%v", items, calls)
 	}
 	for _, test := range []struct{ id, status string }{{"10", "available"}, {"11", "unavailable"}, {"99", "unknown"}, {"", "unknown"}} {
-		status, err := client.CheckStock(context.Background(), offer.Offer{URL: "https://cards.test/products/ring?variant=" + test.id})
-		if err != nil || status != test.status {
-			t.Fatalf("id=%s status=%s err=%v", test.id, status, err)
+		reading, err := client.CheckStock(context.Background(), offer.Offer{URL: "https://cards.test/products/ring?variant=" + test.id})
+		// Shopify Says whether a Variant Sells, never how Many Remain.
+		if err != nil || reading.Status != test.status || reading.Quantity != nil {
+			t.Fatalf("id=%s status=%s quantity=%v err=%v", test.id, reading.Status, reading.Quantity, err)
 		}
 	}
 }

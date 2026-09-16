@@ -19,7 +19,7 @@ type SourceFetcher interface {
 
 // CommerceAdapter Checks Stock according to one Store Platform.
 type CommerceAdapter interface {
-	CheckStock(context.Context, offer.Offer) (string, error)
+	CheckStock(context.Context, offer.Offer) (offer.StockReading, error)
 }
 
 type Checker struct {
@@ -27,23 +27,23 @@ type Checker struct {
 	Config  Config
 }
 
-func (c Checker) CheckStock(ctx context.Context, item offer.Offer) (string, error) {
+func (c Checker) CheckStock(ctx context.Context, item offer.Offer) (offer.StockReading, error) {
 	link, err := url.Parse(item.URL)
 	if err != nil {
-		return "unknown", err
+		return offer.ReadStock("unknown"), err
 	}
 	config, found := c.Config.Stores[link.Host]
 	if !found || !config.Enabled {
-		return "unknown", nil
+		return offer.ReadStock("unknown"), nil
 	}
 	if adapter := c.commerceAdapter(config, link.Host); adapter != nil {
 		return adapter.CheckStock(ctx, item)
 	}
 	data, err := c.Fetcher.FetchSource(ctx, link.Host, item.URL)
 	if err != nil {
-		return "unknown", err
+		return offer.ReadStock("unknown"), err
 	}
-	return inspectStock(data, config), nil
+	return offer.ReadStock(inspectStock(data, config)), nil
 }
 
 func (c Checker) commerceAdapter(config StoreConfig, domain string) CommerceAdapter {

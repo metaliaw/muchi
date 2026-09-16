@@ -86,13 +86,16 @@ func TestVariantStock(t *testing.T) {
 		t.Fatal(err)
 	}
 	client := Client{Domain: "www.magic4ever.cl", Fetcher: fixtureFetcher(func(string) ([]byte, error) { return data, nil })}
-	status, err := client.CheckStock(context.Background(), offer.Offer{URL: "https://www.magic4ever.cl/sol-ring-25?variant_id=120640277"})
-	if err != nil || status != "unavailable" {
-		t.Fatalf("status=%s err=%v", status, err)
+	reading, err := client.CheckStock(context.Background(), offer.Offer{URL: "https://www.magic4ever.cl/sol-ring-25?variant_id=120640277"})
+	if err != nil || reading.Status != "unavailable" {
+		t.Fatalf("status=%s err=%v", reading.Status, err)
 	}
-	status, err = client.CheckStock(context.Background(), offer.Offer{URL: "https://www.magic4ever.cl/sol-ring-25?variant_id=99"})
-	if err != nil || status != "unknown" {
-		t.Fatalf("status=%s err=%v", status, err)
+	if reading.Quantity == nil || *reading.Quantity != 0 {
+		t.Fatalf("a sold out Jumpseller variant counts zero units, got %v", reading.Quantity)
+	}
+	reading, err = client.CheckStock(context.Background(), offer.Offer{URL: "https://www.magic4ever.cl/sol-ring-25?variant_id=99"})
+	if err != nil || reading.Status != "unknown" || reading.Quantity != nil {
+		t.Fatalf("status=%s quantity=%v err=%v", reading.Status, reading.Quantity, err)
 	}
 	if _, err = client.CheckStock(context.Background(), offer.Offer{URL: "https://evil.test/sol-ring"}); err == nil {
 		t.Fatal("foreign URL accepted")

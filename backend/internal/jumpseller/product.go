@@ -68,6 +68,7 @@ func (c Client) parseProduct(data []byte, path string) ([]offer.Offer, error) {
 			return nil, err
 		}
 		base.StockStatus = stockStatus(form.Info.Product.stockReply)
+		base.StockQuantity = countStock(form.Info.Product.stockReply)
 		return []offer.Offer{base}, nil
 	}
 	return buildVariants(base, form, variants)
@@ -94,6 +95,7 @@ func buildVariants(base offer.Offer, form formReply, variants []variantReply) ([
 			stock.Status = form.Info.Product.Status
 		}
 		item.StockStatus = stockStatus(stock)
+		item.StockQuantity = countStock(stock)
 		item.Metadata = map[string]string{"title": base.CardName, "sku": variant.Variant.SKU}
 		applyOptions(&item, form, variant)
 		items = append(items, item)
@@ -118,6 +120,17 @@ func applyOptions(item *offer.Offer, form formReply, variant variantReply) {
 			}
 		}
 	}
+}
+
+// countStock Keeps the Number only when the Store Kept one. An Unlimited
+// Stock Counts nothing: the Store Sells without Counting, and inventing a
+// Number there would Say more than the Store Said.
+func countStock(stock stockReply) *int {
+	if stock.Unlimited || stock.Stock == nil {
+		return nil
+	}
+	units := *stock.Stock
+	return &units
 }
 
 func stockStatus(stock stockReply) string {

@@ -16,8 +16,8 @@ func (f *variantFetcher) FetchSource(_ context.Context, _, target string) ([]byt
 func TestCheckShopifyVariant(t *testing.T) {
 	fetcher := &variantFetcher{}
 	checker := Checker{Fetcher: fetcher, Config: Config{Stores: map[string]StoreConfig{"cards.test": {Platform: "shopify", Enabled: true}}}}
-	status, err := checker.CheckStock(context.Background(), offer.Offer{URL: "https://cards.test/products/ring?variant=11", VariantID: "10"})
-	if err != nil || status != "unavailable" || fetcher.target != "https://cards.test/products/ring.js" {
-		t.Fatalf("status=%s target=%s err=%v", status, fetcher.target, err)
+	reading, err := checker.CheckStock(context.Background(), offer.Offer{URL: "https://cards.test/products/ring?variant=11", VariantID: "10"})
+	if err != nil || reading.Status != "unavailable" || fetcher.target != "https://cards.test/products/ring.js" {
+		t.Fatalf("status=%s target=%s err=%v", reading.Status, fetcher.target, err)
 	}
 }

@@ -44,7 +44,7 @@ type PrintLibrary interface {
 
 // StockChecker Verifies availability using https://schema.org/availability.
 type StockChecker interface {
-	CheckStock(context.Context, offer.Offer) (string, error)
+	CheckStock(context.Context, offer.Offer) (offer.StockReading, error)
 }
 
 // OfferCache Reuses Offers under https://www.rfc-editor.org/rfc/rfc9111.html.

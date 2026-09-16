@@ -205,3 +205,75 @@ func TestARetiredOptionIsRefused(t *testing.T) {
 		t.Fatalf("POST /v1/searches status = %d, want 400", response.Code)
 	}
 }
+
+// stockStore Answers one Page with two Offers, one of each Price.
+type stockStore struct{ fakeStore }
+
+func (s *stockStore) ListResults(context.Context, string, search.ResultPage) (search.Result, error) {
+	return search.Result{SearchID: "search_one", Items: []search.Item{{ID: "item-1", Offers: []offer.Offer{
+		{ID: "cheap", URL: "https://store.test/cheap", PriceAmount: "1000"},
+		{ID: "dear", URL: "https://store.test/dear", PriceAmount: "2000"},
+	}}}}, nil
+}
+
+// countingStock Answers Sold Out for the cheap Offer and counts its Visits.
+type countingStock struct{ visits []string }
+
+func (c *countingStock) CheckStock(_ context.Context, item offer.Offer) (offer.StockReading, error) {
+	c.visits = append(c.visits, item.ID)
+	if item.ID == "cheap" {
+		return offer.CountStock("unavailable", 0), nil
+	}
+	return offer.CountStock("available", 3), nil
+}
+
+func askStock(t *testing.T, body string) *httptest.ResponseRecorder {
+	t.Helper()
+	store := &stockStore{}
+	api := API{Searches: search.Service{Searches: store, Stocks: &countingStock{}}, Token: "secret"}
+	request := httptest.NewRequest(http.MethodPost, "/v1/searches/search_one/stock", strings.NewReader(body))
+	request.Header.Set("Authorization", "Bearer secret")
+	recorder := httptest.NewRecorder()
+	api.BuildHandler().ServeHTTP(recorder, request)
+	return recorder
+}
+
+// TestCheckStockAnswersEachOfferAsked Spells the Contract the Caller Reads: one
+// Reading per Offer, in the Order Asked, and a Count when the Store Kept one.
+func TestCheckStockAnswersEachOfferAsked(t *testing.T) {
+	recorder := askStock(t, `{"offers":["cheap","dear"]}`)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d", recorder.Code)
+	}
+	var reply struct {
+		Offers []search.OfferStock `json:"offers"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &reply); err != nil {
+		t.Fatal(err)
+	}
+	if len(reply.Offers) != 2 || reply.Offers[0].ID != "cheap" || reply.Offers[1].ID != "dear" {
+		t.Fatalf("offers = %+v", reply.Offers)
+	}
+	if reply.Offers[0].Status != "unavailable" || reply.Offers[0].Quantity == nil || *reply.Offers[0].Quantity != 0 {
+		t.Fatalf("the sold out offer = %+v", reply.Offers[0])
+	}
+	if reply.Offers[1].Status != "available" || reply.Offers[1].Quantity == nil || *reply.Offers[1].Quantity != 3 {
+		t.Fatalf("the stocked offer = %+v", reply.Offers[1])
+	}
+}
+
+// TestCheckStockRefusesAnOfferOutsideTheSearch Keeps this Route from Becoming a
+// Proxy: only an Offer this Search Found can be Asked about.
+func TestCheckStockRefusesAnOfferOutsideTheSearch(t *testing.T) {
+	if recorder := askStock(t, `{"offers":["https://evil.test/anything"]}`); recorder.Code != http.StatusNotFound {
+		t.Fatalf("status = %d", recorder.Code)
+	}
+}
+
+// TestCheckStockRefusesAnEmptyList Answers nothing to ask with a Refusal, not
+// with an empty Success that Reads like a finished Check.
+func TestCheckStockRefusesAnEmptyList(t *testing.T) {
+	if recorder := askStock(t, `{"offers":[]}`); recorder.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d", recorder.Code)
+	}
+}

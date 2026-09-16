@@ -55,6 +55,7 @@ func (a API) BuildHandler() http.Handler {
 	mux.Handle("POST /v1/searches", a.authenticate(http.HandlerFunc(a.createSearch)))
 	mux.Handle("GET /v1/searches/{search_id}", a.authenticate(http.HandlerFunc(a.getSearch)))
 	mux.Handle("GET /v1/searches/{search_id}/results", a.authenticate(http.HandlerFunc(a.listResults)))
+	mux.Handle("POST /v1/searches/{search_id}/stock", a.authenticate(http.HandlerFunc(a.checkStock)))
 	mux.Handle("POST /v1/searches/{search_id}/cancel", a.authenticate(http.HandlerFunc(a.cancelSearch)))
 	mux.Handle("GET /v1/cards/metadata", a.authenticate(http.HandlerFunc(a.getCardMetadata)))
 	mux.Handle("GET /v1/cards/autocomplete", a.authenticate(http.HandlerFunc(a.autocompleteCards)))
@@ -199,6 +200,30 @@ func readQueryNumber(r *http.Request, name string, fallback int) (int, error) {
 		return fallback, nil
 	}
 	return strconv.Atoi(value)
+}
+
+// stockRequest Names the Offers the Caller Wants Looked at again.
+type stockRequest struct {
+	Offers []string `json:"offers"`
+}
+
+// checkStock Visits the Stores again for Offers this Search already Found.
+//
+// It Answers the Question a Comparator Cannot Answer alone: the cheapest Price
+// is Worth nothing if that Card is gone. The Visit Belongs here, where each
+// Store Platform already has its Adapter and its Timeout.
+func (a API) checkStock(w http.ResponseWriter, r *http.Request) {
+	var request stockRequest
+	if err := decodeJSON(r, &request); err != nil {
+		a.writeError(w, r, search.ErrInvalid)
+		return
+	}
+	readings, err := a.Searches.CheckOfferStock(r.Context(), r.PathValue("search_id"), request.Offers)
+	if err != nil {
+		a.writeError(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"offers": readings})
 }
 
 func (a API) cancelSearch(w http.ResponseWriter, r *http.Request) {

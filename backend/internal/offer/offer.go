@@ -27,12 +27,29 @@ type Offer struct {
 	Locations     []string `json:"locations,omitempty"`
 	// CardKey Names the Card the Offer is for, with the Printing Dropped.
 	// The Caller Groups by it; the Title Stays for Reading.
-	CardKey          string            `json:"card_key,omitempty"`
-	Source           string            `json:"source"`
-	StockStatus      string            `json:"stock_status"`
+	CardKey     string `json:"card_key,omitempty"`
+	Source      string `json:"source"`
+	StockStatus string `json:"stock_status"`
+	// StockQuantity Counts the Units the Store Declares. Absent Means the Store
+	// Never Said; Zero Means it Said None. A Reader Tells them Apart.
+	StockQuantity    *int              `json:"stock_quantity,omitempty"`
 	Suspicious       bool              `json:"suspicious"`
 	SuspiciousReason string            `json:"suspicious_reason,omitempty"`
 	Metadata         map[string]string `json:"metadata,omitempty"`
+}
+
+// StockReading Carries what one Store Answered about one Offer.
+type StockReading struct {
+	Status   string `json:"stock_status"`
+	Quantity *int   `json:"stock_quantity,omitempty"`
+}
+
+// ReadStock Names a Status no Store Counted.
+func ReadStock(status string) StockReading { return StockReading{Status: status} }
+
+// CountStock Names a Status the Store Backed with a Number.
+func CountStock(status string, quantity int) StockReading {
+	return StockReading{Status: status, Quantity: &quantity}
 }
 
 func NormalizeCard(name string) string {

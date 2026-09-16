@@ -51,17 +51,17 @@ func (c Client) readOffers(ctx context.Context, path string) ([]offer.Offer, err
 	return c.parseProduct(data, path)
 }
 
-func (c Client) CheckStock(ctx context.Context, item offer.Offer) (string, error) {
+func (c Client) CheckStock(ctx context.Context, item offer.Offer) (offer.StockReading, error) {
 	link, err := url.Parse(item.URL)
 	if err != nil {
-		return "unknown", err
+		return offer.ReadStock("unknown"), err
 	}
 	if !sameStore(link, c.Domain) || link.Path == "" {
-		return "unknown", errors.New("invalid Jumpseller product URL")
+		return offer.ReadStock("unknown"), errors.New("invalid Jumpseller product URL")
 	}
 	items, err := c.readOffers(ctx, link.EscapedPath())
 	if err != nil {
-		return "unknown", err
+		return offer.ReadStock("unknown"), err
 	}
 	variant := link.Query().Get("variant_id")
 	if variant == "" {
@@ -69,10 +69,15 @@ func (c Client) CheckStock(ctx context.Context, item offer.Offer) (string, error
 	}
 	for _, candidate := range items {
 		if candidate.VariantID == variant || (variant == "" && len(items) == 1) {
-			return candidate.StockStatus, nil
+			return readStock(candidate), nil
 		}
 	}
-	return "unknown", nil
+	return offer.ReadStock("unknown"), nil
+}
+
+// readStock Repeats what the Product Page already Said about this Variant.
+func readStock(item offer.Offer) offer.StockReading {
+	return offer.StockReading{Status: item.StockStatus, Quantity: item.StockQuantity}
 }
 
 // requestGate Serializes Jumpseller Reads within one Process.

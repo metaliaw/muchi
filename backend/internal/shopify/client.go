@@ -95,32 +95,33 @@ func (c Client) readProduct(ctx context.Context, path string) (productReply, err
 }
 
 // CheckStock Reads the Requested Variant, including Variants that Sold Out.
-func (c Client) CheckStock(ctx context.Context, item offer.Offer) (string, error) {
+func (c Client) CheckStock(ctx context.Context, item offer.Offer) (offer.StockReading, error) {
 	link, err := url.Parse(item.URL)
 	if err != nil {
-		return "unknown", err
+		return offer.ReadStock("unknown"), err
 	}
 	path := productPath(link, c.Domain)
 	if path == "" {
-		return "unknown", errors.New("invalid Shopify product URL")
+		return offer.ReadStock("unknown"), errors.New("invalid Shopify product URL")
 	}
 	variant := link.Query().Get("variant")
 	if variant == "" {
 		variant = item.VariantID
 	}
 	if variant == "" {
-		return "unknown", nil
+		return offer.ReadStock("unknown"), nil
 	}
 	product, err := c.readProduct(ctx, path)
 	if err != nil {
-		return "unknown", err
+		return offer.ReadStock("unknown"), err
 	}
 	for _, candidate := range product.Variants {
 		if strconv.FormatInt(candidate.ID, 10) == variant {
-			return stockStatus(candidate.Available), nil
+			// Shopify Publishes whether a Variant Sells, never how Many Remain.
+			return offer.ReadStock(stockStatus(candidate.Available)), nil
 		}
 	}
-	return "unknown", nil
+	return offer.ReadStock("unknown"), nil
 }
 
 // SourceName Identifies this Store the Way the Health Report Names it.
