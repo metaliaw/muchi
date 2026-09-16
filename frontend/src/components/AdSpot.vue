@@ -27,14 +27,14 @@ const live = computed(() =>
 .mu-aviso {
   width: 100%;
   min-width: 0;
-  padding: 10px 12px;
+  padding: 18px 20px;
   border: 1px dashed var(--mu-tinta-sw);
   border-radius: 14px;
   background: color-mix(in srgb, var(--mu-blanco) 55%, transparent);
 }
 .mu-aviso__marca {
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
   color: var(--mu-tinta-sw);
   font-size: .72rem;
 }
