@@ -96,8 +96,14 @@ a.mu-icono { transition: background .15s, transform .15s; }
 /* Una Ranura sin Dirección se ve, pero no promete nada. */
 .mu-icono.pronto { opacity: .35; filter: grayscale(1); cursor: default; background: none; }
 
+/* En Móvil el Muelle de Muchi Ocupa el Borde de abajo: el Pie se Sube encima
+   de él en vez de Pelearle el mismo Centímetro. */
+@media (max-width: 800px) {
+  .mu-pie { bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
+}
+
 @media (max-width: 560px) {
-  .mu-pie { right: 8px; left: 8px; bottom: 8px; }
+  .mu-pie { right: 8px; left: 8px; }
   .mu-insignias { justify-content: center; flex-wrap: wrap; }
 }
 </style>

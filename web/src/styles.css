@@ -55,6 +55,11 @@ body {
   padding-bottom: 72px;
 }
 
+/* En Móvil el Muelle se Suma al Pie, y los dos Piden su propio Aire. */
+@media (max-width: 800px) {
+  body { padding-bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
+}
+
 a { color: var(--mu-acento); }
 
 button {
