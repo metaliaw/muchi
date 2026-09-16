@@ -56,7 +56,7 @@ Carta donde todas Negaron se queda **sin** Corona.
 `GET /api/searches/{id}/stock` pregunta **por Rondas**: la primera Candidata de
 cada Tipo de Carta viaja en una sola Consulta, y solo los Tipos que no
 Confirmaron pasan a la siguiente Ronda. El Costo crece con la Duda, no con el
-Largo de la Lista, y `stock_check_limit` —hoy 5, en
+Largo de la Lista, y `stock_check_limit` —hoy 3, en
 [`config/offers.defaults.yaml`](../../config/offers.defaults.yaml)— le pone
 Techo.
 
