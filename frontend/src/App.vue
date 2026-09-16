@@ -375,9 +375,11 @@ onUnmounted(stopPolling)
   box-shadow: var(--mu-sombra);
 }
 /* El Nombre Manda a la Izquierda; los Enlaces Acompañan a la Derecha y, cuando
-   no Caben, Bajan a su propia Línea sin Perder ese Lado. */
+   no Caben, Bajan a su propia Línea sin Perder ese Lado. La Regla Nombra al
+   `nav` y no al último Hijo: sin Redes configuradas no hay `nav`, y el Nombre
+   se Iba a la Derecha él solo. */
 .mu-hero__nombre { min-width: 0; }
-.mu-hero > :last-child { margin-left: auto; }
+.mu-hero > nav { margin-left: auto; }
 .mu-hero h1 { margin: 0; font-size: 2.4rem; font-weight: 800; letter-spacing: -1px; }
 .mu-hero h1 a { color: inherit; text-decoration: none; }
 .mu-hero p { margin: 4px 0 0; opacity: .9; }
