@@ -12,7 +12,7 @@ substitutions:
   _TOKEN_SECRET: muchi-api-token
   _ADSENSE_CLIENT: ''
   _ADSENSE_SLOT: ''
-  # El Pie, el Apoyo y la Re-verificacion. Todos son Identificadores publicos o
+  # La Barra, el Apoyo y la Re-verificacion. Todos son Identificadores publicos o
   # Interruptores: ninguno es un Secreto, y por eso viajan como Variables y no
   # por Secret Manager. Vacios por Defecto, asi un deploy sin ellos no inventa
   # un Patrocinador ni enciende una Visita extra por Oferta.
@@ -20,13 +20,13 @@ substitutions:
   _SPONSOR_NAME: ''
   _SPONSOR_TEXT: ''
   _SPONSOR_URL: ''
-  _INSTAGRAM_URL: ''
+  # Las Cuentas que existen hoy. El resto sigue vacio, y una Red sin Direccion
+  # no se Muestra: un Icono apagado Promete una Cuenta que nadie abrio.
+  _INSTAGRAM_URL: 'https://www.instagram.com/muchi_tgc'
+  _TIKTOK_URL: 'https://www.tiktok.com/@muchi_tgc'
   _DISCORD_URL: ''
   _X_URL: ''
   _YOUTUBE_URL: ''
-  # La única Cuenta que existe hoy. El resto sigue vacío, y una Red sin
-  # Dirección no se Muestra: un Icono apagado Promete una Cuenta que nadie abrió.
-  _TIKTOK_URL: 'https://www.tiktok.com/@muchi_tgc'
   _VERIFY_STOCK: ''
   # SHORT_SHA solo lo llena un Trigger; en un submit manual queda vacío y la
   # Etiqueta de la Imagen sale rota. deploy.sh pasa el SHA del Commit.
