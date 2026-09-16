@@ -400,7 +400,19 @@ onUnmounted(stopPolling)
 .mu-flotante {
   grid-area: flotante; position: sticky; top: 16px;
   display: flex; flex-direction: column; gap: 16px;
+  /* El Bloque nunca Pasa del Alto de la Ventana. Si algo le Crece adentro
+     —Auto Ads Mete Anuncios donde Encuentra un Hueco— Muchi Quedaría empujado
+     fuera de la Pantalla, Flotando debajo del Borde. */
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
 }
+/* Lo que Muchi no Puso ahí va al Final del Bloque, nunca delante de Muchi ni
+   de la Carta. No se Esconde: se Ordena. */
+.mu-flotante > :not(.mu-muelle):not(.mu-tarjeta) { order: 9; }
+/* Un Anuncio que Aterriza suelto en la Rejilla Toma su propia Fila entera, en
+   vez de Robarle el Ancho a la Columna de Muchi o a la de las Ofertas. */
+.mu-grilla > ins,
+.mu-grilla > .google-auto-placed { grid-column: 1 / -1; }
 /* En Escritorio el Muelle es un Panel más: sin Barra ni Tirador. */
 .mu-muelle, .mu-muelle__cuerpo { display: contents; }
 .mu-columna { grid-area: lista; display: flex; flex-direction: column; gap: 16px; }
