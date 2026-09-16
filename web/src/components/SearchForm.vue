@@ -118,10 +118,26 @@ h2 { margin-top: 0; }
 .mu-juego { display: grid; gap: 6px; margin-bottom: 10px; font-weight: 600; }
 /* Pasado el Tope, el Aviso deja de ser una Nota al pie. */
 .pasado { color: var(--mu-acento); font-weight: 700; }
-.mu-fila { display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+/* El Botón y su Nota Comparten Línea: la Nota Parte adentro de su Columna en
+   vez de Empujar al Botón a una Línea propia. */
+.mu-fila { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
+.mu-fila > button { flex: none; }
+.mu-fila > .mu-caption, .mu-fila > input { min-width: 0; }
+.mu-fila > input { flex: 1; }
 /* El Modo va pegado al Campo que cambia, no escondido en un Menu. */
-.mu-modo { border: 0; padding: 0; margin: 10px 0 0; display: flex; gap: 16px; flex-wrap: wrap; }
+.mu-modo { border: 0; padding: 0; margin: 10px 0 0; display: grid; gap: 8px 16px; }
 .mu-modo legend { padding: 0; }
-.mu-modo label { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+/* Las dos Opciones Comparten Fila mientras Quepan enteras. */
+@media (min-width: 560px) {
+  .mu-modo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mu-modo legend { grid-column: 1 / -1; }
+}
+/* El Botón Redondo se Alinea con la primera Línea del Texto, no con su Centro:
+   una Etiqueta de tres Líneas dejaba el Punto flotando a media Altura. */
+.mu-modo label {
+  display: grid; grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px; align-items: start; cursor: pointer;
+}
+.mu-modo input { margin: 3px 0 0; }
 summary { cursor: pointer; font-weight: 600; margin-top: 12px; }
 </style>
