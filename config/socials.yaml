@@ -1,0 +1,25 @@
+# Las Redes de Muchi, en el Orden en que se Muestran en la Barra de arriba.
+#
+# Viven acá y no en Variables de Entorno: son Direcciones públicas, las mismas
+# para cualquiera que Abra el Sitio, y cambiarlas no debería pedir un Deploy con
+# doce Sustituciones ni recordar el Nombre de una Variable.
+#
+# Una Red sin `url` no se Muestra. Se Deja escrita para que se Vea qué Ranuras
+# existen y con qué Icono, pero un Icono apagado Promete una Cuenta que nadie
+# abrió, así que el Front no la Dibuja.
+networks:
+  - name: Instagram
+    icon: 📸
+    url: https://www.instagram.com/muchi_tgc
+  - name: TikTok
+    icon: 🎵
+    url: https://www.tiktok.com/@muchi_tgc
+  - name: Discord
+    icon: 💬
+    url: ""
+  - name: X
+    icon: 𝕏
+    url: ""
+  - name: YouTube
+    icon: ▶️
+    url: ""

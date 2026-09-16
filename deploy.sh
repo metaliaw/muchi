@@ -11,10 +11,12 @@
 #   ./deploy.sh                      -> despliega el Commit actual
 #   MUCHI_REGION=us-east1 ./deploy.sh
 #
-# El Pie, el Apoyo y AdSense viajan por el Entorno. Lo que no exportes queda
-# vacio, y el Front lo omite:
+# El Apoyo, el Patrocinio y AdSense viajan por el Entorno. Lo que no exportes
+# queda vacio, y el Front lo omite:
 #
-#   MUCHI_INSTAGRAM_URL=https://instagram.com/muchi ./deploy.sh
+#   MUCHI_DONATION_URL=https://ko-fi.com/muchi ./deploy.sh
+#
+# Las Redes no: viven en config/socials.yaml y viajan con la Imagen.
 #
 # Sin MUCHI_ADSENSE_SLOT el Deploy Avisa y Sigue: el Sitio Sube sin Anuncios.
 # ./check-ads.sh dice si Google ya Asigno un Bloque que Poner ahi.
@@ -185,11 +187,6 @@ push_service() {
     build_options+="|_SPONSOR_NAME=${MUCHI_SPONSOR_NAME:-}"
     build_options+="|_SPONSOR_TEXT=${MUCHI_SPONSOR_TEXT:-}"
     build_options+="|_SPONSOR_URL=${MUCHI_SPONSOR_URL:-}"
-    build_options+="|_INSTAGRAM_URL=${MUCHI_INSTAGRAM_URL:-}"
-    build_options+="|_DISCORD_URL=${MUCHI_DISCORD_URL:-}"
-    build_options+="|_X_URL=${MUCHI_X_URL:-}"
-    build_options+="|_YOUTUBE_URL=${MUCHI_YOUTUBE_URL:-}"
-    build_options+="|_TIKTOK_URL=${MUCHI_TIKTOK_URL:-}"
     build_options+="|_VERIFY_STOCK=${MUCHI_VERIFY_STOCK:-}"
     gcloud builds submit --config "$CONFIG" --substitutions="$build_options"
 
