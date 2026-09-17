@@ -106,6 +106,29 @@ inventa uno.
 > la Opción más simple que funciona mientras decidimos, no la Decisión tomada.
 > Si lees esto para aprender del Patrón, ese es el Estado real, y el Número que
 > ves en el Carrito es siempre el que se aplicó a ese Carrito.
+> Parte de esa Duda depende de otra Cosa que aún no pasa:
+> [Cuando Muchi Compre](docs/la-compra.md).
+
+## Estamos trabajando en poder Comprar
+
+Hoy Muchi te deja en la puerta de la Tienda: comparas, armas el Carrito y la
+Compra la haces tú, una vez por Tienda. **Queremos que Muchi Compre por ti** —
+elegir el Carrito una vez, pagar una vez, recibir las Cartas juntas.
+
+El Plan es automatizar esa Compra con **Agentes** que hagan el Checkout de cada
+Tienda en vez de una Persona repitiéndolo doce veces. Todavía estamos viendo la
+Implementación y los Costos, y eso no es una Frase de Cortesía: no hay Agente
+corriendo ni Fecha que prometer.
+
+Tiene que ver directo con el [Muchi Dólar](#el-muchi-dólar). Ese Cambio ya
+incluye el Margen de los Intermediarios que harán la Compra *cuando Muchi
+compre*; hoy esos Intermediarios son Personas, y son la parte del Costo que un
+Agente podría mover. Si se mueve, falta decidir si el Muchi Dólar baja o si el
+Costo de comprar sale a la Superficie con su propio Nombre, separado del Cambio.
+
+📄 [Cuando Muchi Compre](docs/la-compra.md) lo cuenta entero: qué falta
+resolver —el Costo por Compra, la Compra a medias, los Pagos, las Tiendas—, cómo
+se arma el Total hoy y qué Parte se le agregaría.
 
 ## Aparecer en Muchi
 
