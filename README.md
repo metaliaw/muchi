@@ -107,7 +107,22 @@ inventa uno.
 > Si lees esto para aprender del Patrón, ese es el Estado real, y el Número que
 > ves en el Carrito es siempre el que se aplicó a ese Carrito.
 
-## Compartir el Stock de tu Tienda
+## Aparecer en Muchi
+
+Muchi no tiene Formulario de alta. Todo lo que aparece acá entró porque alguien
+lo pidió y alguien del otro lado lo conectó, así que el Camino siempre empieza
+con una Conversación:
+
+- 🐙 [Issues del Proyecto](https://github.com/metaliaw/muchi/issues), que es el
+  Canal preferido: queda escrito y cualquiera puede leer el Hilo después.
+- 📸 [Instagram](https://www.instagram.com/muchi_tgc) o
+  🎵 [TikTok](https://www.tiktok.com/@muchi_tgc), si prefieres escribir por ahí.
+
+Nunca mandes Contraseñas ni Tokens en la Solicitud. Si la Integración necesita
+una Credencial, se coordina por un Canal privado y con permisos de sólo
+Lectura sobre el Inventario que quieras compartir.
+
+### Si tienes una Tienda
 
 Puedes proponer la incorporación de tu Inventario mediante:
 
@@ -120,6 +135,34 @@ Consulta [Cómo compartir el Stock de tu Tienda](INTEGRAR-TIENDA.md) para saber
 qué información preparar y cómo solicitar la integración. La conexión se
 realiza en la API de Muchi; publicar un enlace no incorpora automáticamente
 la Tienda.
+
+### Si eres una Persona que vende
+
+No hace falta tener Tienda. Si vendes tus repetidas y las mantienes en una
+Lista pública de Moxfield, esa es la misma **Opción 1** de la Guía de arriba, y
+sirve igual: lo que Muchi necesita no es un Rol comercial, sino una Lista que
+se pueda leer sin tu Sesión, con Cantidades, Precios y una forma de contactarte
+para comprar.
+
+Lo que sí se te va a pedir es lo mismo que a una Tienda, porque quien busca no
+distingue: decir si las Cantidades son Stock real o sólo una Lista de
+referencia, mantenerla al día y marcar lo agotado. Una Oferta que ya no existe
+le cuesta a quien viajó hasta ella. Si vender es algo que haces de vez en
+cuando y no vas a poder actualizar, mejor decirlo antes que aparecer y
+desaparecer.
+
+### Si quieres que Muchi soporte otro Juego
+
+Muchi hoy busca Cartas de Magic, pero el Front nunca tuvo esa Lista escrita: la
+pide con `GET /api/supported-games` y dibuja lo que le respondan. Sumar un
+Juego es Trabajo del lado de la API —las Fuentes que lo conocen, los Nombres,
+las Ediciones— y no un cambio en este Repositorio.
+
+Abre un Issue contando **qué Juego** y, sobre todo, **dónde se compra en Chile**:
+las Tiendas o Listas que ya venden esas Cartas. Un Juego sin Fuentes que
+consultar da una Búsqueda vacía, así que esa parte pesa más que la Petición
+misma. Si además vendes ese Juego, dilo en el mismo Issue: un Juego nuevo que
+llega con su primera Fuente adentro parte con algo que mostrar.
 
 ## Publicidad y Apoyo
 
