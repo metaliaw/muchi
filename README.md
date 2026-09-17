@@ -11,6 +11,11 @@ Quienes quieran mirar detrás de la Pantalla pueden recorrer la
 [Arquitectura de Muchi](docs/arquitectura.md), sus Decisiones públicas y las
 formas de colaborar.
 
+> 📚 **Este Repositorio se lee, no sólo se ejecuta.** Cada Decisión de Muchi
+> tiene un Documento que la cuenta con sus Motivos, incluidas las que salieron
+> mal. Si llegaste a aprender, parte por la
+> [Documentación](#documentación) y vuelve después al Código.
+
 ## Buscar Cartas
 
 1. Escribe el Nombre de una Carta o pega una Lista con Cantidades.
@@ -312,24 +317,76 @@ Puedes añadir `MUCHI_API_SEARCH_ID` para verificar una Búsqueda existente.
 
 ## Documentación
 
-- [Arquitectura de Muchi](docs/arquitectura.md): la Frontera entre Código
-  público y Lógica privada, Seguridad, Datos, Operación y una Guía neutral para
-  replicar el Patrón con otros Proveedores.
-- [Compartir el Stock de una Tienda](INTEGRAR-TIENDA.md).
-- [Contrato de Muchi API](docs/api/openapi.yaml): copia de referencia del archivo
-  `openapi.yaml` del [Repositorio privado muchi-api](https://github.com/cangrejometralleta/muchi-api).
-  El acceso al original requiere permisos. Los cambios del Contrato se realizan
-  en ese Repositorio y luego se sincronizan aquí; esta copia no es una
-  Especificación independiente.
-- [Colecciones de Bruno](docs/api/bruno/README.md): una Petición por Ruta del
-  Contrato, para consultar la API sin pasar por el BFF. Copia de referencia,
-  como el Contrato.
-- [El Front y su Frontera](docs/migracion-web.md): qué dibuja el Front, qué
-  decide el BFF, sus Rutas y el Despliegue en Cloud Run.
-- [Hallazgos en los Buscadores](docs/hallazgos-buscadores.md): los Supuestos que
-  se cayeron cuando una Búsqueda empezó a traer Cartas distintas y no Variantes
-  de una, qué los cerró y qué queda abierto. Los del otro lado de la Frontera
-  viven en el Repositorio de la API.
-- [La Publicidad, de Punta a Punta](docs/publicidad.md): los Identificadores, el
-  Flujo hasta el primer Anuncio, lo que la Revisión de Google mira y qué hacer
-  cuando algo no anda.
+Muchi se escribe para que alguien más lo lea. Cada Documento cuenta una
+Decisión con sus Motivos y, cuando corresponde, con el Supuesto que se cayó.
+Ese es el Orden sugerido para quien llega a aprender.
+
+### Empieza por acá
+
+| Documento | Qué aprendes |
+| --- | --- |
+| 🏛️ [Arquitectura de Muchi](docs/arquitectura.md) | La Frontera entre Código público y Lógica privada, la Seguridad, los Datos, la Operación y una Guía neutral para replicar el Patrón con otros Proveedores. |
+| 🪟 [El Front y su Frontera](docs/migracion-web.md) | Qué dibuja el Front, qué decide el BFF, cuáles son sus Rutas y cómo se despliega en Cloud Run. |
+| 📜 [Contrato de Muchi API](docs/api/openapi.yaml) | Todas las Rutas que Muchi consume, con sus Formas de Entrada y Salida. |
+
+### El Contrato de una API privada, guardado acá
+
+`muchi-api` es un Repositorio **privado**, y este archivo es una **copia de
+referencia** de su `openapi.yaml`. La guardamos a propósito.
+
+Somos aficionados al Open Source: casi todo lo que hacemos se publica, y este
+Front es público entero. Pero el Negocio de Muchi vive en cómo la API consulta
+a las Tiendas, las ordena y decide en qué confiar. Si ese Repositorio también
+fuera abierto, cualquiera levantaría Muchi de nuevo el martes y no quedaría
+Negocio que sostenga el Proyecto. **La Frontera no es Secretismo: es lo que
+permite que la parte pública siga existiendo.**
+
+Lo que sí podemos abrir, lo abrimos. El Contrato es una de esas cosas: describe
+**qué** se pide y **qué** se responde, sin decir **cómo** se resuelve. Con esa
+copia puedes leer el Front completo sin permisos, entender cada Llamada que
+hace, escribir tu propia implementación de la API y correr todo esto contra
+ella. Un Front cuyo Contrato no se puede leer no es un Front público.
+
+- El original vive en el [Repositorio privado
+  muchi-api](https://github.com/cangrejometralleta/muchi-api); el acceso
+  requiere permisos.
+- Los cambios se hacen **allá** y se sincronizan **acá**. Esta copia no es una
+  Especificación independiente y no gana Rutas por su cuenta.
+- 🧪 [Colecciones de Bruno](docs/api/bruno/README.md): una Petición por Ruta del
+  Contrato, para hablarle a la API sin pasar por el BFF. Copia de referencia,
+  igual que el Contrato.
+
+### Decisiones aún abiertas
+
+- 💵 [El Muchi Dólar](#el-muchi-dólar): qué es ya está cerrado —un Cambio
+  comercial, publicado— pero cómo se opera no. Se explica ahí mismo, con las
+  Preguntas que siguen sin Respuesta, porque un Número que convierte Precios
+  ajenos merece contarse incluso a medio decidir.
+- 🛒 [Cuando Muchi Compre](docs/la-compra.md): el Plan de automatizar la Compra
+  con Agentes, la Implementación y los Costos que seguimos mirando, y cómo eso
+  toca el Muchi Dólar y el Costeo del Carrito. Un Plan en voz alta, sin Fecha.
+
+### Decisiones contadas en detalle
+
+- 📦 [El Pedido de Stock](docs/api/pedido-stock.md): cómo se pregunta por Rondas
+  —la Candidata más barata de cada Tipo en una sola Consulta— para que el Costo
+  crezca con la Duda y no con el Largo de la Lista. El BFF conserva la Ruta y el
+  Tope `stock_check_limit` (hoy **3**); el Front ya no la llama y corona la más
+  barata de entrada.
+- ⚖️ [Por qué la Re-verificación de Stock es Opcional](docs/reverificacion-opcional.md):
+  la Cadena de Carga que aparece cuando cada Oferta barata pide una segunda
+  Visita a la Tienda, y por qué esa Vuelta no puede ser obligatoria.
+- 🔍 [Hallazgos en los Buscadores](docs/hallazgos-buscadores.md): los Supuestos
+  que se cayeron cuando una Búsqueda empezó a traer Cartas distintas y no
+  Variantes de una, qué los cerró y qué queda abierto. Los del otro lado de la
+  Frontera viven en el Repositorio de la API.
+- 📣 [La Publicidad, de Punta a Punta](docs/publicidad.md): los Identificadores,
+  el Flujo hasta el primer Anuncio, lo que la Revisión de Google mira y qué
+  hacer cuando algo no anda.
+
+### Para quien quiera aparecer en Muchi
+
+- 🏪 [Compartir el Stock de una Tienda](INTEGRAR-TIENDA.md): qué información
+  preparar y cómo pedir la integración. Sirve igual si vendes sin Tienda.
+- 🙋 [Aparecer en Muchi](#aparecer-en-muchi): los tres Caminos —Tienda, Persona
+  o un Juego nuevo— y por dónde se piden.
