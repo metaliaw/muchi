@@ -17,7 +17,8 @@ formas de colaborar.
 2. Pulsa **Buscar**. Las Ofertas aparecen mientras avanza la Búsqueda.
 3. Revisa los Resultados y abre el **Carrito en CLP** para comparar la Compra.
 
-Cada Búsqueda admite entre 1 y 500 entradas, con 1 a 99 copias por entrada:
+Cada Búsqueda admite entre 1 y 100 Entradas, con 1 a 99 copias por Entrada.
+Son los Topes de un Mazo de Commander, no una Preferencia configurable:
 
 ```text
 1 Sol Ring
@@ -50,8 +51,13 @@ Carrito descarta esas Ofertas.
 volver a enviarlas. Guarda sus Enlaces para recuperarlas al abrir otra Sesión;
 la API debe conservar todavía esos Resultados.
 
-El Estado y las Ofertas se consultan cada **5 segundos** mientras la Búsqueda
-está pendiente. El intervalo se configura con `MUCHI_API_POLL_SECONDS`.
+El Estado y las Ofertas se consultan cada **3 segundos** mientras la Búsqueda
+está pendiente, y cada Consulta espera a lo más **10 segundos** antes de darse
+por perdida. Los dos Números viven en
+[`config/api.defaults.yaml`](config/api.defaults.yaml) y se ajustan con
+`MUCHI_API_POLL_SECONDS` y `MUCHI_API_TIMEOUT_SECONDS`. El Front no los adivina:
+los lee de `/api/config` al arrancar, así que el Intervalo que escribe en
+Pantalla es el mismo que usa el Reloj.
 Al recibir los Resultados finales, las Consultas automáticas se detienen.
 Si falla la Consulta de Resultados, se conserva el Estado recibido y se reintenta.
 Una Búsqueda vencida o rechazada detiene los Reintentos y permite crear otra.
@@ -182,7 +188,8 @@ El Front carga su Configuración en este orden:
 2. `config/api.development.yaml` o `config/api.production.yaml`, según `MUCHI_ENV`.
 3. `MUCHI_API_TIMEOUT_SECONDS` y `MUCHI_API_POLL_SECONDS`, si están definidas.
 
-Los Tiempos deben ser positivos y finitos. Los Topes de una Búsqueda —cien
+Los Tiempos deben ser positivos y finitos; hoy son 3 segundos de Intervalo y 10
+de Espera. Los Topes de una Búsqueda —cien
 Entradas, noventa y nueve copias— no se configuran: salen del Formato, un Mazo
 de Commander de cien Cartas. El Front los lee de `/api/config` y los escribe
 junto al Formulario, así que el Número vive en un solo lugar. Los Archivos de Configuración usan
