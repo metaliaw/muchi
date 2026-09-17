@@ -2,6 +2,12 @@
 # Fuente oficial: openapi.yaml del Repositorio privado
 # https://github.com/cangrejometralleta/muchi-api
 # Sincronizar desde la Fuente; no mantener una Especificación independiente.
+#
+# Por qué se guarda una copia acá: muchi-api es privado porque en el cómo
+# consulta y ordena a las Tiendas vive el Negocio que sostiene el Proyecto.
+# El Contrato, en cambio, sólo dice qué se pide y qué se responde, así que se
+# publica. Sin él, este Front público sería ilegible para quien no tiene
+# permisos, y un Front cuyo Contrato no se puede leer no es público.
 openapi: 3.1.0
 info:
   title: Muchi API
