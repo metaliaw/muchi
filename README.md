@@ -97,6 +97,16 @@ con `MUCHI_RATES_MUCHI_DOLAR`. Las Ofertas en otras Monedas se muestran con su
 Valor original y quedan fuera del Carrito: sin Cambio declarado, Muchi no
 inventa uno.
 
+> 🚧 **Todavía estamos fijando cómo se usa.** Lo que está cerrado es *qué es*:
+> un Cambio comercial, con Costo y Margen dentro, publicado a la Vista. Lo que
+> sigue abierto es *cómo se opera*: cada cuánto se revisa el Número, quién lo
+> mueve y con qué Señal, si un solo Valor alcanza para todas las Tiendas o si
+> cada una termina pidiendo el suyo, y qué pasa con una Búsqueda guardada
+> cuando el Número cambia después. Hoy es **un Valor, fijo, editado a Mano**:
+> la Opción más simple que funciona mientras decidimos, no la Decisión tomada.
+> Si lees esto para aprender del Patrón, ese es el Estado real, y el Número que
+> ves en el Carrito es siempre el que se aplicó a ese Carrito.
+
 ## Compartir el Stock de tu Tienda
 
 Puedes proponer la incorporación de tu Inventario mediante:
