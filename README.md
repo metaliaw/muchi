@@ -218,7 +218,8 @@ MUCHI_API_TOKEN=tu-codigo-de-seguridad
 
 `MUCHI_API_URL` acepta la URL base con o sin `/v1`. El Código de Seguridad es
 obligatorio y se envía como `Authorization: Bearer <MUCHI_API_TOKEN>`, según
-la [Especificación de la API](docs/api/openapi.yaml). Se configura en el
+la [Especificación de la API](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml).
+Se configura en el
 Servidor del Front; no debe publicarse en el Repositorio ni en enlaces.
 
 En Linux o macOS:
@@ -227,7 +228,8 @@ En Linux o macOS:
 ./start-web.sh   # BFF en :8000, Front en http://127.0.0.1:5173
 ```
 
-La API local requiere dos Procesos. Desde el Repositorio `muchi-api`, ejecuta
+La API local requiere dos Procesos. Desde el
+[Repositorio muchi-api](https://github.com/cangrejometralleta/muchi-api), ejecuta
 `./run.sh serve` y `./run.sh work`: el primero recibe los Pedidos y el segundo
 los procesa. El Token del Front debe coincidir con el configurado en la API.
 Una Búsqueda que permanece en `queued` necesita un Worker disponible.
@@ -240,7 +242,8 @@ en el Entorno de Despliegue.
 `./get-secret.sh` baja el Token vigente de Secret Manager y lo escribe en tu
 `.env`. Es para el Desarrollo local: en la Nube, Cloud Run lo monta solo.
 
-Para **rotarlo**, usa `./rotate-secret.sh` del Repositorio `muchi-api`. Ahí se
+Para **rotarlo**, usa `./rotate-secret.sh` del
+[Repositorio muchi-api](https://github.com/cangrejometralleta/muchi-api). Ahí se
 crea el Secreto y ahí se versiona, y esa Rotación alcanza a los tres Servicios
 que lo consumen —el Worker, la API y este Front—. Un segundo Rotador de este
 lado solo se volvería viejo sin que nadie lo notara.
@@ -325,36 +328,26 @@ Ese es el Orden sugerido para quien llega a aprender.
 
 | Documento | Qué aprendes |
 | --- | --- |
-| 🏛️ [Arquitectura de Muchi](docs/arquitectura.md) | La Frontera entre Código público y Lógica privada, la Seguridad, los Datos, la Operación y una Guía neutral para replicar el Patrón con otros Proveedores. |
+| 🏛️ [Arquitectura de Muchi](docs/arquitectura.md) | La Frontera entre este Front y la API, la Seguridad, los Datos, la Operación y una Guía neutral para replicar el Patrón con otros Proveedores. |
 | 🪟 [El Front y su Frontera](docs/migracion-web.md) | Qué dibuja el Front, qué decide el BFF, cuáles son sus Rutas y cómo se despliega en Cloud Run. |
-| 📜 [Contrato de Muchi API](docs/api/openapi.yaml) | Todas las Rutas que Muchi consume, con sus Formas de Entrada y Salida. |
+| 📜 [Contrato de Muchi API](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml) | Todas las Rutas que Muchi consume, con sus Formas de Entrada y Salida. Vive en muchi-api. |
 
-### El Contrato de una API privada, guardado acá
+### La API vive en su propio Repositorio
 
-`muchi-api` es un Repositorio **privado**, y este archivo es una **copia de
-referencia** de su `openapi.yaml`. La guardamos a propósito.
+Muchi son dos Repositorios públicos. Éste dibuja la Experiencia y guarda el BFF
+que habla con la API. [muchi-api](https://github.com/cangrejometralleta/muchi-api)
+consulta las Tiendas, ordena las Ofertas y conserva los Resultados.
 
-Somos aficionados al Open Source: casi todo lo que hacemos se publica, y este
-Front es público entero. Pero el Negocio de Muchi vive en cómo la API consulta
-a las Tiendas, las ordena y decide en qué confiar. Si ese Repositorio también
-fuera abierto, cualquiera levantaría Muchi de nuevo el martes y no quedaría
-Negocio que sostenga el Proyecto. **La Frontera no es Secretismo: es lo que
-permite que la parte pública siga existiendo.**
+Cada Cosa se lee en un solo lugar, y por eso acá ya no hay Copias:
 
-Lo que sí podemos abrir, lo abrimos. El Contrato es una de esas cosas: describe
-**qué** se pide y **qué** se responde, sin decir **cómo** se resuelve. Con esa
-copia puedes leer el Front completo sin permisos, entender cada Llamada que
-hace, escribir tu propia implementación de la API y correr todo esto contra
-ella. Un Front cuyo Contrato no se puede leer no es un Front público.
-
-- El original vive en el [Repositorio privado
-  muchi-api](https://github.com/cangrejometralleta/muchi-api); el acceso
-  requiere permisos.
-- Los cambios se hacen **allá** y se sincronizan **acá**. Esta copia no es una
-  Especificación independiente y no gana Rutas por su cuenta.
-- 🧪 [Colecciones de Bruno](docs/api/bruno/README.md): una Petición por Ruta del
-  Contrato, para hablarle a la API sin pasar por el BFF. Copia de referencia,
-  igual que el Contrato.
+- 📜 El [Contrato OpenAPI](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml)
+  vive allá. Una Copia acá envejecía en silencio, y quien la leía creía estar
+  mirando el Contrato.
+- 🧪 Las [Colecciones de Bruno](https://github.com/cangrejometralleta/muchi-api/tree/main/bruno)
+  viven allá. Sirven para pegarle a la API sin pasar por el BFF, que es como se
+  separa un Fallo del Front de uno del Servicio.
+- 🏛️ La Arquitectura del Backend —Cola, Worker, Persistencia y Caducidad— se
+  cuenta allá. [Acá](docs/arquitectura.md) se cuenta la del Front y su Frontera.
 
 ### Decisiones aún abiertas
 
@@ -390,3 +383,36 @@ ella. Un Front cuyo Contrato no se puede leer no es un Front público.
   preparar y cómo pedir la integración. Sirve igual si vendes sin Tienda.
 - 🙋 [Aparecer en Muchi](#aparecer-en-muchi): los tres Caminos —Tienda, Persona
   o un Juego nuevo— y por dónde se piden.
+
+## Licencia
+
+Muchi es Software Libre bajo la **[GNU Affero General Public License v3.0 o
+posterior](LICENSE)**.
+
+Puedes usarlo, leerlo, modificarlo y redistribuirlo. La Affero agrega una sola
+Condición más que la GPL, y es la que importa acá: **quien opere Muchi —o una
+Versión modificada— como Servicio en una Red debe ofrecer su Código fuente a
+las Personas que lo usan.** Un Fork mejor es bienvenido; un Fork cerrado y
+alojado en otra parte, no.
+
+Por eso Muchi muestra **Ver el código** en su propia Pantalla: es la Oferta de
+Fuente que pide la Sección 13, y apunta a este Repositorio.
+
+```text
+Copyright (C) 2026 Muchi
+
+Este Programa es Software Libre: puedes redistribuirlo y/o modificarlo bajo
+los términos de la GNU Affero General Public License publicada por la Free
+Software Foundation, en su versión 3 o cualquier versión posterior.
+
+Este Programa se distribuye con la esperanza de que sea útil, pero SIN
+GARANTÍA ALGUNA; ni siquiera la garantía implícita de COMERCIALIZACIÓN o
+ADECUACIÓN A UN PROPÓSITO PARTICULAR. Lee la GNU Affero General Public
+License para más detalles.
+
+Deberías haber recibido una copia de la GNU Affero General Public License
+junto a este Programa. Si no, mira <https://www.gnu.org/licenses/>.
+```
+
+[muchi-api](https://github.com/cangrejometralleta/muchi-api) lleva la misma
+Licencia. Son dos Repositorios, una sola Regla.

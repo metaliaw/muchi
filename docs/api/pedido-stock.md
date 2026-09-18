@@ -9,7 +9,7 @@ Carta agotada no es una Recomendación: es una Visita perdida a la Tienda. Antes
 de coronar, Muchi vuelve a preguntar —de la barata a la cara— hasta que una
 Tienda Confirme que sí la Tiene.
 
-La Consulta a la Tienda vive del lado privado: el Worker ya sabe hablarle a cada
+La Consulta a la Tienda vive del lado de la API: el Worker ya sabe hablarle a cada
 Proveedor, con su Adaptador y su Tope de Tiempo. Repetir esa Lógica en el BFF la
 publicaría dos veces y duplicaría el Tráfico que las Tiendas reciben de nosotros.
 Por eso el BFF no visita nada: Decide a quién preguntar y en qué Orden.
