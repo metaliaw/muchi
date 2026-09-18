@@ -1,6 +1,60 @@
 # Muchi API
 
-Servicio Go para buscar ofertas de cartas, verificar stock y ejecutar listas reanudables.
+API en Go que Busca y compara ofertas de cartas TCG en tiendas de Chile,
+verifica stock y procesa listas de búsqueda reanudables.
+Soporta Magic: The Gathering, Pokémon y Yu-Gi-Oh!, con precios en pesos chilenos.
+El cartón es Caro; buscarlo no debería costarte también la tarde.
+
+La comunidad Cree en nosotros; nosotros creemos en la comunidad.
+Hacemos público este repositorio para Compartir cómo funciona Muchi
+y construirlo con quienes lo usan.
+
+Puedes Empezar por el entorno local, consultar el contrato [OpenAPI](openapi.yaml)
+o probar las peticiones de [Bruno](bruno/README.md).
+
+## Desarrollo local
+
+Necesitas Docker con Compose para Levantar la API, el worker y el emulador
+local de Firestore; este flujo no requiere una cuenta de Google Cloud.
+Desde la raíz del repositorio, Ejecuta:
+
+```sh
+docker compose up --build
+```
+
+La API queda en `http://localhost:8081`; el token local es
+`local-development-token`. Métricas Prometheus: `/metrics`.
+
+`./start.sh [serve|work]` usa Docker Compose para compilar e iniciar la API
+(`serve`, por defecto) o el worker (`work`), junto con el emulador de Firestore.
+Los servicios arrancan en segundo plano y el script sigue sus logs. Ctrl+C deja
+de mostrar logs; `docker compose down` detiene los servicios. Esto evita la ruta
+de arranque adjunto de Podman Compose al reutilizar contenedores activos.
+Para iniciar todos los servicios, usa el comando
+anterior. `./build.sh` compila el binario local tras pasar formato, vet y pruebas.
+En Windows, `start.cmd` y `build.cmd` hacen lo mismo.
+Para compilar fuera de Docker, Necesitas Go 1.26 o posterior.
+
+```sh
+curl -X POST http://localhost:8081/v1/searches \
+  -H 'Authorization: Bearer local-development-token' \
+  -H 'Idempotency-Key: demo-1' \
+  -H 'Content-Type: application/json' \
+  -d '{"cards":[{"name":"Sol Ring","quantity":1}],"options":{"verify_stock":true,"stores_only":true}}'
+```
+
+La respuesta Devuelve un `id`; reemplaza `ID_DE_BUSQUEDA` con ese valor
+para consultar resultados mientras el worker avanza:
+
+```sh
+curl http://localhost:8081/v1/searches/ID_DE_BUSQUEDA/results \
+  -H 'Authorization: Bearer local-development-token'
+```
+
+Consulta `GET /v1/searches/ID_DE_BUSQUEDA` para Conocer el estado de la búsqueda.
+El token del ejemplo es Solo para desarrollo local.
+
+## Fuentes y precios
 
 Las fuentes de ofertas son [scry.cl](https://scry.cl) y las tiendas habilitadas
 en `config/stores.yaml`: catálogos WooCommerce, Shopify y Jumpseller, e inventarios publicados en Moxfield.
@@ -47,32 +101,6 @@ Para comprobar las nueve listas públicas configuradas:
 MUCHI_TEST_MOXFIELD_LIVE=1 go test ./internal/moxfield -run TestPublicLists -v
 ```
 
-## Desarrollo local
-
-```sh
-docker compose up --build
-```
-
-La API queda en `http://localhost:8081`; el token local es
-`local-development-token`. Métricas Prometheus: `/metrics`.
-
-`./run.sh [serve|work]` usa Docker Compose para compilar e iniciar la API
-(`serve`, por defecto) o el worker (`work`), junto con el emulador de Firestore.
-Los servicios arrancan en segundo plano y el script sigue sus logs. Ctrl+C deja
-de mostrar logs; `docker compose down` detiene los servicios. Esto evita la ruta
-de arranque adjunto de Podman Compose al reutilizar contenedores activos.
-Para iniciar todos los servicios, usa el comando
-anterior. `./build.sh` compila el binario local tras pasar formato, vet y pruebas.
-En Windows, `run.cmd` y `build.cmd` hacen lo mismo.
-
-```sh
-curl -X POST http://localhost:8081/v1/searches \
-  -H 'Authorization: Bearer local-development-token' \
-  -H 'Idempotency-Key: demo-1' \
-  -H 'Content-Type: application/json' \
-  -d '{"cards":[{"name":"Sol Ring","quantity":1}],"options":{"verify_stock":true,"stores_only":true}}'
-```
-
 ## Comandos
 
 - `muchi-api serve`: sirve HTTP y métricas.
@@ -108,67 +136,30 @@ Activa una política TTL sobre el campo `expires_at` en los collection groups
 `searches`, `items`, `item_offers`, `idempotency` y `offer_cache`. El código
 rechaza documentos vencidos aunque Firestore aún no los haya eliminado.
 
-## Despliegue con Gatos
+## Despliegue
 
-`deploy.sh` y `deploy.cmd` ejecutan `gcloud` directamente con tu sesión de
-`gcloud auth login`. Usan el proyecto activo de Google Cloud CLI o `--project`.
-No requieren Go local para desplegar: GCP compila las funciones desde el código fuente.
-
-```sh
-./deploy.sh
-```
-
-En Unix también puedes desplegar cada componente por separado. `deploy.sh` los
-orquesta en este mismo orden:
+El [despliegue con gatos](docs/despliegue.md) explica cómo `deploy.sh` orquesta
+los cuatro componentes, qué hace cada script, los permisos que necesita quien
+despliega, las opciones compartidas de `config/deploy.env` y el manejo del token.
 
 ```sh
-./deploy-infra.sh
-./deploy-worker.sh
-./deploy-sweeper.sh
-./deploy-api.sh
+./deploy.sh --project mi-proyecto
 ```
 
-La API y el barredor descubren la URL del worker ya desplegado. Por eso requieren
-que exista el worker, pero no vuelven a desplegarlo.
+Cada despliegue sale de una máquina con `gcloud auth login`; no hay despliegue
+automático desde GitHub.
 
-```bat
-deploy.cmd
-```
+## Participa
 
-Los valores compartidos están en `config/deploy.env`: las funciones
-`muchi-serve-api` y `muchi-process-search`, región `southamerica-east1`, cola
-`muchi-searches`, cuentas de servicio y límites. Puedes seleccionar otro proyecto,
-región o referencia de Secret Manager:
+Puedes Ayudar reportando una búsqueda incorrecta, proponiendo una tienda
+o enviando una mejora de código o documentación.
+Abre un [issue](https://github.com/cangrejometralleta/muchi-api/issues)
+con el juego, la carta, la tienda y el resultado esperado para Reproducir el problema.
+Omite tokens, credenciales y datos personales.
 
-```sh
-./deploy.sh --project mi-proyecto --region southamerica-east1 --token-secret muchi-api-token
-```
-
-Agrega `--dry-run` para revisar los comandos sin cambios en GCP. Ambos servicios reciben
-la referencia viva `muchi-api-token:latest`: cada instancia nueva lee la última versión
-habilitada, así que rotar el secreto no exige redesplegar. El despliegue verifica que esa
-última versión exista y esté habilitada, y avisa si pasas un número distinto.
-Para crear el secreto por primera vez o agregar una versión, usa `--token-file` con la
-ruta absoluta de un archivo privado fuera del repositorio, sin salto de línea final.
-El token no se imprime ni se pasa como valor en argumentos. Los scripts no cargan `.env`.
-
-El proyecto debe existir y tener facturación activa. Tu cuenta necesita desplegar
-funciones, habilitar servicios y administrar los recursos y permisos indicados.
-Las cuentas de servicio se usan durante la ejecución en GCP; el despliegue usa tu sesión.
-
-Los scripts habilitan los servicios, reutilizan o crean cuentas, Firestore y la cola,
-y solicitan los TTL de las cinco colecciones. Firestore existente conserva su ubicación.
-Despliegan primero el worker privado `ProcessSearch` y conceden su invocación a Cloud Tasks
-mediante OIDC. Luego despliegan `ServeAPI`, pública en IAM y protegida por el token de la
-aplicación, con la URL real del worker. No se inicia un worker residente en GCP.
-
-Se incluyen las tiendas de `config/stores.yaml` en el código desplegado; el runtime Go
-las lee desde `serverless_function_source_code/config/stores.yaml`. Los límites
-predeterminados son 512 MiB, timeout de 1800 segundos, concurrencia 1 y hasta 5 instancias
-por función. La cola admite 1 envío por segundo y 2 tareas concurrentes. Las tareas HTTP
-tienen un plazo de 1800 segundos (`MUCHI_TASK_DEADLINE_SECONDS`), para completar búsquedas
-Jumpseller con paginación extensa. En local, usa el flujo asíncrono para estas búsquedas.
-
-La salida incluye gatos y estados, junto con el progreso y los errores nativos de gcloud.
-Un error detiene el script; los recursos ya creados se conservan para reintentar.
-Al terminar se imprime la URL de la API y su ruta `/v1/health`.
+Para contribuir código, Crea un fork y envía un pull request con el problema
+que resuelve y cómo lo comprobaste.
+Ejecuta `./build.sh` o `build.cmd` para Validar formato, análisis y pruebas
+antes de enviarlo.
+Las pruebas contra tiendas reales son Opcionales y generan consultas externas;
+actívalas solo cuando estés revisando esa integración.
