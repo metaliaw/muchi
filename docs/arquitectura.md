@@ -1,14 +1,16 @@
 # Arquitectura de Muchi
 
 Muchi separa lo que las Personas ven y pueden discutir de la Lógica que opera
-el Servicio. La Interfaz, sus Criterios de Presentación y el Contrato con la API
-viven en el [Repositorio público](https://github.com/metaliaw/muchi). La
-recolección, persistencia y procesamiento de las Búsquedas viven en un
-Repositorio privado.
+el Servicio. La Interfaz, sus Criterios de Presentación y el BFF viven en
+[metaliaw/muchi](https://github.com/metaliaw/muchi). La recolección,
+persistencia y procesamiento de las Búsquedas viven en
+[cangrejometralleta/muchi-api](https://github.com/cangrejometralleta/muchi-api),
+y ahí vive también su [Contrato OpenAPI](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml).
 
-No toda la Plataforma es Código abierto. La propuesta abierta consiste en
-dejar a la Vista las Decisiones que afectan a quien busca, ofrecer un Contrato
-legible y aceptar Conversaciones y Cambios sobre la Experiencia pública.
+Los dos Repositorios son públicos. Este Documento cuenta la Arquitectura del
+Front y su Frontera; la del Backend —Cola, Worker, Persistencia y Caducidad—
+se cuenta en muchi-api. Ningún Diagrama se copia de un lado al otro: una Copia
+envejece sin que nadie lo note.
 
 ## El Recorrido de una Búsqueda
 
@@ -17,54 +19,44 @@ flowchart LR
     person([Persona])
     dns["muchitcg.cl<br/>NIC Chile y Cloud DNS"]
 
-    subgraph public["Repositorio público · metaliaw/muchi"]
+    subgraph public["Este Repositorio · metaliaw/muchi"]
         hosting["Firebase Hosting<br/>Vue 3 y archivos estáticos"]
         bff["Cloud Run · BFF FastAPI<br/>valida y presenta"]
         criteria["Criterios visibles<br/>orden · alertas · carrito"]
-        contract["Contrato OpenAPI"]
     end
 
-    subgraph private["Repositorio privado · muchi-api"]
-        api["API de Búsquedas"]
-        queue["Cola de Trabajo"]
-        worker["Worker de Consulta"]
-        store[("Resultados persistidos")]
-    end
-
-    sources["Tiendas y Fuentes"]
+    api["muchi-api<br/>Búsquedas, Cola, Worker y Resultados"]
+    contract["Contrato OpenAPI<br/>frontera compartida"]
     secrets["Secret Manager<br/>llave versionada y rotativa"]
 
     person --> dns --> hosting
     hosting -->|"/api/*"| bff
     criteria --- bff
-    contract -. "frontera compartida" .-> bff
-    contract -. "frontera compartida" .-> api
+    contract -. .-> bff
+    contract -. .-> api
     bff -->|"Bearer solo entre servidores"| api
-    api --> queue --> worker --> sources
-    worker --> store
-    api --> store
     secrets -. "versión vigente" .-> bff
     secrets -. "versión vigente" .-> api
-    secrets -. "versión vigente" .-> worker
 ```
 
 Cloud DNS dice dónde encontrar `muchitcg.cl`; no sirve la Aplicación. Firebase
 Hosting entrega los Archivos existentes desde su CDN y deriva las Rutas que no
-resuelve —incluidas `/api/*`— a Cloud Run. El BFF llama a la API privada y
-devuelve al Navegador solamente el Estado y los Resultados que necesita
-presentar.
+resuelve —incluidas `/api/*`— a Cloud Run. El BFF llama a la API y devuelve al
+Navegador solamente el Estado y los Resultados que necesita presentar. Lo que
+pasa dentro de ese Cuadro —Cola, Worker y Persistencia— se dibuja en
+[muchi-api](https://github.com/cangrejometralleta/muchi-api).
 
 ## Una Frontera Deliberada
 
 | Espacio | Responsabilidad | Por qué vive ahí |
 | --- | --- | --- |
-| Repositorio público | Interfaz Vue, BFF, Criterios de Presentación, Configuración pública, Contrato OpenAPI y Documentación | Permite aprender, revisar la Experiencia y proponer Cambios con Contexto. |
-| Repositorio privado | Consulta de Fuentes, coordinación de Trabajos, persistencia y Lógica operativa de Producción | Limita la Exposición de Integraciones y Controles cuya publicación facilitaría el Abuso del Servicio. |
+| `metaliaw/muchi` | Interfaz Vue, BFF, Criterios de Presentación, Configuración pública y Documentación del Front | Permite aprender, revisar la Experiencia y proponer Cambios con Contexto. |
+| `cangrejometralleta/muchi-api` | Contrato OpenAPI, consulta de Fuentes, coordinación de Trabajos y persistencia | Tiene otro Ciclo de Cambio y otra Operación; cada Decisión se discute donde vive su Código. |
 | Secret Manager | Llave compartida por BFF, API y Worker | Separa Credenciales del Código, de la Imagen y del Navegador; permite versionarlas y rotarlas. |
 
-La separación no convierte al Front en una Cáscara opaca. El Contrato público
-describe la Conversación entre ambos lados, y las Reglas que transforman una
-Respuesta en una Recomendación permanecen inspeccionables.
+La separación no convierte al Front en una Cáscara opaca. El Contrato describe
+la Conversación entre ambos lados, y las Reglas que transforman una Respuesta
+en una Recomendación permanecen inspeccionables.
 
 ## Criterios a la Vista
 
@@ -90,8 +82,9 @@ Muchi publica los Criterios que cambian lo que una Persona ve o compra:
 Estas Decisiones pueden seguirse en
 [`server/presenter.py`](../server/presenter.py),
 [`muchi/mtg/optimizer.py`](../muchi/mtg/optimizer.py) y en el
-[`Contrato OpenAPI`](api/openapi.yaml). Así una sugerencia puede discutirse
-como una Regla concreta y no como el resultado inexplicable de una Caja negra.
+[`Contrato OpenAPI`](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml).
+Así una sugerencia puede discutirse como una Regla concreta y no como el
+resultado inexplicable de una Caja negra.
 
 ## Seguridad y Rotación de la Llave
 
@@ -99,9 +92,9 @@ La Llave de la API nunca se compila dentro de Vue ni se envía al Navegador. El
 BFF la recibe desde Secret Manager y la agrega como `Authorization: Bearer`
 solo en la Conexión entre Servidores.
 
-La Llave es un Secreto versionado. `./rotate-secret.sh`, en el Repositorio
-privado, crea una Versión nueva y actualiza los tres Consumidores: BFF, API y
-Worker. Los Despliegues leen la Versión vigente; ni el Valor ni una copia de
+La Llave es un Secreto versionado. `./rotate-secret.sh`, en
+[muchi-api](https://github.com/cangrejometralleta/muchi-api), crea una Versión
+nueva y actualiza los tres Consumidores: BFF, API y Worker. Los Despliegues leen la Versión vigente; ni el Valor ni una copia de
 respaldo deben guardarse en Git, en la Imagen o en la Configuración pública.
 
 Esta Llave protege la Frontera interna. No reemplaza los Límites de Uso, la
@@ -114,46 +107,8 @@ La misma Forma sirve para una Aplicación que recibe un Trabajo lento, consulta
 Proveedores externos y permite volver por el Resultado. Los Productos concretos
 pueden cambiar sin cambiar las Responsabilidades:
 
-```mermaid
-flowchart TB
-    user([Cliente web])
-
-    subgraph edge["Borde público"]
-        dns["DNS administrado"]
-        cdn["Hosting estático y CDN"]
-        gateway["BFF o API de presentación"]
-    end
-
-    subgraph async["Procesamiento asíncrono"]
-        command["API de comandos y consultas"]
-        queue["Cola con reintentos"]
-        worker["Worker idempotente"]
-        database[("Base de datos con caducidad")]
-    end
-
-    subgraph trust["Plano de control"]
-        secret["Gestor de secretos"]
-        identity["Identidades de servicio"]
-        logs["Logs y métricas"]
-    end
-
-    providers["Proveedores externos"]
-
-    user --> dns --> cdn
-    cdn -->|"ruta dinámica"| gateway
-    gateway -->|"credencial interna"| command
-    command --> database
-    command --> queue --> worker
-    worker --> providers
-    worker --> database
-    secret -.-> gateway
-    secret -.-> command
-    identity -.-> queue
-    identity -.-> worker
-    gateway -.-> logs
-    command -.-> logs
-    worker -.-> logs
-```
+El Recorrido de arriba ya dibuja esa Forma; acá se nombra Pieza por Pieza para
+que cada Responsabilidad pueda cambiar de Proveedor sin cambiar de Lugar:
 
 | Responsabilidad | Implementación de referencia | Sustitutos posibles |
 | --- | --- | --- |
@@ -162,7 +117,7 @@ flowchart TB
 | Proteger Credenciales del Navegador | BFF en Cloud Run | Una Función, un Contenedor o un API Gateway con Transformación. |
 | Aceptar y consultar Trabajos | API en Cloud Run Functions | Un Servicio HTTP que persista Estado antes de responder. |
 | Desacoplar Trabajo lento | Cloud Tasks | Una Cola que entregue al menos una vez y permita Reintentos. |
-| Ejecutar cada Unidad | Función privada | Un Worker, Job o Consumidor autenticado. |
+| Ejecutar cada Unidad | Función interna | Un Worker, Job o Consumidor autenticado. |
 | Conservar Estado temporal | Firestore con TTL | Una Base transaccional con Índices y política de Caducidad. |
 | Distribuir Credenciales | Secret Manager | Un Gestor de Secretos con Versiones y Auditoría. |
 
@@ -184,31 +139,23 @@ sequenceDiagram
     participant Web as Front
     participant BFF
     participant API
-    participant Queue as Cola
-    participant Worker
-    participant DB as Persistencia
-    participant Source as Fuente externa
 
     Person->>Web: Envía una Lista
     Web->>BFF: POST /api/searches + Idempotency-Key
     BFF->>API: POST /v1/searches + Bearer
-    API->>DB: Guarda Pedido y Estado queued
-    API->>Queue: Encola una Unidad por entrada
     API-->>Web: 202 + Identificador
-
-    loop Mientras haya Unidades
-        Queue->>Worker: Entrega autenticada
-        Worker->>Source: Consulta con límites de tiempo
-        Worker->>DB: Guarda Ofertas y Avance
-    end
 
     loop Hasta un Estado terminal
         Web->>BFF: GET /api/searches/{id}
         BFF->>API: GET /v1/searches/{id} + Bearer
-        API->>DB: Lee Estado y Resultados parciales
         API-->>Web: Avance visible
     end
 ```
+
+Mientras tanto, la API encola una Unidad por Entrada y su Worker consulta las
+Fuentes. Ese Tramo se dibuja en
+[muchi-api](https://github.com/cangrejometralleta/muchi-api); acá importa que
+el Avance aparece antes de que termine.
 
 La Clave de Idempotencia evita duplicar un Trabajo cuando el Cliente no sabe si
 su primer Envío llegó. La Cola puede entregar una Tarea más de una vez; por eso
@@ -269,13 +216,9 @@ flowchart LR
     browser["Navegador<br/>no confiable"]
     bff["BFF público<br/>valida entrada"]
     api["API pública en red<br/>autenticada por aplicación"]
-    worker["Worker privado<br/>invocado por identidad"]
-    vendor["Fuente externa<br/>respuesta no confiable"]
 
     browser -->|"sin secretos"| bff
     bff -->|"Bearer desde Secret Manager"| api
-    api -->|"Tarea OIDC"| worker
-    worker -->|"HTTP con timeout"| vendor
 ```
 
 - El Front recibe solamente Configuración pública. Un Identificador de AdSense
@@ -315,18 +258,12 @@ Ruta que el BFF anterior todavía no conoce. Para Cambios incompatibles se
 necesita además versionar el Contrato o mantener ambas Formas durante la
 Migración.
 
-El Backend usa otro Despliegue porque tiene otro Ciclo de Cambio. Ese Flujo:
-
-1. Habilita Servicios administrados y comprueba el Secreto vigente.
-2. Crea Cuentas con Responsabilidades separadas.
-3. Configura TTL de Firestore y capacidad de la Cola.
-4. Publica primero el Worker privado y obtiene su URL real.
-5. Concede invocación a la Identidad de la Cola.
-6. Publica la API con la URL del Worker y la Versión `latest` del Secreto.
+El Backend usa otro Despliegue porque tiene otro Ciclo de Cambio, y su Flujo se
+cuenta en [muchi-api](https://github.com/cangrejometralleta/muchi-api).
 
 La API y el BFF deben desplegarse de forma compatible con el Contrato OpenAPI.
-Un Repositorio privado no elimina esa Disciplina: la Copia pública del Contrato
-debe sincronizarse cuando cambia la Frontera.
+Dos Repositorios no eliminan esa Disciplina: quien cambia la Frontera cambia el
+Contrato antes, y de un solo lado.
 
 ## Cómo Replicar esta Arquitectura
 
@@ -410,9 +347,9 @@ Una Operación mínima debe observar:
   exactamente una vez traslada el mismo Problema a una Capa menos visible.
 - Una Heurística rápida puede ser preferible a un Óptimo costoso si la Interfaz
   declara esa Limitación y permite revisar el Resultado.
-- Mantener la Lógica operativa privada protege Integraciones, pero obliga a
-  publicar Contratos, Criterios visibles y Canales de discusión para sostener la
-  Transparencia prometida.
+- Separar el Front de la API en dos Repositorios deja cada Decisión donde vive
+  su Código, pero obliga a un Contrato explícito y a no copiar Documentos de un
+  lado al otro: una Copia envejece en silencio.
 
 ## Aprender y Colaborar
 
