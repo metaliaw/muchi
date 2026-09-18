@@ -163,3 +163,33 @@ Ejecuta `./build.sh` o `build.cmd` para Validar formato, análisis y pruebas
 antes de enviarlo.
 Las pruebas contra tiendas reales son Opcionales y generan consultas externas;
 actívalas solo cuando estés revisando esa integración.
+
+## Licencia
+
+Muchi API es Software Libre bajo la **[GNU Affero General Public License v3.0 o
+posterior](LICENSE)**.
+
+Puedes usarla, leerla, modificarla y redistribuirla. La Affero agrega una sola
+condición más que la GPL, y es la que importa acá: **quien opere esta API —o
+una versión modificada— como servicio en una red debe ofrecer su código fuente
+a quienes la usan.** Un fork mejor es bienvenido; un fork cerrado y alojado en
+otra parte, no.
+
+```text
+Copyright (C) 2026 Muchi
+
+Este programa es software libre: puedes redistribuirlo y/o modificarlo bajo
+los términos de la GNU Affero General Public License publicada por la Free
+Software Foundation, en su versión 3 o cualquier versión posterior.
+
+Este programa se distribuye con la esperanza de que sea útil, pero SIN
+GARANTÍA ALGUNA; ni siquiera la garantía implícita de COMERCIALIZACIÓN o
+ADECUACIÓN A UN PROPÓSITO PARTICULAR. Lee la GNU Affero General Public
+License para más detalles.
+
+Deberías haber recibido una copia de la GNU Affero General Public License
+junto a este programa. Si no, mira <https://www.gnu.org/licenses/>.
+```
+
+El [Front](https://github.com/metaliaw/muchi) lleva la misma licencia. Son dos
+repositorios, una sola regla.
