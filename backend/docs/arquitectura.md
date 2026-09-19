@@ -159,6 +159,33 @@ El [flujo de búsqueda por juego](busqueda-proveedores.md) detalla esa composici
 La [identidad de cartas](identidad-cartas-juegos-ediciones.md) separa búsqueda,
 impresión y variante comercial.
 
+### La Frontera del Almacén
+
+`internal/application` es el único paquete que nombra un proveedor. Fuera de él
+nadie importa `internal/firestore` ni `internal/taskqueue`: el `Runtime` entrega
+puertos, no tipos concretos.
+
+- `Vault` reúne los cinco papeles que hoy cumple un solo almacén: guarda las
+  búsquedas, cachea las ofertas, responde por su salud, cuenta el trabajo que
+  espera y regula el tráfico hacia cada fuente. Están listados aparte porque son
+  independientes; que Firestore los cumpla todos es una coincidencia de la
+  composición, no un supuesto del dominio.
+- `Dispatcher` reúne el despacho de trabajo y el despertar que repone el barredor.
+- `Teller` es opcional: un almacén que tiene algo que decir recibe el logger, y
+  uno que no, simplemente no lo implementa.
+
+Las afirmaciones de `internal/application/vault_test.go` fijan esa frontera en
+tiempo de compilación.
+
+Un supuesto no se lee en ninguna interfaz y conviene decirlo: **la caducidad se
+delega al proveedor**. Firestore aplica TTL sobre `expires_at` según
+`firestore.indexes.json`, y el código solo rechaza lo vencido porque el borrado
+es eventual. Un almacén sin TTL nativo debe barrer por su cuenta; esa es la
+pieza más cara de portar, no las consultas.
+
+El [plan de almacén agnóstico](plan-almacen-agnostico.md) describe cómo se
+probaría esa frontera con un segundo adaptador.
+
 ## Disponibilidad y Recuperación
 
 - Los leases permiten recuperar un ítem cuando un worker muere a mitad del trabajo.

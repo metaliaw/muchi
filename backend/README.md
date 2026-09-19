@@ -124,6 +124,9 @@ entrada HTTP, cola, workers, persistencia, fuentes, identidades y secretos.
 El [incidente de despliegue, revisiones y secretos](docs/despliegue-revisiones-secretos.md)
 explica por qué una rotación correcta también debe mover tráfico y actualizar a
 todos los consumidores.
+El [plan de almacén agnóstico](docs/plan-almacen-agnostico.md) describe el
+trabajo pendiente para que el proyecto corra sin nube y para que cambiar de
+proveedor siga siendo una decisión.
 
 La función pública usa el entry point `ServeAPI`. La función privada de Cloud
 Tasks usa `ProcessSearch` y no debe permitir invocaciones sin autenticar.

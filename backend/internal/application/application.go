@@ -26,10 +26,38 @@ import (
 // userAgent identifies this service to card sources; it does not vary by environment.
 const userAgent = "muchi-api/1.0"
 
+// Vault Names every Role one Store Plays for a Runtime: it Keeps the Searches,
+// Caches the Offers, Answers for its own Health, Counts the Work that Waits and
+// Paces the Traffic toward each Source.
+//
+// The Roles are Listed apart because they are Independent: the Composition Root
+// Happens to Satisfy all five with one Firestore Store, and nothing above it
+// Depends on that. Only this Package Names a Vendor.
+type Vault interface {
+	search.SearchStore
+	search.OfferCache
+	search.HealthStore
+	search.WaitingCounter
+	source.TrafficGate
+}
+
+// Dispatcher Carries Work to a Worker that Runs somewhere else, and Adds a Turn
+// when a silent one Spent it.
+type Dispatcher interface {
+	search.TaskQueue
+	search.Waker
+}
+
+// Teller Takes a Logger from a Store that has something to Say. A Store that
+// Stays quiet simply does not Implement it.
+type Teller interface {
+	TellStore(*slog.Logger)
+}
+
 type Runtime struct {
 	Service               search.Service
-	Store                 *firestorestore.Store
-	Queue                 *taskqueue.Queue
+	Store                 Vault
+	Queue                 Dispatcher
 	CardMetadataProviders map[search.Game]cardmetadata.Provider
 	AutocompleteProviders map[search.Game]cardmetadata.AutocompleteProvider
 	SupportedGames        map[search.Game]string
@@ -43,7 +71,9 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 	}
 	// The Store Warns when a Claim steps over dead Items; silent, that Warning
 	// is the one that took two Hours to notice.
-	store.TellStore(logger)
+	if teller, told := any(store).(Teller); told {
+		teller.TellStore(logger)
+	}
 	storeConfig, err := stores.LoadStoreConfig(config.StoresPath, logger)
 	if err != nil {
 		return Runtime{}, err
