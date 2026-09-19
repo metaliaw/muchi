@@ -257,7 +257,12 @@ func (a API) findCardOffers(w http.ResponseWriter, r *http.Request) {
 	name := r.URL.Query().Get("name")
 	items, faults, err := a.Searches.FindCardOffers(r.Context(), game,
 		offer.CardQuery{Name: name, Match: match, Kind: kind})
-	if err != nil {
+	// Every Source Falling is an Answer, not a Broken Server. The Faults Name
+	// which ones Fell and Why, and the Contract already Says a non-empty List
+	// Means the Offers are Incomplete. A 500 Threw that List away and Told the
+	// Caller nothing it could Act on — and it Arrived as a Blank Failure right
+	// next to Sources the Caller can See are Resting.
+	if err != nil && len(faults) == 0 {
 		a.writeError(w, r, err)
 		return
 	}
@@ -265,6 +270,13 @@ func (a API) findCardOffers(w http.ResponseWriter, r *http.Request) {
 	// Problemas Enseña a no Mirarlo.
 	if faults == nil {
 		faults = []search.SourceFault{}
+	}
+	// `offers` Viaja como Arreglo aunque no haya ninguna. Cuando todas las
+	// Fuentes Caen no Queda Lista que Devolver, y una Lista ausente se Serializa
+	// como `null`: el Contrato Promete un Arreglo, y un Cliente que lo Recorre
+	// sin Mirar Revienta justo en la Respuesta que ya Traía malas Noticias.
+	if items == nil {
+		items = []offer.Offer{}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"name": name, "match": match, "kind": kind, "offers": items, "faults": faults,

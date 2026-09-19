@@ -277,3 +277,53 @@ func TestCheckStockRefusesAnEmptyList(t *testing.T) {
 		t.Fatalf("status = %d", recorder.Code)
 	}
 }
+
+// fallenSource Fails the Way a Store Down Fails: it Names itself and Says why.
+type fallenSource struct{ name string }
+
+func (f fallenSource) FindOffers(context.Context, offer.CardQuery) ([]offer.Offer, error) {
+	return nil, errors.New("source returned HTTP 503")
+}
+func (f fallenSource) SourceName() string { return f.name }
+
+// TestEverySourceFallingIsAnAnswerNotAFailure Covers the Reply a Caller Gets
+// when nothing Answered. The Faults Name who Fell; a 500 Threw them away and
+// Left the Caller with a blank Failure it could do nothing about.
+func TestEverySourceFallingIsAnAnswerNotAFailure(t *testing.T) {
+	store := &fakeStore{}
+	service := search.Service{
+		Searches: store,
+		SourcesByGame: map[search.Game][]search.OfferSource{
+			search.GameMagic: {fallenSource{name: "lacripta.cl"}},
+		},
+	}
+	api := API{Searches: service, Health: store, Token: "secret"}
+	request := httptest.NewRequest(http.MethodGet,
+		"/v1/cards/offers?game=magic&name=Play+Booster&kind=sealed", nil)
+	request.Header.Set("Authorization", "Bearer secret")
+	response := httptest.NewRecorder()
+
+	api.BuildHandler().ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d body=%s", response.Code, response.Body.String())
+	}
+	// El Cuerpo se Mira crudo: `offers` debe Llegar como Arreglo vacío, nunca
+	// como `null`. Decodificado, uno y otro se Ven iguales.
+	if strings.Contains(response.Body.String(), `"offers":null`) {
+		t.Errorf("offers = null, want an empty array: %s", response.Body.String())
+	}
+	var reply struct {
+		Offers []offer.Offer        `json:"offers"`
+		Faults []search.SourceFault `json:"faults"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&reply); err != nil {
+		t.Fatal(err)
+	}
+	if len(reply.Offers) != 0 {
+		t.Errorf("offers = %d, want none", len(reply.Offers))
+	}
+	if len(reply.Faults) != 1 || reply.Faults[0].Source != "lacripta.cl" {
+		t.Errorf("faults = %#v", reply.Faults)
+	}
+}
