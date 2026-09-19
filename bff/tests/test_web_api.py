@@ -410,6 +410,14 @@ def test_config_names_the_repository_for_the_footer(client):
     assert reply.get("/api/config").json()["repository_url"].startswith("https://github.com/")
 
 
+def test_config_names_both_repositories_because_muchi_is_open_source(client):
+    """La Interfaz y la API son Libres: el Panel abre las dos Puertas."""
+    reply, _ = client
+    config = reply.get("/api/config").json()
+    assert config["repository_url"] == "https://github.com/metaliaw/muchi"
+    assert config["api_repository_url"] == "https://github.com/cangrejometralleta/muchi-api"
+
+
 def test_a_network_without_an_address_does_not_exist():
     """La Barra solo muestra las Redes que Llevan a alguna parte."""
     redes = links.validate_networks({"networks": [
