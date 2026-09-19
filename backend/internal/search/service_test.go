@@ -434,3 +434,45 @@ func (c *countingSource) FindOffers(context.Context, offer.CardQuery) ([]offer.O
 }
 
 func (c *countingSource) SourceName() string { return c.name }
+
+// TestASealedOfferKeepsItsOwnPicture Covers the Image a Box Wears.
+//
+// The Printing Library Lists Cards, and a Set Name Names both the Set and the
+// Cards in it. Filling a Booster Box with the Picture of a Card Printed inside
+// it Looks like an Answer and is a Lie: a Box Wears its Store's Photo or none.
+func TestASealedOfferKeepsItsOwnPicture(t *testing.T) {
+	source := &fixedSource{items: []offer.Offer{{
+		ID: "1", CardName: "Bloomburrow Play Booster Box", Store: "Tienda",
+		PriceAmount: "100000", PriceCurrency: "CLP", URL: "https://example.cl/box",
+		Source: "example.cl", StockStatus: "available",
+	}}}
+	service := Service{
+		SourcesByGame: map[Game][]OfferSource{GameMagic: {source}},
+		PrintsByGame:  map[Game]PrintLibrary{GameMagic: stubPrints{}},
+	}
+
+	sealed, _, err := service.FindCardOffers(context.Background(), GameMagic,
+		offer.CardQuery{Name: "Bloomburrow", Kind: offer.KindSealed})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sealed[0].Image != "" {
+		t.Errorf("a box was painted with a card: %q", sealed[0].Image)
+	}
+}
+
+type fixedSource struct{ items []offer.Offer }
+
+func (f *fixedSource) FindOffers(context.Context, offer.CardQuery) ([]offer.Offer, error) {
+	return append([]offer.Offer(nil), f.items...), nil
+}
+func (f *fixedSource) SourceName() string { return "example.cl" }
+
+type stubPrints struct{}
+
+func (stubPrints) CardPrints(context.Context, string) ([]cardmetadata.Print, error) {
+	return []cardmetadata.Print{{
+		Edition: "blb", EditionName: "Bloomburrow", CollectorNumber: "1",
+		Image: "https://img/card.jpg",
+	}}, nil
+}

@@ -106,7 +106,7 @@ func (s Service) collectOffers(ctx context.Context, game Game, query offer.CardQ
 	items = offer.NameCards(nameKinds(offer.DeduplicateOffers(items), query.Kind))
 	items = s.keepGameSealed(ctx, game, query, items)
 	items = s.applyStoreLocations(items)
-	items = s.applyPrintImages(ctx, game, query.Name, items)
+	items = s.applyPrintImages(ctx, game, query, items)
 	items = offer.MarkSuspicious(items, s.SuspiciousPercent, query)
 	if err == nil {
 		s.saveOfferCache(ctx, key, items)
@@ -204,12 +204,17 @@ func (s Service) applyStoreLocations(items []offer.Offer) []offer.Offer {
 // A Store Publishes a Title and a Price, not an Image; the Printing List has
 // the Image and the Title Says which Printing. Only an Offer Arriving without
 // one is Filled: a Source that Sent its own Picture Knows better.
-func (s Service) applyPrintImages(ctx context.Context, game Game, name string, items []offer.Offer) []offer.Offer {
+//
+// A Sealed Offer Never Gets one from here. The Library Lists Printed Cards, and
+// `Bloomburrow` Names both a Set and the Cards in it: filling a Booster Box with
+// the Picture of a Card Printed inside it Looks like an Answer and is a Lie.
+// A Box Wears the Photo its Store Published, or none.
+func (s Service) applyPrintImages(ctx context.Context, game Game, query offer.CardQuery, items []offer.Offer) []offer.Offer {
 	library, found := s.PrintsByGame[game]
-	if !found || library == nil || !anyImageMissing(items) {
+	if query.Sealed() || !found || library == nil || !anyImageMissing(items) {
 		return items
 	}
-	prints, err := library.CardPrints(ctx, name)
+	prints, err := library.CardPrints(ctx, query.Name)
 	if err != nil {
 		return items
 	}
@@ -219,7 +224,7 @@ func (s Service) applyPrintImages(ctx context.Context, game Game, name string, i
 	}
 	for position := range items {
 		if items[position].Image == "" {
-			items[position].Image = index.ImageFor(readOfferTitle(items[position]), name)
+			items[position].Image = index.ImageFor(readOfferTitle(items[position]), query.Name)
 		}
 	}
 	return items
