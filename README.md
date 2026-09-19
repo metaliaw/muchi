@@ -331,6 +331,7 @@ Ese es el Orden sugerido para quien llega a aprender.
 | 🏛️ [Arquitectura de Muchi](docs/arquitectura.md) | La Frontera entre este Front y la API, la Seguridad, los Datos, la Operación y una Guía neutral para replicar el Patrón con otros Proveedores. |
 | 🪟 [El Front y su Frontera](docs/migracion-web.md) | Qué dibuja el Front, qué decide el BFF, cuáles son sus Rutas y cómo se despliega en Cloud Run. |
 | 🐱 [Cómo Habla Muchi](docs/muchi-habla.md) | El Catálogo de Frases, quién le gana el turno a la Burbuja, los tres Canales de Aviso, la Hoja de Sprites y qué queda con Movimiento reducido. |
+| 📦 [Producto Sellado](docs/producto-sellado.md) | Cómo se elige el Catálogo, los Valores por Defecto medidos contra las Tiendas, por qué la Caja no Tiene a quién pedirle su Foto y por qué decir «No hay Ofertas» puede ser Mentira. |
 | 📜 [Contrato de Muchi API](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml) | Todas las Rutas que Muchi consume, con sus Formas de Entrada y Salida. Vive en muchi-api. |
 
 ### La API vive en su propio Repositorio
@@ -350,6 +351,10 @@ Cada Cosa se lee en un solo lugar, y por eso acá ya no hay Copias:
 - 🏛️ La [Arquitectura del Backend](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/arquitectura.md)
   —Cola, Worker, Persistencia y Caducidad— se cuenta allá.
   [Acá](docs/arquitectura.md) se cuenta la del Front y su Frontera.
+- ⚖️ El [Castigo y Perdón](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/castigo-y-perdon.md)
+  explica cómo la API trata a una Tienda que se cae, que tarda o que pide calma.
+  Importa acá porque de esa Política salen los Avisos que Muchi muestra: una
+  Fuente que no contestó nunca debe leerse como una Carta que no existe.
 
 ### Decisiones aún abiertas
 
