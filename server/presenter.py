@@ -110,6 +110,8 @@ def build_offer(offer: SearchOffer, muchi_dolar: int,
         "edition": offer.edition,
         "finish": offer.finish,
         "locations": list(offer.locations),
+        # La Foto de la Tienda. Es la unica que una Caja sellada va a tener.
+        "image": offer.image,
         "metadata": offer.metadata,
     }
 

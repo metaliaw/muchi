@@ -37,6 +37,10 @@ class SearchOffer:
     # Cuantas Unidades declara la Tienda. None es "no lo sabemos"; 0 es
     # "lo preguntamos y no hay". Son Estados distintos y se muestran distinto.
     stock_quantity: int | None = None
+    # La Foto que publica la Tienda. Una Carta puede pedirsela al Catalogo del
+    # Juego; una Caja sellada no Existe en ese Catalogo, y esta es la unica que
+    # va a tener. Ultima en la Forma: las Pruebas arman Ofertas por Posicion.
+    image: str = ""
 
 
 @dataclass(frozen=True)
@@ -102,7 +106,8 @@ class SearchState:
 
 class SearchService(Protocol):
     def create_search(self, orders: list[Order], verify_stock: bool,
-                      key: str, game: str = "magic") -> SearchState: ...
+                      key: str, game: str = "magic", match: str = "exact",
+                      kind: str = "single") -> SearchState: ...
     def read_search(self, search_id: str) -> SearchState: ...
     def read_results(self, search_id: str, after: int = 0) -> SearchResults: ...
     def cancel_search(self, search_id: str, key: str) -> SearchState: ...

@@ -12,7 +12,9 @@ const printingOf = (offer) => ({
   language: offer.language || '',
   edition: offer.edition || '',
   foil: Boolean(offer.finish && offer.finish.toLowerCase().includes('foil')),
-  image: offer.metadata?.image || '',
+  // La Foto llega como Campo propio de la Oferta. Buscarla solo en `metadata`
+  // la Perdia entera: ahi solo cae lo que la Tienda manda de mas.
+  image: offer.image || offer.metadata?.image || '',
   url: offer.metadata?.url || '',
 })
 

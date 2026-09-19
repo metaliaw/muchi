@@ -30,8 +30,9 @@ class FakeSearches:
         self.stock = {}
         self.asked = []
 
-    def create_search(self, orders, verify_stock, key, game="magic", match="exact"):
-        self.created.append((orders, key, game, match))
+    def create_search(self, orders, verify_stock, key, game="magic", match="exact",
+                      kind="single"):
+        self.created.append((orders, key, game, match, kind))
         return self.state
 
     def read_search(self, search_id):
@@ -157,9 +158,9 @@ def test_create_search_parses_the_decklist(client):
         "text": "4 Lightning Bolt", "game": "pokemon", "key": "k" * 10,
     })
     assert reply.status_code == 200
-    orders, key, game, match = searches.created[0]
-    assert (orders[0].quantity, orders[0].name, key, game, match) == (
-        4, "Lightning Bolt", "k" * 10, "pokemon", "exact",
+    orders, key, game, match, kind = searches.created[0]
+    assert (orders[0].quantity, orders[0].name, key, game, match, kind) == (
+        4, "Lightning Bolt", "k" * 10, "pokemon", "exact", "single",
     )
     assert reply.json()["items"] == [
         {"name": "Lightning Bolt", "quantity": 4, "position": 0,
@@ -646,6 +647,29 @@ def test_create_search_carries_the_match_mode(client):
     assert searches.created[0][3] == "includes"
 
 
+def test_create_search_carries_the_sealed_kind(client):
+    """Pedir Sellado Viaja a la API; sin Pedirlo, se Buscan Cartas sueltas."""
+    http, searches = client
+    http.post("/api/searches", json={
+        "text": "Caja de Sobres Bloomburrow", "game": "magic", "key": "k" * 10,
+        "kind": "sealed",
+    })
+    assert searches.created[0][4] == "sealed"
+
+    http.post("/api/searches", json={
+        "text": "Sol Ring", "game": "magic", "key": "j" * 10,
+    })
+    assert searches.created[1][4] == "single"
+
+
+def test_create_search_refuses_an_unknown_kind(client):
+    http, _ = client
+    reply = http.post("/api/searches", json={
+        "text": "Sol Ring", "game": "magic", "key": "k" * 10, "kind": "booster",
+    })
+    assert reply.status_code == 422
+
+
 def test_create_search_refuses_an_unknown_match_mode(client):
     http, _ = client
     reply = http.post("/api/searches", json={
@@ -799,3 +823,20 @@ def test_a_complete_answer_warns_about_nobody():
     ), id="item-1", position=0, sequence=1, game="yugioh"),)
     notices = presenter.build_results(items, 1000)["notices"]
     assert [n for n in notices if n["level"] == "warning"] == []
+
+
+def test_an_offer_carries_the_picture_its_store_published():
+    """La Foto de la Tienda Llega entera: una Caja sellada no Tiene otra."""
+    from muchi.api.client import build_offer
+
+    offer = build_offer({
+        "id": "1", "card_name": "Play Booster Display", "store": "Oasis",
+        "price_amount": "194990", "price_currency": "CLP",
+        "url": "https://oasisgames.cl/box", "source": "www.oasisgames.cl",
+        "stock_status": "available", "suspicious": False,
+        "image": "https://cdn.shopify.com/box.png",
+    })
+    assert offer.image == "https://cdn.shopify.com/box.png"
+
+    row = presenter.build_offer(offer, 1000, verified=False)
+    assert row["image"] == "https://cdn.shopify.com/box.png"
