@@ -254,3 +254,23 @@ func TestReadProductKind(t *testing.T) {
 		t.Fatal("unknown kind accepted")
 	}
 }
+
+// TestNamesSetStandsOnWords Keeps a Set from Matching inside a longer Word.
+func TestNamesSetStandsOnWords(t *testing.T) {
+	sets := []string{"151", "Chaos Origins", "Journey Together"}
+	cases := map[string]bool{
+		"Scarlet & Violet 151 Elite Trainer Box":                 true,
+		"Chaos Origins Booster Box Español":                      true,
+		`Pokemon: Scarlet & Violet - Journey Together: "Bundle"`: true,
+		"Cardfight!! Vanguard Booster Box: Destined Showdown":    false,
+		"Booster Box 1510 Edition":                               false,
+	}
+	for title, want := range cases {
+		if got := NamesSet(title, sets); got != want {
+			t.Fatalf("NamesSet(%q) = %v", title, got)
+		}
+	}
+	if NamesSet("Chaos Origins Booster Box", nil) {
+		t.Fatal("an empty set list named a set")
+	}
+}

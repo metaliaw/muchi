@@ -31,15 +31,16 @@ func TestSealedProbe(t *testing.T) {
 	service := search.Service{
 		Providers:     buildProviders(fetcher, config),
 		SourcesByGame: buildSourcesByGame(fetcher, config, nil, time.Hour, nil),
+		SetsByGame:    buildSetLibraries(fetcher, config),
 	}
 	probes := []struct {
 		game search.Game
 		name string
 	}{
-		{search.GamePokemon, "Pitch Black Elite Trainer Box"},
-		{search.GamePokemon, "Journey Together Booster Bundle"},
+		{search.GamePokemon, "Elite Trainer Box"},
+		{search.GameYuGiOh, "Booster Box"},
+		{search.GameMagic, "Collector Booster"},
 		{search.GameYuGiOh, "Chaos Origins Booster Box"},
-		{search.GameMagic, "Aetherdrift Collector Booster"},
 	}
 	for _, probe := range probes {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)

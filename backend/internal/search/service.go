@@ -31,6 +31,9 @@ type Service struct {
 	MaxQuantity       int
 	SuspiciousPercent int
 	StoreLocations    map[string][]string
+	// SetsByGame Lends a Game its Sets, so a Sealed Answer can Tell whether a
+	// Box Belongs to the Game that was Asked about.
+	SetsByGame map[Game]SetLibrary
 	// PrintsByGame Lends a Card its Printings. Only a Game with a Catalog of
 	// Images Appears here; the rest Keep whatever Image their Source Sent.
 	PrintsByGame map[Game]PrintLibrary
@@ -90,6 +93,7 @@ func (s Service) collectOffers(ctx context.Context, game Game, query offer.CardQ
 		return nil, faults, err
 	}
 	items = offer.NameCards(nameKinds(offer.DeduplicateOffers(items), query.Kind))
+	items = s.keepGameSealed(ctx, game, query, items)
 	items = s.applyStoreLocations(items)
 	items = s.applyPrintImages(ctx, game, query.Name, items)
 	items = offer.MarkSuspicious(items, s.SuspiciousPercent, query)
@@ -109,6 +113,34 @@ func nameKinds(items []offer.Offer, kind offer.ProductKind) []offer.Offer {
 		items[position].Kind = kind
 	}
 	return items
+}
+
+// keepGameSealed Drops a Box that Belongs to another Game.
+//
+// `Booster Box` Names no Game, so a Store Selling several Answers with all of
+// them: a Yu-Gi-Oh Question Came back with Cardfight!! Vanguard. A Sealed Title
+// Carries its Set, and the Set Belongs to one Game — that is the Filter the
+// Card Name Gives for free in a Singles Search and nothing Gives here.
+//
+// It Fails open. A Game without a Set List, or a List that would not Load,
+// Answers what the Sources Sent: fewer Offers Hurt a Caller more than a
+// Stranger among them.
+func (s Service) keepGameSealed(ctx context.Context, game Game, query offer.CardQuery, items []offer.Offer) []offer.Offer {
+	library, found := s.SetsByGame[game]
+	if !query.Sealed() || !found || library == nil || len(items) == 0 {
+		return items
+	}
+	sets, err := library.GameSets(ctx)
+	if err != nil || len(sets) == 0 {
+		return items
+	}
+	kept := make([]offer.Offer, 0, len(items))
+	for _, item := range items {
+		if offer.NamesSet(item.CardName, sets) || offer.NamesSet(item.Edition, sets) {
+			kept = append(kept, item)
+		}
+	}
+	return kept
 }
 
 // applyStoreLocations Adds only Locations verified in Store Configuration.

@@ -457,3 +457,48 @@ func parseCents(value string) (int, error) {
 	}
 	return whole*100 + cents, nil
 }
+
+// NamesSet Answers whether a Title Names one of these Sets.
+//
+// A Sealed Title Carries its Set in Plain Words — `Chaos Origins Booster Box`,
+// `Scarlet & Violet - Journey Together: "Booster Bundle"` — so the Set List of
+// a Game Tells whether the Box Belongs to it. The Set must Sit on Word Edges:
+// `151` is a Set, and `1510` is not it.
+func NamesSet(title string, sets []string) bool {
+	title = NormalizeCard(title)
+	for _, set := range sets {
+		if name := NormalizeCard(set); name != "" && wordsContain(title, name) {
+			return true
+		}
+	}
+	return false
+}
+
+// wordsContain Finds a Phrase Standing on its own Words inside a Title.
+func wordsContain(title, phrase string) bool {
+	for offset := 0; ; {
+		found := strings.Index(title[offset:], phrase)
+		if found < 0 {
+			return false
+		}
+		start := offset + found
+		end := start + len(phrase)
+		if openEdge(title, start) && closeEdge(title, end) {
+			return true
+		}
+		offset = start + 1
+	}
+}
+
+func openEdge(title string, start int) bool {
+	return start == 0 || !isWordByte(title[start-1])
+}
+
+func closeEdge(title string, end int) bool {
+	return end == len(title) || !isWordByte(title[end])
+}
+
+// isWordByte Keeps Letters and Digits together and Lets every Separator Cut.
+func isWordByte(value byte) bool {
+	return value >= '0' && value <= '9' || value >= 'a' && value <= 'z' || value >= 'A' && value <= 'Z'
+}

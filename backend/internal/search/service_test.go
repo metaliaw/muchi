@@ -269,3 +269,69 @@ func TestAGameWithoutAPrintListAsksNobody(t *testing.T) {
 		t.Fatalf("asked the Magic print list %d times for Yu-Gi-Oh", library.calls)
 	}
 }
+
+type stubSets struct {
+	names []string
+	err   error
+	calls int
+}
+
+func (s *stubSets) GameSets(context.Context) ([]string, error) {
+	s.calls++
+	return s.names, s.err
+}
+
+// TestASealedAnswerKeepsItsOwnGame Covers what the Probe Showed: a Store
+// Selling several Games Answered `Booster Box` with Cardfight!! Vanguard,
+// because the Question Named no Game and the Title Named no Card.
+func TestASealedAnswerKeepsItsOwnGame(t *testing.T) {
+	sets := &stubSets{names: []string{"Chaos Origins", "Rarity Collection 5"}}
+	service := Service{
+		Providers: map[Game]Provider{GameYuGiOh: stubProvider{items: []offer.Offer{
+			{ID: "own", CardName: "Chaos Origins Booster Box Español", Store: "store",
+				URL: "https://store.test/own", PriceAmount: "104990", Source: "store"},
+			{ID: "other", CardName: "Cardfight!! Vanguard Booster Box: Destined Showdown", Store: "store",
+				URL: "https://store.test/other", PriceAmount: "59143", Source: "store"},
+		}}},
+		SetsByGame: map[Game]SetLibrary{GameYuGiOh: sets},
+	}
+	query := offer.CardQuery{Name: "Booster Box", Kind: offer.KindSealed}
+	items, _, err := service.FindCardOffers(context.Background(), GameYuGiOh, query)
+	if err != nil || len(items) != 1 || items[0].ID != "own" {
+		t.Fatalf("items=%+v err=%v", items, err)
+	}
+}
+
+// TestASingleAnswerNeverAsksForSets Keeps the Set List out of the Path it does
+// not Serve: a Card Name already Names one Game.
+func TestASingleAnswerNeverAsksForSets(t *testing.T) {
+	sets := &stubSets{names: []string{"Chaos Origins"}}
+	service := Service{
+		Providers: map[Game]Provider{GameYuGiOh: stubProvider{items: []offer.Offer{
+			{ID: "card", CardName: "Kuriboh", Store: "store", URL: "https://store.test/card",
+				PriceAmount: "990", Source: "store"},
+		}}},
+		SetsByGame: map[Game]SetLibrary{GameYuGiOh: sets},
+	}
+	items, _, err := service.FindCardOffers(context.Background(), GameYuGiOh, offer.CardQuery{Name: "Kuriboh"})
+	if err != nil || len(items) != 1 || sets.calls != 0 {
+		t.Fatalf("items=%+v calls=%d err=%v", items, sets.calls, err)
+	}
+}
+
+// TestASealedAnswerSurvivesASetListThatFails Fails open: fewer Offers Hurt a
+// Caller more than a Stranger among them.
+func TestASealedAnswerSurvivesASetListThatFails(t *testing.T) {
+	service := Service{
+		Providers: map[Game]Provider{GameYuGiOh: stubProvider{items: []offer.Offer{
+			{ID: "own", CardName: "Chaos Origins Booster Box", Store: "store",
+				URL: "https://store.test/own", PriceAmount: "104990", Source: "store"},
+		}}},
+		SetsByGame: map[Game]SetLibrary{GameYuGiOh: &stubSets{err: errors.New("catalog down")}},
+	}
+	query := offer.CardQuery{Name: "Booster Box", Kind: offer.KindSealed}
+	items, _, err := service.FindCardOffers(context.Background(), GameYuGiOh, query)
+	if err != nil || len(items) != 1 {
+		t.Fatalf("items=%+v err=%v", items, err)
+	}
+}

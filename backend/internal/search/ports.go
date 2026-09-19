@@ -42,6 +42,11 @@ type PrintLibrary interface {
 	CardPrints(context.Context, string) ([]cardmetadata.Print, error)
 }
 
+// SetLibrary Lists the Sets one Game Has Released.
+type SetLibrary interface {
+	GameSets(context.Context) ([]string, error)
+}
+
 // StockChecker Verifies availability using https://schema.org/availability.
 type StockChecker interface {
 	CheckStock(context.Context, offer.Offer) (offer.StockReading, error)

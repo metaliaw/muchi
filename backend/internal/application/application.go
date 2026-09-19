@@ -72,6 +72,7 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		Searches:          store,
 		Providers:         buildProviders(fetcher, storeConfig),
 		PrintsByGame:      buildPrintLibraries(fetcher, storeConfig),
+		SetsByGame:        buildSetLibraries(fetcher, storeConfig),
 		SourcesByGame:     buildSourcesByGame(fetcher, storeConfig, store, config.OfferCacheTTL, logger),
 		Stocks:            checker,
 		Cache:             store,
@@ -182,6 +183,29 @@ func buildPrintLibraries(fetcher stores.SourceFetcher, config stores.Config) map
 	libraries := make(map[search.Game]search.PrintLibrary)
 	if game, found := config.Games[string(search.GameMagic)]; found && game.Enabled {
 		libraries[search.GameMagic] = cardmetadata.Scryfall{Fetcher: fetcher}
+	}
+	return libraries
+}
+
+// setCatalogTTL Holds a Set List for a Day. A Set Releases a few Times a Year.
+const setCatalogTTL = 24 * time.Hour
+
+// buildSetLibraries Lends every Enabled Game its Sets. TCGMatch Lists the Sets
+// of the four Games it Knows, Magic among them, even where it is not the
+// Provider that Answers that Game.
+func buildSetLibraries(fetcher stores.SourceFetcher, config stores.Config) map[search.Game]search.SetLibrary {
+	provider, found := config.SearchProviders["tcgmatch"]
+	if !found || !provider.Enabled {
+		return nil
+	}
+	libraries := make(map[search.Game]search.SetLibrary, len(config.Games))
+	for name, game := range config.Games {
+		if !game.Enabled {
+			continue
+		}
+		libraries[search.Game(name)] = &tcgmatch.SetCatalog{
+			Fetcher: fetcher, BaseURL: provider.URL, Game: name, TTL: setCatalogTTL,
+		}
 	}
 	return libraries
 }
