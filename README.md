@@ -346,8 +346,9 @@ Cada Cosa se lee en un solo lugar, y por eso acá ya no hay Copias:
 - 🧪 Las [Colecciones de Bruno](https://github.com/cangrejometralleta/muchi-api/tree/main/bruno)
   viven allá. Sirven para pegarle a la API sin pasar por el BFF, que es como se
   separa un Fallo del Front de uno del Servicio.
-- 🏛️ La Arquitectura del Backend —Cola, Worker, Persistencia y Caducidad— se
-  cuenta allá. [Acá](docs/arquitectura.md) se cuenta la del Front y su Frontera.
+- 🏛️ La [Arquitectura del Backend](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/arquitectura.md)
+  —Cola, Worker, Persistencia y Caducidad— se cuenta allá.
+  [Acá](docs/arquitectura.md) se cuenta la del Front y su Frontera.
 
 ### Decisiones aún abiertas
 

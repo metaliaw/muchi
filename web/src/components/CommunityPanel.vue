@@ -1,12 +1,20 @@
 <script setup>
 import { computed } from 'vue'
 
-// La Direccion la sirve el Servidor: escrita aqui tambien, se despegarian.
+// Las Direcciones las sirve el Servidor: escritas aqui tambien, se despegarian.
 const props = defineProps({
   repositoryUrl: { type: String, default: '' },
+  apiRepositoryUrl: { type: String, default: '' },
 })
 
 const newIssueUrl = computed(() => `${props.repositoryUrl}/issues/new`)
+
+// Muchi son dos Repositorios y una sola Licencia. Enlazar solo uno Dejaria la
+// mitad del Programa sin Puerta.
+const repositories = computed(() => [
+  { label: 'La Interfaz', url: props.repositoryUrl },
+  { label: 'La API', url: props.apiRepositoryUrl },
+].filter((repo) => repo.url))
 
 // Quienes escriben Muchi. Las Redes de Muchi viven en el Pie; estas son
 // Personas, y van donde se habla del Código.
@@ -18,17 +26,18 @@ const AUTHORS = [
 
 <template>
   <aside class="mu-panel mu-comunidad">
-    <p class="mu-comunidad__eyebrow">Código abierto</p>
+    <p class="mu-comunidad__eyebrow">Muchi es código abierto</p>
     <h2>Aprende con Muchi</h2>
-    <p>Revisa cómo está hecha y ayúdanos a mejorarla.</p>
+    <p>Está entera a la vista, Interfaz y API. Revisa cómo está hecha y ayúdanos
+      a mejorarla.</p>
     <!-- La Dirección Llega con la Configuración, un Instante después del primer
          Pintado. El `nav` se Queda igual: si Apareciera recién con ella,
          Empujaría hacia abajo a Muchi y a la Carta con la Página ya a la Vista. -->
     <nav aria-label="Participar en Muchi" class="mu-comunidad__enlaces">
-      <template v-if="repositoryUrl">
-        <a :href="repositoryUrl" target="_blank" rel="noopener noreferrer">Ver el código</a>
-        <a :href="newIssueUrl" target="_blank" rel="noopener noreferrer">Comentar</a>
-      </template>
+      <a v-for="repo in repositories" :key="repo.url" :href="repo.url"
+         target="_blank" rel="noopener noreferrer">{{ repo.label }}</a>
+      <a v-if="repositoryUrl" :href="newIssueUrl"
+         target="_blank" rel="noopener noreferrer">Comentar</a>
     </nav>
 
     <p class="mu-comunidad__firma">

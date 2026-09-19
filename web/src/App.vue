@@ -248,7 +248,8 @@ onUnmounted(stopPolling)
          el Recorrido: Flotan juntos en Escritorio, y en Móvil Muchi Espera en
          la Esquina mientras la Carta se Pega arriba de la Lista. -->
     <div class="mu-abierto">
-      <CommunityPanel :repository-url="config.repository_url" />
+      <CommunityPanel :repository-url="config.repository_url"
+                      :api-repository-url="config.api_repository_url" />
     </div>
 
     <div class="mu-flotante">

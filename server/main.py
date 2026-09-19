@@ -81,7 +81,12 @@ def read_health() -> dict:
 MAX_CARDS = 100
 MAX_QUANTITY = 99
 
+# Muchi entero es Software Libre, y son dos Repositorios: la Interfaz con su BFF
+# acá, la API en el suyo. El Front los enlaza, así que las dos Direcciones salen
+# del mismo lugar.
 REPOSITORY_URL = "https://github.com/metaliaw/muchi"
+API_REPOSITORY_URL = "https://github.com/cangrejometralleta/muchi-api"
+
 
 @app.get("/api/config")
 def read_config() -> dict:
@@ -99,6 +104,7 @@ def read_config() -> dict:
         "adsense_client": os.getenv("MUCHI_ADSENSE_CLIENT", "") or ADSENSE_CLIENT,
         "adsense_slot": os.getenv("MUCHI_ADSENSE_SLOT", ""),
         "repository_url": REPOSITORY_URL,
+        "api_repository_url": API_REPOSITORY_URL,
         "socials": links.read_socials(),
     }
 
