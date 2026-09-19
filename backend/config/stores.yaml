@@ -40,6 +40,10 @@ search_providers:
     url: https://scry.cl
     enabled: true
     community: false
+    # Indexa Cartas sueltas. Medido: una Pregunta sellada de Magic trajo 32
+    # Ofertas y las 32 Salieron de una Tienda; scry Aporto cero. La misma
+    # Pregunta por Singles le Saca mas de cien.
+    sealed: false
     games: [magic]
     stores:
       - lacripta.cl
@@ -49,6 +53,8 @@ search_providers:
       - www.cardsouls.cl
       - el-wombat-rabioso-tcg
   tcgmatch:
+    # Medido: una Pregunta sellada de Yu-Gi-Oh Trajo Cajas desde aqui.
+    sealed: true
     type: tcgmatch
     url: https://api.tcgmatch.cl
     enabled: true

@@ -37,6 +37,12 @@ type Service struct {
 	// PrintsByGame Lends a Card its Printings. Only a Game with a Catalog of
 	// Images Appears here; the rest Keep whatever Image their Source Sent.
 	PrintsByGame map[Game]PrintLibrary
+	// SinglesOnly Names the Sources that Sell no Unopened Product, as their
+	// Configuration Declares it. A Sealed Question Skips them: asking a Singles
+	// Index for a Booster Box Spends a Request, Waits out its Timeout and
+	// Answers nothing — and that Wait Comes back Marked as an incomplete
+	// Answer, which Reads to a Caller like the Box might Exist elsewhere.
+	SinglesOnly map[string]bool
 }
 
 func (s Service) CreateSearch(ctx context.Context, key string, input CreateInput) (Job, error) {
@@ -89,6 +95,10 @@ func (s Service) collectOffers(ctx context.Context, game Game, query offer.CardQ
 	if !hasProvider && len(sources) == 0 {
 		return nil, nil, ErrInvalid
 	}
+	if query.Sealed() {
+		sources = s.keepSealedSources(sources)
+		hasProvider = hasProvider && !s.SinglesOnly[provider.SourceName()]
+	}
 	items, faults, err := queryGameSources(ctx, provider, hasProvider, sources, query)
 	if err != nil && len(items) == 0 {
 		return nil, faults, err
@@ -130,6 +140,24 @@ func nameKinds(items []offer.Offer, kind offer.ProductKind) []offer.Offer {
 		items[position].Kind = kind
 	}
 	return items
+}
+
+// keepSealedSources Drops the Sources that Declared they Sell no Sealed Product.
+//
+// It Fails open, like the Set Filter: a Source nobody Marked Stays Asked. The
+// Mark is a Fact about a Shop, and an unmarked Shop is one nobody Looked at
+// yet — not one that Sells nothing.
+func (s Service) keepSealedSources(sources []OfferSource) []OfferSource {
+	if len(s.SinglesOnly) == 0 {
+		return sources
+	}
+	kept := make([]OfferSource, 0, len(sources))
+	for _, source := range sources {
+		if !s.SinglesOnly[source.SourceName()] {
+			kept = append(kept, source)
+		}
+	}
+	return kept
 }
 
 // keepGameSealed Drops a Box that Belongs to another Game.

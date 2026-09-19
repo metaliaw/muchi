@@ -31,6 +31,16 @@ type SearchProviderConfig struct {
 	Games     []string `yaml:"games"`
 	Stores    []string `yaml:"stores"`
 	Community bool     `yaml:"community"`
+	// Sealed Says whether this Aggregator Indexes Unopened Product. An Index
+	// built from Singles Answers a Sealed Question with nothing, or with the
+	// Card Printed inside the Box, and either way it Spends a Request and Waits
+	// for it. Absent Means yes, so a Source Stays Asked until someone Looks.
+	Sealed *bool `yaml:"sealed"`
+}
+
+// ServesSealed Answers whether a Sealed Question is Worth Asking this Provider.
+func (c SearchProviderConfig) ServesSealed() bool {
+	return c.Sealed == nil || *c.Sealed
 }
 
 type StoreConfig struct {
@@ -46,6 +56,15 @@ type StoreConfig struct {
 	Enabled                  bool            `yaml:"enabled"`
 	Name                     string          `yaml:"name"`
 	Lists                    []MoxfieldList  `yaml:"lists"`
+	// Sealed Says whether this Store Sells Unopened Product at all. A Singles
+	// Shop Answers every Sealed Question empty, and the Answer Comes back
+	// Marked incomplete when it Times out first. Absent Means yes.
+	Sealed *bool `yaml:"sealed"`
+}
+
+// SellsSealed Answers whether a Sealed Question is Worth Asking this Store.
+func (c StoreConfig) SellsSealed() bool {
+	return c.Sealed == nil || *c.Sealed
 }
 
 type StoreLocation struct {

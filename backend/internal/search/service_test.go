@@ -375,3 +375,62 @@ func TestAnOldItemAsksTheQuestionOfANewOne(t *testing.T) {
 		t.Fatalf("a stored item and a fresh question wrote different keys: %q", cache.keys)
 	}
 }
+
+// TestASealedQuestionSkipsASinglesOnlySource Covers the Mark a Store or an
+// Aggregator Carries in its Configuration. A Singles Index Answers a Sealed
+// Question with nothing after Spending a Request and its whole Timeout, and
+// that Wait Comes back Marked incomplete — which Reads like the Box might be
+// somewhere the Search never Looked.
+func TestASealedQuestionSkipsASinglesOnlySource(t *testing.T) {
+	singles := &countingSource{name: "singles.example.cl"}
+	boxes := &countingSource{name: "boxes.example.cl"}
+	service := Service{
+		SourcesByGame: map[Game][]OfferSource{GameMagic: {singles, boxes}},
+		SinglesOnly:   map[string]bool{"singles.example.cl": true},
+	}
+
+	if _, _, err := service.FindCardOffers(context.Background(), GameMagic,
+		offer.CardQuery{Name: "Play Booster", Kind: offer.KindSealed}); err != nil {
+		t.Fatal(err)
+	}
+	if singles.asked != 0 {
+		t.Errorf("a singles-only source was asked for sealed product %d times", singles.asked)
+	}
+	if boxes.asked != 1 {
+		t.Errorf("the sealed source was asked %d times", boxes.asked)
+	}
+
+	if _, _, err := service.FindCardOffers(context.Background(), GameMagic,
+		offer.CardQuery{Name: "Sol Ring", Kind: offer.KindSingle}); err != nil {
+		t.Fatal(err)
+	}
+	if singles.asked != 1 {
+		t.Error("a singles question stopped reaching the singles source")
+	}
+}
+
+// TestAnUnmarkedSourceStaysAsked Covers the Fail-open Half of the same Mark.
+func TestAnUnmarkedSourceStaysAsked(t *testing.T) {
+	unmarked := &countingSource{name: "unknown.example.cl"}
+	service := Service{SourcesByGame: map[Game][]OfferSource{GameMagic: {unmarked}}}
+
+	if _, _, err := service.FindCardOffers(context.Background(), GameMagic,
+		offer.CardQuery{Name: "Play Booster", Kind: offer.KindSealed}); err != nil {
+		t.Fatal(err)
+	}
+	if unmarked.asked != 1 {
+		t.Error("an unmarked source was dropped from a sealed question")
+	}
+}
+
+type countingSource struct {
+	name  string
+	asked int
+}
+
+func (c *countingSource) FindOffers(context.Context, offer.CardQuery) ([]offer.Offer, error) {
+	c.asked++
+	return nil, nil
+}
+
+func (c *countingSource) SourceName() string { return c.name }

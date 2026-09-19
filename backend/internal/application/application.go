@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"slices"
 	"strings"
 	"time"
@@ -113,6 +114,7 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		MaxQuantity:       config.MaxQuantityPerCard,
 		SuspiciousPercent: config.SuspiciousPricePercent,
 		StoreLocations:    buildStoreLocations(storeConfig),
+		SinglesOnly:       buildSinglesOnly(storeConfig),
 	}
 	if dispatch && config.TaskURL != "" {
 		queue, err := taskqueue.OpenQueue(
@@ -238,6 +240,37 @@ func buildSetLibraries(fetcher stores.SourceFetcher, config stores.Config) map[s
 		}
 	}
 	return libraries
+}
+
+// buildSinglesOnly Names the Sources their Configuration Marks `sealed: false`,
+// the Way each one Names itself in a Failure. An Aggregator Answers by the Host
+// of its URL; a Store, by its Domain.
+func buildSinglesOnly(config stores.Config) map[string]bool {
+	named := map[string]bool{}
+	for _, provider := range config.SearchProviders {
+		if provider.ServesSealed() {
+			continue
+		}
+		if host := readHost(provider.URL); host != "" {
+			named[host] = true
+		}
+	}
+	for domain, store := range config.Stores {
+		if !store.SellsSealed() {
+			named[domain] = true
+		}
+	}
+	return named
+}
+
+// readHost Names a Provider the Way its Client Does, so the Mark and the Fault
+// Speak of the same Source.
+func readHost(raw string) string {
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.Host == "" {
+		return raw
+	}
+	return parsed.Host
 }
 
 func buildProviders(fetcher stores.SourceFetcher, config stores.Config) map[search.Game]search.Provider {
