@@ -47,6 +47,11 @@ light:
     state: alert
   - text: aayy mis ojos, avisa antes de prender la luz
     state: alert
+libre:
+  - text: muchi es abierto
+    state: happy
+  - text: GPL no es GANA PLATA LARRY
+    state: happy
 nerd:
   - text: HAAAA NERDD!
     state: happy

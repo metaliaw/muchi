@@ -51,7 +51,8 @@ def test_creates_authenticated_search():
     assert kwargs["headers"]["Idempotency-Key"] == "stable-key"
     assert kwargs["json"] == {"game": "pokemon",
                               "cards": [{"name": "Sol Ring", "quantity": 2}],
-                              "options": {"verify_stock": True, "match": "exact"}}
+                              "options": {"verify_stock": True, "match": "exact",
+                                          "kind": "single"}}
     assert kwargs["allow_redirects"] is False
     assert "private-code" not in repr(provider)
 
@@ -265,3 +266,23 @@ def test_connection_failure_explains_recovery_without_credentials(failure, messa
     with pytest.raises(QueryFailed, match=message) as caught:
         provider.read_search("search-1")
     assert "private-code" not in str(caught.value)
+
+
+def test_results_survive_the_fields_the_api_omits():
+    """`sequence` en cero y un Item sin Ofertas Llegan ausentes, no vacíos."""
+    from muchi.api.client import build_results
+
+    page = build_results({
+        "items": [{"id": "a", "position": 0, "original_name": "Sol Ring",
+                   "quantity": 1, "status": "not_found", "offers": None}],
+        "cursor": 0, "has_more": False,
+    })
+    assert page.items[0].sequence == 0
+    assert page.items[0].offers == ()
+
+
+def test_a_broken_answer_names_the_field_it_lost():
+    """Un Contrato incumplido Dice cuál Campo Faltó; sin eso no se Arregla."""
+    from muchi.api.client import name_contract_fault
+
+    assert "original_name" in name_contract_fault(KeyError("original_name"))
