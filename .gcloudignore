@@ -35,3 +35,7 @@ get-secret.cmd
 data/
 
 .DS_Store
+
+# Local agent configuration.
+.agents
+.codex
