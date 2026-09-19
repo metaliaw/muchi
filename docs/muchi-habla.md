@@ -55,14 +55,14 @@ greetings:
 ```
 
 `GET /api/muchi` lo entrega entero: `every`, `phrases`, `greetings`, `dark`,
-`light`, `nerd` y `help`. El Front lo pide una vez al montar, junto con
+`light`, `nerd`, `libre` y `help`. El Front lo pide una vez al montar, junto con
 `/api/config`, y lo guarda en el `book`.
 
 La Separación tiene un Motivo concreto: una Frase nueva no debería exigir un
 Build del Front ni un Despliegue de Hosting. El Texto es Contenido, no Código.
 
 El Servidor no es tolerante con ese Contenido. `build_phrase_book` exige las
-siete Claves exactas, rechaza un Grupo vacío, un `every` que no sea Entero
+ocho Claves exactas, rechaza un Grupo vacío, un `every` que no sea Entero
 positivo y —sobre todo— un Estado fuera de los cinco. La Validación ocurre al
 leer, no al dibujar: un `state: contenta` revienta en el Servidor con un Error
 claro, en vez de llegar al Navegador y dejar a Muchi en blanco.
@@ -113,6 +113,7 @@ Estos son todos los Disparadores:
 | El Buscador no encontró la Carta | El Mensaje del Fallo | `angry` |
 | El Buscador vio Nombres parecidos | «¿Buscabas «…»?» | `talk` |
 | Alguien abrió las Estadísticas | Una Frase del Grupo `nerd` | `happy` |
+| Alguien tocó o rozó el Aviso del Código Abierto | Una Frase del Grupo `libre` | La del Grupo |
 | Caricia número `every` (10) | Una Frase al azar de `phrases` | La del Grupo |
 | Se encendió el Modo Oscuro | Una de `dark` | `happy` |
 | Se apagó el Modo Oscuro | Una de `light` | `alert` |

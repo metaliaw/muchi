@@ -44,6 +44,9 @@ class SearchRequest(BaseModel):
     # `includes` Ensancha la Búsqueda a los Derivados del Nombre. Vale para una
     # Carta, no para una Lista: el Front manda solo la primera Línea.
     match: Literal["exact", "includes"] = "exact"
+    # `sealed` Cambia el Catálogo, no el Modo: se Buscan Cajas sin Abrir en vez
+    # de Cartas sueltas. La API lo Trata como una Opción de la Búsqueda entera.
+    kind: Literal["single", "sealed"] = "single"
     # La Clave de Idempotencia la elige el Front: reintentar un Envío que no
     # supo su Suerte no debe crear una segunda Búsqueda.
     key: str = Field(min_length=8, max_length=100)
@@ -131,6 +134,7 @@ def read_muchi() -> dict:
         "dark": rows(book.dark),
         "light": rows(book.light),
         "nerd": rows(book.nerd),
+        "libre": rows(book.libre),
         "help": [{"title": title, "detail": detail} for title, detail in book.help_topics],
     }
 
@@ -138,7 +142,8 @@ def read_muchi() -> dict:
 @app.post("/api/decklist")
 def read_decklist(request: SearchRequest) -> dict:
     """Muestra cómo quedó leída la Lista antes de gastar una Búsqueda."""
-    orders, ignored = decklist.parse_decklist(request.text)
+    orders, ignored = decklist.parse_decklist(request.text,
+                                              sealed=request.kind == "sealed")
     return {
         "orders": [{"name": order.name, "quantity": order.quantity} for order in orders],
         "ignored": list(ignored),
@@ -224,7 +229,8 @@ def read_card(name: str = Query(min_length=1, max_length=200),
 
 @app.post("/api/searches")
 def create_search(request: SearchRequest) -> dict:
-    orders, ignored = decklist.parse_decklist(request.text)
+    orders, ignored = decklist.parse_decklist(request.text,
+                                              sealed=request.kind == "sealed")
     if ignored:
         raise HTTPException(422, {"detail": "Revisa estas Líneas: " + ", ".join(ignored),
                                   "ignored": list(ignored)})
@@ -235,6 +241,7 @@ def create_search(request: SearchRequest) -> dict:
     state = build_muchi().searches.create_search(
         orders=orders, verify_stock=VERIFY_STOCK,
         key=request.key, game=request.game, match=request.match,
+        kind=request.kind,
     )
     return {
         "state": presenter.build_state(state),
