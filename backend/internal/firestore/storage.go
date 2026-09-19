@@ -48,6 +48,37 @@ type Store struct {
 	client    *firestorelib.Client
 	searchTTL time.Duration
 	logger    *slog.Logger
+	pacing    time.Duration
+	cooldown  time.Duration
+}
+
+// sourcePacing Spaces two Calls to one Domain. It is a Floor, not a Promise:
+// a Store that Asks for more Room Gets it through throttleCooldown.
+const sourcePacing = 250 * time.Millisecond
+
+// throttleCooldown Holds a Domain that Answered 429. The Store Said the Calls
+// Arrive too Fast, so the next one Waits — that is the Answer it Asked for,
+// and it is Kept per Domain, so one Store Slowing down Never Quiets another.
+const throttleCooldown = 30 * time.Second
+
+// PaceSources Tunes both Waits. Zero Keeps the Default, so a Caller may Set
+// one and Leave the other alone.
+func (s *Store) PaceSources(pacing, cooldown time.Duration) {
+	s.pacing, s.cooldown = pacing, cooldown
+}
+
+func (s *Store) pace() time.Duration {
+	if s.pacing <= 0 {
+		return sourcePacing
+	}
+	return s.pacing
+}
+
+func (s *Store) cool() time.Duration {
+	if s.cooldown <= 0 {
+		return throttleCooldown
+	}
+	return s.cooldown
 }
 
 // TellStore Gives the Store a Voice. Without one it stays silent, which is
@@ -359,10 +390,32 @@ func (s *Store) RecordSource(ctx context.Context, domain string, latency time.Du
 	ctx, cancel := boundContext(ctx)
 	defer cancel()
 	reference := s.client.Collection("source_health").Doc(hashKey(domain))
+	// Un Freno Cambia el Ritmo, no la Salud: la Tienda Pidio Espacio y aqui se
+	// le Da, antes de Anotar nada. Fallar al Espaciar no Pierde la Anotacion.
+	if source.Throttled(sourceErr) {
+		_ = s.delaySource(ctx, domain, s.cool())
+	}
 	return s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
 		record, _ := s.readSource(ctx, tx, reference, domain)
 		updateSource(&record, latency, sourceErr)
 		return tx.Set(reference, record)
+	})
+}
+
+// delaySource Pushes one Domain's next Turn away, never Closer: two Frenos
+// Arriving together must not Shorten the Wait the first one Won.
+func (s *Store) delaySource(ctx context.Context, domain string, wait time.Duration) error {
+	reference := s.client.Collection("traffic_leases").Doc(hashKey(domain))
+	return s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
+		allowed := time.Now().UTC().Add(wait)
+		if document, err := tx.Get(reference); err == nil {
+			if previous, err := document.DataAt("next_allowed_at"); err == nil {
+				if stored, ok := previous.(time.Time); ok && stored.After(allowed) {
+					allowed = stored
+				}
+			}
+		}
+		return tx.Set(reference, map[string]any{"next_allowed_at": allowed})
 	})
 }
 
@@ -606,7 +659,7 @@ func (s *Store) reserveTraffic(ctx context.Context, domain string) (time.Time, e
 				allowed = previous.(time.Time)
 			}
 		}
-		return tx.Set(reference, map[string]any{"next_allowed_at": allowed.Add(250 * time.Millisecond)})
+		return tx.Set(reference, map[string]any{"next_allowed_at": allowed.Add(s.pace())})
 	})
 	return allowed, err
 }
@@ -659,7 +712,14 @@ func updateSource(record *sourceRecord, latency time.Duration, sourceErr error) 
 		record.LastSuccess, record.ConsecutiveFailures, record.CircuitOpenUntil = &now, 0, nil
 		return
 	}
-	record.LastFailure, record.ConsecutiveFailures = &now, record.ConsecutiveFailures+1
+	record.LastFailure = &now
+	// Un Freno Queda Anotado y no Avanza el Contador: cinco 429 seguidos son
+	// una Tienda sana Pidiendo Calma, y Abrirle el Circuito la Deja muda un
+	// Minuto por Portarse bien.
+	if source.Throttled(sourceErr) {
+		return
+	}
+	record.ConsecutiveFailures++
 	if record.ConsecutiveFailures >= 5 {
 		opened := now.Add(time.Minute)
 		record.CircuitOpenUntil = &opened

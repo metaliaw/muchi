@@ -2,6 +2,7 @@ package source
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -154,5 +155,21 @@ func TestStatusErrorStaysReadable(t *testing.T) {
 	}
 	if got := (StatusError{Code: 404}).Error(); got != "source returned HTTP 404" {
 		t.Fatalf("empty body message = %q", got)
+	}
+}
+
+// TestThrottledNamesOnlyTheRateLimit Covers the Line between a Store Asking
+// for Calm and a Store Falling over. Only 429 Means the first.
+func TestThrottledNamesOnlyTheRateLimit(t *testing.T) {
+	if !Throttled(StatusError{Code: 429}) {
+		t.Error("a 429 did not read as throttling")
+	}
+	for _, code := range []int{500, 503, 404, 403} {
+		if Throttled(StatusError{Code: code}) {
+			t.Errorf("HTTP %d read as throttling", code)
+		}
+	}
+	if Throttled(errors.New("connection refused")) {
+		t.Error("a dead connection read as throttling")
 	}
 }

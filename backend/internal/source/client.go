@@ -134,6 +134,16 @@ func (c Client) bodyCap() int64 {
 	return c.MaxBodyBytes
 }
 
+// Throttled Answers whether a Source Asked the Caller to Slow down.
+//
+// A 429 is not a Sick Store. It is a healthy one Saying the Calls Arrive too
+// Fast, and the Answer is to Space them — not to Count the Store as Falling
+// until its Circuit Opens and nobody Asks it anything for a Minute.
+func Throttled(err error) bool {
+	var status StatusError
+	return errors.As(err, &status) && status.Code == http.StatusTooManyRequests
+}
+
 func CanRetry(err error) bool {
 	if errors.Is(err, ErrCircuitOpen) {
 		return false
