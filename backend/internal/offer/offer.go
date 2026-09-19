@@ -12,19 +12,23 @@ import (
 var ErrInvalidOffer = errors.New("invalid offer")
 
 type Offer struct {
-	ID            string   `json:"id"`
-	CardName      string   `json:"card_name"`
-	Store         string   `json:"store"`
-	PriceAmount   string   `json:"price_amount"`
-	PriceCurrency string   `json:"price_currency"`
-	URL           string   `json:"url"`
-	Image         string   `json:"image,omitempty"`
-	VariantID     string   `json:"variant_id,omitempty"`
-	Language      string   `json:"language,omitempty"`
-	Condition     string   `json:"condition,omitempty"`
-	Finish        string   `json:"finish,omitempty"`
-	Edition       string   `json:"edition,omitempty"`
-	Locations     []string `json:"locations,omitempty"`
+	ID            string `json:"id"`
+	CardName      string `json:"card_name"`
+	Store         string `json:"store"`
+	PriceAmount   string `json:"price_amount"`
+	PriceCurrency string `json:"price_currency"`
+	URL           string `json:"url"`
+	Image         string `json:"image,omitempty"`
+	VariantID     string `json:"variant_id,omitempty"`
+	Language      string `json:"language,omitempty"`
+	Condition     string `json:"condition,omitempty"`
+	Finish        string `json:"finish,omitempty"`
+	Edition       string `json:"edition,omitempty"`
+	// Kind Says whether the Offer is a Single Card or a Sealed Product. A Pack
+	// and a Display Share a Set and a Name, and only this Tells them apart from
+	// the Card inside them.
+	Kind      ProductKind `json:"kind,omitempty"`
+	Locations []string    `json:"locations,omitempty"`
 	// CardKey Names the Card the Offer is for, with the Printing Dropped.
 	// The Caller Groups by it; the Title Stays for Reading.
 	CardKey     string `json:"card_key,omitempty"`
@@ -76,6 +80,31 @@ const (
 	MatchIncludes MatchMode = "includes"
 )
 
+// ProductKind Says what the Caller is Shopping for.
+type ProductKind string
+
+const (
+	// KindSingle Keeps the Cards a Store Sells one by one.
+	KindSingle ProductKind = "single"
+	// KindSealed Keeps the Boxes a Store Sells Unopened: Booster Box, Elite
+	// Trainer Box, Bundle, Display.
+	KindSealed ProductKind = "sealed"
+)
+
+// ErrInvalidKind Answers a Product Kind the Catalog does not Offer.
+var ErrInvalidKind = errors.New("invalid product kind")
+
+// ReadProductKind Reads the Kind a Caller Asked for, Defaulting to the Card.
+func ReadProductKind(value string) (ProductKind, error) {
+	switch ProductKind(value) {
+	case "", KindSingle:
+		return KindSingle, nil
+	case KindSealed:
+		return KindSealed, nil
+	}
+	return "", ErrInvalidKind
+}
+
 // ErrInvalidMatch Answers a Match Mode the Catalog does not Offer.
 var ErrInvalidMatch = errors.New("invalid match mode")
 
@@ -83,11 +112,18 @@ var ErrInvalidMatch = errors.New("invalid match mode")
 type CardQuery struct {
 	Name  string
 	Match MatchMode
+	Kind  ProductKind
 }
 
+// Sealed Answers whether this Query Asks for Unopened Product.
+func (q CardQuery) Sealed() bool { return q.Kind == KindSealed }
+
 // AcceptsTitle Answers whether a Store Title Belongs to this Query.
+// A Sealed Title Never Follows the Grammar of a Printing: a Store Writes
+// `Aetherdrift: "Collector Booster Pack"`, never `Collector Booster Pack (ADF)`.
+// So a Sealed Question Reads the Name wherever the Title Puts it.
 func (q CardQuery) AcceptsTitle(title string) bool {
-	if q.Match == MatchIncludes {
+	if q.Match == MatchIncludes || q.Sealed() {
 		return ContainsCard(title, q.Name)
 	}
 	return MatchesCard(title, q.Name)
@@ -169,7 +205,7 @@ func trimPrintingTail(title string) string {
 // Under MatchIncludes each Title is another Card, and a Starlight Rare of one
 // must not Judge a Common of another.
 func (q CardQuery) PriceGroupOf(item Offer) string {
-	if q.Match == MatchIncludes {
+	if q.Match == MatchIncludes || q.Sealed() {
 		return item.CardKey
 	}
 	return NormalizeCard(q.Name)
@@ -185,6 +221,9 @@ func NameCards(items []Offer) []Offer {
 }
 
 func readOfferKey(item Offer) string {
+	if item.Kind == KindSealed {
+		return ReadSealedKey(item)
+	}
 	card := ReadCardKey(item.CardName)
 	if item.Metadata["game"] != "pokemon" {
 		return card
@@ -196,6 +235,18 @@ func readOfferKey(item Offer) string {
 		return strings.Join([]string{card, "printing", product}, "|")
 	}
 	return card
+}
+
+// ReadSealedKey Names the Sealed Product an Offer is for, Keeping the whole
+// Title. A Booster Pack and a Booster Display of one Set Share every Word but
+// one and Differ by Ten Times the Price: Trimming a Tail here would Make the
+// Pack Look like a Display Priced Suspiciously low.
+func ReadSealedKey(item Offer) string {
+	name := NormalizeCard(plainDashes(item.CardName))
+	if item.Edition == "" {
+		return name
+	}
+	return strings.Join([]string{NormalizeCard(item.Edition), name}, "|")
 }
 
 // MatchesCard Accepts a Title that Names the Card, Wherever the Store Puts it.

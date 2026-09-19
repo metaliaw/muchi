@@ -145,6 +145,12 @@ paths:
           schema:
             allOf: [{$ref: "#/components/schemas/MatchMode"}]
             default: exact
+        - name: kind
+          in: query
+          description: Whether to look for single cards or sealed product
+          schema:
+            allOf: [{$ref: "#/components/schemas/ProductKind"}]
+            default: single
       responses:
         "200":
           description: Offers for one card
@@ -152,10 +158,11 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [name, match, offers, faults]
+                required: [name, match, kind, offers, faults]
                 properties:
                   name: {type: string}
                   match: {$ref: "#/components/schemas/MatchMode"}
+                  kind: {$ref: "#/components/schemas/ProductKind"}
                   offers: {type: array, items: {$ref: "#/components/schemas/Offer"}}
                   faults:
                     type: array
@@ -241,6 +248,9 @@ components:
             match:
               allOf: [{$ref: "#/components/schemas/MatchMode"}]
               default: exact
+            kind:
+              allOf: [{$ref: "#/components/schemas/ProductKind"}]
+              default: single
     SourceFault:
       type: object
       required: [source, reason]
@@ -253,6 +263,15 @@ components:
       description: >-
         exact keeps the card and its printings (Kuriboh, Kuriboh (C));
         includes keeps any title carrying the name (Winged Kuriboh, Linkuriboh).
+    ProductKind:
+      type: string
+      enum: [single, sealed]
+      description: >-
+        single keeps the cards a store sells one by one; sealed keeps the boxes
+        it sells unopened (Booster Box, Elite Trainer Box, Bundle, Display).
+        A sealed answer groups by the whole product title and its set, because a
+        Booster Pack and a Booster Display share every word but one and differ
+        by ten times the price.
     Search:
       type: object
       required: [id, status, total, processed, found, not_found, errors, created_at, updated_at]
@@ -331,6 +350,7 @@ components:
         language: {type: string}
         condition: {type: string}
         finish: {type: string}
+        kind: {$ref: "#/components/schemas/ProductKind"}
         locations:
           type: array
           description: Verified pickup locations, formatted for display.

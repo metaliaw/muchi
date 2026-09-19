@@ -50,8 +50,9 @@ const (
 )
 
 type Options struct {
-	VerifyStock bool            `json:"verify_stock"`
-	Match       offer.MatchMode `json:"match,omitempty"`
+	VerifyStock bool              `json:"verify_stock"`
+	Match       offer.MatchMode   `json:"match,omitempty"`
+	Kind        offer.ProductKind `json:"kind,omitempty"`
 }
 
 // SourceFault Names a Source that Failed while others Answered. Sin esto una
@@ -106,8 +107,9 @@ type Item struct {
 	// Las Opciones Viajan Serializadas porque el Worker Lee el Item de vuelta
 	// desde el Almacén, en otro Proceso. Con `json:"-"` se Perdían al Escribir
 	// y el Worker las Leía siempre en falso.
-	VerifyStock bool            `json:"verify_stock,omitempty"`
-	Match       offer.MatchMode `json:"match,omitempty"`
+	VerifyStock bool              `json:"verify_stock,omitempty"`
+	Match       offer.MatchMode   `json:"match,omitempty"`
+	Kind        offer.ProductKind `json:"kind,omitempty"`
 	// Faults Name the Sources that Fell while others Answered. Sin ellos un
 	// Resultado incompleto Llega Marcado `found` y nadie lo Nota.
 	Faults []SourceFault `json:"faults,omitempty"`

@@ -24,7 +24,7 @@ func (c Client) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer.
 	if strings.TrimSpace(name) == "" {
 		return nil, errors.New("empty card name")
 	}
-	paths, err := c.findProducts(ctx, name)
+	paths, err := c.findProducts(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +35,7 @@ func (c Client) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer.
 			return nil, err
 		}
 		for _, item := range products {
-			if offer.MatchesCard(item.CardName, name) && item.StockStatus == "available" {
+			if query.AcceptsTitle(item.CardName) && item.StockStatus == "available" {
 				items = append(items, item)
 			}
 		}

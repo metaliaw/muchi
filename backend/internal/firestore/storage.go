@@ -434,6 +434,7 @@ func (s *Store) createItems(ctx context.Context, job search.Job, input search.Cr
 			OriginalName: card.Name, NormalizedName: offer.NormalizeCard(card.Name),
 			Quantity: card.Quantity, Status: search.ItemPending, Offers: []offer.Offer{},
 			VerifyStock: input.Options.VerifyStock, Match: input.Options.Match,
+			Kind: input.Options.Kind,
 		}
 		data, _ := json.Marshal(item)
 		record := itemRecord{Payload: data, SearchID: job.ID, Position: index, AvailableAt: job.CreatedAt, ExpiresAt: stored.ExpiresAt}

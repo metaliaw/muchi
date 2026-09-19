@@ -249,8 +249,14 @@ func (a API) findCardOffers(w http.ResponseWriter, r *http.Request) {
 		a.writeError(w, r, search.ErrInvalid)
 		return
 	}
+	kind, err := offer.ReadProductKind(r.URL.Query().Get("kind"))
+	if err != nil {
+		a.writeError(w, r, search.ErrInvalid)
+		return
+	}
 	name := r.URL.Query().Get("name")
-	items, faults, err := a.Searches.FindCardOffers(r.Context(), game, offer.CardQuery{Name: name, Match: match})
+	items, faults, err := a.Searches.FindCardOffers(r.Context(), game,
+		offer.CardQuery{Name: name, Match: match, Kind: kind})
 	if err != nil {
 		a.writeError(w, r, err)
 		return
@@ -261,7 +267,7 @@ func (a API) findCardOffers(w http.ResponseWriter, r *http.Request) {
 		faults = []search.SourceFault{}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"name": name, "match": match, "offers": items, "faults": faults,
+		"name": name, "match": match, "kind": kind, "offers": items, "faults": faults,
 	})
 }
 

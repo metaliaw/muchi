@@ -191,3 +191,54 @@ func TestExactSearchComparesEveryPrinting(t *testing.T) {
 		t.Fatal("a ten-peso outlier survived a narrow search")
 	}
 }
+
+// TestSealedPricesJudgeTheirOwnProduct Keeps a Booster Pack from Looking cheap
+// next to a Display of the same Set. Both Share the Set and every Word but one,
+// and the Display Costs ten Times more.
+func TestSealedPricesJudgeTheirOwnProduct(t *testing.T) {
+	query := CardQuery{Name: "Collector Booster", Kind: KindSealed}
+	items := NameCards([]Offer{
+		{CardName: `Aetherdrift: "Collector Booster Pack"`, Edition: "DFT", PriceAmount: "31990", PriceCurrency: "CLP", Kind: KindSealed},
+		{CardName: `Aetherdrift: "Collector Booster Pack"`, Edition: "DFT", PriceAmount: "33990", PriceCurrency: "CLP", Kind: KindSealed},
+		{CardName: `Aetherdrift: "Collector Booster Display"`, Edition: "DFT", PriceAmount: "399990", PriceCurrency: "CLP", Kind: KindSealed},
+	})
+	for _, item := range MarkSuspicious(items, 50, query) {
+		if item.Suspicious {
+			t.Fatalf("sealed offer marked suspicious: %s at %s", item.CardName, item.PriceAmount)
+		}
+	}
+}
+
+// TestSealedKeySeparatesSets Keeps two Sets apart, where a Card Key would Read
+// only the Quoted Tail and Merge them.
+func TestSealedKeySeparatesSets(t *testing.T) {
+	items := NameCards([]Offer{
+		{CardName: `Aetherdrift: "Collector Booster Pack"`, Edition: "DFT", Kind: KindSealed},
+		{CardName: `The Hobbit: "Collector Booster Pack"`, Edition: "LTR", Kind: KindSealed},
+	})
+	if items[0].CardKey == items[1].CardKey {
+		t.Fatalf("two sets share one key: %s", items[0].CardKey)
+	}
+}
+
+// TestSealedTitleReadsTheNameAnywhere Accepts the Title a Store Writes, where
+// the Product Name Sits after the Set.
+func TestSealedTitleReadsTheNameAnywhere(t *testing.T) {
+	query := CardQuery{Name: "Elite Trainer Box", Kind: KindSealed}
+	if !query.AcceptsTitle(`Pokemon: Mega Evolution - Pitch Black: "Elite Trainer Box"`) {
+		t.Fatal("sealed query rejected a store title carrying its name")
+	}
+}
+
+// TestReadProductKind Answers only the two Kinds the Catalog Offers.
+func TestReadProductKind(t *testing.T) {
+	for value, want := range map[string]ProductKind{"": KindSingle, "single": KindSingle, "sealed": KindSealed} {
+		kind, err := ReadProductKind(value)
+		if err != nil || kind != want {
+			t.Fatalf("kind %q = %q, %v", value, kind, err)
+		}
+	}
+	if _, err := ReadProductKind("booster"); err == nil {
+		t.Fatal("unknown kind accepted")
+	}
+}

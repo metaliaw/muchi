@@ -12,7 +12,8 @@ import (
 )
 
 // findProducts Tracks Product IDs because Different Products May Share Permalinks.
-func (c Client) findProducts(ctx context.Context, name string) ([]string, error) {
+func (c Client) findProducts(ctx context.Context, query offer.CardQuery) ([]string, error) {
+	name := query.Name
 	seen := map[int64]bool{}
 	paths := make([]string, 0)
 	for page := 1; ; page++ {
@@ -46,7 +47,7 @@ func (c Client) findProducts(ctx context.Context, name string) ([]string, error)
 			}
 			seen[product.ID] = true
 			added++
-			if !offer.MatchesCard(product.Name, name) {
+			if !query.AcceptsTitle(product.Name) {
 				continue
 			}
 			if product.Permalink == "" || strings.ContainsAny(product.Permalink, "/\\.") {

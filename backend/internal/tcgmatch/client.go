@@ -76,16 +76,16 @@ func (c Client) Search(ctx context.Context, query offer.CardQuery) ([]offer.Offe
 	if strings.TrimSpace(name) == "" || c.Game == "" {
 		return nil, errors.New("invalid TCGMatch search")
 	}
-	products, err := c.searchCatalog(ctx, base, name)
+	products, err := c.searchCatalog(ctx, base, name, catalogType(query.Kind))
 	if err != nil {
 		return nil, err
 	}
-	if c.Game == "pokemon" {
+	if c.Game == "pokemon" && !query.Sealed() {
 		c.namePokemonFunctions(ctx, products)
 	}
 	items := make([]offer.Offer, 0)
 	for _, product := range products {
-		if product.TCG != c.Game || product.Type != "card" || !query.AcceptsTitle(product.Name) {
+		if product.TCG != c.Game || product.Type != catalogType(query.Kind) || !query.AcceptsTitle(product.Name) {
 			continue
 		}
 		listings, err := c.readListings(ctx, base, product.ID)
@@ -93,7 +93,7 @@ func (c Client) Search(ctx context.Context, query offer.CardQuery) ([]offer.Offe
 			return nil, err
 		}
 		for _, entry := range listings {
-			if item, ok := buildOffer(entry, product, c.Game); ok {
+			if item, ok := buildOffer(entry, product, c.Game, query.Kind); ok {
 				items = append(items, item)
 			}
 		}
@@ -106,7 +106,7 @@ func (c Client) CardMetadata(ctx context.Context, request cardmetadata.Request) 
 	if err != nil {
 		return cardmetadata.Metadata{}, err
 	}
-	products, err := c.searchCatalog(ctx, base, request.Name)
+	products, err := c.searchCatalog(ctx, base, request.Name, "card")
 	if err != nil {
 		return cardmetadata.Metadata{}, err
 	}
@@ -128,7 +128,7 @@ func (c Client) Autocomplete(ctx context.Context, text, language string) ([]stri
 	if err != nil {
 		return nil, err
 	}
-	products, err := c.searchCatalog(ctx, base, text)
+	products, err := c.searchCatalog(ctx, base, text, "card")
 	if err != nil {
 		return nil, err
 	}
@@ -173,8 +173,18 @@ func (c Client) matches(product catalogProduct, language string) bool {
 	return false
 }
 
-func (c Client) searchCatalog(ctx context.Context, base *url.URL, name string) ([]catalogProduct, error) {
-	query := url.Values{"q": {name}, "tcg": {c.Game}, "type": {"card"}, "inStock": {"true"}, "limit": {strconv.Itoa(catalogLimit)}, "page": {"1"}, "sortBy": {"listings"}}
+// catalogType Names the Catalog Type TCGMatch Files this Kind under. The Filter
+// Never Leaves: an Accessory Answers `tcg` as a List, and this Reader Wants a
+// String — Asking for everything Would Break the Decode.
+func catalogType(kind offer.ProductKind) string {
+	if kind == offer.KindSealed {
+		return "sealed"
+	}
+	return "card"
+}
+
+func (c Client) searchCatalog(ctx context.Context, base *url.URL, name, productType string) ([]catalogProduct, error) {
+	query := url.Values{"q": {name}, "tcg": {c.Game}, "type": {productType}, "inStock": {"true"}, "limit": {strconv.Itoa(catalogLimit)}, "page": {"1"}, "sortBy": {"listings"}}
 	target := strings.TrimRight(c.BaseURL, "/") + "/catalog/search?" + query.Encode()
 	data, err := c.Fetcher.FetchSource(ctx, base.Host, target)
 	if err != nil {
@@ -203,7 +213,7 @@ func (c Client) readListings(ctx context.Context, base *url.URL, catalogID int64
 	return reply.Data, nil
 }
 
-func buildOffer(entry listing, product catalogProduct, game string) (offer.Offer, bool) {
+func buildOffer(entry listing, product catalogProduct, game string, kind offer.ProductKind) (offer.Offer, bool) {
 	if !entry.IsActive || entry.Quantity < 1 || entry.Price < 1 || entry.ID == "" || entry.User.Name == "" || entry.TCG != game {
 		return offer.Offer{}, false
 	}
@@ -217,7 +227,7 @@ func buildOffer(entry listing, product catalogProduct, game string) (offer.Offer
 		ID: "tcgmatch:" + entry.ID, VariantID: entry.ID, CardName: product.Name,
 		Store: entry.User.Name, PriceAmount: strconv.FormatInt(entry.Price, 10), PriceCurrency: "CLP",
 		URL: "https://tcgmatch.cl/producto/" + entry.ID, Image: product.Image, Source: "tcgmatch.cl", StockStatus: "available",
-		Language: entry.Language, Condition: entry.Status, Finish: finish, Edition: product.SetCode,
+		Language: entry.Language, Condition: entry.Status, Finish: finish, Edition: product.SetCode, Kind: kind,
 		Metadata: map[string]string{
 			"game": game, "quantity": strconv.Itoa(entry.Quantity), "seller": entry.User.Username,
 			"product_id": strconv.FormatInt(product.ID, 10), "set_id": product.SetID,

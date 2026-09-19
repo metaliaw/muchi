@@ -69,10 +69,11 @@ func (s Service) FindCardOffers(ctx context.Context, game Game, query offer.Card
 	return s.collectOffers(ctx, game, query)
 }
 
-// collectOffers Keys the Cache by Match Mode too: a wide Answer must never
-// Serve a narrow Question.
+// collectOffers Keys the Cache by Match Mode and Product Kind too: a wide
+// Answer must never Serve a narrow Question, and a Booster Box must never
+// Answer the Question about the Card Printed inside it.
 func (s Service) collectOffers(ctx context.Context, game Game, query offer.CardQuery) ([]offer.Offer, []SourceFault, error) {
-	key := s.CacheNamespace + string(game) + ":" + string(query.Match) + ":" + offer.NormalizeCard(query.Name)
+	key := s.CacheNamespace + string(game) + ":" + string(query.Kind) + ":" + string(query.Match) + ":" + offer.NormalizeCard(query.Name)
 	if items, found := s.loadOfferCache(ctx, key); found {
 		return items, nil, nil
 	}
@@ -88,7 +89,7 @@ func (s Service) collectOffers(ctx context.Context, game Game, query offer.CardQ
 	if err != nil && len(items) == 0 {
 		return nil, faults, err
 	}
-	items = offer.NameCards(offer.DeduplicateOffers(items))
+	items = offer.NameCards(nameKinds(offer.DeduplicateOffers(items), query.Kind))
 	items = s.applyStoreLocations(items)
 	items = s.applyPrintImages(ctx, game, query.Name, items)
 	items = offer.MarkSuspicious(items, s.SuspiciousPercent, query)
@@ -96,6 +97,18 @@ func (s Service) collectOffers(ctx context.Context, game Game, query offer.CardQ
 		s.saveOfferCache(ctx, key, items)
 	}
 	return items, faults, nil
+}
+
+// nameKinds Tells every Offer what the Question was for. A Store Title alone
+// cannot Say whether it Sells the Card or the Box: the Question can.
+func nameKinds(items []offer.Offer, kind offer.ProductKind) []offer.Offer {
+	if kind == "" {
+		kind = offer.KindSingle
+	}
+	for position := range items {
+		items[position].Kind = kind
+	}
+	return items
 }
 
 // applyStoreLocations Adds only Locations verified in Store Configuration.
@@ -222,6 +235,9 @@ func ValidateCreate(input CreateInput, maxCards, maxQuantity int) error {
 		return ErrInvalid
 	}
 	if _, err := offer.ReadMatchMode(string(input.Options.Match)); err != nil {
+		return ErrInvalid
+	}
+	if _, err := offer.ReadProductKind(string(input.Options.Kind)); err != nil {
 		return ErrInvalid
 	}
 	for _, card := range input.Cards {
