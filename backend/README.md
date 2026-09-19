@@ -77,6 +77,12 @@ describe qué identifica una búsqueda, una impresión y una variante comercial.
 Los [hallazgos en los buscadores](docs/hallazgos-buscadores.md) registran los
 defectos encontrados en la costura entre el título que publica una tienda y la
 carta que el código deduce de él, con lo que queda abierto.
+El [producto sellado](docs/producto-sellado.md) explica qué identifica una caja,
+qué fuente sirve para buscarla, la propiedad `sealed` de agregadores y tiendas, y
+por qué un 429 no cuenta como caída.
+El [castigo y perdón](docs/castigo-y-perdon.md) reúne la política completa hacia
+las fuentes: qué se castiga, cuánto dura, qué respuestas honestas nunca cuentan
+como falla y por qué la duda beneficia a quien pregunta.
 
 Las listas Moxfield se resuelven automáticamente por la API v3 a partir de cada
 `lists[].url`. Para agregar una tienda, define `name`, `enabled: true` y sus listas
