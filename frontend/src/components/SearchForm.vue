@@ -1,11 +1,21 @@
 <script setup>
 /** Una Carta o una Lista. El Envío pendiente conserva su Clave de Idempotencia. */
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 const GAME_EXAMPLES = {
   magic: ['Sol Ring', '4 Lightning Bolt'],
   pokemon: ['Pikachu', '4 Charizard ex'],
   yugioh: ['Dark Magician', '3 Ash Blossom & Joyous Spring'],
+}
+// Una Caja no se Nombra como una Carta: lleva su Set y su Formato juntos, y
+// cada Tienda los Escribe a su Manera.
+// Medidos contra las Tiendas, no Inventados. Los Títulos largos que Trae la
+// Caja de Fábrica no Encuentran nada: cada Tienda Escribe el Set a su manera y
+// el Formato al final. Un Nombre corto Cae en todos.
+const SEALED_EXAMPLES = {
+  magic: ['Play Booster', '2 Play Booster Display'],
+  pokemon: ['Prismatic Evolutions Booster Bundle', '2 Surging Sparks Elite Trainer Box'],
+  yugioh: ['Booster Box', '2 Structure Deck'],
 }
 
 const props = defineProps({
@@ -24,8 +34,13 @@ const maxCards = computed(() => props.limits.max_cards || 0)
 const maxQuantity = computed(() => props.limits.max_quantity || 99)
 const selectedGame = computed(() =>
   props.games.find((item) => item.reference_key === game.value))
-const searchExample = computed(() =>
-  (GAME_EXAMPLES[game.value] || ['Nombre de Carta', '4 Otra Carta']).join('\n'))
+const examples = computed(() => (sealed.value
+  ? SEALED_EXAMPLES[game.value] || ['Nombre de la Caja', '2 Otra Caja']
+  : GAME_EXAMPLES[game.value] || ['Nombre de Carta', '4 Otra Carta']))
+const searchExample = computed(() => examples.value.join('\n'))
+// Cómo Llamar a lo que se Busca. El Formulario lo Dice en varios Lugares, y
+// escrito una vez no se Despegan entre sí.
+const noun = computed(() => (sealed.value ? 'Cajas' : 'Cartas'))
 
 // Contar Líneas con algo escrito basta para avisar antes de enviar. Quien
 // decide de verdad es el Servidor; esto solo evita el viaje perdido.
@@ -37,6 +52,7 @@ const emit = defineEmits(['search', 'retry', 'resume'])
 const text = defineModel('text', { type: String, default: '' })
 const game = defineModel('game', { type: String, default: '' })
 const match = defineModel('match', { type: String, default: 'exact' })
+const kind = defineModel('kind', { type: String, default: 'single' })
 const identifier = ref('')
 
 // Buscar Derivados es Mirar una Familia, no Comprar una Lista: pedir 3 Kuriboh
@@ -44,7 +60,29 @@ const identifier = ref('')
 const firstLine = computed(() =>
   text.value.split('\n').map((line) => line.trim())
     .find((line) => line && !line.startsWith('#')) || '')
-const wide = computed(() => match.value === 'includes')
+const sealed = computed(() => kind.value === 'sealed')
+
+// Lo que el Campo Trae escrito al Abrirse: la primera Línea del Ejemplo, que
+// es una Búsqueda que de verdad Encuentra. Quien Llega sin saber qué Pedir
+// Aprieta Buscar y Ve el Programa funcionando.
+const suggestion = computed(() => examples.value[0] || '')
+
+// El Ejemplo Sigue al Juego y al Catálogo mientras nadie Haya escrito lo suyo.
+// Un Texto propio Manda: cambiar de Juego no le Borra la Lista a nadie.
+const defaults = new Set()
+function offerDefault() {
+  const typed = text.value.trim()
+  if (typed && !defaults.has(typed)) return
+  defaults.add(suggestion.value)
+  text.value = suggestion.value
+}
+watch([game, kind], offerDefault, { immediate: true })
+
+// Sellado Busca ancho siempre: ninguna Tienda Titula una Caja igual que la
+// otra. Pero eso no lo Vuelve una Búsqueda de a una — una Lista de Cajas con
+// Cantidades es tan legítima como una de Cartas, así que el Modo angosto
+// Duerme mientras Sellado Manda, en vez de Recortar la Lista a su Primera Línea.
+const wide = computed(() => !sealed.value && match.value === 'includes')
 const asked = computed(() => (wide.value ? firstLine.value : text.value))
 const extraLines = computed(() => wide.value && written.value > 1)
 </script>
@@ -61,11 +99,30 @@ const extraLines = computed(() => wide.value && written.value > 1)
                   :value="item.reference_key">{{ item.name }}</option>
         </select>
       </label>
+      <!-- El Catálogo Elige primero: Cambia los Ejemplos, el Tope y hasta si
+           el Modo de Coincidencia Tiene algo que Decir. -->
+      <fieldset class="mu-modo">
+        <legend class="mu-caption">Qué Buscar</legend>
+        <label>
+          <input type="radio" value="single" v-model="kind" />
+          Cartas sueltas
+        </label>
+        <label>
+          <input type="radio" value="sealed" v-model="kind" />
+          Producto sellado
+        </label>
+      </fieldset>
       <textarea
         v-model="text" rows="5" :placeholder="searchExample"
-        :aria-label="`Una Carta o tu Lista de ${selectedGame?.name || 'Cartas'}`"
+        :aria-label="`Una ${sealed ? 'Caja' : 'Carta'} o tu Lista de ${noun}`"
       ></textarea>
-      <fieldset class="mu-modo">
+      <p v-if="sealed" class="mu-caption">
+        Una Caja Lleva su Set en el Nombre — «Bloomburrow» sola Trae toda Caja
+        de ese Set, y un Booster Box no se Confunde con un Booster Pack.
+      </p>
+      <!-- El Modo de Coincidencia Habla de Impresiones y Derivados: dos Cosas
+           que una Caja sin Abrir no Tiene. En Sellado Calla. -->
+      <fieldset v-if="!sealed" class="mu-modo">
         <legend class="mu-caption">Qué Traer</legend>
         <label>
           <input type="radio" value="exact" v-model="match" />
@@ -89,7 +146,7 @@ const extraLines = computed(() => wide.value && written.value > 1)
           Buscar
         </button>
         <span v-if="maxCards && !wide" class="mu-caption" :class="{ pasado: tooMany }">
-          Hasta {{ maxCards }} Cartas por Búsqueda, de 1 a {{ maxQuantity }} copias.
+          Hasta {{ maxCards }} {{ noun }} por Búsqueda, de 1 a {{ maxQuantity }} copias.
           <template v-if="written">Llevas {{ written }}.</template>
         </span>
       </div>

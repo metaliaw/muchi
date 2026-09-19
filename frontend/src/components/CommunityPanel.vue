@@ -7,6 +7,15 @@ const props = defineProps({
   apiRepositoryUrl: { type: String, default: '' },
 })
 
+// Muchi comenta su propia Licencia cuando alguien Toca algo del Aviso, y
+// tambien al Acercarse. El Acercamiento habla una vez: el `mouseenter` va en el
+// Aviso entero, asi que Pasar de un Enlace al otro no suelta dos Frases.
+const emit = defineEmits(['libre', 'close'])
+
+function sayLibre() {
+  emit('libre')
+}
+
 const newIssueUrl = computed(() => `${props.repositoryUrl}/issues/new`)
 
 // Muchi son dos Repositorios y una sola Licencia. Enlazar solo uno Dejaria la
@@ -25,22 +34,27 @@ const AUTHORS = [
 </script>
 
 <template>
-  <aside class="mu-panel mu-comunidad">
-    <p class="mu-comunidad__eyebrow">Muchi es código abierto</p>
-    <h2>Aprende con Muchi</h2>
-    <p>Está entera a la vista, Interfaz y API. Revisa cómo está hecha y ayúdanos
-      a mejorarla.</p>
+  <aside class="mu-panel mu-comunidad" @mouseenter="sayLibre">
+    <!-- La X Cierra el Aviso y no lo Contesta: por eso Vive fuera de lo que
+         hace hablar a Muchi. -->
+    <button class="mu-comunidad__cerrar" type="button" @click="emit('close')"
+            aria-label="Cerrar el Aviso">×</button>
+    <p class="mu-comunidad__eyebrow" @click="sayLibre">Muchi es código abierto</p>
+    <h2 @click="sayLibre">Aprende con Muchi</h2>
+    <p @click="sayLibre">Está entera a la vista, Interfaz y API. Revisa cómo está
+      hecha y ayúdanos a mejorarla.</p>
     <!-- La Dirección Llega con la Configuración, un Instante después del primer
          Pintado. El `nav` se Queda igual: si Apareciera recién con ella,
          Empujaría hacia abajo a Muchi y a la Carta con la Página ya a la Vista. -->
-    <nav aria-label="Participar en Muchi" class="mu-comunidad__enlaces">
+    <nav aria-label="Participar en Muchi" class="mu-comunidad__enlaces"
+         @click="sayLibre">
       <a v-for="repo in repositories" :key="repo.url" :href="repo.url"
          target="_blank" rel="noopener noreferrer">{{ repo.label }}</a>
       <a v-if="repositoryUrl" :href="newIssueUrl"
          target="_blank" rel="noopener noreferrer">Comentar</a>
     </nav>
 
-    <p class="mu-comunidad__firma">
+    <p class="mu-comunidad__firma" @click="sayLibre">
       Lo escriben
       <a v-for="author in AUTHORS" :key="author.name" :href="author.url"
          target="_blank" rel="noopener noreferrer">{{ author.name }}</a>
@@ -51,6 +65,8 @@ const AUTHORS = [
 <style scoped>
 .mu-comunidad {
   box-shadow: none;
+  /* La X se Apoya en esta Esquina. */
+  position: relative;
   /* Abre la Columna y lo que Sigue Flota: cada Línea de más acá Empuja a Muchi
      y a la Carta un Renglón más abajo del primer Vistazo. */
   padding: 14px 16px;
@@ -61,8 +77,17 @@ const AUTHORS = [
     linear-gradient(145deg, color-mix(in srgb, var(--mu-peri) 22%, transparent), transparent 78%),
     var(--mu-blanco);
 }
+/* El Texto Esquiva la X: sin la Sangría, el Rótulo le Pasaría por debajo. */
+.mu-comunidad__cerrar {
+  position: absolute; top: 6px; right: 8px;
+  background: none; border: 0; box-shadow: none; padding: 0 4px;
+  line-height: 1; font-size: 1.1rem; cursor: pointer;
+  color: var(--mu-tinta-sw); opacity: .7;
+}
+.mu-comunidad__cerrar:hover { opacity: 1; }
 .mu-comunidad__eyebrow {
   margin: 0 0 5px;
+  padding-right: 20px;
   color: var(--mu-peri);
   font-size: .72rem;
   font-weight: 800;

@@ -40,6 +40,19 @@ def test_decklist_formats():
     assert not ignored, ignored
 
 
+def test_sealed_products_keep_their_numbers():
+    """Un Ano al final Nombra la Caja; en una Carta seria su Numero de Coleccion."""
+    orders, ignored = decklist.parse_decklist(
+        "Set de Batalla 2024\n2 Bloomburrow Play Booster Box", sealed=True)
+    assert not ignored, ignored
+    assert [(order.quantity, order.name) for order in orders] == [
+        (1, "Set de Batalla 2024"), (2, "Bloomburrow Play Booster Box"),
+    ]
+    # La Carta sigue Soltando su Impresion: lo de arriba no la Toca.
+    cards, _ = decklist.parse_decklist("1 Sol Ring (LTC) 344 *F*")
+    assert cards[0].name == "Sol Ring"
+
+
 def test_decklist_sums_duplicates():
     orders, _ = decklist.parse_decklist("2 Sol Ring\n1 Sol Ring")
     assert len(orders) == 1 and orders[0].quantity == 3
@@ -194,7 +207,7 @@ def test_phrases_file_ships_with_example():
     assert phrases.PHRASES_PATH.exists(), "constants/phrases.yaml is missing"
     doc = yaml.safe_load(phrases.PHRASES_PATH.read_text(encoding="utf-8"))
     assert set(doc) == {"every", "phrases", "greetings", "help", "dark",
-                        "light", "nerd"}
+                        "light", "nerd", "libre"}
 
 
 def test_normalize_name():

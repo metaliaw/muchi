@@ -43,8 +43,8 @@ export const readConfig = () => request('/api/config')
 export const readMuchi = () => request('/api/muchi')
 export const readSupportedGames = () => request('/api/supported-games')
 export const readDecklist = (text, key) => post('/api/decklist', { text, key })
-export const createSearch = (text, game, key, match = 'exact') =>
-  post('/api/searches', { text, game, key, match })
+export const createSearch = (text, game, key, match = 'exact', kind = 'single') =>
+  post('/api/searches', { text, game, key, match, kind })
 export const readSearch = (id, after = 0, match = 'exact') =>
   request(`/api/searches/${encodeURIComponent(id)}?after=${after}&match=${match}`)
 export const checkStock = (id, match = 'exact') =>

@@ -34,14 +34,18 @@ _SPACES = re.compile(r"[\s ​]+")
 
 _QUANTITY = re.compile(r"^(?P<cant>\d{1,3})\s*[xX]?\s+(?P<resto>.+)$")
 
-# Lo que los exportadores cuelgan al final del nombre.
-_DECORATIONS = [
+# Lo que los exportadores cuelgan al final del nombre, y ningun Titulo lleva.
+_MARKS = [
     re.compile(r"\s*\*[A-Za-z]{1,2}\*\s*$"),                        # *F*, *E*
     re.compile(r"\s*#!\S*\s*$"),                                    # #!Commander
     re.compile(r"\s*\[[^\]]*\]\s*$"),                               # [MH2], [Ramp]
+]
+# La Edicion y el Numero de Coleccion: propios de una Carta suelta.
+_PRINTING = [
     re.compile(r"\s*\([A-Za-z0-9]{2,6}\)\s*[0-9A-Za-z\-★]{0,6}\s*$"),
     re.compile(r"\s+[0-9]{1,6}[a-z]?\s*$"),                         # numero suelto
 ]
+_DECORATIONS = _MARKS + _PRINTING
 
 # Todo lo que un nombre de carta real puede llevar. Las comillas son de
 # 'Kongming, "Sleeping Dragon"'; el signo mas, de '+2 Mace'; los parentesis,
@@ -90,12 +94,17 @@ def split_quantity(line: str) -> tuple[int, str]:
     return int(m.group("cant")), m.group("resto").strip()
 
 
-def strip_decorations(name: str) -> str:
-    """Saca set, numero de coleccion y marcas de foil, en cualquier orden."""
+def strip_decorations(name: str, sealed: bool = False) -> str:
+    """Saca set, numero de coleccion y marcas de foil, en cualquier orden.
+
+    Un Producto Sellado Conserva sus Numeros: `Set de Batalla 2024` Nombra un
+    Ano, no la Carta 2024 de una Edicion, y recortarlo Pide otra Cosa.
+    """
+    patterns = _MARKS if sealed else _DECORATIONS
     previous = None
     while previous != name:
         previous = name
-        for pattern in _DECORATIONS:
+        for pattern in patterns:
             name = pattern.sub("", name)
 
     return name.strip(" -")
@@ -120,7 +129,8 @@ def is_card_name(name: str) -> bool:
     return bool(_ALLOWED.match(name))
 
 
-def parse_decklist(text: str) -> tuple[list[Order], list[str]]:
+def parse_decklist(text: str,
+                   sealed: bool = False) -> tuple[list[Order], list[str]]:
     """Devuelve (pedidos, lineas_ignoradas).
 
     Las copias se suman por nombre normalizado, no literal: pegar la lista dos
@@ -136,7 +146,7 @@ def parse_decklist(text: str) -> tuple[list[Order], list[str]]:
             continue
 
         quantity, rest = split_quantity(line)
-        name = strip_decorations(rest)
+        name = strip_decorations(rest, sealed)
         if not is_card_name(name):
             ignored.append(raw_line.strip())
             continue

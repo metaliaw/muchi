@@ -18,6 +18,10 @@ import GoogleAdsense from './components/GoogleAdsense.vue'
 import SponsorSpot from './components/SponsorSpot.vue'
 
 const THEME_KEY = 'muchi_tema'
+// Quien Busca Cartas de un Juego Vuelve al mismo: el Selector Recuerda el
+// último, y no lo Devuelve a Magic en cada Visita.
+const GAME_KEY = 'muchi_juego'
+const KIND_KEY = 'muchi_catalogo'
 
 // El Ritmo lo manda el Servidor; este es el mismo de config/api.defaults.yaml,
 // para los milisegundos que van entre que arranca la Página y llega la Config.
@@ -44,6 +48,10 @@ const lookupText = ref('')
 // mismas Ofertas de otra manera ni mandar Derivados al Carrito.
 const match = ref(new URLSearchParams(location.search).get('match') === 'includes'
   ? 'includes' : 'exact')
+// El Catálogo viaja igual que el Modo: una Búsqueda de Cajas Retomada por su
+// Enlace no debe Volver como una de Cartas.
+const kind = ref(new URLSearchParams(location.search).get('kind') === 'sealed'
+  ? 'sealed' : 'single')
 // La Carta que se mira: un Nombre, y el Idioma en que se escribió.
 const watched = ref(null)
 const history = ref(JSON.parse(localStorage.getItem('muchi_historial') || '[]'))
@@ -69,8 +77,16 @@ function hashSearch(id) {
 const showSponsor = computed(() => sponsorReady.value && hashSearch(searchId.value) % 4 === 0)
 const advertiseSections = computed(() => match.value === 'includes' || game.value === 'pokemon')
 
+// Una Fuente caída Deja un Hueco, no un Vacío. Los Avisos de Nivel `warning`
+// son justo eso: una Consulta que no se Completó o una Tienda que no Contestó.
+const incomplete = computed(() =>
+  notices.value.some((notice) => notice.level === 'warning'))
+
 const placeholder = computed(() => {
   if (unavailable.value) return 'No hay Ofertas recibidas para mostrar.'
+  // Decir «No hay» Cuando alguien no Contestó es Afirmar lo que no se Sabe.
+  if (state.value?.done && incomplete.value)
+    return 'Ninguna Oferta llegó, y algunas Fuentes no contestaron. Lo que falta puede existir igual: reintenta en un rato.'
   if (state.value?.done) return 'No hay Ofertas para mostrar.'
   if (state.value?.status === 'queued')
     return 'Búsqueda en Cola. Esperando que el Servicio la procese.'
@@ -88,8 +104,15 @@ function applyTheme() {
   localStorage.setItem(THEME_KEY, dark.value ? 'oscuro' : 'claro')
 }
 watch(dark, applyTheme)
-watch(game, () => {
+watch(game, (named) => {
   watched.value = null
+  if (named) localStorage.setItem(GAME_KEY, named)
+})
+// La Carta mirada es de un Catálogo: pasar a Cajas Deja en el Panel una Carta
+// que ya nadie Busca.
+watch(kind, (named) => {
+  watched.value = null
+  localStorage.setItem(KIND_KEY, named)
 })
 
 // La Búsqueda nombra su Juego; el Selector lo sigue. Vacío no dice nada.
@@ -108,12 +131,14 @@ function selectSearch(id, initialState = null, initialItems = []) {
   const url = new URL(location.href)
   url.searchParams.set('search', id)
   url.searchParams.set('match', match.value)
+  url.searchParams.set('kind', kind.value)
   history.value.length && window.history.replaceState({}, '', url)
   refresh()
 }
 
 async function submit(text) {
-  pending.value = { text, game: game.value, key: api.newKey(), match: match.value }
+  pending.value = { text, game: game.value, key: api.newKey(), match: match.value,
+                    kind: kind.value }
   await send()
 }
 
@@ -126,13 +151,31 @@ function lookAtCard(card) {
   watched.value = card
 }
 
-// A quien mira las Estadísticas, Muchi lo saluda como se merece. La Frase
-// sale al azar del Catálogo, igual que las de la Luz y las de las Caricias.
-function sayNerd() {
-  const rows = book.value?.nerd
+// Un Grupo del Catálogo, dicho al azar. Un Grupo vacío no dice nada: el
+// Catálogo llega un Instante después del primer Pintado.
+function sayFrom(group) {
+  const rows = book.value?.[group]
   if (!rows?.length) return
   const said = rows[Math.floor(Math.random() * rows.length)]
   say(said.text, said.state)
+}
+
+// A quien mira las Estadísticas, Muchi lo saluda como se merece.
+function sayNerd() {
+  sayFrom('nerd')
+}
+
+// Cerrar el Aviso del Código Abierto Despeja esta Visita, no las que Vengan:
+// cada Recarga lo Trae de vuelta. Es un Aviso, no una Preferencia.
+const libreOpen = ref(true)
+
+function closeLibre() {
+  libreOpen.value = false
+}
+
+// Quien Toca el Aviso del Código Abierto escucha a Muchi hablar de su Licencia.
+function sayLibre() {
+  sayFrom('libre')
 }
 
 // Muchi no completa el Campo: dice lo que vio y quien escribe decide.
@@ -147,7 +190,8 @@ async function send() {
   error.value = ''
   try {
     const reply = await api.createSearch(
-      pending.value.text, pending.value.game, pending.value.key, pending.value.match
+      pending.value.text, pending.value.game, pending.value.key, pending.value.match,
+      pending.value.kind
     )
     remember(reply.state.id, reply.label)
     pending.value = null
@@ -212,6 +256,13 @@ function stopPolling() {
   timer = null
 }
 
+// El Juego Guardado vale mientras el Servidor lo siga Sirviendo. Uno que se
+// Retiró Volvería como un Selector en blanco, y ninguna Búsqueda saldría.
+function rememberedGame() {
+  const named = localStorage.getItem(GAME_KEY)
+  return games.value.some((row) => row.reference_key === named) ? named : ''
+}
+
 watch(busy, (value) => (value ? startPolling() : stopPolling()))
 
 onMounted(async () => {
@@ -219,7 +270,11 @@ onMounted(async () => {
   try {
     const supported = await api.readSupportedGames()
     games.value = supported.games || []
-    game.value = games.value[0]?.reference_key || ''
+    game.value = rememberedGame() || games.value[0]?.reference_key || ''
+    // La URL Manda sobre lo Recordado: quien Abre un Enlace de Cajas Ve Cajas.
+    if (!new URLSearchParams(location.search).has('kind')) {
+      kind.value = localStorage.getItem(KIND_KEY) === 'sealed' ? 'sealed' : 'single'
+    }
     ;[config.value, book.value] = await Promise.all([api.readConfig(), api.readMuchi()])
   } catch (failure) {
     error.value = failure.message
@@ -247,9 +302,10 @@ onUnmounted(stopPolling)
     <!-- El Aviso se Lee una vez y se Queda quieto. Muchi y la Carta Acompañan
          el Recorrido: Flotan juntos en Escritorio, y en Móvil Muchi Espera en
          la Esquina mientras la Carta se Pega arriba de la Lista. -->
-    <div class="mu-abierto">
+    <div v-if="libreOpen" class="mu-abierto">
       <CommunityPanel :repository-url="config.repository_url"
-                      :api-repository-url="config.api_repository_url" />
+                      :api-repository-url="config.api_repository_url"
+                      @libre="sayLibre" @close="closeLibre" />
     </div>
 
     <div class="mu-flotante">
@@ -267,7 +323,7 @@ onUnmounted(stopPolling)
       </div>
 
       <div class="mu-tarjeta" :class="{ vacia: !watched }">
-        <CardArt :card="watched" :game="game" />
+        <CardArt :card="watched" :game="game" :kind="kind" />
       </div>
     </div>
 
@@ -276,14 +332,17 @@ onUnmounted(stopPolling)
         v-model:text="lookupText"
         v-model:game="game"
         v-model:match="match"
+        v-model:kind="kind"
         :games="games"
         :busy="busy" :pending="Boolean(pending)" :error="error"
         :limits="config.limits"
         @search="submit" @retry="send" @resume="selectSearch"
       >
         <template #lookup>
+          <!-- El Buscador Asistido Consulta el Catálogo de Cartas. Para una
+               Caja no Tiene a quién Preguntarle, así que no se Muestra. -->
           <CardLookup
-            v-if="game"
+            v-if="game && kind !== 'sealed'"
             :game="game"
             @found="loadCard"
             @failed="(text) => say(text, 'angry')"

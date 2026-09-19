@@ -72,6 +72,7 @@ def build_offer(row: dict) -> SearchOffer:
         locations=read_locations(row),
         offer_id=str(row.get("id") or ""),
         stock_quantity=read_quantity(row),
+        image=row.get("image") or "",
         suspicious_reason=row.get("suspicious_reason") or "",
         metadata={str(key): str(value) for key, value in (row.get("metadata") or {}).items()},
     )
@@ -98,16 +99,37 @@ def read_faults(row: dict) -> tuple[str, ...]:
 
 
 def build_results(reply: dict) -> SearchResults:
-    ordered = sorted(reply["items"], key=lambda row: row["position"])
+    """Lee una Página de Resultados.
+
+    Dos Campos Llegan ausentes aunque el Contrato los Declare obligatorios: la
+    API los Marca `omitempty`, así que un `sequence` en cero Desaparece y un
+    Item sin Ofertas Manda `null` en vez de una Lista vacía. Ambos son Estados
+    normales de un Item que aún no Termina o que no se Encontró, y ninguno
+    Merece Tumbar el Ciclo entero.
+    """
+    ordered = sorted(reply["items"] or (), key=lambda row: row["position"])
     items = tuple(SearchItem(
         name=row["original_name"], quantity=row["quantity"], status=row["status"],
-        offers=order_offers(build_offer(offer) for offer in row["offers"]),
+        offers=order_offers(build_offer(offer) for offer in row["offers"] or ()),
         error_message=row.get("error_message") or "",
-        id=row["id"], position=row["position"], sequence=row["sequence"],
+        id=row["id"], position=row["position"], sequence=row.get("sequence") or 0,
         game=row.get("game") or "",
         faults=read_faults(row),
     ) for row in ordered)
     return SearchResults(items, reply["cursor"], reply["has_more"])
+
+
+def name_contract_fault(error: Exception) -> str:
+    """Qué Parte de la Respuesta no se Pudo Leer.
+
+    Sin esto una Respuesta que Cambió de Forma se Cuenta igual que una rota:
+    el Mensaje Decía que el Contrato no se Cumple y Callaba en qué Campo, que
+    es lo único que Habría Servido para Arreglarlo.
+    """
+    if isinstance(error, KeyError):
+        return f"falta el Campo «{error.args[0]}»."
+    detail = str(error).strip() or type(error).__name__
+    return f"{detail[:120]}."
 
 
 def build_stock_checks(reply: dict) -> tuple[StockCheck, ...]:
@@ -159,12 +181,15 @@ class SearchProvider:
     def parse_reply(self, parser, reply):
         try:
             return parser(reply)
-        except (KeyError, TypeError, ValueError, InvalidOperation):
-            raise QueryFailed("La Respuesta no cumple el Contrato de la API.") from None
+        except (KeyError, TypeError, ValueError, InvalidOperation) as error:
+            raise QueryFailed(
+                "La Respuesta no cumple el Contrato de la API: "
+                f"{name_contract_fault(error)}") from None
 
     def create_search(self, orders: list[Order], verify_stock: bool,
                       key: str, game: str = "magic",
-                      match: str = "exact") -> SearchState:
+                      match: str = "exact",
+                      kind: str = "single") -> SearchState:
         if not 1 <= len(orders) <= 500:
             raise QueryFailed("La Búsqueda admite entre 1 y 500 Cartas.")
         if any(not order.name.strip() or not 1 <= order.quantity <= 99 for order in orders):
@@ -172,7 +197,8 @@ class SearchProvider:
         payload = {
             "game": game,
             "cards": [{"name": order.name, "quantity": order.quantity} for order in orders],
-            "options": {"verify_stock": verify_stock, "match": match},
+            "options": {"verify_stock": verify_stock, "match": match,
+                        "kind": kind},
         }
         reply = self.request_reply("POST", "/searches", payload=payload, key=key)
         return self.parse_reply(build_search, reply)
