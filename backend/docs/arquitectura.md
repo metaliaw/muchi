@@ -1,5 +1,18 @@
 # Arquitectura de Muchi API
 
+Muchi es Software Libre entero, y son dos Repositorios. La recolección,
+persistencia y procesamiento de las búsquedas viven acá, en
+[cangrejometralleta/muchi-api](https://github.com/cangrejometralleta/muchi-api),
+junto al [contrato OpenAPI](../openapi.yaml). La interfaz, sus criterios de
+presentación y el BFF que consume ese contrato viven en
+[metaliaw/muchi](https://github.com/metaliaw/muchi), y su
+[arquitectura](https://github.com/metaliaw/muchi/blob/main/docs/arquitectura.md)
+se cuenta allá.
+
+Este documento cuenta el lado de la API: entrada HTTP, cola, worker,
+persistencia y caducidad. Ningún diagrama se copia de un lado al otro: una copia
+envejece sin que nadie lo note.
+
 ## Vista General
 
 Muchi API separa la recepción de búsquedas del trabajo lento de consultar
