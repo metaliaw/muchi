@@ -32,3 +32,26 @@ func TestAnItemKeepsItsOptionsThroughStorage(t *testing.T) {
 		t.Errorf("match = %q", read.Match)
 	}
 }
+
+// TestARunningItemStillCarriesItsSequence Covers what the Contract Promises.
+// `sequence` is Required, and a Running Item has not Earned one yet: with
+// `omitempty` the Zero Vanished and the Field went Missing from every Item
+// still Working. A Client Reading the Contract Straight found no Field there.
+func TestARunningItemStillCarriesItsSequence(t *testing.T) {
+	running := Item{
+		ID: "item-1", SearchID: "search-1", Game: GameMagic,
+		OriginalName: "Sol Ring", NormalizedName: "sol ring", Quantity: 1,
+		Status: ItemRunning, Offers: []offer.Offer{},
+	}
+	data, err := json.Marshal(running)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var read map[string]any
+	if err := json.Unmarshal(data, &read); err != nil {
+		t.Fatal(err)
+	}
+	if _, found := read["sequence"]; !found {
+		t.Error("sequence went missing from a running item")
+	}
+}

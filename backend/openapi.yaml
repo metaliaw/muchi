@@ -305,7 +305,14 @@ components:
         search_id: {type: string}
         game: {$ref: "#/components/schemas/Game"}
         position: {type: integer}
-        sequence: {type: integer, minimum: 1}
+        sequence:
+          type: integer
+          minimum: 0
+          description: >-
+            The order in which the item finished, counting from one. An item
+            still pending or running has not earned one and reads zero, so a
+            caller sorts the finished ones by this and tells the rest apart by
+            status, never by a missing field.
         original_name: {type: string}
         normalized_name: {type: string}
         quantity: {type: integer}

@@ -86,11 +86,15 @@ type Job struct {
 }
 
 type Item struct {
-	ID             string        `json:"id"`
-	SearchID       string        `json:"search_id"`
-	Game           Game          `json:"game"`
-	Position       int           `json:"position"`
-	Sequence       int           `json:"sequence,omitempty"`
+	ID       string `json:"id"`
+	SearchID string `json:"search_id"`
+	Game     Game   `json:"game"`
+	Position int    `json:"position"`
+	// Sequence Orders the Items by the Moment they Finished, and a Running Item
+	// has none yet. It Travels even at Zero: the Contract Declares it Required,
+	// and `omitempty` made it Vanish from every Item still Working, which Broke
+	// a Client that Trusted the Contract and Read it Straight.
+	Sequence       int           `json:"sequence"`
 	OriginalName   string        `json:"original_name"`
 	NormalizedName string        `json:"normalized_name"`
 	Quantity       int           `json:"quantity"`
