@@ -120,10 +120,14 @@ func (q CardQuery) Sealed() bool { return q.Kind == KindSealed }
 
 // AcceptsTitle Answers whether a Store Title Belongs to this Query.
 // A Sealed Title Never Follows the Grammar of a Printing: a Store Writes
-// `Aetherdrift: "Collector Booster Pack"`, never `Collector Booster Pack (ADF)`.
-// So a Sealed Question Reads the Name wherever the Title Puts it.
+// `Pokemon: Scarlet & Violet - Journey Together: "Booster Bundle"`, Splitting
+// the Set from the Product. So a Sealed Question Asks for its Words, not for
+// its Phrase.
 func (q CardQuery) AcceptsTitle(title string) bool {
-	if q.Match == MatchIncludes || q.Sealed() {
+	if q.Sealed() {
+		return CoversCard(title, q.Name)
+	}
+	if q.Match == MatchIncludes {
 		return ContainsCard(title, q.Name)
 	}
 	return MatchesCard(title, q.Name)
@@ -144,6 +148,26 @@ func ReadMatchMode(value string) (MatchMode, error) {
 func ContainsCard(title, name string) bool {
 	name = NormalizeCard(name)
 	return name != "" && strings.Contains(NormalizeCard(title), name)
+}
+
+// CoversCard Accepts a Title Carrying every Word of the Name, in any Order.
+//
+// A Sealed Name Names two Things at once: the Set and the Product. Only the
+// Set Says which Game the Box Belongs to — `Booster Box` alone Answers Yu-Gi-Oh
+// and Cardfight!! Vanguard alike, and a Store Selling both cannot Tell them
+// apart. Asking for every Word Puts the Game back into the Question.
+func CoversCard(title, name string) bool {
+	words := strings.Fields(NormalizeCard(name))
+	if len(words) == 0 {
+		return false
+	}
+	title = NormalizeCard(title)
+	for _, word := range words {
+		if !strings.Contains(title, word) {
+			return false
+		}
+	}
+	return true
 }
 
 // ReadCardKey Reduces a Store Title to the Card it Names, Dropping the Printing.

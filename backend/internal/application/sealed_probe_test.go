@@ -36,10 +36,10 @@ func TestSealedProbe(t *testing.T) {
 		game search.Game
 		name string
 	}{
-		{search.GamePokemon, "Elite Trainer Box"},
-		{search.GamePokemon, "Booster Bundle"},
-		{search.GameYuGiOh, "Booster Box"},
-		{search.GameMagic, "Collector Booster"},
+		{search.GamePokemon, "Pitch Black Elite Trainer Box"},
+		{search.GamePokemon, "Journey Together Booster Bundle"},
+		{search.GameYuGiOh, "Chaos Origins Booster Box"},
+		{search.GameMagic, "Aetherdrift Collector Booster"},
 	}
 	for _, probe := range probes {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)

@@ -222,11 +222,23 @@ func TestSealedKeySeparatesSets(t *testing.T) {
 }
 
 // TestSealedTitleReadsTheNameAnywhere Accepts the Title a Store Writes, where
-// the Product Name Sits after the Set.
+// the Set Sits between the Words of the Product.
 func TestSealedTitleReadsTheNameAnywhere(t *testing.T) {
-	query := CardQuery{Name: "Elite Trainer Box", Kind: KindSealed}
-	if !query.AcceptsTitle(`Pokemon: Mega Evolution - Pitch Black: "Elite Trainer Box"`) {
-		t.Fatal("sealed query rejected a store title carrying its name")
+	query := CardQuery{Name: "Journey Together Booster Bundle", Kind: KindSealed}
+	if !query.AcceptsTitle(`Pokemon: Scarlet & Violet - Journey Together: "Booster Bundle"`) {
+		t.Fatal("sealed query rejected a store title carrying every word")
+	}
+}
+
+// TestSealedSetKeepsTheGameOut Keeps a Store that Sells several Games from
+// Answering with the wrong one. `Booster Box` Names no Game; the Set does.
+func TestSealedSetKeepsTheGameOut(t *testing.T) {
+	query := CardQuery{Name: "Chaos Origins Booster Box", Kind: KindSealed}
+	if query.AcceptsTitle("Cardfight!! Vanguard Booster Box: Destined Showdown (Inglés)") {
+		t.Fatal("a sealed question without its set accepted another game")
+	}
+	if !query.AcceptsTitle("Chaos Origins Booster Box [1st Edition]") {
+		t.Fatal("a sealed question rejected its own set")
 	}
 }
 
