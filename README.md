@@ -330,6 +330,7 @@ Ese es el Orden sugerido para quien llega a aprender.
 | --- | --- |
 | 🏛️ [Arquitectura de Muchi](docs/arquitectura.md) | La Frontera entre este Front y la API, la Seguridad, los Datos, la Operación y una Guía neutral para replicar el Patrón con otros Proveedores. |
 | 🪟 [El Front y su Frontera](docs/migracion-web.md) | Qué dibuja el Front, qué decide el BFF, cuáles son sus Rutas y cómo se despliega en Cloud Run. |
+| 🐱 [Cómo Habla Muchi](docs/muchi-habla.md) | El Catálogo de Frases, quién le gana el turno a la Burbuja, los tres Canales de Aviso, la Hoja de Sprites y qué queda con Movimiento reducido. |
 | 📜 [Contrato de Muchi API](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml) | Todas las Rutas que Muchi consume, con sus Formas de Entrada y Salida. Vive en muchi-api. |
 
 ### La API vive en su propio Repositorio
