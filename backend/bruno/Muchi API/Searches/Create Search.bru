@@ -31,6 +31,9 @@ docs {
 
   La Idempotency-Key va sola en cada Envío. Repetir la misma Clave con otro
   Cuerpo da 409; repetirla con el mismo devuelve la Búsqueda original.
+
+  `options.kind` Elige entre `single`, el Default, y `sealed`. Una Búsqueda
+  Sellada Nombra el Set junto al Producto: "Chaos Origins Booster Box".
 }
 
 script:post-response {

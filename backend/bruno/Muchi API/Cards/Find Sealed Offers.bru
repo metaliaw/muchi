@@ -1,0 +1,43 @@
+meta {
+  name: Find Sealed Offers
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/cards/offers?name=Chaos Origins Booster Box&game=yugioh&kind=sealed
+  body: none
+  auth: inherit
+}
+
+params:query {
+  name: Chaos Origins Booster Box
+  game: yugioh
+  kind: sealed
+}
+
+docs {
+  Producto Sellado: Booster Box, Elite Trainer Box, Bundle, Display. La
+  misma Ruta que las Cartas, con `kind=sealed`.
+
+  Nombra el Set junto al Producto. `Booster Box` a secas no Dice de que
+  Juego es, y una Tienda que Vende varios Contesta con todos; el Set lo
+  Devuelve. Si prefieres Preguntar ancho, la API Filtra por la Lista de
+  Sets del Juego y Descarta las Cajas ajenas.
+
+  Un Pack y un Display Comparten Set y casi todas las Palabras, y Difieren
+  por diez Veces el Precio. Se Agrupan por Producto entero, asi que ninguno
+  Juzga el Precio del otro.
+}
+
+tests {
+  test("las Cajas traen Precio, Moneda y Tipo", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().kind).to.equal("sealed");
+    res.getBody().offers.forEach((offer) => {
+      expect(offer.price_amount).to.match(/^[0-9]+(\.[0-9]{1,2})?$/);
+      expect(offer.price_currency).to.match(/^[A-Z]{3}$/);
+      expect(offer.kind).to.equal("sealed");
+    });
+  });
+}

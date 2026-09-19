@@ -13,6 +13,7 @@ get {
 params:query {
   name: Sol Ring
   ~match: exact
+  ~kind: single
 }
 
 docs {
@@ -22,6 +23,9 @@ docs {
   `match` Elige cuanto Puede Alejarse el Titulo de la Tienda del Nombre
   Pedido. `exact`, el Default, Trae la Carta y sus Impresiones. `includes`
   Trae ademas sus Derivados: Winged Kuriboh, Linkuriboh, Token: Kuriboh.
+
+  `kind` Elige que Vende la Tienda. `single`, el Default, son las Cartas
+  sueltas. Para las Cajas sin Abrir mira Find Sealed Offers.
 }
 
 tests {
