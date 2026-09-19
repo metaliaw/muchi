@@ -335,3 +335,43 @@ func TestASealedAnswerSurvivesASetListThatFails(t *testing.T) {
 		t.Fatalf("items=%+v err=%v", items, err)
 	}
 }
+
+// keyCache Remembers which Key each Question Wrote under.
+type keyCache struct{ keys []string }
+
+func (c *keyCache) LoadOffers(context.Context, string) ([]offer.Offer, bool, error) {
+	return nil, false, nil
+}
+
+func (c *keyCache) SaveOffers(_ context.Context, key string, _ []offer.Offer, _ time.Duration) error {
+	c.keys = append(c.keys, key)
+	return nil
+}
+
+// TestAnOldItemAsksTheQuestionOfANewOne Covers the Items Stored before `kind`
+// Existed: they Come back Empty and must Read as Singles, Cache Key included.
+func TestAnOldItemAsksTheQuestionOfANewOne(t *testing.T) {
+	cache := &keyCache{}
+	service := Service{
+		Providers: map[Game]Provider{GameYuGiOh: stubProvider{items: []offer.Offer{
+			{ID: "card", CardName: "Kuriboh", Store: "store", URL: "https://store.test/card",
+				PriceAmount: "990", Source: "store"},
+		}}},
+		Cache: cache,
+	}
+	stored := offer.CardQuery{Name: "Kuriboh"}
+	items, _, err := service.collectOffers(context.Background(), GameYuGiOh, stored)
+	if err != nil || len(items) != 1 {
+		t.Fatalf("items=%+v err=%v", items, err)
+	}
+	if items[0].Kind != offer.KindSingle {
+		t.Fatalf("an empty kind read as %q", items[0].Kind)
+	}
+	asked := offer.CardQuery{Name: "Kuriboh", Kind: offer.KindSingle, Match: offer.MatchExact}
+	if _, _, err := service.collectOffers(context.Background(), GameYuGiOh, asked); err != nil {
+		t.Fatal(err)
+	}
+	if len(cache.keys) != 2 || cache.keys[0] != cache.keys[1] {
+		t.Fatalf("a stored item and a fresh question wrote different keys: %q", cache.keys)
+	}
+}

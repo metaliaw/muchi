@@ -76,6 +76,7 @@ func (s Service) FindCardOffers(ctx context.Context, game Game, query offer.Card
 // Answer must never Serve a narrow Question, and a Booster Box must never
 // Answer the Question about the Card Printed inside it.
 func (s Service) collectOffers(ctx context.Context, game Game, query offer.CardQuery) ([]offer.Offer, []SourceFault, error) {
+	query = settleQuery(query)
 	key := s.CacheNamespace + string(game) + ":" + string(query.Kind) + ":" + string(query.Match) + ":" + offer.NormalizeCard(query.Name)
 	if items, found := s.loadOfferCache(ctx, key); found {
 		return items, nil, nil
@@ -101,6 +102,22 @@ func (s Service) collectOffers(ctx context.Context, game Game, query offer.CardQ
 		s.saveOfferCache(ctx, key, items)
 	}
 	return items, faults, nil
+}
+
+// settleQuery Writes the Defaults down before anything Reads them.
+//
+// An Item Stored before a Field Existed Comes back Empty, and an Empty Kind
+// Means the same as `single` — but not to a Cache Key, which Compares Strings
+// and would Keep two Namespaces for one Question. The Zero Value is the right
+// Answer; it just has to be Spelled.
+func settleQuery(query offer.CardQuery) offer.CardQuery {
+	if query.Kind == "" {
+		query.Kind = offer.KindSingle
+	}
+	if query.Match == "" {
+		query.Match = offer.MatchExact
+	}
+	return query
 }
 
 // nameKinds Tells every Offer what the Question was for. A Store Title alone
