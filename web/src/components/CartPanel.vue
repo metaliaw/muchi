@@ -50,14 +50,11 @@ watch([open, shipping, () => props.searchId, () => props.match, () => props.unit
       <p v-else-if="loading" class="mu-caption">Calculando…</p>
 
       <template v-if="plan && !loading">
-        <p class="mu-caption">
-          Usa Ofertas sin alertas de Precio ni Stock agotado.
-          <strong>Muchi Dólar: 1 USD = {{ formatClp(plan.muchi_dolar) }}</strong>, el Cambio
-          de Muchi con Costos de Compra incluidos, no el del Mercado.
-        </p>
-        <p v-if="plan.converted_offers" class="mu-caption">
-          {{ plan.converted_offers }} Ofertas en USD entraron convertidas.
-        </p>
+        <!-- El Muchi Dólar Salía acá, al lado del Envío y del Total, y ahí
+             Parecía parte del Despacho: quien Leía "1 USD = $1.000" junto a
+             un Envío en Pesos Concluía otra cosa. El Cambio sigue Aplicándose
+             igual; lo que se Fue es la Explicación en el Lugar equivocado. -->
+        <p class="mu-caption">Usa Ofertas sin alertas de Precio ni Stock agotado.</p>
         <p class="mu-total">Total con Envíos: {{ formatClp(plan.total) }}</p>
 
         <div v-for="store in plan.stores" :key="store.store" class="mu-tienda">
