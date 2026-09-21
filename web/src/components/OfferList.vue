@@ -107,6 +107,18 @@ const variants = computed(() => [...new Set(editionOffers.value.map(variantOf))]
 const visibleOffers = computed(() => variant.value
   ? editionOffers.value.filter((offer) => variantOf(offer) === variant.value)
   : editionOffers.value)
+watch(editions, (values) => {
+  if (edition.value && !values.includes(edition.value)) edition.value = ''
+})
+watch(variants, (values) => {
+  if (variant.value && !values.includes(variant.value)) variant.value = ''
+})
+
+// Un solo Tipo no es una Agrupación: mostrar un Encabezado para él sería
+// repetir el Nombre que ya está en cada Oferta.
+const groups = computed(() => groupByCardType(visibleOffers.value))
+const grouped = computed(() => groups.value.length > 1)
+
 // La Cantidad pedida se Reparte sola sobre lo que se Ve, de la barata a la
 // cara. Lo último repartido se Guarda: mientras los Selectores Sigan igual a
 // eso, nadie los Tocó y se Pueden Rehacer. Tocado uno, no se Pisa más —salvo
@@ -120,18 +132,6 @@ function spreadNow(force = false) {
 }
 watch([edition, variant, criterion], () => spreadNow(true))
 watch(() => groups.value, () => spreadNow(), { immediate: true })
-
-watch(editions, (values) => {
-  if (edition.value && !values.includes(edition.value)) edition.value = ''
-})
-watch(variants, (values) => {
-  if (variant.value && !values.includes(variant.value)) variant.value = ''
-})
-
-// Un solo Tipo no es una Agrupación: mostrar un Encabezado para él sería
-// repetir el Nombre que ya está en cada Oferta.
-const groups = computed(() => groupByCardType(visibleOffers.value))
-const grouped = computed(() => groups.value.length > 1)
 </script>
 
 <template>
