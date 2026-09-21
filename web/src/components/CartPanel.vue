@@ -11,7 +11,11 @@ const props = defineProps({
   units: { type: Object, default: () => ({}) },
 })
 
-const shipping = ref(4000)
+// El Envío ya no se Pregunta: Muchi no Sabe cuánto Cobra cada Tienda, y un
+// Número inventado en el Total Hacía Dudar de todo el resto. Este Valor no
+// Aparece en ninguna Cifra mostrada; solo Sirve para que el Reparto Prefiera
+// Juntar Cartas en pocas Tiendas, que es lo que alguien Haría igual.
+const SHIPPING_GUESS = 4000
 const plan = ref(null)
 const error = ref('')
 const open = ref(false)
@@ -23,7 +27,7 @@ async function refresh() {
   error.value = ''
   try {
     plan.value = await readCartWithUnits(
-      props.searchId, Math.max(0, Number(shipping.value) || 0),
+      props.searchId, SHIPPING_GUESS,
       Object.entries(props.units).map(([offer_id, count]) => ({ offer_id, units: count })),
       props.match)
   } catch (failure) {
@@ -33,7 +37,7 @@ async function refresh() {
   }
 }
 
-watch([open, shipping, () => props.searchId, () => props.match, () => props.units], refresh)
+watch([open, () => props.searchId, () => props.match, () => props.units], refresh)
 </script>
 
 <template>
@@ -43,9 +47,6 @@ watch([open, shipping, () => props.searchId, () => props.match, () => props.unit
     </button>
 
     <div v-if="open" class="mu-carro">
-      <label>Envío por Tienda
-        <input type="number" v-model="shipping" min="0" step="500" />
-      </label>
       <p v-if="error" class="mu-aviso error">{{ error }}</p>
       <p v-else-if="loading" class="mu-caption">Calculando…</p>
 
@@ -55,16 +56,25 @@ watch([open, shipping, () => props.searchId, () => props.match, () => props.unit
              un Envío en Pesos Concluía otra cosa. El Cambio sigue Aplicándose
              igual; lo que se Fue es la Explicación en el Lugar equivocado. -->
         <p class="mu-caption">Usa Ofertas sin alertas de Precio ni Stock agotado.</p>
-        <p class="mu-total">Total con Envíos: {{ formatClp(plan.total) }}</p>
+        <!-- El Total es el de las Cartas. Sumarle un Envío que Muchi Inventó
+             Sería Dar por cierto un Número que ninguna Tienda Dijo. -->
+        <p class="mu-total">Total de las Cartas: {{ formatClp(plan.cards_cost) }}</p>
 
         <div v-for="store in plan.stores" :key="store.store" class="mu-tienda">
           <h3>{{ store.store }}</h3>
           <p class="mu-caption">
-            {{ store.cards }} Cartas · {{ formatClp(store.subtotal) }}
-            · Envío {{ formatClp(plan.shipping_per_store) }}
+            {{ store.cards }} Cartas · {{ formatClp(store.subtotal) }} · Envío aparte
           </p>
           <p v-for="line in store.lines" :key="`${line.card_name}-${line.url}`" class="mu-linea">
-            <span>{{ line.quantity }}× {{ line.card_name }}</span>
+            <span>
+              {{ line.quantity }}× {{ line.card_name }}
+              <!-- Dos Líneas con el mismo Nombre y distinta Edición no son la
+                   misma Compra: sin esto, el Carrito Parecía repetirse. -->
+              <span v-if="line.edition || line.finish || line.condition" class="mu-caption">
+                {{ [line.edition?.toUpperCase(), line.finish, line.condition]
+                     .filter(Boolean).join(' · ') }}
+              </span>
+            </span>
             <a :href="line.url" target="_blank" rel="noopener noreferrer">
               {{ formatClp(line.subtotal) }}
             </a>
