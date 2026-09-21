@@ -53,7 +53,7 @@ Carta donde todas Negaron se queda **sin** Corona.
 
 ## El Tope
 
-`GET /api/searches/{id}/stock` pregunta **por Rondas**: la primera Candidata de
+`/api/searches/{id}/stock` pregunta **por Rondas**: la primera Candidata de
 cada Tipo de Carta viaja en una sola Consulta, y solo los Tipos que no
 Confirmaron pasan a la siguiente Ronda. El Costo crece con la Duda, no con el
 Largo de la Lista, y `stock_check_limit` —hoy 3, en
@@ -61,7 +61,11 @@ Largo de la Lista, y `stock_check_limit` —hoy 3, en
 Techo.
 
 No se pregunta por una Oferta ya Agotada, ni por una sin Cambio a Pesos —no
-compite por la Corona—, ni por una que la API no Nombró con un `id`.
+compite por la Corona—, ni por una que la API no Nombró con un `id`. Ni por una
+que el Navegador ya Confirmó: el `POST` de la misma Ruta Recibe
+`{"checks": [{"offer_id": "...", "available": true}]}` y Arranca las Rondas
+desde ahí. Una Tienda que le Contestó al Comprador no Necesita Contestarnos
+también a nosotros. El `GET` es ese mismo Camino sin nada Sabido.
 
 ## Lo que Queda Fuera de Alcance
 
@@ -74,3 +78,5 @@ ella, la Duda más barata se quedaría la Corona sin que nadie la haya Confirmad
 Esto es distinto de [`verify_stock`](../reverificacion-opcional.md), que
 Re-verifica toda Oferta candidata durante la Búsqueda y nace apagada por su
 Carga. Acá se pregunta al Final, de a una, y solo mientras ninguna Confirme.
+Ese mismo Documento Cuenta qué Ofertas Alcanza el Navegador por su cuenta y
+cuánto Dura lo que Confirmó.

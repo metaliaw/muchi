@@ -3,6 +3,9 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import * as api from './api.js'
 import { useSearch } from './search.js'
+import {
+  confirmOffers, countReachable, readFreshChecks, rememberChecks, sayAge,
+} from './stock.js'
 import MuchiPanel from './components/MuchiPanel.vue'
 import CardLookup from './components/CardLookup.vue'
 import CardArt from './components/CardArt.vue'
@@ -22,10 +25,18 @@ const THEME_KEY = 'muchi_tema'
 // último, y no lo Devuelve a Magic en cada Visita.
 const GAME_KEY = 'muchi_juego'
 const KIND_KEY = 'muchi_catalogo'
+// Lo último que alguien Buscó Vuelve escrito en el Campo: repetir la misma
+// Lista al día siguiente no Debería Costar tipearla de nuevo.
+const TEXT_KEY = 'muchi_busqueda'
+// Recargar no Debería Mandar a las Tiendas otra vez. La última Búsqueda mirada
+// se Retoma por su Identificador, con el Modo y el Catálogo con que salió: el
+// Servidor ya la Tiene hecha y solo la Devuelve.
+const LAST_KEY = 'muchi_ultima'
 
 // El Ritmo lo manda el Servidor; este es el mismo de config/api.defaults.yaml,
 // para los milisegundos que van entre que arranca la Página y llega la Config.
-const config = ref({ poll_seconds: 3, adsense_client: 'ca-pub-6368656861543000' })
+const config = ref({ poll_seconds: 3, adsense_client: 'ca-pub-6368656861543000',
+                     stock_fresh_seconds: 600 })
 const book = ref(null)
 const games = ref([])
 const game = ref('')
@@ -36,14 +47,17 @@ const message = ref(null)
 // las Páginas se declaran una sola vez ahí.
 const {
   id: searchId, state, items, offers, summary, notices, cursor, hasMore,
-  checked, unavailable, start: startSearch, applyState, applyResults,
+  checked, unavailable, stocked, start: startSearch, applyState, applyResults,
+  applyStock,
 } = useSearch()
 // El Muelle nace Cerrado: quien Busca quiere ver Ofertas, y Muchi y la Carta
 // Esperan a un Toque. Solo Existe en Móvil; en Escritorio el Lateral los Muestra.
 const dockOpen = ref(false)
 const error = ref('')
 const pending = ref(null)
-const lookupText = ref('')
+// El Campo nace con lo último que se Buscó. Se Lee acá, antes de que el
+// Formulario Exista: con Texto propio, el Ejemplo no lo Pisa.
+const lookupText = ref(localStorage.getItem(TEXT_KEY) || '')
 // El Modo viaja en la URL junto a la Búsqueda: recargar no debe reagrupar las
 // mismas Ofertas de otra manera ni mandar Derivados al Carrito.
 const match = ref(new URLSearchParams(location.search).get('match') === 'includes'
@@ -95,6 +109,37 @@ const placeholder = computed(() => {
   return ''
 })
 
+// Confirmar el Stock es un Paso aparte, y lo Pide quien Compra. Cuesta una
+// Visita a cada Tienda: las que el Navegador Alcanza las Pide él mismo, y por
+// el Resto Pregunta el Servicio. Sin nada que Alcanzar no se Ofrece el Botón,
+// porque sería Prometer una Certeza que Traería el Servicio entero a cuestas.
+const confirming = ref(false)
+// Hace cuánto se Confirmó lo que se está mostrando. Cero es «no se Confirmó»:
+// la Certeza vieja se Descartó sola y el Botón Volvió a su lugar.
+const confirmedAge = ref(0)
+const reachable = computed(() => countReachable(offers.value))
+const confirmable = computed(() =>
+  Boolean(state.value?.done) && reachable.value > 0 && !stocked.value)
+
+async function confirmStock() {
+  confirming.value = true
+  say('Estoy preguntando en las Tiendas', 'talk')
+  try {
+    const found = await confirmOffers(offers.value)
+    applyStock(await api.confirmStock(searchId.value, found, match.value))
+    rememberChecks(searchId.value, found)
+    confirmedAge.value = 0
+    const gone = found.filter((check) => !check.available).length
+    say(gone ? `Pregunté, y ${gone} de las baratas ya no están`
+             : 'Pregunté, y las baratas siguen en pie', gone ? 'idle' : 'happy')
+  } catch (failure) {
+    error.value = failure.message
+    say(failure.message, 'angry')
+  } finally {
+    confirming.value = false
+  }
+}
+
 function say(text, mood = 'happy') {
   message.value = { text, state: mood }
 }
@@ -128,6 +173,8 @@ function remember(id, label) {
 
 function selectSearch(id, initialState = null, initialItems = []) {
   startSearch(id, initialState, initialItems)
+  localStorage.setItem(LAST_KEY, JSON.stringify(
+    { id, match: match.value, kind: kind.value }))
   const url = new URL(location.href)
   url.searchParams.set('search', id)
   url.searchParams.set('match', match.value)
@@ -137,6 +184,9 @@ function selectSearch(id, initialState = null, initialItems = []) {
 }
 
 async function submit(text) {
+  // Se Guarda lo Escrito, no lo Enviado: en Modo ancho sale una Línea sola, y
+  // quien Vuelve Quiere su Lista entera de vuelta.
+  localStorage.setItem(TEXT_KEY, lookupText.value)
   pending.value = { text, game: game.value, key: api.newKey(), match: match.value,
                     kind: kind.value }
   await send()
@@ -205,6 +255,21 @@ async function send() {
   }
 }
 
+// Recargar no Vuelve a preguntarle a nadie: lo Confirmado hace poco se Rearma
+// desde la Memoria y el Servidor Corona con eso. Pasado el Tope, no Vuelve
+// nada y el Botón Reaparece — que es exactamente lo que Debería pasar.
+async function restoreStock() {
+  const { checks, age } = readFreshChecks(searchId.value, config.value.stock_fresh_seconds)
+  if (!checks.length) return
+  try {
+    applyStock(await api.confirmStock(searchId.value, checks, match.value))
+    confirmedAge.value = age
+  } catch {
+    // Sin Corona rearmada se Sigue con la que trajo la Búsqueda. No es un
+    // Error que Contarle a nadie: nadie Pidió esto.
+  }
+}
+
 async function refresh() {
   if (!searchId.value || unavailable.value || refreshing) return
   refreshing = true
@@ -263,6 +328,29 @@ function rememberedGame() {
   return games.value.some((row) => row.reference_key === named) ? named : ''
 }
 
+// Una Búsqueda Guardada Caduca en el Servidor antes que en el Navegador. Si ya
+// no Está, se Olvida callado: nadie Abrió un Enlace roto, solo Volvió a Casa.
+async function resumeLast() {
+  const saved = JSON.parse(localStorage.getItem(LAST_KEY) || 'null')
+  if (!saved?.id) return
+  match.value = saved.match === 'includes' ? 'includes' : 'exact'
+  kind.value = saved.kind === 'sealed' ? 'sealed' : 'single'
+  startSearch(saved.id)
+  await refresh()
+  if (unavailable.value) {
+    localStorage.removeItem(LAST_KEY)
+    startSearch('')
+    unavailable.value = ''
+    return
+  }
+  await restoreStock()
+  const url = new URL(location.href)
+  url.searchParams.set('search', saved.id)
+  url.searchParams.set('match', match.value)
+  url.searchParams.set('kind', kind.value)
+  window.history.replaceState({}, '', url)
+}
+
 watch(busy, (value) => (value ? startPolling() : stopPolling()))
 
 onMounted(async () => {
@@ -279,7 +367,13 @@ onMounted(async () => {
   } catch (failure) {
     error.value = failure.message
   }
-  if (searchId.value) refresh()
+  // La URL Manda: con Búsqueda escrita, esa se Mira. Sin ella, Vuelve la última.
+  if (searchId.value) {
+    await refresh()
+    await restoreStock()
+  } else {
+    await resumeLast()
+  }
 })
 onUnmounted(stopPolling)
 </script>
@@ -386,6 +480,25 @@ onUnmounted(stopPolling)
         />
       </SearchProgress>
 
+      <!-- El Stock se Confirma cuando la Búsqueda ya Cerró: preguntarlo a
+           media Búsqueda Corona una Oferta que la siguiente Página abarata. -->
+      <p v-if="stocked" class="mu-panel mu-confirmar">
+        <span class="mu-caption">
+          Stock confirmado {{ sayAge(confirmedAge) }} en las Tiendas que lo Dicen.
+          Vale por un Rato, no por el Día.
+        </span>
+      </p>
+
+      <p v-if="confirmable" class="mu-panel mu-confirmar">
+        <button class="mu-ghost" :disabled="confirming" @click="confirmStock">
+          {{ confirming ? 'Preguntando…' : 'Confirmar Stock' }}
+        </button>
+        <span class="mu-caption">
+          {{ reachable }} Ofertas las Puede preguntar tu Navegador directo a la
+          Tienda. Lo que Confirme vale para este Minuto, no para mañana.
+        </span>
+      </p>
+
       <OfferList
         v-if="state" :items="items" :offers="offers" :summary="summary"
         :notices="notices" :placeholder="placeholder"
@@ -419,6 +532,9 @@ onUnmounted(stopPolling)
 </template>
 
 <style scoped>
+.mu-confirmar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.mu-confirmar > button { flex: none; }
+.mu-confirmar > .mu-caption { flex: 1; min-width: 200px; }
 .mu-hero {
   display: flex; align-items: center; justify-content: space-between;
   gap: 16px; flex-wrap: wrap;

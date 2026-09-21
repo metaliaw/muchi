@@ -3,3 +3,6 @@ minimum_offers: 5
 maximum_low_offers: 2
 maximum_low_share: 0.20
 stock_check_limit: 3
+# Diez Minutos: lo que Dura armar un Carrito y Volver, y bastante menos que una
+# Tarde. Pasado eso, un "sí hay" Guardado es una Afirmación que ya nadie Vio.
+stock_fresh_seconds: 600

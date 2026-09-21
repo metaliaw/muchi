@@ -49,6 +49,10 @@ export const readSearch = (id, after = 0, match = 'exact') =>
   request(`/api/searches/${encodeURIComponent(id)}?after=${after}&match=${match}`)
 export const checkStock = (id, match = 'exact') =>
   request(`/api/searches/${encodeURIComponent(id)}/stock?match=${match}`)
+// Lo que el Navegador ya Confirmó viaja en el Cuerpo: esas Tiendas no reciben
+// una segunda Visita nuestra.
+export const confirmStock = (id, checks, match = 'exact') =>
+  post(`/api/searches/${encodeURIComponent(id)}/stock?match=${match}`, { checks })
 export const cancelSearch = (id, key) =>
   post(`/api/searches/${encodeURIComponent(id)}/cancel`, { key })
 export const readCart = (id, shipping, match = 'exact') =>
