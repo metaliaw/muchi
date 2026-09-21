@@ -72,6 +72,9 @@ const history = ref(JSON.parse(localStorage.getItem('muchi_historial') || '[]'))
 // Cuántas Copias Tiene cada Oferta, contadas a mano por quien está mirando la
 // Tienda. Viven acá porque las Escribe la Lista y las Usa el Carrito.
 const units = ref({})
+// Cuál Oferta de cada Carta se Piensa comprar. Vacío Significa «la que Muchi
+// Recomienda»: la Elección explícita solo Existe cuando alguien la Marca.
+const chosen = ref({})
 
 let timer = null
 let refreshing = false
@@ -510,6 +513,7 @@ onUnmounted(stopPolling)
         :notices="notices" :placeholder="placeholder"
         :advertise-groups="advertiseSections"
         v-model:units="units"
+        v-model:chosen="chosen"
         @look="lookAtCard"
       >
         <template #advertisement="{ group }">
