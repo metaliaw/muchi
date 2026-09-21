@@ -377,6 +377,9 @@ Cada Cosa se lee en un solo lugar, y por eso acá ya no hay Copias:
   la Cadena de Carga que aparece cuando cada Oferta barata pide una segunda
   Visita a la Tienda, por qué esa Vuelta no puede ser obligatoria, y cómo el
   Navegador de quien Compra paga una de cada cinco sin que nadie la Note.
+- 🌐 [El Tráfico que no Pagamos](docs/trafico-del-navegador.md): quién paga cada
+  Petición que Muchi hace, cuándo una se mueve al Navegador de quien Compra, y
+  la Raya entre aprovechar una Puerta abierta y usar Visitantes de Flota.
 - 🔍 [Hallazgos en los Buscadores](docs/hallazgos-buscadores.md): los Supuestos
   que se cayeron cuando una Búsqueda empezó a traer Cartas distintas y no
   Variantes de una, qué los cerró y qué queda abierto. Los del otro lado de la
