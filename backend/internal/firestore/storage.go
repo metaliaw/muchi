@@ -61,6 +61,14 @@ const sourcePacing = 250 * time.Millisecond
 // and it is Kept per Domain, so one Store Slowing down Never Quiets another.
 const throttleCooldown = 30 * time.Second
 
+// circuitThreshold Counts the Falls in a row that Leave a Store unasked, and
+// circuitCooldown the first Wait. circuitCeiling Caps the Doubling.
+const (
+	circuitThreshold = 5
+	circuitCooldown  = time.Minute
+	circuitCeiling   = time.Hour
+)
+
 // PaceSources Tunes both Waits. Zero Keeps the Default, so a Caller may Set
 // one and Leave the other alone.
 func (s *Store) PaceSources(pacing, cooldown time.Duration) {
@@ -720,10 +728,26 @@ func updateSource(record *sourceRecord, latency time.Duration, sourceErr error) 
 		return
 	}
 	record.ConsecutiveFailures++
-	if record.ConsecutiveFailures >= 5 {
-		opened := now.Add(time.Minute)
+	if record.ConsecutiveFailures >= circuitThreshold {
+		opened := now.Add(circuitWait(record.ConsecutiveFailures))
 		record.CircuitOpenUntil = &opened
 	}
+}
+
+// circuitWait Says how long a Fallen Store Stays unasked, Doubling with each
+// further Fall.
+//
+// Un Minuto fijo Servia para una Caida de un rato y Fallaba para una de una
+// Semana: `v3.netdecker.cl` Llevaba 39 Fallas seguidas y ocho Dias sin
+// Contestar, y aun asi Recibia cinco Consultas por Minuto. Cada una le Costaba
+// su Timeout a la Busqueda que la Pedia, y a la Tienda caida un Golpe mas.
+//
+// Doblar Respeta las dos Puntas: una Caida corta se Perdona rapido, y una
+// larga se Consulta una vez por Hora hasta que Vuelva. El Tope Existe porque
+// una Tienda que Vuelve no Deberia Esperar mas que eso para que la Noten.
+func circuitWait(failures int) time.Duration {
+	wait := circuitCooldown << min(failures-circuitThreshold, 16)
+	return min(wait, circuitCeiling)
 }
 
 func mapSourceHealth(record sourceRecord) search.SourceHealth {

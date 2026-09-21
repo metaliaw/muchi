@@ -46,6 +46,44 @@ func TestARealFailureStillOpensTheCircuit(t *testing.T) {
 	}
 }
 
+// TestALongFallIsAskedLessOften Covers the Wait Growing with the Fall.
+//
+// A Store down for a Week Received five Calls a Minute under the fixed
+// Cooldown. Each one Cost its Timeout to the Search that Asked, and the fallen
+// Store one more Knock.
+func TestALongFallIsAskedLessOften(t *testing.T) {
+	record := sourceRecord{}
+	fall := errors.New("connection refused")
+	waits := []time.Duration{}
+	for range 12 {
+		updateSource(&record, 10*time.Millisecond, fall)
+		if record.CircuitOpenUntil != nil {
+			waits = append(waits, time.Until(*record.CircuitOpenUntil).Round(time.Minute))
+		}
+	}
+
+	if waits[0] != time.Minute {
+		t.Errorf("first wait = %s, want a minute", waits[0])
+	}
+	if waits[3] != 8*time.Minute {
+		t.Errorf("fourth wait = %s, want eight minutes", waits[3])
+	}
+	// La Ultima ya Toco el Techo: una Tienda que Vuelve no Espera mas que eso.
+	if waits[len(waits)-1] != time.Hour {
+		t.Errorf("last wait = %s, want an hour", waits[len(waits)-1])
+	}
+}
+
+// TestTheCircuitNeverWaitsForeverEvenAfterManyFalls Covers the Ceiling.
+func TestTheCircuitNeverWaitsForeverEvenAfterManyFalls(t *testing.T) {
+	if wait := circuitWait(39); wait != time.Hour {
+		t.Errorf("wait after 39 falls = %s, want an hour", wait)
+	}
+	if wait := circuitWait(5000); wait != time.Hour {
+		t.Errorf("wait after 5000 falls = %s, want an hour", wait)
+	}
+}
+
 // TestASuccessClearsWhatCameBefore Covers the Reset a Good Answer Brings.
 func TestASuccessClearsWhatCameBefore(t *testing.T) {
 	record := sourceRecord{ConsecutiveFailures: 4}
