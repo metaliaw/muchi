@@ -1,12 +1,14 @@
 <script setup>
 /** El Carrito en CLP: reparte la Lista entre Tiendas cuidando los Envíos. */
 import { ref, watch } from 'vue'
-import { formatClp, readCart } from '../api.js'
+import { formatClp, readCartWithUnits } from '../api.js'
 
 const props = defineProps({
   searchId: { type: String, required: true },
   // El Carrito vuelve a la Carta pedida: el Modo le dice si hubo Derivados.
   match: { type: String, default: 'exact' },
+  // Cuántas Copias Tiene cada Oferta. Lo que nadie Contó no Limita nada.
+  units: { type: Object, default: () => ({}) },
 })
 
 const shipping = ref(4000)
@@ -20,8 +22,10 @@ async function refresh() {
   loading.value = true
   error.value = ''
   try {
-    plan.value = await readCart(props.searchId, Math.max(0, Number(shipping.value) || 0),
-                                props.match)
+    plan.value = await readCartWithUnits(
+      props.searchId, Math.max(0, Number(shipping.value) || 0),
+      Object.entries(props.units).map(([offer_id, count]) => ({ offer_id, units: count })),
+      props.match)
   } catch (failure) {
     error.value = failure.message
   } finally {
@@ -29,7 +33,7 @@ async function refresh() {
   }
 }
 
-watch([open, shipping, () => props.searchId, () => props.match], refresh)
+watch([open, shipping, () => props.searchId, () => props.match, () => props.units], refresh)
 </script>
 
 <template>
@@ -72,6 +76,12 @@ watch([open, shipping, () => props.searchId, () => props.match], refresh)
 
         <p v-if="plan.missing.length" class="mu-caption">
           Sin Oferta apta: {{ plan.missing.join(', ') }}
+        </p>
+        <!-- Entregar menos Copias de las pedidas sin Decirlo es Mentir el Total. -->
+        <p v-for="row in plan.short" :key="row.card_name" class="mu-aviso">
+          {{ row.card_name }}: Faltan {{ row.units }}
+          {{ row.units === 1 ? 'Copia' : 'Copias' }} — las Tiendas contadas no
+          Tienen tantas.
         </p>
       </template>
     </div>
