@@ -376,28 +376,18 @@ def build_results(items: tuple[SearchItem, ...], muchi_dolar: int,
     }
 
 
-def read_offer_units(offer: SearchOffer, units: dict[str, int]) -> int | None:
-    """Cuantas Copias Tiene esta Oferta. None es "no lo Sabemos, Alcanzan".
-
-    Lo que Escribe quien Compra Manda sobre lo que Declara la Tienda: esta
-    mirando la Pagina abierta, y nosotros una Respuesta de hace un rato.
-    """
-    if offer.offer_id in units:
-        return units[offer.offer_id]
-    return offer.stock_quantity
-
-
 def build_cart(items: tuple[SearchItem, ...], shipping: int, muchi_dolar: int,
-               match: str = MATCH_EXACT, units: dict[str, int] | None = None) -> dict:
+               match: str = MATCH_EXACT, picks: dict[str, int] | None = None) -> dict:
     """El Carrito en CLP: solo Ofertas sin Alerta de Precio ni Stock agotado.
 
     En `includes` la Búsqueda trae Derivados para Mirar, no para Comprar: pedir
     3 Kuriboh y recibir un Linkuriboh porque salía más barato no es un Carrito,
     es otra Carta. Así que el Carrito vuelve a la Carta pedida.
     """
-    units = units or {}
+    picks = picks or {}
     orders = [Order(item.quantity, item.name) for item in items]
     found: dict[str, list[Offer]] = {}
+    catalog: dict[str, Offer] = {}
     converted = 0
     for item in items:
         for offer in item.offers:
@@ -409,12 +399,26 @@ def build_cart(items: tuple[SearchItem, ...], shipping: int, muchi_dolar: int,
             if price is None:
                 continue
             converted += offer.currency != "CLP"
-            found.setdefault(item.name.lower(), []).append(Offer(
+            row = Offer(
                 store=offer.store, card_name=item.name, title=offer.card_name,
                 price_clp=price, url=offer.url, key=offer.offer_id,
-                stock=read_offer_units(offer, units),
-            ))
-    plan = optimizer.build_optimal_plan(orders, found, shipping)
+                # Lo que la Tienda Declara y nadie mas: la Cantidad que Escribe
+                # quien Compra ya no es un Tope, es su Pedido.
+                stock=offer.stock_quantity,
+            )
+            found.setdefault(item.name.lower(), []).append(row)
+            if offer.offer_id:
+                catalog[offer.offer_id] = row
+    # Sin Elecciones, el Carrito es la Recomendacion: el Reparto que Muchi
+    # Haria. Con Elecciones, es lo que la Persona Armo.
+    if picks:
+        # Una Carta que nadie Vende no se Elige mal: Falta, y eso ya se Dice
+        # en `missing`. Repetirlo en `short` seria Contarlo dos veces.
+        sellable = [order for order in orders if found.get(order.name.lower())]
+        plan = optimizer.build_chosen_plan(sellable, catalog, picks, shipping)
+        plan.missing = [order.name for order in orders if not found.get(order.name.lower())]
+    else:
+        plan = optimizer.build_optimal_plan(orders, found, shipping)
     stores = []
     for store in plan.stores:
         lines = [line for line in plan.lines if line.store == store]
@@ -425,7 +429,7 @@ def build_cart(items: tuple[SearchItem, ...], shipping: int, muchi_dolar: int,
             "lines": [{
                 "card_name": line.card_name, "quantity": line.quantity,
                 "unit_price": float(line.unit_price), "subtotal": float(line.subtotal),
-                "url": line.url, "title": line.title,
+                "url": line.url, "title": line.title, "offer_id": line.offer_id,
             } for line in lines],
         })
     return {
