@@ -72,13 +72,8 @@ const history = ref(JSON.parse(localStorage.getItem('muchi_historial') || '[]'))
 // Cuántas Copias Tiene cada Oferta, contadas a mano por quien está mirando la
 // Tienda. Viven acá porque las Escribe la Lista y las Usa el Carrito.
 const units = ref({})
-// El Reparto que Muchi Recomienda, tal como Vino. Sirve para Saber si alguien
-// ya Tocó los Selectores: mientras sean iguales, Rellenarlos de nuevo no le
-// Pisa la Decisión a nadie.
-const recommended = ref({})
-// El Envío con que se Pide la Recomendación. El Carrito Tiene el suyo, que
-// quien Compra Puede cambiar; esto es solo para Llenar los Selectores.
-const SHIPPING_GUESS = 4000
+// El Reparto lo Hace la Lista, que es la única que Sabe qué Edición se está
+// Mirando y con qué Criterio. Acá solo se Guarda lo Elegido.
 
 let timer = null
 let refreshing = false
@@ -314,33 +309,6 @@ async function restoreStock() {
   }
 }
 
-// Los Selectores nacen Llenos con lo que Muchi Compraría, no en cero: una
-// Lista de cien Cartas no se Tilda a mano. Desde ahí Manda quien Compra.
-function readPlanUnits(plan) {
-  const filled = {}
-  for (const store of plan.stores || []) {
-    for (const line of store.lines || []) {
-      if (line.offer_id) filled[line.offer_id] = line.quantity
-    }
-  }
-  return filled
-}
-
-async function fillRecommendation() {
-  // Tocado a mano, no se Vuelve a Llenar: Recalcular por encima de una
-  // Decisión es Borrarla.
-  const untouched = JSON.stringify(units.value) === JSON.stringify(recommended.value)
-  if (!untouched) return
-  try {
-    const plan = await api.readCart(searchId.value, SHIPPING_GUESS, match.value)
-    recommended.value = readPlanUnits(plan)
-    units.value = { ...recommended.value }
-  } catch {
-    // Sin Recomendación los Selectores Quedan en cero. Se Puede Comprar igual,
-    // Tildando a mano; no es un Error que Contarle a nadie.
-  }
-}
-
 async function refresh() {
   if (!searchId.value || unavailable.value || refreshing) return
   refreshing = true
@@ -352,7 +320,6 @@ async function refresh() {
     remember(reply.state.id)
     if (reply.state.done && !reply.has_more) {
       stopPolling()
-      await fillRecommendation()
     }
   } catch (failure) {
     if (failure.retriable) {
@@ -577,7 +544,6 @@ onUnmounted(stopPolling)
         :notices="notices" :placeholder="placeholder"
         :advertise-groups="advertiseSections"
         v-model:units="units"
-        @recommend="units = { ...recommended }"
         @confirm="confirmOne"
         @look="lookAtCard"
       >

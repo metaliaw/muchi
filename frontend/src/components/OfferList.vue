@@ -2,9 +2,11 @@
 /** Las Ofertas, agrupadas por Tipo de Carta y por Precio dentro de cada una. */
 import { computed, ref, watch } from 'vue'
 import { formatAmount, formatClp } from '../api.js'
-import { groupByCardType, pickable as canPick, spreadUnits } from '../search.js'
+import {
+  BY_EDITION, BY_PRICE, groupByCardType, pickable as canPick, spreadUnits,
+} from '../search.js'
 
-const emit = defineEmits(['look', 'recommend', 'confirm'])
+const emit = defineEmits(['look', 'confirm'])
 
 // Cuántas Copias se Compran en cada Oferta. Cero es lo normal: de casi toda
 // Oferta no se Compra nada. Las que el Reparto Recomienda nacen con su
@@ -83,6 +85,9 @@ const asked = computed(() => Object.fromEntries(
 const askedFor = (offer) =>
   asked.value[(offer.card_type || offer.card_name || '').toLowerCase()] || 0
 
+// Con qué Criterio Baja la Cantidad pedida sobre las Ofertas.
+const criterion = ref(BY_PRICE)
+
 const edition = ref('')
 const editions = computed(() => [...new Set(props.offers
   .map((offer) => offer.edition)
@@ -102,13 +107,19 @@ const variants = computed(() => [...new Set(editionOffers.value.map(variantOf))]
 const visibleOffers = computed(() => variant.value
   ? editionOffers.value.filter((offer) => variantOf(offer) === variant.value)
   : editionOffers.value)
-// Filtrar por Edición o Variante es Decir cuál Carta se Quiere: ahí la
-// Cantidad se Reparte sola sobre lo que Quedó a la vista. Quitar el Filtro
-// Devuelve el Reparto que el Servidor Recomienda, que Mira también los Envíos.
-watch([edition, variant], () => {
-  if (!edition.value && !variant.value) return emit('recommend')
-  units.value = spreadUnits(groups.value, (group) => askedFor(group.rows[0]))
-})
+// La Cantidad pedida se Reparte sola sobre lo que se Ve, de la barata a la
+// cara. Lo último repartido se Guarda: mientras los Selectores Sigan igual a
+// eso, nadie los Tocó y se Pueden Rehacer. Tocado uno, no se Pisa más —salvo
+// que quien Compra Cambie el Criterio o el Filtro, que es Pedirlo de nuevo.
+const spread = ref({})
+function spreadNow(force = false) {
+  if (!force && JSON.stringify(units.value) !== JSON.stringify(spread.value)) return
+  spread.value = spreadUnits(groups.value, (group) => askedFor(group.rows[0]),
+                             criterion.value)
+  units.value = { ...spread.value }
+}
+watch([edition, variant, criterion], () => spreadNow(true))
+watch(() => groups.value, () => spreadNow(), { immediate: true })
 
 watch(editions, (values) => {
   if (edition.value && !values.includes(edition.value)) edition.value = ''
@@ -142,6 +153,17 @@ const grouped = computed(() => groups.value.length > 1)
 
     <p v-for="notice in notices" :key="notice.text"
        :class="notice.level === 'warning' ? 'mu-aviso' : 'mu-caption'">{{ notice.text }}</p>
+
+    <div v-if="offers.length" class="mu-filtros">
+      <label class="mu-filtro">
+        <span>Repartir por</span>
+        <select v-model="criterion">
+          <option :value="BY_PRICE">La más barata</option>
+          <!-- Sin dos Ediciones no hay nada que Elegir, y el Criterio Sobra. -->
+          <option v-if="editions.length > 1" :value="BY_EDITION">Una sola Edición</option>
+        </select>
+      </label>
+    </div>
 
     <div v-if="editions.length > 1 || variants.length > 1" class="mu-filtros">
       <label v-if="editions.length > 1" class="mu-filtro">
