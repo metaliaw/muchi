@@ -1,6 +1,6 @@
 # Por qué la Re-verificación de Stock es Opcional
 
-Septiembre 2026 · Rama `deploy.next`
+Septiembre 2026 · Rama `deploy.next`, ampliado el 20 de Septiembre
 
 ## La Cadena de Carga
 
@@ -55,11 +55,85 @@ Encenderla es una línea en el Entorno (`MUCHI_VERIFY_STOCK=1`), sin Deploy.
 Se reserva para el Día en que la Certeza pese más que la Carga — por ejemplo,
 una Venta nocturna masiva donde el Stock se mueve por Minuto.
 
+## La Vuelta que no Pagamos Nosotros
+
+La Carga era el Argumento, no la Certeza. Nadie Dijo que Confirmar el Stock
+estuviera de más: se Dijo que **nosotros** no podíamos Pagar esa segunda Vuelta
+dentro del Ciclo de la Búsqueda.
+
+Hay un Camino donde no la Pagamos. Una Tienda Shopify Sirve su Catálogo en
+`/products/<handle>.js` con `Access-Control-Allow-Origin: *`. El Navegador de
+quien Compra lo Lee directo: no Sale de nuestra IP, no Entra en el Ciclo de la
+Búsqueda, y Ocurre una sola vez, cuando alguien Aprieta el Botón. Las tres
+Objeciones de arriba —la Espera, el Tráfico duplicado, la Certeza efímera—
+Caen por Caminos distintos, y ninguna por Decreto.
+
+### Hasta dónde Llega
+
+Medido contra las Ofertas guardadas en `data/precios.db`, el Navegador Alcanza
+**una de cada cinco**. El Resto sigue Dependiendo del Servicio:
+
+| Plataforma | Ofertas | Desde el Navegador |
+| --- | --- | --- |
+| Shopify | ~1.880 | Sí — JSON público con CORS abierto |
+| WooCommerce | ~2.440 | No — la Store API Contesta, pero sin `Allow-Origin` |
+| scry.cl (Marketplace) | ~2.050 | No — `consultar_stock` Pide Cookie CSRF |
+| Jumpseller | ~580 | No — no Publica JSON de Producto |
+| Propias | ~2.010 | No |
+
+WooCommerce es el que más Duele: el Dato Está, Servido y Completo, y lo único
+que Falta es una Cabecera que no Controlamos. Una Tienda conocida que la Agregue
+Mueve más Ofertas que todo lo que Ganamos con Shopify.
+
+### La Costura
+
+El Front **Averigua**; el Servidor **Corona**.
+
+```
+Navegador → /products/<handle>.js        (las que Alcanza)
+          → POST /api/searches/{id}/stock {"checks": [...]}
+Servidor  → pregunta al Servicio          (solo por lo que Falta)
+          → crown_checked_offers          (la Corona, como siempre)
+```
+
+`answer_stock` Toma lo Sabido y Arranca las Rondas desde ahí: una Oferta que el
+Navegador Confirmó no se le Pregunta a nadie más, y una que el Plan no Nombra se
+Descarta —el Navegador Informa sobre esta Búsqueda, no sobre el Catálogo entero.
+Quién Lleva la Marca de más barata se sigue Decidiendo en `server/presenter.py`,
+con las mismas Reglas de [El Pedido de Stock](api/pedido-stock.md). Esa Decisión
+no Cruzó la Frontera, y no Debe: el Front no Recomienda.
+
+`GET` sigue existiendo, y es el mismo Camino sin nada Sabido.
+
+### El Dato se Guarda con su Hora
+
+Lo Confirmado Sobrevive a la Recarga, pero no como un Sí a secas: se Guarda con
+la Hora en que la Tienda lo Dijo, y Vuelve solo mientras esa Hora Aguante
+—`stock_fresh_seconds`, hoy **600** en
+[`config/offers.defaults.yaml`](../config/offers.defaults.yaml)—. Pasado el
+Tope no Vuelve nada y el Botón Reaparece.
+
+Diez Minutos es lo que Dura armar un Carrito y Volver, y Cabe entero en una
+Sesión de Compra: nadie se Lleva a mañana una Certeza de hoy. La Edad que la
+Página Muestra es la de la Confirmación más vieja, no la de la más nueva:
+Decir la más nueva sería Presumir una Frescura que la mitad de las Filas no
+Tiene.
+
+Es el Revés de lo que se hizo con la última Búsqueda. Esa se Guarda para **no**
+Volver a salir a las Tiendas, porque un Precio de ayer todavía Informa. El Stock
+se Guarda para lo contrario: para Saber cuándo hay que Preguntar de nuevo.
+Guardarlo sin su Hora sería Conservar un "sí hay" que Envejece hasta Volverse
+Mentira.
+
 ## Lo que Queda
 
+- `MUCHI_VERIFY_STOCK` sigue **apagada**, y por las mismas Razones: lo de arriba
+  no Re-verifica durante la Búsqueda, Confirma después y solo si se lo Piden.
 - El Reintento conserva su Clave de Idempotencia: reenviar no duplica
   Búsquedas. Eso no se toca.
 - El Error de Red ahora dice lo que Es ("La Consulta no llegó al Servicio")
   en vez de un `TypeError` mudo.
 - El Front siente qué Cambió en cada Ciclo (`stateChanges`): el camino a
   Deltas parciales queda abierto sin haberle pedido nada nuevo a la Red.
+- Sigue Abierto: medir cada cuánto Cambia de verdad el Stock de una Shopify
+  barata. Los diez Minutos son un Juicio, no una Medición.

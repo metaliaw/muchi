@@ -18,6 +18,9 @@ class OfferSettings:
     maximum_low_offers: int
     maximum_low_share: float
     stock_check_limit: int
+    # Cuánto Dura un Stock confirmado antes de Volver a ser una Duda. El Dato
+    # no Envejece bien: se Guarda con su Hora, no como un Sí a secas.
+    stock_fresh_seconds: int
 
 
 def validate_offer_values(values: dict) -> dict:
@@ -25,7 +28,8 @@ def validate_offer_values(values: dict) -> dict:
     fields = OfferSettings.__dataclass_fields__
     if not isinstance(values, dict) or set(values) - fields.keys():
         raise ValueError("Unknown offer settings")
-    integers = {"minimum_offers", "maximum_low_offers", "stock_check_limit"}
+    integers = {"minimum_offers", "maximum_low_offers", "stock_check_limit",
+                "stock_fresh_seconds"}
     for key, value in values.items():
         if type(value) not in (int, float) or not math.isfinite(value) or value <= 0:
             raise ValueError(f"{key} must be a positive finite number")
@@ -48,7 +52,8 @@ def read_offer_file(name: str) -> dict:
 def read_offer_overrides() -> dict:
     """Lee sólo las Variables declaradas por los Campos de Ofertas."""
     overrides = {}
-    integers = {"minimum_offers", "maximum_low_offers", "stock_check_limit"}
+    integers = {"minimum_offers", "maximum_low_offers", "stock_check_limit",
+                "stock_fresh_seconds"}
     for key in OfferSettings.__dataclass_fields__:
         variable = f"MUCHI_OFFERS_{key.upper()}"
         if variable in os.environ:

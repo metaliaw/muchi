@@ -100,6 +100,9 @@ def read_config() -> dict:
         "muchi_dolar": load_rate_settings().muchi_dolar,
         "environment": os.getenv("MUCHI_ENV", ""),
         "limits": {"max_cards": MAX_CARDS, "max_quantity": MAX_QUANTITY},
+        # Cuánto Vale un Stock ya confirmado. El Front lo Guarda con su Hora y
+        # lo Descarta solo; el Tope lo Dice el Servidor, como todos los demás.
+        "stock_fresh_seconds": load_offer_settings().stock_fresh_seconds,
         "donation_url": os.getenv("MUCHI_DONATION_URL", ""),
         "sponsor_name": os.getenv("MUCHI_SPONSOR_NAME", ""),
         "sponsor_text": os.getenv("MUCHI_SPONSOR_TEXT", ""),
@@ -270,38 +273,86 @@ def read_search(search_id: str, after: int = Query(0, ge=0),
             "cursor": page.cursor, "has_more": page.has_more}
 
 
-@app.get("/api/searches/{search_id}/stock")
-def check_stock(search_id: str,
-                match: Literal["exact", "includes"] = "exact") -> dict:
+class BrowserCheck(BaseModel):
+    """Lo que el Navegador de quien Compra vio en la Tienda, Oferta por Oferta."""
+    offer_id: str = Field(min_length=1, max_length=200)
+    available: bool
+
+
+class StockRequest(BaseModel):
+    # Una Lista larga no Confirma más: lo que no está en el Plan se Descarta
+    # igual, y el Tope Evita un Cuerpo que crezca sin Razón.
+    checks: list[BrowserCheck] = Field(default_factory=list, max_length=500)
+
+
+def answer_stock(search_id: str, match: str, known: dict[str, StockCheck]) -> dict:
     """Comprueba la más barata de cada Carta y Corona la primera que sí Tiene.
 
     Pregunta por Rondas: la primera Candidata de cada Tipo de Carta viaja en
     una sola Consulta, y solo los Tipos cuya Candidata no Tenía pasan a la
     siguiente. Así el Costo crece con la Mala Suerte, no con el Largo de la
     Lista, y `stock_check_limit` le pone Techo.
+
+    Lo que el Navegador ya Averiguó entra como Sabido: esas Ofertas no se le
+    Preguntan a nadie. Una Tienda que Contestó al Comprador no necesita
+    Contestarnos también a nosotros.
     """
     searches = build_muchi().searches
     items = read_all_results(searches, search_id)
     limit = load_offer_settings().stock_check_limit
     plan = presenter.plan_stock_checks(items, load_rate_settings().muchi_dolar,
                                        match=match, limit=limit)
-    checks: dict[str, StockCheck] = {}
-    pending = dict(plan)
-    for turn in range(limit):
-        asking = {card_type: candidates[turn] for card_type, candidates in pending.items()
-                  if len(candidates) > turn}
+    planned = {offer_id for candidates in plan.values() for offer_id in candidates}
+    # Una Oferta que el Plan no Nombra no Corona ni Descorona nada: el Navegador
+    # Informa sobre esta Búsqueda, no sobre el Catálogo entero.
+    checks: dict[str, StockCheck] = {offer_id: check for offer_id, check in known.items()
+                                     if offer_id in planned}
+
+    def waiting() -> dict[str, list[str]]:
+        """Los Tipos sin un Sí todavía, y a quién les Queda por preguntar."""
+        return {card_type: [offer_id for offer_id in candidates if offer_id not in checks]
+                for card_type, candidates in plan.items()
+                if not any(offer_id in checks and checks[offer_id].confirmed
+                           for offer_id in candidates)}
+
+    pending = waiting()
+    for _ in range(limit):
+        asking = {card_type: candidates[0] for card_type, candidates in pending.items()
+                  if candidates}
         if not asking:
             break
         for check in searches.check_stock(search_id, tuple(asking.values())):
             checks[check.offer_id] = check
         # Una Duda no Cierra la Ronda: se sigue preguntando por si alguna
         # Tienda Confirma, y la Duda barata espera su turno como Reserva.
-        pending = {card_type: plan[card_type] for card_type, offer_id in asking.items()
-                   if not (offer_id in checks and checks[offer_id].confirmed)}
+        pending = waiting()
     offers = {offer.offer_id: offer for item in items for offer in item.offers
               if offer.offer_id}
     return presenter.build_stock_answer(offers, plan, checks,
                                         load_rate_settings().muchi_dolar)
+
+
+@app.get("/api/searches/{search_id}/stock")
+def check_stock(search_id: str,
+                match: Literal["exact", "includes"] = "exact") -> dict:
+    """Comprueba el Stock preguntando solo el Servicio."""
+    return answer_stock(search_id, match, {})
+
+
+@app.post("/api/searches/{search_id}/stock")
+def check_stock_with_browser(search_id: str, request: StockRequest,
+                             match: Literal["exact", "includes"] = "exact") -> dict:
+    """Comprueba el Stock con lo que el Navegador ya Confirmó por su cuenta.
+
+    Una Tienda Shopify Sirve su Catálogo con CORS abierto: el Navegador lo Lee
+    directo y Manda acá el Resultado. La Corona se Decide igual de este Lado —
+    el Front Averigua, no Recomienda.
+    """
+    known = {row.offer_id: StockCheck(
+        offer_id=row.offer_id,
+        stock_status="available" if row.available else "unavailable",
+    ) for row in request.checks}
+    return answer_stock(search_id, match, known)
 
 
 @app.post("/api/searches/{search_id}/cancel")
