@@ -209,15 +209,14 @@ def pick_cheapest_by_type(offers: list[SearchOffer], types: dict[int, str],
     return best
 
 
-def plan_stock_checks(items: tuple[SearchItem, ...], muchi_dolar: int,
-                      match: str = MATCH_EXACT,
-                      limit: int = 3) -> dict[str, list[str]]:
-    """Por cada Tipo de Carta, a quién preguntarle Stock y en qué Orden.
+def rank_stock_candidates(items: tuple[SearchItem, ...], muchi_dolar: int,
+                          match: str = MATCH_EXACT) -> dict[str, list[str]]:
+    """Por cada Tipo de Carta, sus Ofertas en pie, de la barata a la cara.
 
-    El Orden es el mismo con el que se premia la más barata, porque la Pregunta
-    existe para sostener esa Marca: si la barata no tiene, la Corona pasa a la
-    siguiente. Una Oferta sin Cambio a Pesos no compite por la Corona, y una ya
-    Agotada no necesita que se le pregunte de nuevo.
+    El Orden es el mismo con el que se premia la más barata, porque la Corona
+    Recorre esta Lista: si la barata no tiene, pasa a la siguiente. Una Oferta
+    sin Cambio a Pesos no compite por la Corona, y una ya Agotada no necesita
+    que se le pregunte de nuevo.
     """
     types: dict[int, str] = {}
     offers: list[SearchOffer] = []
@@ -225,16 +224,29 @@ def plan_stock_checks(items: tuple[SearchItem, ...], muchi_dolar: int,
         types.update((id(offer), read_card_type(offer, item.name, match))
                      for offer in item.offers)
         offers.extend(item.offers)
-    plan: dict[str, list[str]] = {}
+    ranking: dict[str, list[str]] = {}
     for offer in order_by_card_type(offers, types):
         if not offer.offer_id or offer.stock_status == "unavailable":
             continue
         if convert_to_clp(offer, muchi_dolar) is None:
             continue
-        candidates = plan.setdefault(types[id(offer)], [])
-        if len(candidates) < limit:
-            candidates.append(offer.offer_id)
-    return plan
+        ranking.setdefault(types[id(offer)], []).append(offer.offer_id)
+    return ranking
+
+
+def plan_stock_checks(items: tuple[SearchItem, ...], muchi_dolar: int,
+                      match: str = MATCH_EXACT,
+                      limit: int = 3) -> dict[str, list[str]]:
+    """A quién le Preguntamos nosotros, y en qué Orden.
+
+    El Tope es de la Pregunta, no de la Corona: cada Consulta que Sale de acá
+    es una Visita nuestra a la Tienda, y `stock_check_limit` la Acota. Lo que
+    el Navegador Averigua por su cuenta no Pasa por este Tope —no nos Cuesta
+    una Visita— y Compite por la Corona igual, esté en el Puesto que esté.
+    """
+    return {card_type: candidates[:limit]
+            for card_type, candidates
+            in rank_stock_candidates(items, muchi_dolar, match=match).items()}
 
 
 def crown_checked_offers(plan: dict[str, list[str]],
@@ -263,7 +275,7 @@ def refresh_offer(offer: SearchOffer, check: StockCheck) -> SearchOffer:
                    stock_quantity=check.stock_quantity)
 
 
-def build_stock_answer(offers: dict[str, SearchOffer], plan: dict[str, list[str]],
+def build_stock_answer(offers: dict[str, SearchOffer], ranking: dict[str, list[str]],
                        checks: dict[str, StockCheck], muchi_dolar: int) -> dict:
     """Lo Comprobado, ya presentado, y a quién le toca la Corona ahora.
 
@@ -271,14 +283,14 @@ def build_stock_answer(offers: dict[str, SearchOffer], plan: dict[str, list[str]
     Etiqueta y el Color de la Pastilla, y esas son Decisiones de acá. El Front
     reemplaza la Fila que comparte `offer_id` y no vuelve a decidir nada.
     """
-    crowned = crown_checked_offers(plan, checks)
+    crowned = crown_checked_offers(ranking, checks)
     return {
         "offers": [build_offer(refresh_offer(offers[offer_id], check), muchi_dolar)
                    for offer_id, check in checks.items() if offer_id in offers],
         "best": [{"card_type": card_type, "offer_id": offer_id}
                  for card_type, offer_id in crowned.items()],
         # Un Tipo sin Corona ya no Recomienda: el Front apaga la Marca vieja.
-        "uncrowned": [card_type for card_type in plan if card_type not in crowned],
+        "uncrowned": [card_type for card_type in ranking if card_type not in crowned],
     }
 
 
