@@ -2,9 +2,9 @@
 /** Las Ofertas, agrupadas por Tipo de Carta y por Precio dentro de cada una. */
 import { computed, ref, watch } from 'vue'
 import { formatAmount, formatClp } from '../api.js'
-import { groupByCardType, pickable as canPick } from '../search.js'
+import { groupByCardType, pickable as canPick, spreadUnits } from '../search.js'
 
-const emit = defineEmits(['look'])
+const emit = defineEmits(['look', 'recommend'])
 
 // Cuántas Copias se Compran en cada Oferta. Cero es lo normal: de casi toda
 // Oferta no se Compra nada. Las que el Reparto Recomienda nacen con su
@@ -87,6 +87,14 @@ const variants = computed(() => [...new Set(editionOffers.value.map(variantOf))]
 const visibleOffers = computed(() => variant.value
   ? editionOffers.value.filter((offer) => variantOf(offer) === variant.value)
   : editionOffers.value)
+// Filtrar por Edición o Variante es Decir cuál Carta se Quiere: ahí la
+// Cantidad se Reparte sola sobre lo que Quedó a la vista. Quitar el Filtro
+// Devuelve el Reparto que el Servidor Recomienda, que Mira también los Envíos.
+watch([edition, variant], () => {
+  if (!edition.value && !variant.value) return emit('recommend')
+  units.value = spreadUnits(groups.value, (group) => askedFor(group.rows[0]))
+})
+
 watch(editions, (values) => {
   if (edition.value && !values.includes(edition.value)) edition.value = ''
 })

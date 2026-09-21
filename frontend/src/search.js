@@ -56,6 +56,34 @@ export function pickable(offer) {
   return offer.stock_status !== 'unavailable'
 }
 
+/** Reparte la Cantidad pedida de cada Carta entre las Ofertas que se Ven.
+ *
+ * Filtrar por Edición o por Variante es Decir cuál se Quiere. Una vez Dicho,
+ * ya no hay nada que Elegir: la Cantidad Baja sola sobre las más baratas de
+ * esa Edición, tomando de cada Tienda hasta lo que Declara Tener. Sin Cantidad
+ * Declarada se Asume que Alcanza, que es lo mismo que Asume el Reparto.
+ *
+ * Es el Gemelo de `take_units` en `muchi/mtg/optimizer.py`: la misma Regla,
+ * del otro lado de la Frontera, porque acá el Servidor no Sabe qué se Filtró.
+ */
+export function spreadUnits(groups, askedFor) {
+  const filled = {}
+  for (const group of groups) {
+    let left = askedFor(group) || 0
+    const rows = group.rows.filter(pickable)
+      .sort((left_, right) => (left_.price_clp ?? Infinity) - (right.price_clp ?? Infinity))
+    for (const offer of rows) {
+      if (left <= 0) break
+      const declared = offer.stock_quantity
+      const take = declared == null ? left : Math.min(left, declared)
+      if (take <= 0 || !offer.offer_id) continue
+      filled[offer.offer_id] = take
+      left -= take
+    }
+  }
+  return filled
+}
+
 /** Todo lo que pertenece a una Búsqueda, declarado y limpiado en un solo Lugar. */
 export function useSearch() {
   const id = ref(new URLSearchParams(location.search).get('search') || '')
