@@ -96,9 +96,16 @@ Servidor  → pregunta al Servicio          (solo por lo que Falta)
           → crown_checked_offers          (la Corona, como siempre)
 ```
 
+El Navegador Pregunta de la barata a la cara y **Corta en el primer Sí**: más
+arriba solo hay Ofertas más caras. `browser_check_limit` —hoy **5**— es su
+Techo por Carta, así que una Lista de cien Cartas Hace cien Consultas cuando la
+barata Tiene, y quinientas solo si ninguna Contesta.
+
 `answer_stock` Toma lo Sabido y Arranca las Rondas desde ahí: una Oferta que el
 Navegador Confirmó no se le Pregunta a nadie más, y una que el Plan no Nombra se
-Descarta —el Navegador Informa sobre esta Búsqueda, no sobre el Catálogo entero.
+Descarta —el Navegador Informa sobre esta Búsqueda, no sobre el Catálogo
+entero—, pero Vale aunque esté fuera del Tope de `stock_check_limit`: ese Tope
+Acota las Visitas que Hacemos nosotros, no quién Compite por la Corona.
 Quién Lleva la Marca de más barata se sigue Decidiendo en `server/presenter.py`,
 con las mismas Reglas de [El Pedido de Stock](api/pedido-stock.md). Esa Decisión
 no Cruzó la Frontera, y no Debe: el Front no Recomienda.
@@ -137,3 +144,7 @@ Mentira.
   Deltas parciales queda abierto sin haberle pedido nada nuevo a la Red.
 - Sigue Abierto: medir cada cuánto Cambia de verdad el Stock de una Shopify
   barata. Los diez Minutos son un Juicio, no una Medición.
+- `cartasmagicsur.cl` Sigue sin Poder Comprobarse por nadie: Vercel le Contesta
+  `429` a todo Cliente que no Sea un Navegador, y tampoco Manda `Allow-Origin`,
+  así que el del Comprador tampoco la Alcanza. Lo único que la Destrona es que
+  otra Tienda Confirme.

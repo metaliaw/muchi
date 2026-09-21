@@ -21,6 +21,10 @@ class OfferSettings:
     # Cuánto Dura un Stock confirmado antes de Volver a ser una Duda. El Dato
     # no Envejece bien: se Guarda con su Hora, no como un Sí a secas.
     stock_fresh_seconds: int
+    # Cuántas Ofertas de cada Carta Consulta el Navegador antes de Rendirse.
+    # No es el mismo Tope que `stock_check_limit`: esas Visitas no las Hacemos
+    # nosotros, y se Cortan solas en cuanto una Tienda Dice que sí.
+    browser_check_limit: int
 
 
 def validate_offer_values(values: dict) -> dict:
@@ -29,7 +33,7 @@ def validate_offer_values(values: dict) -> dict:
     if not isinstance(values, dict) or set(values) - fields.keys():
         raise ValueError("Unknown offer settings")
     integers = {"minimum_offers", "maximum_low_offers", "stock_check_limit",
-                "stock_fresh_seconds"}
+                "stock_fresh_seconds", "browser_check_limit"}
     for key, value in values.items():
         if type(value) not in (int, float) or not math.isfinite(value) or value <= 0:
             raise ValueError(f"{key} must be a positive finite number")
@@ -53,7 +57,7 @@ def read_offer_overrides() -> dict:
     """Lee sólo las Variables declaradas por los Campos de Ofertas."""
     overrides = {}
     integers = {"minimum_offers", "maximum_low_offers", "stock_check_limit",
-                "stock_fresh_seconds"}
+                "stock_fresh_seconds", "browser_check_limit"}
     for key in OfferSettings.__dataclass_fields__:
         variable = f"MUCHI_OFFERS_{key.upper()}"
         if variable in os.environ:

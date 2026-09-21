@@ -1,8 +1,8 @@
 /** Lo que el Navegador Puede afirmar de una Tienda, y lo que no. */
 import { describe, expect, it } from 'vitest'
 import {
-  confirmOffer, confirmOffers, countReachable, readFreshChecks, readShopifyProbe,
-  readShopifyStock, rememberChecks, sayAge,
+  confirmOffer, confirmOffers, countReachable, pickCandidates, readFreshChecks,
+  readShopifyProbe, readShopifyStock, rememberChecks, sayAge,
 } from '../src/stock.js'
 
 // Una Tienda de mentira: contesta lo que se le Diga y Anota a quién visitaron.
@@ -80,29 +80,62 @@ describe('una Oferta consultada', () => {
 })
 
 describe('la Lista entera', () => {
+  const shopify = (id, card, price) => ({
+    offer_id: id, card_name: card, price_clp: price,
+    url: `https://tienda.cl/products/${id}?variant=${id.slice(-1)}`,
+  })
   const offers = [
-    { offer_id: 'of-1', url: 'https://tienda.cl/products/uno?variant=1' },
-    { offer_id: 'of-2', url: 'https://otra.cl/producto/dos/' },
-    { offer_id: 'of-3', url: 'https://tienda.cl/products/tres?variant=3' },
-    { offer_id: '', url: 'https://tienda.cl/products/cuatro?variant=4' },
+    shopify('of-3', 'sol ring', 300), shopify('of-1', 'sol ring', 100),
+    shopify('of-2', 'sol ring', 200), shopify('of-4', 'sol ring', 400),
+    { offer_id: 'of-5', card_name: 'sol ring', price_clp: 50,
+      url: 'https://otra.cl/producto/cinco/' },
+    { offer_id: '', card_name: 'sol ring', price_clp: 10,
+      url: 'https://tienda.cl/products/sin-id?variant=9' },
+    shopify('of-6', 'mox', 900),
   ]
 
-  it('Cuenta solo las que el Navegador Alcanza', () => {
-    expect(countReachable(offers)).toBe(3)
+  it('Toma las más baratas de cada Carta, y solo las que Alcanza', () => {
+    // La de otra Plataforma y la que no Trae Identificador quedan fuera: a una
+    // no se le Puede preguntar, y la otra no Tendría a quién Volver.
+    expect(pickCandidates(offers, 3).map((rows) => rows.map((row) => row.offer_id)))
+      .toEqual([['of-1', 'of-2', 'of-3'], ['of-6']])
   })
 
-  it('Devuelve lo Confirmado y Deja fuera la Duda', async () => {
+  it('Cuenta lo que Preguntaría si nadie Contestara que sí', () => {
+    expect(countReachable(offers, 3)).toBe(4)
+    expect(countReachable(offers, 1)).toBe(2)
+  })
+
+  it('Corta en el primer Sí: más arriba solo hay Ofertas más caras', async () => {
     const { fetcher, asked } = store({
-      'https://tienda.cl/products/uno.js': { variants: [{ id: 1, available: true }] },
+      'https://tienda.cl/products/of-1.js': { variants: [{ id: 1, available: false }] },
+      'https://tienda.cl/products/of-2.js': { variants: [{ id: 2, available: true }] },
+      'https://tienda.cl/products/of-3.js': { variants: [{ id: 3, available: true }] },
+      'https://tienda.cl/products/of-6.js': { variants: [{ id: 6, available: true }] },
     })
 
-    const found = await confirmOffers(offers, fetcher)
+    // Las Cartas Viajan en paralelo, así que el Orden entre ellas no se Fija.
+    const found = await confirmOffers(offers, fetcher, 3)
 
-    // La Oferta sin Identificador no Viaja: no habría a quién Devolvérsela.
-    expect(asked).toEqual([
-      'https://tienda.cl/products/uno.js', 'https://tienda.cl/products/tres.js',
-    ])
-    expect(found).toEqual([{ offer_id: 'of-1', available: true }])
+    expect(asked).not.toContain('https://tienda.cl/products/of-3.js')
+    expect([...found].sort((left, right) => left.offer_id.localeCompare(right.offer_id)))
+      .toEqual([
+        { offer_id: 'of-1', available: false },
+        { offer_id: 'of-2', available: true },
+        { offer_id: 'of-6', available: true },
+      ])
+  })
+
+  it('Una Duda no Cierra la Vuelta: se Sigue preguntando', async () => {
+    // Una Tienda que no Contestó no Niega ni Confirma; la siguiente puede Sí.
+    const { fetcher, asked } = store({
+      'https://tienda.cl/products/of-2.js': { variants: [{ id: 2, available: true }] },
+    })
+
+    await confirmOffers(offers, fetcher, 3)
+
+    expect(asked).toContain('https://tienda.cl/products/of-2.js')
+    expect(asked).not.toContain('https://tienda.cl/products/of-3.js')
   })
 })
 
