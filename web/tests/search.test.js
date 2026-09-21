@@ -1,7 +1,8 @@
 /** Las Páginas que el BFF manda de a una, acumuladas de este Lado. */
 import { describe, expect, it } from 'vitest'
 import {
-  groupByCardType, pickable, replacePositions, spreadUnits, summarizeOffers,
+  BY_EDITION, BY_PRICE, groupByCardType, pickable, replacePositions, spreadUnits,
+  summarizeOffers,
 } from '../src/search.js'
 
 const offer = (position, card, price, store, amount = price) =>
@@ -85,5 +86,41 @@ describe('la Cantidad repartida sobre lo que se Ve', () => {
 
     expect(spreadUnits(groups, (row) => (row.card === 'mox' ? 1 : 3)))
       .toEqual({ 'of-1': 3, 'of-9': 1 })
+  })
+})
+
+describe('el Criterio del Reparto', () => {
+  const offer = (id, price, edition, stock = null) =>
+    ({ offer_id: id, price_clp: price, edition, stock_quantity: stock,
+       stock_status: 'unknown' })
+  const groups = [{ card: 'sol ring', rows: [
+    offer('of-otc-1', 100, 'otc', 1),
+    offer('of-cmm', 200, 'cmm', 4),
+    offer('of-otc-2', 300, 'otc', 3),
+  ] }]
+  const four = () => 4
+
+  it('Por Precio, la Cantidad Baja sobre las más baratas', () => {
+    expect(spreadUnits(groups, four, BY_PRICE)).toEqual({ 'of-otc-1': 1, 'of-cmm': 3 })
+  })
+
+  it('Por Edición, Sale entera de la que Alcance más barato', () => {
+    // otc también Cubre las cuatro, pero Sale 1.000 contra 800.
+    expect(spreadUnits(groups, four, BY_EDITION)).toEqual({ 'of-cmm': 4 })
+  })
+
+  it('Cubrir Manda sobre Ahorrar', () => {
+    // La Edición barata Deja dos Copias afuera: no Sirve, aunque Sea la barata.
+    const short = [{ card: 'sol ring', rows: [
+      offer('of-barata', 100, 'otc', 2), offer('of-cara', 500, 'cmm', 4)] }]
+
+    expect(spreadUnits(short, four, BY_EDITION)).toEqual({ 'of-cara': 4 })
+  })
+
+  it('Sin Edición que Cubra, Vuelve al Precio', () => {
+    const scattered = [{ card: 'sol ring', rows: [
+      offer('of-a', 100, 'otc', 1), offer('of-b', 200, 'cmm', 1)] }]
+
+    expect(spreadUnits(scattered, four, BY_EDITION)).toEqual({ 'of-a': 1, 'of-b': 1 })
   })
 })

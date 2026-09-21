@@ -56,30 +56,65 @@ export function pickable(offer) {
   return offer.stock_status !== 'unavailable'
 }
 
+/** Llena la Cantidad pedida con estas Ofertas, de la barata a la cara.
+ *
+ * De cada Tienda se Toma hasta lo que Declara Tener. Sin Cantidad Declarada
+ * se Asume que Alcanza, que es lo mismo que Asume el Reparto del Servidor.
+ * Devuelve también lo que Quedó sin cubrir y lo que Costaría, para Poder
+ * Comparar dos Maneras de Llenar la misma Lista.
+ */
+function fillFrom(rows, asked) {
+  const picks = {}
+  let left = asked
+  let cost = 0
+  const sorted = [...rows].sort(
+    (one, other) => (one.price_clp ?? Infinity) - (other.price_clp ?? Infinity))
+  for (const offer of sorted) {
+    if (left <= 0) break
+    const declared = offer.stock_quantity
+    const take = declared == null ? left : Math.min(left, declared)
+    if (take <= 0 || !offer.offer_id) continue
+    picks[offer.offer_id] = take
+    cost += take * (offer.price_clp ?? 0)
+    left -= take
+  }
+  return { picks, left, cost }
+}
+
+/** Con qué Criterio se Reparte la Cantidad pedida. */
+export const BY_PRICE = 'precio'
+export const BY_EDITION = 'edicion'
+
 /** Reparte la Cantidad pedida de cada Carta entre las Ofertas que se Ven.
  *
- * Filtrar por Edición o por Variante es Decir cuál se Quiere. Una vez Dicho,
- * ya no hay nada que Elegir: la Cantidad Baja sola sobre las más baratas de
- * esa Edición, tomando de cada Tienda hasta lo que Declara Tener. Sin Cantidad
- * Declarada se Asume que Alcanza, que es lo mismo que Asume el Reparto.
+ * Por Precio —lo normal— la Cantidad Baja sobre las más baratas, aunque eso
+ * Signifique tres Ediciones distintas de la misma Carta. Por Edición se Busca
+ * la Edición que Alcance a Cubrirla entera más barato: quien Arma un Mazo
+ * para que Combine no Quiere una Carta de cada Set.
  *
- * Es el Gemelo de `take_units` en `muchi/mtg/optimizer.py`: la misma Regla,
- * del otro lado de la Frontera, porque acá el Servidor no Sabe qué se Filtró.
+ * Es el Gemelo de `take_units` en `muchi/mtg/optimizer.py`: la misma Regla de
+ * los dos Lados, porque el Servidor no Sabe qué se Filtró en la Pantalla.
  */
-export function spreadUnits(groups, askedFor) {
+export function spreadUnits(groups, askedFor, criterion = BY_PRICE) {
   const filled = {}
   for (const group of groups) {
-    let left = askedFor(group) || 0
+    const asked = askedFor(group) || 0
     const rows = group.rows.filter(pickable)
-      .sort((left_, right) => (left_.price_clp ?? Infinity) - (right.price_clp ?? Infinity))
-    for (const offer of rows) {
-      if (left <= 0) break
-      const declared = offer.stock_quantity
-      const take = declared == null ? left : Math.min(left, declared)
-      if (take <= 0 || !offer.offer_id) continue
-      filled[offer.offer_id] = take
-      left -= take
+    let best = fillFrom(rows, asked)
+    if (criterion === BY_EDITION) {
+      const editions = new Map()
+      for (const offer of rows) {
+        const named = offer.edition || ''
+        if (!editions.has(named)) editions.set(named, [])
+        editions.get(named).push(offer)
+      }
+      // Cubrir Manda sobre Ahorrar: una Edición que Deja Copias afuera no
+      // Sirve aunque Sea la más barata de todas.
+      const [pick] = [...editions.values()].map((rows_) => fillFrom(rows_, asked))
+        .sort((one, other) => (one.left - other.left) || (one.cost - other.cost))
+      if (pick && pick.left <= best.left) best = pick
     }
+    Object.assign(filled, best.picks)
   }
   return filled
 }
