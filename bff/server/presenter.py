@@ -388,6 +388,9 @@ def build_cart(items: tuple[SearchItem, ...], shipping: int, muchi_dolar: int,
     orders = [Order(item.quantity, item.name) for item in items]
     found: dict[str, list[Offer]] = {}
     catalog: dict[str, Offer] = {}
+    # La Impresion de cada Oferta, para que el Carrito Diga cual se Eligio:
+    # dos Lineas con el mismo Nombre y distinta Edicion no son la misma Compra.
+    printings: dict[str, dict[str, str]] = {}
     converted = 0
     for item in items:
         for offer in item.offers:
@@ -409,6 +412,10 @@ def build_cart(items: tuple[SearchItem, ...], shipping: int, muchi_dolar: int,
             found.setdefault(item.name.lower(), []).append(row)
             if offer.offer_id:
                 catalog[offer.offer_id] = row
+                printings[offer.offer_id] = {
+                    "edition": offer.edition, "finish": offer.finish,
+                    "condition": offer.condition, "language": offer.language,
+                }
     # Sin Elecciones, el Carrito es la Recomendacion: el Reparto que Muchi
     # Haria. Con Elecciones, es lo que la Persona Armo.
     if picks:
@@ -430,6 +437,7 @@ def build_cart(items: tuple[SearchItem, ...], shipping: int, muchi_dolar: int,
                 "card_name": line.card_name, "quantity": line.quantity,
                 "unit_price": float(line.unit_price), "subtotal": float(line.subtotal),
                 "url": line.url, "title": line.title, "offer_id": line.offer_id,
+                **printings.get(line.offer_id, {}),
             } for line in lines],
         })
     return {
