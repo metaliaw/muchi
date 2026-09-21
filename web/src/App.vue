@@ -134,13 +134,16 @@ const reachable = computed(() => countReachable(
 const confirmable = computed(() =>
   Boolean(state.value?.done) && reachable.value > 0 && !stocked.value)
 
-// Sumar una Copia Vuelve interesante saber si de verdad Está. Se Pregunta a
-// esa Tienda y a nadie más: un Toque no Debe Desatar una Ronda del Servicio.
-// Si la Tienda no Contesta —CORS cerrado, Red caída— la Cuenta Sube igual y
-// nadie se Entera, que es lo que Pasaba antes de poder preguntar.
+// Tocar una Oferta Pregunta si Está, a esa Tienda y a nadie más: un Toque no
+// Debe Desatar una Ronda del Servicio. Si la Tienda no Deja preguntar —CORS
+// cerrado, otra Plataforma— se Dice, porque el Toque no Tuvo otro Efecto y
+// un Silencio Parecería que la Página se Colgó.
 async function confirmOne(offer) {
   const [check] = await confirmOffers([offer], fetch, 1)
-  if (!check) return
+  if (!check) {
+    say(`${offer.store} no contesta desde acá; no puedo confirmarla`, 'idle')
+    return
+  }
   rememberChecks(searchId.value, [check])
   try {
     applyStock(await api.confirmStock(searchId.value, [check], match.value, false))
@@ -153,6 +156,8 @@ async function confirmOne(offer) {
     const { [offer.offer_id]: gone, ...rest } = units.value
     units.value = rest
     say(`En ${offer.store} ya no queda`, 'idle')
+  } else {
+    say(`En ${offer.store} sí queda`, 'happy')
   }
 }
 
@@ -573,7 +578,7 @@ onUnmounted(stopPolling)
         :advertise-groups="advertiseSections"
         v-model:units="units"
         @recommend="units = { ...recommended }"
-        @take="confirmOne"
+        @confirm="confirmOne"
         @look="lookAtCard"
       >
         <template #advertisement="{ group }">
