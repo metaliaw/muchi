@@ -40,6 +40,13 @@ const props = defineProps({
   advertiseGroups: { type: Boolean, default: false },
 })
 
+// Cuántas Copias Pide la Lista de cada Carta. El Badge lo Muestra al lado de
+// lo contado: "1 / 4" Dice de una vez que esta Tienda no Alcanza sola.
+const asked = computed(() => Object.fromEntries(
+  props.items.map((item) => [item.name.toLowerCase(), item.quantity])))
+const askedFor = (offer) =>
+  asked.value[(offer.card_type || offer.card_name || '').toLowerCase()] || 0
+
 const edition = ref('')
 const editions = computed(() => [...new Set(props.offers
   .map((offer) => offer.edition)
@@ -132,6 +139,19 @@ const grouped = computed(() => groups.value.length > 1)
     <slot v-if="advertiseGroups" name="advertisement" :group="group" />
     <article v-for="(offer, index) in group.rows" :key="`${offer.url}-${index}`"
              class="mu-panel mu-oferta" :class="{ mejor: offer.best }">
+      <!-- La Tienda casi nunca Dice cuántas Tiene; quien Abrió la Página sí.
+           En blanco no Afirma nada, que es como Estaba antes de preguntar. El
+           Total al lado Evita Contar de memoria cuántas Faltan. -->
+      <label v-if="offer.offer_id" class="mu-copias">
+        <input type="number" min="0" max="999" step="1" placeholder="?"
+               :value="units[offer.offer_id] ?? ''"
+               :aria-label="`Cuántas Copias Tiene ${offer.store}`"
+               @input="countUnits(offer, $event.target.value)" />
+        <span v-if="askedFor(offer)" class="mu-copias__total">/ {{ askedFor(offer) }}</span>
+        <span class="mu-copias__rotulo">Copias</span>
+      </label>
+
+      <div class="mu-oferta-cuerpo">
       <div class="mu-oferta-cab">
         <h3 class="mu-mirable" tabindex="0" role="button"
             :title="`Mira ${offer.card_name}`"
@@ -163,17 +183,7 @@ const grouped = computed(() => groups.value.length > 1)
         </ul>
       </details>
       <p v-if="offer.note" class="mu-caption">{{ offer.note }}</p>
-      <div class="mu-oferta-pie">
-        <a :href="offer.url" target="_blank" rel="noopener noreferrer">{{ offer.action }} →</a>
-        <!-- La Tienda casi nunca Dice cuántas Tiene; quien Abrió la Página sí.
-             En blanco no Afirma nada, que es como Estaba antes de preguntar. -->
-        <label v-if="offer.offer_id" class="mu-copias">
-          <span class="mu-caption">Copias</span>
-          <input type="number" min="0" max="999" step="1" placeholder="?"
-                 :value="units[offer.offer_id] ?? ''"
-                 :aria-label="`Cuántas Copias Tiene ${offer.store}`"
-                 @input="countUnits(offer, $event.target.value)" />
-        </label>
+      <a :href="offer.url" target="_blank" rel="noopener noreferrer">{{ offer.action }} →</a>
       </div>
     </article>
     </template>
@@ -183,14 +193,39 @@ const grouped = computed(() => groups.value.length > 1)
 </template>
 
 <style scoped>
-/* El Pie Junta el Enlace y las Copias: son las dos Cosas que se Hacen con una
-   Oferta, ir a verla o Decir cuántas Quedan. */
-.mu-oferta-pie {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; flex-wrap: wrap; margin-top: 6px;
+/* Las Copias Abren la Oferta por la Izquierda: es lo primero que se Mira
+   cuando se está Armando una Compra, y ahí el Número Cabe grande. */
+/* Flex y no Grid: una Oferta sin Identificador no Lleva Ficha, y una Columna
+   vacía le Comería el Ancho al Cuerpo. */
+.mu-oferta { display: flex; align-items: flex-start; gap: 14px; }
+.mu-oferta-cuerpo { flex: 1; min-width: 0; }
+.mu-copias {
+  flex: none;
+  display: grid; grid-template-columns: auto auto; justify-content: center;
+  align-items: baseline; align-content: center; gap: 0 4px;
+  /* Un Ancho fijo Alinea todas las Fichas: con uno y con doce Dígitos, los
+     Nombres de las Ofertas Empiezan en la misma Columna. */
+  min-width: 4.6rem; padding: 10px 12px; border-radius: 16px;
+  background: var(--mu-papel); border: 1px solid var(--mu-rosa-cl);
+  cursor: pointer;
 }
-.mu-copias { display: flex; align-items: center; gap: 6px; }
-.mu-copias input { width: 5.5ch; text-align: center; }
+.mu-copias input {
+  width: 3ch; padding: 0; border: 0; background: none; text-align: right;
+  font-size: 1.5rem; font-weight: 800; color: var(--mu-acento);
+  font-family: inherit;
+}
+/* Las Flechitas Roban el Ancho que el Número Necesita para Verse. */
+.mu-copias input::-webkit-outer-spin-button,
+.mu-copias input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.mu-copias input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+.mu-copias input:focus { outline: none; }
+.mu-copias:focus-within { border-color: var(--mu-acento); }
+.mu-copias__total { font-size: 1.05rem; font-weight: 700; color: var(--mu-tinta-sw); }
+.mu-copias__rotulo {
+  grid-column: 1 / -1; text-align: center;
+  font-size: .72rem; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--mu-tinta-sw);
+}
 .mu-lista { margin-bottom: 14px; }
 .mu-lista h2 { margin-top: 0; }
 .mu-lista-fila { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
