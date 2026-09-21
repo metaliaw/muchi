@@ -1,7 +1,7 @@
 /** Las Páginas que el BFF manda de a una, acumuladas de este Lado. */
 import { describe, expect, it } from 'vitest'
 import {
-  groupByCardType, pickOffer, replacePositions, summarizeOffers,
+  groupByCardType, pickable, replacePositions, summarizeOffers,
 } from '../src/search.js'
 
 const offer = (position, card, price, store, amount = price) =>
@@ -43,30 +43,10 @@ describe('los Grupos por Tipo de Carta', () => {
   })
 })
 
-describe('la Oferta elegida', () => {
-  const row = (id, extra = {}) =>
-    ({ offer_id: id, stock_status: 'unknown', best: false, ...extra })
-  const rows = [row('of-1'), row('of-2', { best: true }), row('of-3')]
-
-  it('Sin nadie que Marque, Vale la que el Servidor Coronó', () => {
-    expect(pickOffer(rows)).toBe('of-2')
-  })
-
-  it('Lo Marcado Manda sobre la Corona', () => {
-    expect(pickOffer(rows, 'of-3')).toBe('of-3')
-  })
-
-  it('Se Salta la Agotada y Sigue a la próxima', () => {
-    const sold = [row('of-1', { stock_status: 'unavailable', best: true }), row('of-2')]
-    expect(pickOffer(sold)).toBe('of-2')
-  })
-
-  it('Contar cero Suelta la Elección hecha', () => {
-    // Quien Escribió el Cero ya Fue a mirar: seguir Marcándola sería Insistir.
-    expect(pickOffer(rows, 'of-3', { 'of-3': 0 })).toBe('of-2')
-  })
-
-  it('Sin ninguna en pie no Elige nada, en vez de Elegir mal', () => {
-    expect(pickOffer([row('of-1', { stock_status: 'unavailable' })])).toBe('')
+describe('la Oferta que se Puede comprar', () => {
+  it('Una Agotada no se Compra; una en Duda sí', () => {
+    expect(pickable({ stock_status: 'unavailable' })).toBe(false)
+    expect(pickable({ stock_status: 'unknown' })).toBe(true)
+    expect(pickable({ stock_status: 'available' })).toBe(true)
   })
 })

@@ -24,6 +24,9 @@ class Line:
     unit_price: int | Decimal
     url: str
     title: str
+    # De que Oferta Salio esta Linea. Sin el, el Front no Puede Marcar en la
+    # Lista cual Oferta es la que el Reparto Eligio.
+    offer_id: str = ""
 
     @property
     def subtotal(self) -> int | Decimal:
@@ -118,7 +121,33 @@ def build_naive_plan(orders: list[Order],
             continue
         o = min(offers, key=lambda x: x.price_clp)
         plan.lines.append(
-            Line(p.name, p.quantity, o.store, o.price_clp, o.url, o.title))
+            Line(p.name, p.quantity, o.store, o.price_clp, o.url, o.title, o.key))
+    return plan
+
+
+def build_chosen_plan(orders: list[Order], offers_by_id: dict[str, Offer],
+                      picks: dict[str, int], shipping_per_store: int = 0) -> Plan:
+    """El Carrito que Armo quien Compra, Oferta por Oferta.
+
+    Aca no se Optimiza nada: se Suma lo Elegido y se Cuentan los Envios. El
+    Reparto Automatico ya Dijo lo suyo —Llena los Selectores— y de ahi en
+    adelante Manda la Persona, incluso cuando Elige peor. Lo que no Alcanza a
+    Cubrir lo Pedido Vuelve en `short`, porque un Carrito que Entrega menos
+    Copias sin Decirlo Miente el Total.
+    """
+    plan = Plan(shipping_per_store=shipping_per_store)
+    bought: dict[str, int] = {}
+    for offer_id, quantity in picks.items():
+        item = offers_by_id.get(offer_id)
+        if item is None or quantity <= 0:
+            continue
+        plan.lines.append(Line(item.card_name, quantity, item.store, item.price_clp,
+                               item.url, item.title, item.key))
+        bought[item.card_name.lower()] = bought.get(item.card_name.lower(), 0) + quantity
+    for order in orders:
+        left = order.quantity - bought.get(order.name.lower(), 0)
+        if left > 0:
+            plan.short[order.name] = left
     return plan
 
 
@@ -212,7 +241,8 @@ def build_optimal_plan(orders: list[Order],
             continue
         for offer, units in taken:
             plan.lines.append(
-                Line(names[i], units, offer.store, offer.price_clp, offer.url, offer.title))
+                Line(names[i], units, offer.store, offer.price_clp, offer.url,
+                     offer.title, offer.key))
         # Media Carta conseguida no es una Carta faltante, pero Callarlo seria
         # Entregar un Carrito que no Compra lo que se Pidio.
         if left:

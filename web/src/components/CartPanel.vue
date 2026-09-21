@@ -7,7 +7,7 @@ const props = defineProps({
   searchId: { type: String, required: true },
   // El Carrito vuelve a la Carta pedida: el Modo le dice si hubo Derivados.
   match: { type: String, default: 'exact' },
-  // Cuántas Copias Tiene cada Oferta. Lo que nadie Contó no Limita nada.
+  // Cuántas Copias se Compran en cada Oferta. Vacío Devuelve la Recomendación.
   units: { type: Object, default: () => ({}) },
 })
 

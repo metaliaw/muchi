@@ -517,42 +517,64 @@ def test_the_crown_moves_to_the_next_offer_with_stock(client):
     assert agotada["stock_label"] == "Agotado"
 
 
-def test_the_cart_splits_when_a_store_runs_out(client):
-    """Cuatro Copias no Salen de una Tienda que Tiene una."""
+def test_the_cart_recommends_before_anyone_chooses(client):
+    """Sin Elecciones, el Carrito es el Reparto que Muchi Haría."""
     http, _ = client
 
-    whole = http.get("/api/searches/abc/cart?shipping=0").json()
-    counted = http.post("/api/searches/abc/cart?shipping=0",
-                        json={"units": [{"offer_id": "of-10", "units": 1}]}).json()
+    plan = http.get("/api/searches/abc/cart?shipping=0").json()
 
-    # Sin Cuenta, las dos Copias salen de la más barata y nadie Avisa nada.
-    assert [(row["store"], row["cards"]) for row in whole["stores"]] == [("Dudosa", 2)]
-    assert sorted((row["store"], row["cards"]) for row in counted["stores"]) \
+    assert [(row["store"], row["cards"]) for row in plan["stores"]] == [("Dudosa", 2)]
+    # La Línea Nombra su Oferta: con eso el Front Llena los Selectores.
+    assert plan["stores"][0]["lines"][0]["offer_id"] == "of-10"
+
+
+def test_the_cart_sums_what_the_person_chose(client):
+    """Elegir dos Tiendas es Comprar en dos Tiendas, aunque Salga más caro."""
+    http, _ = client
+
+    plan = http.post("/api/searches/abc/cart?shipping=0", json={"picks": [
+        {"offer_id": "of-10", "units": 1},
+        {"offer_id": "of-1500", "units": 1},
+    ]}).json()
+
+    assert sorted((row["store"], row["cards"]) for row in plan["stores"]) \
         == [("Dudosa", 1), ("Otra", 1)]
-    assert counted["short"] == []
+    assert plan["cards_cost"] == 1510
+    assert plan["short"] == []
 
 
-def test_the_cart_says_what_it_could_not_complete(client):
-    """Una sola Copia en el Mundo y dos Pedidas: el Carrito lo Dice."""
-    http, _ = client
-
-    plan = http.post("/api/searches/abc/cart?shipping=0", json={"units": [
-        {"offer_id": name, "units": 0}
-        for name in ("of-1500", "of-4000", "of-usd")
-    ] + [{"offer_id": "of-10", "units": 1}]}).json()
-
-    assert [(row["store"], row["cards"]) for row in plan["stores"]] == [("Dudosa", 1)]
-    assert plan["short"] == [{"card_name": "Sol Ring", "units": 1}]
-
-
-def test_a_sold_out_offer_leaves_the_cart(client):
-    """Una Oferta contada en cero no Compite, aunque Sea la más barata."""
+def test_the_cart_says_what_the_choice_leaves_out(client):
+    """Se Piden dos Copias y se Elige una: el Carrito lo Dice."""
     http, _ = client
 
     plan = http.post("/api/searches/abc/cart?shipping=0",
-                     json={"units": [{"offer_id": "of-10", "units": 0}]}).json()
+                     json={"picks": [{"offer_id": "of-10", "units": 1}]}).json()
 
-    assert all(row["store"] != "Dudosa" for row in plan["stores"])
+    assert plan["short"] == [{"card_name": "Sol Ring", "units": 1}]
+
+
+def test_a_pick_of_zero_buys_nothing(client):
+    """Cero no es una Compra: la Oferta no Entra al Carrito."""
+    http, _ = client
+
+    plan = http.post("/api/searches/abc/cart?shipping=0", json={"picks": [
+        {"offer_id": "of-10", "units": 0},
+        {"offer_id": "of-1500", "units": 2},
+    ]}).json()
+
+    assert [(row["store"], row["cards"]) for row in plan["stores"]] == [("Otra", 2)]
+
+
+def test_a_pick_outside_the_search_is_ignored(client):
+    """Se Compra de esta Búsqueda, no del Catálogo entero."""
+    http, _ = client
+
+    plan = http.post("/api/searches/abc/cart?shipping=0", json={"picks": [
+        {"offer_id": "of-ajena", "units": 3},
+        {"offer_id": "of-10", "units": 2},
+    ]}).json()
+
+    assert [(row["store"], row["cards"]) for row in plan["stores"]] == [("Dudosa", 2)]
 
 
 def test_the_config_says_how_long_a_stock_lasts(client):
