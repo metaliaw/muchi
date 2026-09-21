@@ -47,6 +47,28 @@ const byCardThenPrice = (left, right) =>
   left.currency.localeCompare(right.currency) ||
   Number(left.amount) - Number(right.amount)
 
+/** Si una Oferta se Puede elegir para Comprar.
+ *
+ * Una Agotada no, y una contada en cero tampoco: quien Escribió el Cero está
+ * Diciendo que ya Fue a mirar y no Quedaba.
+ */
+export function pickable(offer, units = {}) {
+  return offer.stock_status !== 'unavailable' && units[offer.offer_id] !== 0
+}
+
+/** La Oferta elegida de un Grupo, y por qué.
+ *
+ * Manda lo que alguien Marcó, mientras Siga en pie. Si no Marcó nada —o lo
+ * Marcado se Cayó— Vale la que el Servidor Coronó, que es la más barata
+ * Confirmada. Si esa tampoco Está, se Salta a la siguiente que Siga viva.
+ */
+export function pickOffer(rows, marked = '', units = {}) {
+  const chosen = rows.find((offer) => offer.offer_id === marked)
+  if (chosen && pickable(chosen, units)) return chosen.offer_id
+  const crowned = rows.find((offer) => offer.best && pickable(offer, units))
+  return (crowned || rows.find((offer) => pickable(offer, units)))?.offer_id || ''
+}
+
 /** Todo lo que pertenece a una Búsqueda, declarado y limpiado en un solo Lugar. */
 export function useSearch() {
   const id = ref(new URLSearchParams(location.search).get('search') || '')
