@@ -36,7 +36,7 @@ const LAST_KEY = 'muchi_ultima'
 // El Ritmo lo manda el Servidor; este es el mismo de config/api.defaults.yaml,
 // para los milisegundos que van entre que arranca la Página y llega la Config.
 const config = ref({ poll_seconds: 3, adsense_client: 'ca-pub-6368656861543000',
-                     stock_fresh_seconds: 600 })
+                     stock_fresh_seconds: 600, browser_check_limit: 5 })
 const book = ref(null)
 const games = ref([])
 const game = ref('')
@@ -117,7 +117,8 @@ const confirming = ref(false)
 // Hace cuánto se Confirmó lo que se está mostrando. Cero es «no se Confirmó»:
 // la Certeza vieja se Descartó sola y el Botón Volvió a su lugar.
 const confirmedAge = ref(0)
-const reachable = computed(() => countReachable(offers.value))
+const reachable = computed(() =>
+  countReachable(offers.value, config.value.browser_check_limit))
 const confirmable = computed(() =>
   Boolean(state.value?.done) && reachable.value > 0 && !stocked.value)
 
@@ -125,7 +126,8 @@ async function confirmStock() {
   confirming.value = true
   say('Estoy preguntando en las Tiendas', 'talk')
   try {
-    const found = await confirmOffers(offers.value)
+    const found = await confirmOffers(offers.value, fetch,
+                                      config.value.browser_check_limit)
     applyStock(await api.confirmStock(searchId.value, found, match.value))
     rememberChecks(searchId.value, found)
     confirmedAge.value = 0
@@ -494,8 +496,9 @@ onUnmounted(stopPolling)
           {{ confirming ? 'Preguntando…' : 'Confirmar Stock' }}
         </button>
         <span class="mu-caption">
-          {{ reachable }} Ofertas las Puede preguntar tu Navegador directo a la
-          Tienda. Lo que Confirme vale para este Minuto, no para mañana.
+          Tu Navegador le Pregunta directo a hasta {{ reachable }} Tiendas, y
+          Corta en cuanto una Dice que sí. Lo que Confirme vale para este
+          Minuto, no para mañana.
         </span>
       </p>
 
