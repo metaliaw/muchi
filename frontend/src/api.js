@@ -51,8 +51,11 @@ export const checkStock = (id, match = 'exact') =>
   request(`/api/searches/${encodeURIComponent(id)}/stock?match=${match}`)
 // Lo que el Navegador ya Confirmó viaja en el Cuerpo: esas Tiendas no reciben
 // una segunda Visita nuestra.
-export const confirmStock = (id, checks, match = 'exact') =>
-  post(`/api/searches/${encodeURIComponent(id)}/stock?match=${match}`, { checks })
+// `ask` apagado Corona con lo que el Navegador Trajo y no Visita a nadie: es
+// para el Toque suelto sobre una Oferta.
+export const confirmStock = (id, checks, match = 'exact', ask = true) =>
+  post(`/api/searches/${encodeURIComponent(id)}/stock?match=${match}&ask=${ask}`,
+       { checks })
 export const cancelSearch = (id, key) =>
   post(`/api/searches/${encodeURIComponent(id)}/cancel`, { key })
 export const readCart = (id, shipping, match = 'exact') =>
