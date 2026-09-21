@@ -528,6 +528,15 @@ def test_the_cart_recommends_before_anyone_chooses(client):
     assert plan["stores"][0]["lines"][0]["offer_id"] == "of-10"
 
 
+def test_the_cart_names_the_printing_it_bought(client):
+    """Dos Líneas con el mismo Nombre y distinta Edición no son la misma Compra."""
+    http, _ = client
+
+    line = http.get("/api/searches/abc/cart?shipping=0").json()["stores"][0]["lines"][0]
+
+    assert (line["edition"], line["finish"]) == ("c21", "foil")
+
+
 def test_the_cart_sums_what_the_person_chose(client):
     """Elegir dos Tiendas es Comprar en dos Tiendas, aunque Salga más caro."""
     http, _ = client
