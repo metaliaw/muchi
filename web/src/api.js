@@ -57,6 +57,11 @@ export const cancelSearch = (id, key) =>
   post(`/api/searches/${encodeURIComponent(id)}/cancel`, { key })
 export const readCart = (id, shipping, match = 'exact') =>
   request(`/api/searches/${encodeURIComponent(id)}/cart?shipping=${shipping}&match=${match}`)
+// Las Copias que quien Compra Contó en cada Tienda viajan en el Cuerpo: son
+// muchas, y una URL no es lugar para una Lista.
+export const readCartWithUnits = (id, shipping, units, match = 'exact') =>
+  post(`/api/searches/${encodeURIComponent(id)}/cart?shipping=${shipping}&match=${match}`,
+       { units })
 export const readSources = () => request('/api/sources')
 export const readLanguages = () => request('/api/languages')
 export const readCardArt = ({ name, language = '', edition = '', foil = false }) =>

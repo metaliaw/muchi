@@ -34,6 +34,10 @@ class Line:
 class Plan:
     lines: list[Line] = field(default_factory=list)
     missing: list[str] = field(default_factory=list)
+    # Las Cartas que se Consiguen a medias: cuantas Copias Quedaron sin Tienda
+    # que las Tenga. Una Lista de cuatro con tres Unidades en el Mundo no es
+    # una Carta faltante, pero tampoco es un Carrito completo.
+    short: dict[str, int] = field(default_factory=dict)
     shipping_per_store: int = 0
 
     @property
@@ -51,6 +55,45 @@ class Plan:
     @property
     def total(self) -> int | Decimal:
         return self.cards_cost + self.shipping_cost
+
+
+def group_by_store(offers: list[Offer]) -> dict[str, list[Offer]]:
+    """Las Ofertas de una Carta, por Tienda y de la barata a la cara.
+
+    No se Colapsa a una por Tienda: una Tienda puede Tener dos Copias a dos
+    Precios, y quien Pide cuatro se Lleva las dos. Quedarse con la barata
+    Perderia la segunda Copia como si no Existiera.
+    """
+    grouped: dict[str, list[Offer]] = {}
+    for offer in offers:
+        grouped.setdefault(offer.store, []).append(offer)
+    for rows in grouped.values():
+        rows.sort(key=lambda offer: offer.price_clp)
+    return grouped
+
+
+def take_units(by_store: dict[str, list[Offer]], selection: frozenset[str],
+               quantity: int) -> tuple[list[tuple[Offer, int]], int]:
+    """Cuantas Copias Salen de cada Oferta, de la barata a la cara.
+
+    `Offer.stock` en None es "no Sabemos cuantas hay": se Asume que Alcanzan,
+    que es lo que el Reparto Asumia de todas antes de que alguien Pudiera
+    Decir lo contrario. Un Cero Deja la Oferta fuera. Devuelve tambien las
+    Copias que nadie Pudo cubrir.
+    """
+    options = sorted((offer for store in selection for offer in by_store.get(store, ())),
+                     key=lambda offer: offer.price_clp)
+    taken: list[tuple[Offer, int]] = []
+    left = quantity
+    for offer in options:
+        if left <= 0:
+            break
+        units = left if offer.stock is None else min(left, offer.stock)
+        if units <= 0:
+            continue
+        taken.append((offer, units))
+        left -= units
+    return taken, left
 
 
 def pick_best_per_store(offers: list[Offer]) -> dict[str, Offer]:
@@ -95,7 +138,7 @@ def build_optimal_plan(orders: list[Order],
         if not offers:
             missing.append(p.name)
             continue
-        prices.append(pick_best_per_store(offers))
+        prices.append(group_by_store(offers))
         quantities.append(p.quantity)
         names.append(p.name)
 
@@ -105,7 +148,7 @@ def build_optimal_plan(orders: list[Order],
     candidates = sorted({t for m in prices for t in m})
     # Penalizacion por carta no cubierta: alta como para forzar cobertura,
     # pero finita para que el algoritmo no explote si algo es incomprable.
-    ceiling = max(o.price_clp for m in prices for o in m.values())
+    ceiling = max(o.price_clp for m in prices for rows in m.values() for o in rows)
     PENALTY = ceiling * 4 + shipping_per_store * 10
 
     def cost_selection(selection: frozenset[str]) -> int | Decimal:
@@ -113,8 +156,12 @@ def build_optimal_plan(orders: list[Order],
             return PENALTY * sum(quantities)
         total = shipping_per_store * len(selection)
         for i, by_store in enumerate(prices):
-            available = [by_store[t].price_clp for t in selection if t in by_store]
-            total += (min(available) if available else PENALTY) * quantities[i]
+            taken, left = take_units(by_store, selection, quantities[i])
+            total += sum(offer.price_clp * units for offer, units in taken)
+            # Lo que la Seleccion no Alcanza a cubrir Pesa como si se Comprara
+            # carisimo: asi el Algoritmo Prefiere una Tienda mas antes que
+            # Dejar Copias sin comprar.
+            total += PENALTY * left
         return total
 
     # --- construccion greedy ---
@@ -159,12 +206,16 @@ def build_optimal_plan(orders: list[Order],
     # --- materializar el plan ---
     plan = Plan(missing=missing, shipping_per_store=shipping_per_store)
     for i, by_store in enumerate(prices):
-        options = [by_store[t] for t in current if t in by_store]
-        if not options:
+        taken, left = take_units(by_store, current, quantities[i])
+        if not taken:
             plan.missing.append(names[i])
             continue
-        o = min(options, key=lambda x: x.price_clp)
-        plan.lines.append(
-            Line(names[i], quantities[i], o.store, o.price_clp, o.url, o.title))
+        for offer, units in taken:
+            plan.lines.append(
+                Line(names[i], units, offer.store, offer.price_clp, offer.url, offer.title))
+        # Media Carta conseguida no es una Carta faltante, pero Callarlo seria
+        # Entregar un Carrito que no Compra lo que se Pidio.
+        if left:
+            plan.short[names[i]] = left
 
     return plan

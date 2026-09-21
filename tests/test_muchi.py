@@ -107,6 +107,64 @@ def test_optimizer_reports_missing():
     assert plan.total == 1000
 
 
+def test_optimizer_splits_a_card_when_one_store_runs_out():
+    """Cuatro Copias no Salen de una Tienda que Tiene una."""
+    orders = [Order(4, "A")]
+    offers = {"a": [Offer(store="T1", card_name="A", title="A", price_clp=100,
+                          url="http://x", key="t1", stock=1),
+                    Offer(store="T2", card_name="A", title="A", price_clp=500,
+                          url="http://y", key="t2", stock=None)]}
+
+    plan = optimizer.build_optimal_plan(orders, offers, shipping_per_store=0)
+
+    assert sorted((line.store, line.quantity) for line in plan.lines) \
+        == [("T1", 1), ("T2", 3)]
+    assert plan.cards_cost == 1600
+    assert plan.short == {}
+
+
+def test_optimizer_says_what_it_could_not_complete():
+    """Tres Copias en el Mundo y cuatro Pedidas: el Carrito lo Dice."""
+    orders = [Order(4, "A")]
+    offers = {"a": [Offer(store="T1", card_name="A", title="A", price_clp=100,
+                          url="http://x", key="t1", stock=3)]}
+
+    plan = optimizer.build_optimal_plan(orders, offers, shipping_per_store=0)
+
+    assert [(line.store, line.quantity) for line in plan.lines] == [("T1", 3)]
+    assert plan.short == {"A": 1}
+    assert plan.missing == []
+
+
+def test_optimizer_takes_two_prices_from_the_same_store():
+    """Dos Copias en una Tienda a dos Precios Siguen siendo dos Copias."""
+    orders = [Order(2, "A")]
+    offers = {"a": [Offer(store="T1", card_name="A", title="A barata", price_clp=100,
+                          url="http://x", key="t1a", stock=1),
+                    Offer(store="T1", card_name="A", title="A cara", price_clp=300,
+                          url="http://x2", key="t1b", stock=1)]}
+
+    plan = optimizer.build_optimal_plan(orders, offers, shipping_per_store=1000)
+
+    assert plan.stores == ["T1"]
+    assert plan.cards_cost == 400
+    assert plan.short == {}
+
+
+def test_optimizer_ignores_an_offer_with_zero_units():
+    """Una Oferta que Dice cero no Compite, aunque Sea la más barata."""
+    orders = [Order(1, "A")]
+    offers = {"a": [Offer(store="T1", card_name="A", title="A", price_clp=100,
+                          url="http://x", key="t1", stock=0),
+                    Offer(store="T2", card_name="A", title="A", price_clp=900,
+                          url="http://y", key="t2")]}
+
+    plan = optimizer.build_optimal_plan(orders, offers, shipping_per_store=0)
+
+    assert plan.stores == ["T2"]
+    assert plan.cards_cost == 900
+
+
 def test_optimizer_respects_quantities():
     orders = [Order(4, "A")]
     offers = {"a": [_offer("T1", "A", 250)]}
