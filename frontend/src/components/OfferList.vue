@@ -2,7 +2,7 @@
 /** Las Ofertas, agrupadas por Tipo de Carta y por Precio dentro de cada una. */
 import { computed, ref, watch } from 'vue'
 import { formatAmount, formatClp } from '../api.js'
-import { groupByCardType } from '../search.js'
+import { groupByCardType, pickable as canPick, pickOffer } from '../search.js'
 
 const emit = defineEmits(['look'])
 
@@ -10,6 +10,17 @@ const emit = defineEmits(['look'])
 // ninguna Fuente lo Declara, así que el Carrito Asumía que Alcanzaban todas.
 // Vacío sigue Significando eso; un Número lo Corrige.
 const units = defineModel('units', { type: Object, default: () => ({}) })
+
+// Cuál Oferta de cada Carta se Piensa comprar. Vacío no es Indecisión: es
+// «la que Muchi Recomienda», y esa se Mueve sola cuando la barata se Cae.
+const chosen = defineModel('chosen', { type: Object, default: () => ({}) })
+
+const pickable = (offer) => canPick(offer, units.value)
+const chosenOf = (group) => pickOffer(group.rows, chosen.value[group.card], units.value)
+
+function chooseOffer(group, offer) {
+  chosen.value = { ...chosen.value, [group.card]: offer.offer_id }
+}
 
 function countUnits(offer, written) {
   const clean = { ...units.value }
@@ -138,7 +149,18 @@ const grouped = computed(() => groups.value.length > 1)
     </h2>
     <slot v-if="advertiseGroups" name="advertisement" :group="group" />
     <article v-for="(offer, index) in group.rows" :key="`${offer.url}-${index}`"
-             class="mu-panel mu-oferta" :class="{ mejor: offer.best }">
+             class="mu-panel mu-oferta"
+             :class="{ mejor: offer.best, elegida: chosenOf(group) === offer.offer_id }">
+      <!-- Elegir una Oferta es Decir «de acá la Compro». Nace marcada la que
+           Muchi Recomienda, y una Agotada no se Puede Marcar. -->
+      <input v-if="offer.offer_id && pickable(offer)" type="radio" class="mu-elige"
+             :name="`elige-${group.card}`" :value="offer.offer_id"
+             :checked="chosenOf(group) === offer.offer_id"
+             :aria-label="`Compra ${offer.card_name} en ${offer.store}`"
+             @change="chooseOffer(group, offer)" />
+      <span v-else-if="offer.offer_id" class="mu-elige mu-elige--fuera"
+            aria-hidden="true" title="Agotada: no se puede elegir"></span>
+
       <!-- La Tienda casi nunca Dice cuántas Tiene; quien Abrió la Página sí.
            En blanco no Afirma nada, que es como Estaba antes de preguntar. El
            Total al lado Evita Contar de memoria cuántas Faltan. -->
@@ -198,6 +220,13 @@ const grouped = computed(() => groups.value.length > 1)
 /* Flex y no Grid: una Oferta sin Identificador no Lleva Ficha, y una Columna
    vacía le Comería el Ancho al Cuerpo. */
 .mu-oferta { display: flex; align-items: flex-start; gap: 14px; }
+.mu-elige {
+  flex: none; width: 20px; height: 20px; margin: 26px 0 0; accent-color: var(--mu-acento);
+  cursor: pointer;
+}
+/* El Hueco de una Agotada Guarda la Columna: sin él, su Ficha se Corre y las
+   Ofertas Dejan de Alinearse entre sí. */
+.mu-elige--fuera { display: block; cursor: default; }
 .mu-oferta-cuerpo { flex: 1; min-width: 0; }
 .mu-copias {
   flex: none;
@@ -237,6 +266,10 @@ const grouped = computed(() => groups.value.length > 1)
 .mu-ficha strong { font-size: 1.4rem; }
 .mu-oferta { margin-bottom: 12px; }
 .mu-oferta.mejor { border-color: var(--mu-peri); }
+/* La Elegida se Nota sin Gritar: un Borde, no un Fondo entero. Va después de
+   `mejor` porque Elegir otra es Contradecir la Recomendación, y lo que Manda
+   en la Pantalla es la Decisión de quien Compra. */
+.mu-oferta.elegida { border-color: var(--mu-acento); box-shadow: var(--mu-sombra-sw); }
 .mu-oferta-cab { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap; }
 h3 { margin: 0; font-size: 1.05rem; }
 /* El Encabezado separa una Carta de la siguiente sin robarle Peso al Precio. */
