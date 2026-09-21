@@ -517,6 +517,46 @@ def test_the_crown_moves_to_the_next_offer_with_stock(client):
     assert agotada["stock_label"] == "Agotado"
 
 
+def test_the_config_says_how_long_a_stock_lasts(client):
+    """El Front Guarda lo Confirmado con su Hora; el Tope lo Dice el Servidor."""
+    http, _ = client
+
+    assert http.get("/api/config").json()["stock_fresh_seconds"] == 600
+
+
+def test_the_browser_check_saves_the_visit(client):
+    """Lo que el Navegador Confirmó no se le Pregunta al Servicio otra vez."""
+    http, searches = client
+
+    answer = http.post("/api/searches/abc/stock",
+                       json={"checks": [{"offer_id": "of-10", "available": True}]}).json()
+
+    assert searches.asked == []
+    assert answer["best"] == [{"card_type": "sol ring", "offer_id": "of-10"}]
+
+
+def test_the_browser_no_passes_the_crown(client):
+    """Un Agotado visto en el Navegador Mueve la Corona sin Visitar la barata."""
+    http, searches = client
+
+    answer = http.post("/api/searches/abc/stock",
+                       json={"checks": [{"offer_id": "of-10", "available": False}]}).json()
+
+    assert searches.asked == [("of-1500",)]
+    assert answer["best"] == [{"card_type": "sol ring", "offer_id": "of-1500"}]
+
+
+def test_an_offer_outside_the_plan_is_ignored(client):
+    """El Navegador Informa sobre esta Búsqueda: lo demás no Corona nada."""
+    http, searches = client
+
+    answer = http.post("/api/searches/abc/stock",
+                       json={"checks": [{"offer_id": "of-ajena", "available": True}]}).json()
+
+    assert searches.asked == [("of-10",)]
+    assert all(row["offer_id"] != "of-ajena" for row in answer["offers"])
+
+
 def test_a_checked_offer_stops_the_round(client):
     """Si la más barata Tiene, nadie más recibe una Visita."""
     http, searches = client

@@ -371,11 +371,12 @@ Cada Cosa se lee en un solo lugar, y por eso acá ya no hay Copias:
 - 📦 [El Pedido de Stock](docs/api/pedido-stock.md): cómo se pregunta por Rondas
   —la Candidata más barata de cada Tipo en una sola Consulta— para que el Costo
   crezca con la Duda y no con el Largo de la Lista. El BFF conserva la Ruta y el
-  Tope `stock_check_limit` (hoy **3**); el Front ya no la llama y corona la más
-  barata de entrada.
+  Tope `stock_check_limit` (hoy **3**). El Front la llama al Final, con lo que
+  su Navegador ya pudo Confirmar por su cuenta.
 - ⚖️ [Por qué la Re-verificación de Stock es Opcional](docs/reverificacion-opcional.md):
   la Cadena de Carga que aparece cuando cada Oferta barata pide una segunda
-  Visita a la Tienda, y por qué esa Vuelta no puede ser obligatoria.
+  Visita a la Tienda, por qué esa Vuelta no puede ser obligatoria, y cómo el
+  Navegador de quien Compra paga una de cada cinco sin que nadie la Note.
 - 🔍 [Hallazgos en los Buscadores](docs/hallazgos-buscadores.md): los Supuestos
   que se cayeron cuando una Búsqueda empezó a traer Cartas distintas y no
   Variantes de una, qué los cerró y qué queda abierto. Los del otro lado de la
