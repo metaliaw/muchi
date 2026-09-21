@@ -4,7 +4,7 @@ import { computed, ref, watch } from 'vue'
 import { formatAmount, formatClp } from '../api.js'
 import { groupByCardType, pickable as canPick, spreadUnits } from '../search.js'
 
-const emit = defineEmits(['look', 'recommend'])
+const emit = defineEmits(['look', 'recommend', 'take'])
 
 // Cuántas Copias se Compran en cada Oferta. Cero es lo normal: de casi toda
 // Oferta no se Compra nada. Las que el Reparto Recomienda nacen con su
@@ -24,6 +24,20 @@ function missingFor(group, offer) {
     .filter((row) => row.offer_id !== offer.offer_id)
     .reduce((count, row) => count + bought(row), 0)
   return Math.max(1, total - others)
+}
+
+// Tocar la Oferta Suma una Copia. Es el Gesto de quien está Armando la
+// Compra mirando: «de esta me Llevo una más». Los Controles propios —el
+// Enlace, la Casilla, el Selector— Siguen Haciendo lo suyo y no Suman.
+function takeOne(offer, event) {
+  if (!offer.offer_id || !pickable(offer)) return
+  // El Nombre Abre la Carta y el Enlace Lleva a la Tienda: cada Control
+  // Sigue Haciendo lo suyo, y solo el Resto de la Ficha Suma.
+  if (event.target.closest('a, input, label, button, summary, details, .mu-mirable')) return
+  countUnits(offer, String(bought(offer) + 1))
+  // Sumar una Copia Vuelve interesante saber si de verdad Está. Se Pregunta
+  // solo si la Tienda Deja; si no, la Cuenta Sube igual.
+  emit('take', offer)
 }
 
 // Marcar una Oferta es Pedirle lo que Falta, no una Copia suelta: quien
@@ -169,7 +183,9 @@ const grouped = computed(() => groups.value.length > 1)
     <article v-for="(offer, index) in group.rows" :key="`${offer.url}-${index}`"
              class="mu-panel mu-oferta"
              :class="{ mejor: offer.best, elegida: bought(offer) > 0,
-                       agotada: offer.offer_id && !pickable(offer) }">
+                       agotada: offer.offer_id && !pickable(offer),
+                       tomable: offer.offer_id && pickable(offer) }"
+             @click="takeOne(offer, $event)">
       <!-- Tildar es Decir «de acá me Llevo». El Reparto ya Tildó lo que
            Recomienda; una Agotada ni siquiera Lleva Casilla. -->
       <input v-if="offer.offer_id && pickable(offer)" type="checkbox" class="mu-elige"
@@ -250,6 +266,9 @@ const grouped = computed(() => groups.value.length > 1)
 .mu-elige--fuera { display: block; cursor: default; }
 /* Una Agotada se Sigue Viendo, apagada: su Precio Dice algo del Mercado,
    pero no es una Compra posible y no Debería Competir por la Atención. */
+/* Se Puede Tocar para Sumar, y la Mano lo Dice antes que cualquier Cartel. */
+.mu-oferta.tomable { cursor: pointer; }
+.mu-oferta.tomable:hover { border-color: var(--mu-rosa); }
 .mu-oferta.agotada { opacity: .55; }
 .mu-oferta.agotada .mu-precio { color: var(--mu-tinta-sw); }
 .mu-copias--fuera {
