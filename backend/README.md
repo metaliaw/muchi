@@ -80,6 +80,11 @@ carta que el código deduce de él, con lo que queda abierto.
 El [producto sellado](docs/producto-sellado.md) explica qué identifica una caja,
 qué fuente sirve para buscarla, la propiedad `sealed` de agregadores y tiendas, y
 por qué un 429 no cuenta como caída.
+La [tienda caída ocho días](docs/tienda-caida-netdecker.md) cuenta el caso de
+`v3.netdecker.cl`, por qué un circuito de un minuto fijo no alcanzaba y qué
+queda abierto —`www.deckscards.cl` no está caída, es lenta, y eso es otro
+problema.
+
 El [castigo y perdón](docs/castigo-y-perdon.md) reúne la política completa hacia
 las fuentes: qué se castiga, cuánto dura, qué respuestas honestas nunca cuentan
 como falla y por qué la duda beneficia a quien pregunta.

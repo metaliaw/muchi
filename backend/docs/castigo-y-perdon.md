@@ -57,12 +57,17 @@ seguidas sube en uno. La fuente sigue recibiendo preguntas con normalidad.
 
 ### 4. El circuito abierto — el silencio
 
-A la **quinta falla seguida**, la fuente deja de recibir preguntas por **un
-minuto**. Quien pregunte por ella en ese rato recibe un fallo que dice hasta
-cuándo dura.
+A la **quinta falla seguida**, la fuente deja de recibir preguntas. Quien
+pregunte por ella en ese rato recibe un fallo que dice hasta cuándo dura.
 
-Es lo más duro que hace Muchi, y sigue siendo poco: un minuto, y solo contra quien
-falló cinco veces seguidas.
+La espera **dobla con cada falla que sigue**: un minuto, dos, cuatro, hasta un
+techo de una hora. Un minuto fijo servía para una caída de un rato y fallaba para
+una de una semana — [una tienda caída ocho días](tienda-caida-netdecker.md) seguía
+recibiendo cinco consultas por minuto, y cada una le costaba su timeout a la
+búsqueda que la pidió.
+
+Sigue siendo poco, y sigue siendo lo más duro que hace Muchi: solo contra quien
+falló cinco veces seguidas, y una sola respuesta buena lo borra entero.
 
 ## El Perdón
 
@@ -149,7 +154,8 @@ en su error.
 
 ## Qué Queda Abierto
 
-- **Las constantes no están medidas.** Cinco fallas, un minuto de circuito, treinta
+- **Las constantes no están medidas.** Cinco fallas, un minuto de circuito y su
+  techo de una hora, treinta
   segundos de freno, 30% bajo la mediana. Son números razonables que nadie validó
   contra datos. `PaceSources` permite tunear los del ritmo sin recompilar; el resto
   pide una edición.
