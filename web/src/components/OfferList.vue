@@ -4,7 +4,7 @@ import { computed, ref, watch } from 'vue'
 import { formatAmount, formatClp } from '../api.js'
 import { groupByCardType, pickable as canPick, spreadUnits } from '../search.js'
 
-const emit = defineEmits(['look', 'recommend', 'take'])
+const emit = defineEmits(['look', 'recommend', 'confirm'])
 
 // Cuántas Copias se Compran en cada Oferta. Cero es lo normal: de casi toda
 // Oferta no se Compra nada. Las que el Reparto Recomienda nacen con su
@@ -26,18 +26,19 @@ function missingFor(group, offer) {
   return Math.max(1, total - others)
 }
 
-// Tocar la Oferta Suma una Copia. Es el Gesto de quien está Armando la
-// Compra mirando: «de esta me Llevo una más». Los Controles propios —el
-// Enlace, la Casilla, el Selector— Siguen Haciendo lo suyo y no Suman.
-function takeOne(offer, event) {
+// Tocar la Oferta Pregunta si Está, y nada más. Comprar es una Decisión con
+// Cantidad: para eso están el Más y el Menos, que no se Aprietan sin querer.
+function touchOffer(offer, event) {
   if (!offer.offer_id || !pickable(offer)) return
   // El Nombre Abre la Carta y el Enlace Lleva a la Tienda: cada Control
-  // Sigue Haciendo lo suyo, y solo el Resto de la Ficha Suma.
+  // Sigue Haciendo lo suyo, y solo el Resto de la Ficha Pregunta.
   if (event.target.closest('a, input, label, button, summary, details, .mu-mirable')) return
-  countUnits(offer, String(bought(offer) + 1))
-  // Sumar una Copia Vuelve interesante saber si de verdad Está. Se Pregunta
-  // solo si la Tienda Deja; si no, la Cuenta Sube igual.
-  emit('take', offer)
+  emit('confirm', offer)
+}
+
+// Una Copia más, o una menos. Nunca bajo cero: un Carrito negativo no Existe.
+function stepUnits(offer, step) {
+  countUnits(offer, String(Math.max(0, bought(offer) + step)))
 }
 
 // Marcar una Oferta es Pedirle lo que Falta, no una Copia suelta: quien
@@ -185,7 +186,7 @@ const grouped = computed(() => groups.value.length > 1)
              :class="{ mejor: offer.best, elegida: bought(offer) > 0,
                        agotada: offer.offer_id && !pickable(offer),
                        tomable: offer.offer_id && pickable(offer) }"
-             @click="takeOne(offer, $event)">
+             @click="touchOffer(offer, $event)">
       <!-- Tildar es Decir «de acá me Llevo». El Reparto ya Tildó lo que
            Recomienda; una Agotada ni siquiera Lleva Casilla. -->
       <input v-if="offer.offer_id && pickable(offer)" type="checkbox" class="mu-elige"
@@ -197,15 +198,23 @@ const grouped = computed(() => groups.value.length > 1)
 
       <!-- Cuántas Copias Salen de acá. Cero es lo normal, y el Total al lado
            Evita Contar de memoria cuántas Faltan. -->
-      <label v-if="offer.offer_id && pickable(offer)" class="mu-copias"
-             :class="{ vacia: !bought(offer) }">
-        <input type="number" min="0" max="999" step="1"
-               :value="bought(offer)"
-               :aria-label="`Copias de ${offer.card_name} en ${offer.store}`"
-               @input="countUnits(offer, $event.target.value)" />
-        <span v-if="askedFor(offer)" class="mu-copias__total">/ {{ askedFor(offer) }}</span>
+      <div v-if="offer.offer_id && pickable(offer)" class="mu-copias"
+           :class="{ vacia: !bought(offer) }">
+        <button type="button" class="mu-copias__paso" :disabled="!bought(offer)"
+                :aria-label="`Una Copia menos en ${offer.store}`"
+                @click="stepUnits(offer, -1)">−</button>
+        <label class="mu-copias__cuenta">
+          <input type="number" min="0" max="999" step="1"
+                 :value="bought(offer)"
+                 :aria-label="`Copias de ${offer.card_name} en ${offer.store}`"
+                 @input="countUnits(offer, $event.target.value)" />
+          <span v-if="askedFor(offer)" class="mu-copias__total">/ {{ askedFor(offer) }}</span>
+        </label>
+        <button type="button" class="mu-copias__paso"
+                :aria-label="`Una Copia más en ${offer.store}`"
+                @click="stepUnits(offer, 1)">+</button>
         <span class="mu-copias__rotulo">Copias</span>
-      </label>
+      </div>
       <span v-else-if="offer.offer_id" class="mu-copias mu-copias--fuera">
         <span class="mu-copias__rotulo">Agotada</span>
       </span>
@@ -279,11 +288,11 @@ const grouped = computed(() => groups.value.length > 1)
 .mu-oferta-cuerpo { flex: 1; min-width: 0; }
 .mu-copias {
   flex: none;
-  display: grid; grid-template-columns: auto auto; justify-content: center;
-  align-items: baseline; align-content: center; gap: 0 4px;
+  display: grid; grid-template-columns: auto auto auto; justify-content: center;
+  align-items: center; align-content: center; gap: 2px 6px;
   /* Un Ancho fijo Alinea todas las Fichas: con uno y con doce Dígitos, los
      Nombres de las Ofertas Empiezan en la misma Columna. */
-  min-width: 4.6rem; padding: 10px 12px; border-radius: 16px;
+  min-width: 4.6rem; padding: 8px 10px; border-radius: 16px;
   background: var(--mu-papel); border: 1px solid var(--mu-rosa-cl);
   cursor: pointer;
 }
@@ -301,7 +310,18 @@ const grouped = computed(() => groups.value.length > 1)
 .mu-copias.vacia { background: none; border-color: var(--mu-niebla); }
 .mu-copias.vacia input { color: var(--mu-tinta-sw); }
 .mu-copias:focus-within { border-color: var(--mu-acento); }
+.mu-copias__cuenta { display: flex; align-items: baseline; gap: 4px; cursor: pointer; }
 .mu-copias__total { font-size: 1.05rem; font-weight: 700; color: var(--mu-tinta-sw); }
+/* El Más y el Menos Son el Camino corto; el Campo Sigue ahí para el Número
+   que no se Alcanza a Golpes. */
+.mu-copias__paso {
+  width: 26px; height: 26px; padding: 0; border-radius: 50%;
+  border: 1px solid var(--mu-rosa-cl); background: var(--mu-blanco);
+  color: var(--mu-acento); font-size: 1.1rem; font-weight: 800; line-height: 1;
+  cursor: pointer;
+}
+.mu-copias__paso:hover:not(:disabled) { background: var(--mu-rosa-cl); }
+.mu-copias__paso:disabled { opacity: .35; cursor: default; }
 .mu-copias__rotulo {
   grid-column: 1 / -1; text-align: center;
   font-size: .72rem; letter-spacing: .04em; text-transform: uppercase;
