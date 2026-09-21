@@ -382,13 +382,41 @@ def cancel_search(search_id: str, request: CancelRequest) -> dict:
     return {"state": presenter.build_state(state)}
 
 
+class OfferUnits(BaseModel):
+    """Cuantas Copias Tiene una Oferta, segun quien esta mirando la Tienda."""
+    offer_id: str = Field(min_length=1, max_length=200)
+    units: int = Field(ge=0, le=999)
+
+
+class CartRequest(BaseModel):
+    units: list[OfferUnits] = Field(default_factory=list, max_length=2000)
+
+
 @app.get("/api/searches/{search_id}/cart")
 def read_cart(search_id: str, shipping: int = Query(4000, ge=0, le=1_000_000),
               match: Literal["exact", "includes"] = "exact") -> dict:
+    """El Carrito con lo que cada Tienda Declara, que casi siempre es nada."""
     searches = build_muchi().searches
     items = read_all_results(searches, search_id)
     return presenter.build_cart(items, shipping, load_rate_settings().muchi_dolar,
                                 match=match)
+
+
+@app.post("/api/searches/{search_id}/cart")
+def read_cart_with_units(search_id: str, request: CartRequest,
+                         shipping: int = Query(4000, ge=0, le=1_000_000),
+                         match: Literal["exact", "includes"] = "exact") -> dict:
+    """El Carrito con las Copias que quien Compra Contó en cada Tienda.
+
+    Casi ninguna Fuente Declara cuántas Unidades hay, así que el Reparto
+    Asumía que toda Tienda Tenía las que Hicieran falta. Quien está mirando la
+    Página lo Sabe, y acá lo Dice.
+    """
+    searches = build_muchi().searches
+    items = read_all_results(searches, search_id)
+    return presenter.build_cart(items, shipping, load_rate_settings().muchi_dolar,
+                                match=match,
+                                units={row.offer_id: row.units for row in request.units})
 
 
 def read_all_results(searches, search_id: str):

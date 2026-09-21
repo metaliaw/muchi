@@ -6,6 +6,19 @@ import { groupByCardType } from '../search.js'
 
 const emit = defineEmits(['look'])
 
+// Cuántas Copias Tiene cada Oferta, según quien está mirando la Tienda. Casi
+// ninguna Fuente lo Declara, así que el Carrito Asumía que Alcanzaban todas.
+// Vacío sigue Significando eso; un Número lo Corrige.
+const units = defineModel('units', { type: Object, default: () => ({}) })
+
+function countUnits(offer, written) {
+  const clean = { ...units.value }
+  const value = Math.floor(Number(written))
+  if (written === '' || Number.isNaN(value) || value < 0) delete clean[offer.offer_id]
+  else clean[offer.offer_id] = Math.min(value, 999)
+  units.value = clean
+}
+
 // Lo que identifica la Impresion en venta. Sin Edicion, Scryfall elige ella.
 const printingOf = (offer) => ({
   name: offer.card_name,
@@ -150,7 +163,18 @@ const grouped = computed(() => groups.value.length > 1)
         </ul>
       </details>
       <p v-if="offer.note" class="mu-caption">{{ offer.note }}</p>
-      <a :href="offer.url" target="_blank" rel="noopener noreferrer">{{ offer.action }} →</a>
+      <div class="mu-oferta-pie">
+        <a :href="offer.url" target="_blank" rel="noopener noreferrer">{{ offer.action }} →</a>
+        <!-- La Tienda casi nunca Dice cuántas Tiene; quien Abrió la Página sí.
+             En blanco no Afirma nada, que es como Estaba antes de preguntar. -->
+        <label v-if="offer.offer_id" class="mu-copias">
+          <span class="mu-caption">Copias</span>
+          <input type="number" min="0" max="999" step="1" placeholder="?"
+                 :value="units[offer.offer_id] ?? ''"
+                 :aria-label="`Cuántas Copias Tiene ${offer.store}`"
+                 @input="countUnits(offer, $event.target.value)" />
+        </label>
+      </div>
     </article>
     </template>
 
@@ -159,6 +183,14 @@ const grouped = computed(() => groups.value.length > 1)
 </template>
 
 <style scoped>
+/* El Pie Junta el Enlace y las Copias: son las dos Cosas que se Hacen con una
+   Oferta, ir a verla o Decir cuántas Quedan. */
+.mu-oferta-pie {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-top: 6px;
+}
+.mu-copias { display: flex; align-items: center; gap: 6px; }
+.mu-copias input { width: 5.5ch; text-align: center; }
 .mu-lista { margin-bottom: 14px; }
 .mu-lista h2 { margin-top: 0; }
 .mu-lista-fila { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }

@@ -517,6 +517,44 @@ def test_the_crown_moves_to_the_next_offer_with_stock(client):
     assert agotada["stock_label"] == "Agotado"
 
 
+def test_the_cart_splits_when_a_store_runs_out(client):
+    """Cuatro Copias no Salen de una Tienda que Tiene una."""
+    http, _ = client
+
+    whole = http.get("/api/searches/abc/cart?shipping=0").json()
+    counted = http.post("/api/searches/abc/cart?shipping=0",
+                        json={"units": [{"offer_id": "of-10", "units": 1}]}).json()
+
+    # Sin Cuenta, las dos Copias salen de la más barata y nadie Avisa nada.
+    assert [(row["store"], row["cards"]) for row in whole["stores"]] == [("Dudosa", 2)]
+    assert sorted((row["store"], row["cards"]) for row in counted["stores"]) \
+        == [("Dudosa", 1), ("Otra", 1)]
+    assert counted["short"] == []
+
+
+def test_the_cart_says_what_it_could_not_complete(client):
+    """Una sola Copia en el Mundo y dos Pedidas: el Carrito lo Dice."""
+    http, _ = client
+
+    plan = http.post("/api/searches/abc/cart?shipping=0", json={"units": [
+        {"offer_id": name, "units": 0}
+        for name in ("of-1500", "of-4000", "of-usd")
+    ] + [{"offer_id": "of-10", "units": 1}]}).json()
+
+    assert [(row["store"], row["cards"]) for row in plan["stores"]] == [("Dudosa", 1)]
+    assert plan["short"] == [{"card_name": "Sol Ring", "units": 1}]
+
+
+def test_a_sold_out_offer_leaves_the_cart(client):
+    """Una Oferta contada en cero no Compite, aunque Sea la más barata."""
+    http, _ = client
+
+    plan = http.post("/api/searches/abc/cart?shipping=0",
+                     json={"units": [{"offer_id": "of-10", "units": 0}]}).json()
+
+    assert all(row["store"] != "Dudosa" for row in plan["stores"])
+
+
 def test_the_config_says_how_long_a_stock_lasts(client):
     """El Front Guarda lo Confirmado con su Hora; el Tope lo Dice el Servidor."""
     http, _ = client

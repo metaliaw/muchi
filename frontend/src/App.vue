@@ -69,6 +69,9 @@ const kind = ref(new URLSearchParams(location.search).get('kind') === 'sealed'
 // La Carta que se mira: un Nombre, y el Idioma en que se escribió.
 const watched = ref(null)
 const history = ref(JSON.parse(localStorage.getItem('muchi_historial') || '[]'))
+// Cuántas Copias Tiene cada Oferta, contadas a mano por quien está mirando la
+// Tienda. Viven acá porque las Escribe la Lista y las Usa el Carrito.
+const units = ref({})
 
 let timer = null
 let refreshing = false
@@ -506,6 +509,7 @@ onUnmounted(stopPolling)
         v-if="state" :items="items" :offers="offers" :summary="summary"
         :notices="notices" :placeholder="placeholder"
         :advertise-groups="advertiseSections"
+        v-model:units="units"
         @look="lookAtCard"
       >
         <template #advertisement="{ group }">
@@ -527,7 +531,8 @@ onUnmounted(stopPolling)
         </template>
       </OfferList>
 
-      <CartPanel v-if="offers.length" :search-id="searchId" :match="match" />
+      <CartPanel v-if="offers.length" :search-id="searchId" :match="match"
+                 :units="units" />
       <SourcesPanel @nerd="sayNerd" />
     </div>
   </main>

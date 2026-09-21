@@ -376,14 +376,26 @@ def build_results(items: tuple[SearchItem, ...], muchi_dolar: int,
     }
 
 
+def read_offer_units(offer: SearchOffer, units: dict[str, int]) -> int | None:
+    """Cuantas Copias Tiene esta Oferta. None es "no lo Sabemos, Alcanzan".
+
+    Lo que Escribe quien Compra Manda sobre lo que Declara la Tienda: esta
+    mirando la Pagina abierta, y nosotros una Respuesta de hace un rato.
+    """
+    if offer.offer_id in units:
+        return units[offer.offer_id]
+    return offer.stock_quantity
+
+
 def build_cart(items: tuple[SearchItem, ...], shipping: int, muchi_dolar: int,
-               match: str = MATCH_EXACT) -> dict:
+               match: str = MATCH_EXACT, units: dict[str, int] | None = None) -> dict:
     """El Carrito en CLP: solo Ofertas sin Alerta de Precio ni Stock agotado.
 
     En `includes` la Búsqueda trae Derivados para Mirar, no para Comprar: pedir
     3 Kuriboh y recibir un Linkuriboh porque salía más barato no es un Carrito,
     es otra Carta. Así que el Carrito vuelve a la Carta pedida.
     """
+    units = units or {}
     orders = [Order(item.quantity, item.name) for item in items]
     found: dict[str, list[Offer]] = {}
     converted = 0
@@ -399,7 +411,8 @@ def build_cart(items: tuple[SearchItem, ...], shipping: int, muchi_dolar: int,
             converted += offer.currency != "CLP"
             found.setdefault(item.name.lower(), []).append(Offer(
                 store=offer.store, card_name=item.name, title=offer.card_name,
-                price_clp=price, url=offer.url,
+                price_clp=price, url=offer.url, key=offer.offer_id,
+                stock=read_offer_units(offer, units),
             ))
     plan = optimizer.build_optimal_plan(orders, found, shipping)
     stores = []
@@ -424,4 +437,8 @@ def build_cart(items: tuple[SearchItem, ...], shipping: int, muchi_dolar: int,
         "muchi_dolar": muchi_dolar,
         "stores": stores,
         "missing": list(plan.missing),
+        # Lo que se Consiguio a medias, Carta por Carta. Un Carrito que Calla
+        # esto Entrega menos Copias de las que se Pidieron sin Avisar.
+        "short": [{"card_name": name, "units": count}
+                  for name, count in plan.short.items()],
     }
