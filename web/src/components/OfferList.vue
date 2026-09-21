@@ -2,30 +2,40 @@
 /** Las Ofertas, agrupadas por Tipo de Carta y por Precio dentro de cada una. */
 import { computed, ref, watch } from 'vue'
 import { formatAmount, formatClp } from '../api.js'
-import { groupByCardType, pickable as canPick, pickOffer } from '../search.js'
+import { groupByCardType, pickable as canPick } from '../search.js'
 
 const emit = defineEmits(['look'])
 
-// Cuántas Copias Tiene cada Oferta, según quien está mirando la Tienda. Casi
-// ninguna Fuente lo Declara, así que el Carrito Asumía que Alcanzaban todas.
-// Vacío sigue Significando eso; un Número lo Corrige.
+// Cuántas Copias se Compran en cada Oferta. Cero es lo normal: de casi toda
+// Oferta no se Compra nada. Las que el Reparto Recomienda nacen con su
+// Cantidad puesta, y de ahí en adelante Manda quien Compra.
 const units = defineModel('units', { type: Object, default: () => ({}) })
 
-// Cuál Oferta de cada Carta se Piensa comprar. Vacío no es Indecisión: es
-// «la que Muchi Recomienda», y esa se Mueve sola cuando la barata se Cae.
-const chosen = defineModel('chosen', { type: Object, default: () => ({}) })
+// Una Agotada no se Compra. Se Sigue Mostrando —su Precio Dice algo del
+// Mercado— pero en gris y sin Selector: Ofrecerla sería Ofrecer una Compra
+// que la Tienda ya Dijo que no Puede hacer.
+const pickable = (offer) => canPick(offer)
+const bought = (offer) => units.value[offer.offer_id] || 0
 
-const pickable = (offer) => canPick(offer, units.value)
-const chosenOf = (group) => pickOffer(group.rows, chosen.value[group.card], units.value)
+// Cuántas Copias de esta Carta Faltan por Elegir, sin Contar esta Oferta.
+function missingFor(group, offer) {
+  const total = askedFor(offer)
+  const others = group.rows
+    .filter((row) => row.offer_id !== offer.offer_id)
+    .reduce((count, row) => count + bought(row), 0)
+  return Math.max(1, total - others)
+}
 
-function chooseOffer(group, offer) {
-  chosen.value = { ...chosen.value, [group.card]: offer.offer_id }
+// Marcar una Oferta es Pedirle lo que Falta, no una Copia suelta: quien
+// Tilda la única Tienda de una Lista de cuatro Quiere las cuatro.
+function toggleOffer(group, offer, taken) {
+  countUnits(offer, taken ? String(missingFor(group, offer)) : '0')
 }
 
 function countUnits(offer, written) {
-  const clean = { ...units.value }
   const value = Math.floor(Number(written))
-  if (written === '' || Number.isNaN(value) || value < 0) delete clean[offer.offer_id]
+  const clean = { ...units.value }
+  if (written === '' || Number.isNaN(value) || value <= 0) delete clean[offer.offer_id]
   else clean[offer.offer_id] = Math.min(value, 999)
   units.value = clean
 }
@@ -150,28 +160,31 @@ const grouped = computed(() => groups.value.length > 1)
     <slot v-if="advertiseGroups" name="advertisement" :group="group" />
     <article v-for="(offer, index) in group.rows" :key="`${offer.url}-${index}`"
              class="mu-panel mu-oferta"
-             :class="{ mejor: offer.best, elegida: chosenOf(group) === offer.offer_id }">
-      <!-- Elegir una Oferta es Decir «de acá la Compro». Nace marcada la que
-           Muchi Recomienda, y una Agotada no se Puede Marcar. -->
-      <input v-if="offer.offer_id && pickable(offer)" type="radio" class="mu-elige"
-             :name="`elige-${group.card}`" :value="offer.offer_id"
-             :checked="chosenOf(group) === offer.offer_id"
+             :class="{ mejor: offer.best, elegida: bought(offer) > 0,
+                       agotada: offer.offer_id && !pickable(offer) }">
+      <!-- Tildar es Decir «de acá me Llevo». El Reparto ya Tildó lo que
+           Recomienda; una Agotada ni siquiera Lleva Casilla. -->
+      <input v-if="offer.offer_id && pickable(offer)" type="checkbox" class="mu-elige"
+             :checked="bought(offer) > 0"
              :aria-label="`Compra ${offer.card_name} en ${offer.store}`"
-             @change="chooseOffer(group, offer)" />
+             @change="toggleOffer(group, offer, $event.target.checked)" />
       <span v-else-if="offer.offer_id" class="mu-elige mu-elige--fuera"
-            aria-hidden="true" title="Agotada: no se puede elegir"></span>
+            aria-hidden="true" title="Agotada: no se puede comprar"></span>
 
-      <!-- La Tienda casi nunca Dice cuántas Tiene; quien Abrió la Página sí.
-           En blanco no Afirma nada, que es como Estaba antes de preguntar. El
-           Total al lado Evita Contar de memoria cuántas Faltan. -->
-      <label v-if="offer.offer_id" class="mu-copias">
-        <input type="number" min="0" max="999" step="1" placeholder="?"
-               :value="units[offer.offer_id] ?? ''"
-               :aria-label="`Cuántas Copias Tiene ${offer.store}`"
+      <!-- Cuántas Copias Salen de acá. Cero es lo normal, y el Total al lado
+           Evita Contar de memoria cuántas Faltan. -->
+      <label v-if="offer.offer_id && pickable(offer)" class="mu-copias"
+             :class="{ vacia: !bought(offer) }">
+        <input type="number" min="0" max="999" step="1"
+               :value="bought(offer)"
+               :aria-label="`Copias de ${offer.card_name} en ${offer.store}`"
                @input="countUnits(offer, $event.target.value)" />
         <span v-if="askedFor(offer)" class="mu-copias__total">/ {{ askedFor(offer) }}</span>
         <span class="mu-copias__rotulo">Copias</span>
       </label>
+      <span v-else-if="offer.offer_id" class="mu-copias mu-copias--fuera">
+        <span class="mu-copias__rotulo">Agotada</span>
+      </span>
 
       <div class="mu-oferta-cuerpo">
       <div class="mu-oferta-cab">
@@ -227,6 +240,15 @@ const grouped = computed(() => groups.value.length > 1)
 /* El Hueco de una Agotada Guarda la Columna: sin él, su Ficha se Corre y las
    Ofertas Dejan de Alinearse entre sí. */
 .mu-elige--fuera { display: block; cursor: default; }
+/* Una Agotada se Sigue Viendo, apagada: su Precio Dice algo del Mercado,
+   pero no es una Compra posible y no Debería Competir por la Atención. */
+.mu-oferta.agotada { opacity: .55; }
+.mu-oferta.agotada .mu-precio { color: var(--mu-tinta-sw); }
+.mu-copias--fuera {
+  flex: none; min-width: 4.6rem; padding: 10px 12px; border-radius: 16px;
+  display: grid; align-content: center; justify-content: center;
+  background: var(--mu-cond-bg); border: 1px dashed var(--mu-tinta-sw);
+}
 .mu-oferta-cuerpo { flex: 1; min-width: 0; }
 .mu-copias {
   flex: none;
@@ -248,6 +270,9 @@ const grouped = computed(() => groups.value.length > 1)
 .mu-copias input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .mu-copias input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .mu-copias input:focus { outline: none; }
+/* Cero es la Mayoría: la Ficha se Apaga para que Resalten las que sí Compran. */
+.mu-copias.vacia { background: none; border-color: var(--mu-niebla); }
+.mu-copias.vacia input { color: var(--mu-tinta-sw); }
 .mu-copias:focus-within { border-color: var(--mu-acento); }
 .mu-copias__total { font-size: 1.05rem; font-weight: 700; color: var(--mu-tinta-sw); }
 .mu-copias__rotulo {

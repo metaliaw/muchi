@@ -72,9 +72,13 @@ const history = ref(JSON.parse(localStorage.getItem('muchi_historial') || '[]'))
 // Cuántas Copias Tiene cada Oferta, contadas a mano por quien está mirando la
 // Tienda. Viven acá porque las Escribe la Lista y las Usa el Carrito.
 const units = ref({})
-// Cuál Oferta de cada Carta se Piensa comprar. Vacío Significa «la que Muchi
-// Recomienda»: la Elección explícita solo Existe cuando alguien la Marca.
-const chosen = ref({})
+// El Reparto que Muchi Recomienda, tal como Vino. Sirve para Saber si alguien
+// ya Tocó los Selectores: mientras sean iguales, Rellenarlos de nuevo no le
+// Pisa la Decisión a nadie.
+const recommended = ref({})
+// El Envío con que se Pide la Recomendación. El Carrito Tiene el suyo, que
+// quien Compra Puede cambiar; esto es solo para Llenar los Selectores.
+const SHIPPING_GUESS = 4000
 
 let timer = null
 let refreshing = false
@@ -123,8 +127,10 @@ const confirming = ref(false)
 // Hace cuánto se Confirmó lo que se está mostrando. Cero es «no se Confirmó»:
 // la Certeza vieja se Descartó sola y el Botón Volvió a su lugar.
 const confirmedAge = ref(0)
-const reachable = computed(() =>
-  countReachable(offers.value, config.value.browser_check_limit))
+const buying = computed(() =>
+  offers.value.filter((offer) => units.value[offer.offer_id] > 0))
+const reachable = computed(() => countReachable(
+  buying.value.length ? buying.value : offers.value, config.value.browser_check_limit))
 const confirmable = computed(() =>
   Boolean(state.value?.done) && reachable.value > 0 && !stocked.value)
 
@@ -132,7 +138,10 @@ async function confirmStock() {
   confirming.value = true
   say('Estoy preguntando en las Tiendas', 'talk')
   try {
-    const found = await confirmOffers(offers.value, fetch,
+    // Se Comprueba lo que se va a Comprar. Sin nada Elegido todavía, se
+    // Comprueban las más baratas, que es lo que alguien Compraría.
+    const buying = offers.value.filter((offer) => units.value[offer.offer_id] > 0)
+    const found = await confirmOffers(buying.length ? buying : offers.value, fetch,
                                       config.value.browser_check_limit)
     applyStock(await api.confirmStock(searchId.value, found, match.value))
     rememberChecks(searchId.value, found)
@@ -278,6 +287,33 @@ async function restoreStock() {
   }
 }
 
+// Los Selectores nacen Llenos con lo que Muchi Compraría, no en cero: una
+// Lista de cien Cartas no se Tilda a mano. Desde ahí Manda quien Compra.
+function readPlanUnits(plan) {
+  const filled = {}
+  for (const store of plan.stores || []) {
+    for (const line of store.lines || []) {
+      if (line.offer_id) filled[line.offer_id] = line.quantity
+    }
+  }
+  return filled
+}
+
+async function fillRecommendation() {
+  // Tocado a mano, no se Vuelve a Llenar: Recalcular por encima de una
+  // Decisión es Borrarla.
+  const untouched = JSON.stringify(units.value) === JSON.stringify(recommended.value)
+  if (!untouched) return
+  try {
+    const plan = await api.readCart(searchId.value, SHIPPING_GUESS, match.value)
+    recommended.value = readPlanUnits(plan)
+    units.value = { ...recommended.value }
+  } catch {
+    // Sin Recomendación los Selectores Quedan en cero. Se Puede Comprar igual,
+    // Tildando a mano; no es un Error que Contarle a nadie.
+  }
+}
+
 async function refresh() {
   if (!searchId.value || unavailable.value || refreshing) return
   refreshing = true
@@ -289,6 +325,7 @@ async function refresh() {
     remember(reply.state.id)
     if (reply.state.done && !reply.has_more) {
       stopPolling()
+      await fillRecommendation()
     }
   } catch (failure) {
     if (failure.retriable) {
@@ -513,7 +550,6 @@ onUnmounted(stopPolling)
         :notices="notices" :placeholder="placeholder"
         :advertise-groups="advertiseSections"
         v-model:units="units"
-        v-model:chosen="chosen"
         @look="lookAtCard"
       >
         <template #advertisement="{ group }">

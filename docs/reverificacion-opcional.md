@@ -96,10 +96,13 @@ Servidor  → pregunta al Servicio          (solo por lo que Falta)
           → crown_checked_offers          (la Corona, como siempre)
 ```
 
-El Navegador Pregunta de la barata a la cara y **Corta en el primer Sí**: más
-arriba solo hay Ofertas más caras. `browser_check_limit` —hoy **5**— es su
-Techo por Carta, así que una Lista de cien Cartas Hace cien Consultas cuando la
-barata Tiene, y quinientas solo si ninguna Contesta.
+El Navegador Pregunta por **lo que se va a Comprar**: las Ofertas con Copias
+Elegidas, que Nacen puestas donde el Reparto las Recomienda. Sin nada Elegido
+todavía, Pregunta por las más baratas, que es lo que alguien Compraría igual.
+Va de la barata a la cara y **Corta en el primer Sí**: más arriba solo hay
+Ofertas más caras. `browser_check_limit` —hoy **5**— es su Techo por Carta, así
+que una Lista de cien Cartas Hace cien Consultas cuando la barata Tiene, y
+quinientas solo si ninguna Contesta.
 
 `answer_stock` Toma lo Sabido y Arranca las Rondas desde ahí: una Oferta que el
 Navegador Confirmó no se le Pregunta a nadie más, y una que el Plan no Nombra se
