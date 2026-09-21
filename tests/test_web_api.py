@@ -546,7 +546,7 @@ def test_the_browser_no_passes_the_crown(client):
     assert answer["best"] == [{"card_type": "sol ring", "offer_id": "of-1500"}]
 
 
-def test_an_offer_outside_the_plan_is_ignored(client):
+def test_an_offer_outside_the_search_is_ignored(client):
     """El Navegador Informa sobre esta Búsqueda: lo demás no Corona nada."""
     http, searches = client
 
@@ -555,6 +555,25 @@ def test_an_offer_outside_the_plan_is_ignored(client):
 
     assert searches.asked == [("of-10",)]
     assert all(row["offer_id"] != "of-ajena" for row in answer["offers"])
+
+
+def test_a_browser_yes_crowns_from_beyond_the_limit(client):
+    """El Tope es de la Pregunta, no de la Corona.
+
+    `stock_check_limit` Acota las Visitas que Hacemos nosotros. Una Oferta que
+    el Navegador Confirmó no nos Costó ninguna, así que Compite aunque esté
+    fuera del Plan — si no, la Duda más barata se Queda la Corona teniendo un
+    Sí más arriba.
+    """
+    http, searches = client
+    searches.stock = {name: ("unknown", None) for name in ("of-10", "of-1500", "of-4000")}
+
+    # `of-usd` es la cuarta de la Lista: el Plan de tres no la Nombra.
+    answer = http.post("/api/searches/abc/stock",
+                       json={"checks": [{"offer_id": "of-usd", "available": True}]}).json()
+
+    assert searches.asked == [("of-10",), ("of-1500",), ("of-4000",)]
+    assert answer["best"] == [{"card_type": "sol ring", "offer_id": "of-usd"}]
 
 
 def test_a_checked_offer_stops_the_round(client):

@@ -67,6 +67,14 @@ que el Navegador ya Confirmó: el `POST` de la misma Ruta Recibe
 desde ahí. Una Tienda que le Contestó al Comprador no Necesita Contestarnos
 también a nosotros. El `GET` es ese mismo Camino sin nada Sabido.
 
+**El Tope es de la Pregunta, no de la Corona.** Son dos Listas: `ranking` —todas
+las Ofertas en pie de cada Carta, de la barata a la cara— Decide quién Compite,
+y `plan` —sus primeras `stock_check_limit`— Decide a quién Visitamos nosotros.
+Una Oferta que el Navegador Confirmó Compite aunque esté en el Puesto nueve,
+porque Confirmarla no nos Costó una Visita. Confundir las dos Listas Deja la
+Corona en la Duda más barata teniendo un Sí más arriba, que es exactamente lo
+que Pasaba con `cartasmagicsur.cl`.
+
 ## Lo que Queda Fuera de Alcance
 
 Una Tienda detrás de un Desafío de Bot no se puede Comprobar. `cartasmagicsur.cl`

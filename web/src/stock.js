@@ -22,6 +22,9 @@ const TIMEOUT_MS = 4000
 // Cuántas Tiendas se Consultan a la vez. Son Peticiones de un Navegador a
 // Catálogos ajenos: de a pocas, como un Cliente que Mira, no como un Robot.
 const WORKERS = 4
+// Cuántas Tiendas se Consultan por Carta cuando ninguna Contesta que sí. El
+// Servidor lo Dice en `/api/config`; esto es el Valor mientras la Config llega.
+const LIMIT = 5
 
 /** La Dirección JSON de una Oferta Shopify, y la Variante que Nombra. */
 export function readShopifyProbe(url) {
@@ -77,24 +80,58 @@ export async function confirmOffer(offer, fetcher = fetch) {
   }
 }
 
-/** Lo que el Navegador pudo Confirmar de esta Lista, de a pocas Tiendas. */
-export async function confirmOffers(offers, fetcher = fetch, workers = WORKERS) {
-  const queue = offers.filter((offer) => offer.offer_id && readShopifyProbe(offer.url || ''))
+/** El Tipo de Carta al que Pertenece una Fila. El BFF ya lo Nombró. */
+const cardTypeOf = (row) => row.card_type || row.card_name || ''
+
+/** Por cada Carta, las Tiendas que el Navegador Alcanza, de la barata a la cara.
+ *
+ * El Orden Importa: se Pregunta hacia arriba y se Corta en el primer Sí, así
+ * que la primera que Contesta es la más barata que de verdad se Puede comprar.
+ */
+export function pickCandidates(offers, limit = LIMIT) {
+  const cards = new Map()
+  for (const offer of offers) {
+    if (!offer.offer_id || !readShopifyProbe(offer.url || '')) continue
+    const card = cardTypeOf(offer)
+    if (!cards.has(card)) cards.set(card, [])
+    cards.get(card).push(offer)
+  }
+  return [...cards.values()].map((rows) => rows
+    .sort((left, right) => (left.price_clp ?? Infinity) - (right.price_clp ?? Infinity))
+    .slice(0, limit))
+}
+
+/** Pregunta por una Carta hasta el primer Sí. Una Duda no Cierra la Vuelta. */
+async function confirmCard(candidates, fetcher) {
+  const found = []
+  for (const offer of candidates) {
+    const check = await confirmOffer(offer, fetcher)
+    if (!check) continue
+    found.push(check)
+    // Más arriba solo hay Ofertas más caras: si esta Tiene, ya no Importan.
+    if (check.available) break
+  }
+  return found
+}
+
+/** Lo que el Navegador pudo Confirmar de esta Lista, de a pocas Cartas. */
+export async function confirmOffers(offers, fetcher = fetch, limit = LIMIT,
+                                    workers = WORKERS) {
+  const queue = pickCandidates(offers, limit)
   const found = []
   let next = 0
   async function work() {
     while (next < queue.length) {
-      const check = await confirmOffer(queue[next++], fetcher)
-      if (check) found.push(check)
+      found.push(...await confirmCard(queue[next++], fetcher))
     }
   }
   await Promise.all(Array.from({ length: Math.min(workers, queue.length) }, work))
   return found
 }
 
-/** Cuántas Ofertas de esta Lista Sabe Consultar el Navegador. */
-export function countReachable(offers) {
-  return offers.filter((offer) => readShopifyProbe(offer.url || '')).length
+/** Cuántas Consultas Haría el Navegador si ninguna Tienda Contestara que sí. */
+export function countReachable(offers, limit = LIMIT) {
+  return pickCandidates(offers, limit).reduce((total, rows) => total + rows.length, 0)
 }
 
 // ------------------------------------------------- lo Confirmado, con su Hora

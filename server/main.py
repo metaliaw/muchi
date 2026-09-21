@@ -103,6 +103,9 @@ def read_config() -> dict:
         # Cuánto Vale un Stock ya confirmado. El Front lo Guarda con su Hora y
         # lo Descarta solo; el Tope lo Dice el Servidor, como todos los demás.
         "stock_fresh_seconds": load_offer_settings().stock_fresh_seconds,
+        # Cuántas Tiendas Consulta el Navegador por Carta. El Tope lo Dice el
+        # Servidor aunque las Visitas no Salgan de acá.
+        "browser_check_limit": load_offer_settings().browser_check_limit,
         "donation_url": os.getenv("MUCHI_DONATION_URL", ""),
         "sponsor_name": os.getenv("MUCHI_SPONSOR_NAME", ""),
         "sponsor_text": os.getenv("MUCHI_SPONSOR_TEXT", ""),
@@ -300,20 +303,38 @@ def answer_stock(search_id: str, match: str, known: dict[str, StockCheck]) -> di
     searches = build_muchi().searches
     items = read_all_results(searches, search_id)
     limit = load_offer_settings().stock_check_limit
-    plan = presenter.plan_stock_checks(items, load_rate_settings().muchi_dolar,
-                                       match=match, limit=limit)
-    planned = {offer_id for candidates in plan.values() for offer_id in candidates}
-    # Una Oferta que el Plan no Nombra no Corona ni Descorona nada: el Navegador
-    # Informa sobre esta Búsqueda, no sobre el Catálogo entero.
+    # Dos Listas, no una. `ranking` es quién Compite por la Corona: todas las
+    # Ofertas en pie, de la barata a la cara. `plan` es a quién le Preguntamos
+    # nosotros, y ahí sí Manda el Tope, porque cada una es una Visita nuestra.
+    ranking = presenter.rank_stock_candidates(items, load_rate_settings().muchi_dolar,
+                                              match=match)
+    plan = {card_type: candidates[:limit] for card_type, candidates in ranking.items()}
+    competing = {offer_id for candidates in ranking.values() for offer_id in candidates}
+    # Una Oferta que no Compite no Corona ni Descorona nada: el Navegador
+    # Informa sobre esta Búsqueda, no sobre el Catálogo entero. Pero sí Vale
+    # aunque esté en el Puesto nueve: Confirmarla no nos Costó una Visita.
     checks: dict[str, StockCheck] = {offer_id: check for offer_id, check in known.items()
-                                     if offer_id in planned}
+                                     if offer_id in competing}
 
     def waiting() -> dict[str, list[str]]:
-        """Los Tipos sin un Sí todavía, y a quién les Queda por preguntar."""
-        return {card_type: [offer_id for offer_id in candidates if offer_id not in checks]
-                for card_type, candidates in plan.items()
-                if not any(offer_id in checks and checks[offer_id].confirmed
-                           for offer_id in candidates)}
+        """Los Tipos sin un Sí barato todavía, y a quién les Queda por preguntar.
+
+        Un Sí puede Venir de cualquier Puesto —el Navegador Llega a Tiendas que
+        el Plan no Alcanza—, pero no Cierra la Búsqueda por sí solo: si Quedan
+        Dudas más baratas sin preguntar, Vale la Pena preguntarlas, porque una
+        de ellas Confirmada Recomienda mejor. La Pregunta sale solo hacia el
+        Plan: lo de más allá del Tope no nos Cuesta una Visita ni la Pide.
+        """
+        pending: dict[str, list[str]] = {}
+        for card_type, candidates in ranking.items():
+            said_yes = next((turn for turn, offer_id in enumerate(candidates)
+                             if offer_id in checks and checks[offer_id].confirmed), None)
+            cheaper = candidates if said_yes is None else candidates[:said_yes]
+            asking = [offer_id for offer_id in cheaper
+                      if offer_id in plan[card_type] and offer_id not in checks]
+            if asking:
+                pending[card_type] = asking
+        return pending
 
     pending = waiting()
     for _ in range(limit):
@@ -328,7 +349,7 @@ def answer_stock(search_id: str, match: str, known: dict[str, StockCheck]) -> di
         pending = waiting()
     offers = {offer.offer_id: offer for item in items for offer in item.offers
               if offer.offer_id}
-    return presenter.build_stock_answer(offers, plan, checks,
+    return presenter.build_stock_answer(offers, ranking, checks,
                                         load_rate_settings().muchi_dolar)
 
 
