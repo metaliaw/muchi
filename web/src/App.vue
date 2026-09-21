@@ -550,6 +550,7 @@ onUnmounted(stopPolling)
         :notices="notices" :placeholder="placeholder"
         :advertise-groups="advertiseSections"
         v-model:units="units"
+        @recommend="units = { ...recommended }"
         @look="lookAtCard"
       >
         <template #advertisement="{ group }">
