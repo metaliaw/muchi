@@ -134,6 +134,28 @@ const reachable = computed(() => countReachable(
 const confirmable = computed(() =>
   Boolean(state.value?.done) && reachable.value > 0 && !stocked.value)
 
+// Sumar una Copia Vuelve interesante saber si de verdad Está. Se Pregunta a
+// esa Tienda y a nadie más: un Toque no Debe Desatar una Ronda del Servicio.
+// Si la Tienda no Contesta —CORS cerrado, Red caída— la Cuenta Sube igual y
+// nadie se Entera, que es lo que Pasaba antes de poder preguntar.
+async function confirmOne(offer) {
+  const [check] = await confirmOffers([offer], fetch, 1)
+  if (!check) return
+  rememberChecks(searchId.value, [check])
+  try {
+    applyStock(await api.confirmStock(searchId.value, [check], match.value, false))
+  } catch {
+    return
+  }
+  if (!check.available) {
+    // Contar una Copia de lo que ya no Está Metería al Carrito una Compra que
+    // la Tienda acaba de Negar.
+    const { [offer.offer_id]: gone, ...rest } = units.value
+    units.value = rest
+    say(`En ${offer.store} ya no queda`, 'idle')
+  }
+}
+
 async function confirmStock() {
   confirming.value = true
   say('Estoy preguntando en las Tiendas', 'talk')
@@ -551,6 +573,7 @@ onUnmounted(stopPolling)
         :advertise-groups="advertiseSections"
         v-model:units="units"
         @recommend="units = { ...recommended }"
+        @take="confirmOne"
         @look="lookAtCard"
       >
         <template #advertisement="{ group }">

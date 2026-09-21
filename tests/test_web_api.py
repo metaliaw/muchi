@@ -615,6 +615,17 @@ def test_the_browser_no_passes_the_crown(client):
     assert answer["best"] == [{"card_type": "sol ring", "offer_id": "of-1500"}]
 
 
+def test_a_single_touch_visits_nobody(client):
+    """Un Toque sobre una Oferta no Desata una Ronda nuestra a las Tiendas."""
+    http, searches = client
+
+    answer = http.post("/api/searches/abc/stock?ask=false",
+                       json={"checks": [{"offer_id": "of-1500", "available": True}]}).json()
+
+    assert searches.asked == []
+    assert answer["best"] == [{"card_type": "sol ring", "offer_id": "of-1500"}]
+
+
 def test_an_offer_outside_the_search_is_ignored(client):
     """El Navegador Informa sobre esta Búsqueda: lo demás no Corona nada."""
     http, searches = client

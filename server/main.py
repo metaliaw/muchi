@@ -288,7 +288,8 @@ class StockRequest(BaseModel):
     checks: list[BrowserCheck] = Field(default_factory=list, max_length=500)
 
 
-def answer_stock(search_id: str, match: str, known: dict[str, StockCheck]) -> dict:
+def answer_stock(search_id: str, match: str, known: dict[str, StockCheck],
+                 ask: bool = True) -> dict:
     """Comprueba la más barata de cada Carta y Corona la primera que sí Tiene.
 
     Pregunta por Rondas: la primera Candidata de cada Tipo de Carta viaja en
@@ -336,7 +337,7 @@ def answer_stock(search_id: str, match: str, known: dict[str, StockCheck]) -> di
                 pending[card_type] = asking
         return pending
 
-    pending = waiting()
+    pending = waiting() if ask else {}
     for _ in range(limit):
         asking = {card_type: candidates[0] for card_type, candidates in pending.items()
                   if candidates}
@@ -362,7 +363,8 @@ def check_stock(search_id: str,
 
 @app.post("/api/searches/{search_id}/stock")
 def check_stock_with_browser(search_id: str, request: StockRequest,
-                             match: Literal["exact", "includes"] = "exact") -> dict:
+                             match: Literal["exact", "includes"] = "exact",
+                             ask: bool = Query(True)) -> dict:
     """Comprueba el Stock con lo que el Navegador ya Confirmó por su cuenta.
 
     Una Tienda Shopify Sirve su Catálogo con CORS abierto: el Navegador lo Lee
@@ -373,7 +375,7 @@ def check_stock_with_browser(search_id: str, request: StockRequest,
         offer_id=row.offer_id,
         stock_status="available" if row.available else "unavailable",
     ) for row in request.checks}
-    return answer_stock(search_id, match, known)
+    return answer_stock(search_id, match, known, ask=ask)
 
 
 @app.post("/api/searches/{search_id}/cancel")
