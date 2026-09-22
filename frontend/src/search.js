@@ -155,6 +155,13 @@ export function completionFor(typed, suggestions) {
 
 /** Con qué Criterio se Reparte la Cantidad pedida. */
 export const BY_PRICE = 'precio'
+
+/** Reconoce una Tienda que Publica su Catálogo como Lista de Moxfield. */
+export function hasStoreCatalog(offer) {
+  const source = [offer?.source, offer?.metadata?.source, offer?.metadata?.catalog]
+    .filter(Boolean).join(' ').toLowerCase()
+  return source.includes('moxfield') || String(offer?.url || '').includes('moxfield.com/')
+}
 export const BY_EDITION = 'edicion'
 
 /** Reparte la Cantidad pedida de cada Carta entre las Ofertas que se Ven.

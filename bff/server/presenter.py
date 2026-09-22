@@ -91,6 +91,8 @@ def build_offer(offer: SearchOffer, muchi_dolar: int,
     return {
         "card_name": offer.card_name,
         "store": offer.store,
+        # El Front Distingue los Catálogos que no tienen una Página propia.
+        "source": offer.source,
         "amount": str(offer.amount),
         "currency": offer.currency,
         "price_clp": None if price is None else float(price),

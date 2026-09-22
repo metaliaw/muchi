@@ -785,6 +785,12 @@ def test_a_checked_offer_declares_its_units(client):
     assert {"kind": "tienda", "text": "3 Unidades"} in row["pills"]
 
 
+def test_an_offer_tells_the_front_where_its_catalog_lives():
+    row = presenter.build_offer(build_offer(source="moxfield"), muchi_dolar=1000)
+
+    assert row["source"] == "moxfield"
+
+
 def test_zero_units_is_sold_out_whatever_the_status_says(client):
     """Cero Unidades es Agotado: la Cantidad manda sobre la Etiqueta."""
     row = presenter.build_offer(build_offer(stock_quantity=0), muchi_dolar=1000)
