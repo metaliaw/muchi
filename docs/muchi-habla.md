@@ -165,9 +165,10 @@ sin decidir por ti que lo leas ahora.
 
 ### El Film y la Ventana
 
-La Hoja `muchi-retro-sheet@4x.png` mide 1536×480: dieciséis Columnas por cinco
-Filas de 24×24 a Escala 4. El Componente dibuja una Ventana de un Cuadro y
-desliza la Hoja entera por debajo.
+La Hoja `muchi-sofi-sheet.png` tiene ocho Columnas por cinco Filas,
+inspiradas en el Gato naranja de la referencia de Sofi. Cada Estado tiene
+ocho Cuadros. El Componente conserva una Ventana lógica de 24×24 a Escala 4
+y desliza la Hoja entera por debajo.
 
 - La **Fila** se elige moviendo el Film en Y.
 - Los **Cuadros** se recorren animándolo en X con `steps()`, para que el
@@ -177,8 +178,8 @@ desliza la Hoja entera por debajo.
   re-muestrea la Hoja en cada Cuadro, y en Pantallas con DPI fraccional deja
   ver una línea de la Fila de arriba. El `transform` desliza la Capa ya
   rasterizada y la Ventana la recorta limpia.
-- La Escala 4 sobre una Hoja @4x cae en Enteros, así que `image-rendering:
-  pixelated` dibuja Píxel a Píxel sin que el Navegador invente nada.
+- La Hoja se ajusta a la Grilla lógica con `background-size: 100% 100%`;
+  `image-rendering: pixelated` conserva los bordes al cambiar de Escala.
 
 ### Las que Terminan
 

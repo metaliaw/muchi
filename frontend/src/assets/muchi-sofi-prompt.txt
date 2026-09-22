@@ -1,0 +1,4 @@
+Generated with the built-in image_gen tool, using the user's Sofi sticker as reference.
+Asset: muchi-sofi-sheet.png. Requested dimensions are in the prompt; the renderer normalizes the generated atlas to eight columns and five rows.
+
+undefined
