@@ -1,4 +1,7 @@
 Generated with the built-in image_gen tool, using the user's Sofi sticker as reference.
+Corrected with the built-in image_gen tool to remove duplicate arms from the talk animation.
+
+Correction prompt: Edit the provided sprite atlas with surgical precision. Preserve the same orange tabby Muchi character, pixel style, transparent alpha background, original canvas dimensions, exact 8 columns by 5 rows, all cell positions and sprite sizes. Fix the SECOND ROW (talk animation), especially column SIX where there are THREE front paws: an extra waving arm/paw beside the face while two other paws hold the card. Remove that extra waving arm completely. Across all eight cells in row TWO, make the torso, arms, card and feet identical to row TWO column ONE: exactly TWO front arms/paws TOTAL holding the card, exactly TWO back feet, ONE tail. Animate talking using ONLY open/closed mouth and blinking eyes; no arm gestures, no motion trails, no ghost limbs. Keep all other rows unchanged. Keep every full sprite inside its own equal grid cell. No labels, no new elements, no background, no checkerboard. This is a correction of an existing production sprite sheet, not a redesign.
 Asset: muchi-sofi-sheet.png. Requested dimensions are in the prompt; the renderer normalizes the generated atlas to eight columns and five rows.
 
 undefined
