@@ -45,6 +45,7 @@ type Game string
 const (
 	GameDigimon   Game = "digimon"
 	GameMagic     Game = "magic"
+	GameMitos     Game = "mitos-y-leyendas"
 	GameOnePiece  Game = "one-piece"
 	GamePokemon   Game = "pokemon"
 	GameRiftbound Game = "riftbound"

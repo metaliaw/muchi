@@ -50,6 +50,15 @@ games:
     origins:
       - tcgmatch
       - shopify
+  # Medido: el Marketplace Indexa Cartas sueltas y ninguna Caja; la Tienda que
+  # Vende Cajas no Vende ni una Carta suelta. Juntas Cubren el Juego entero.
+  mitos-y-leyendas:
+    name: Mitos y Leyendas
+    reference_key: mitos-y-leyendas
+    enabled: true
+    origins:
+      - tcgmatch
+      - shopify
 
 search_providers:
   scry:
@@ -75,7 +84,7 @@ search_providers:
     type: tcgmatch
     url: https://api.tcgmatch.cl
     enabled: true
-    games: [pokemon, yugioh, one-piece, digimon, riftbound]
+    games: [pokemon, yugioh, one-piece, digimon, riftbound, mitos-y-leyendas]
     stores: []
   tcgdex:
     type: tcgdex
@@ -132,6 +141,17 @@ stores:
     searched: false
     name: "Pay to Win"
     platform: shopify
+    timeout_seconds: 10
+    allow_redirects: true
+    enabled: true
+  # Medido en su Catálogo: Displays, Mazos, Kits y Accesorios, y ni una Carta
+  # suelta. `singles: false` la Saca de las Preguntas por una Carta, donde
+  # Contestaría "Mazo de 50 Cartas" a un Nombre de Carta.
+  casamyl.cl:
+    games: [mitos-y-leyendas]
+    name: "Casa MyL"
+    platform: shopify
+    singles: false
     timeout_seconds: 10
     allow_redirects: true
     enabled: true

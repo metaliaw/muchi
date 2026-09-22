@@ -86,6 +86,7 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 	tcgmatchOnePiece := buildTCGMatch(fetcher, storeConfig, string(search.GameOnePiece))
 	tcgmatchDigimon := buildTCGMatch(fetcher, storeConfig, string(search.GameDigimon))
 	tcgmatchRiftbound := buildTCGMatch(fetcher, storeConfig, string(search.GameRiftbound))
+	tcgmatchMitos := buildTCGMatch(fetcher, storeConfig, string(search.GameMitos))
 	cardMetadataProviders := map[search.Game]cardmetadata.Provider{
 		search.GameMagic:     cardmetadata.Scryfall{Fetcher: fetcher},
 		search.GamePokemon:   tcgmatchMetadata,
@@ -93,6 +94,7 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		search.GameOnePiece:  tcgmatchOnePiece,
 		search.GameDigimon:   tcgmatchDigimon,
 		search.GameRiftbound: tcgmatchRiftbound,
+		search.GameMitos:     tcgmatchMitos,
 	}
 	autocompleteProviders := map[search.Game]cardmetadata.AutocompleteProvider{
 		search.GameMagic:     cardmetadata.Scryfall{Fetcher: fetcher},
@@ -101,6 +103,7 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		search.GameOnePiece:  tcgmatchOnePiece,
 		search.GameDigimon:   tcgmatchDigimon,
 		search.GameRiftbound: tcgmatchRiftbound,
+		search.GameMitos:     tcgmatchMitos,
 	}
 	supportedGames := make(map[search.Game]string)
 	for key, game := range storeConfig.Games {
@@ -128,6 +131,7 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		SuspiciousPercent: config.SuspiciousPricePercent,
 		StoreLocations:    buildStoreLocations(storeConfig),
 		SinglesOnly:       buildSinglesOnly(storeConfig),
+		SealedOnly:        buildSealedOnly(storeConfig),
 	}
 	if dispatch && config.TaskURL != "" {
 		queue, err := taskqueue.OpenQueue(
@@ -275,6 +279,19 @@ func buildSetLibraries(fetcher stores.SourceFetcher, config stores.Config) map[s
 // buildSinglesOnly Names the Sources their Configuration Marks `sealed: false`,
 // the Way each one Names itself in a Failure. An Aggregator Answers by the Host
 // of its URL; a Store, by its Domain.
+// buildSealedOnly Names the Stores that Sell no Loose Card, the Mirror of
+// buildSinglesOnly. A Search Provider Indexes what its Shops Sell, so the Mark
+// Belongs to a Shop.
+func buildSealedOnly(config stores.Config) map[string]bool {
+	named := map[string]bool{}
+	for domain, store := range config.Stores {
+		if !store.SellsSingles() {
+			named[domain] = true
+		}
+	}
+	return named
+}
+
 func buildSinglesOnly(config stores.Config) map[string]bool {
 	named := map[string]bool{}
 	for _, provider := range config.SearchProviders {

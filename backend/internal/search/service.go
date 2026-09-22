@@ -43,6 +43,12 @@ type Service struct {
 	// Answers nothing — and that Wait Comes back Marked as an incomplete
 	// Answer, which Reads to a Caller like the Box might Exist elsewhere.
 	SinglesOnly map[string]bool
+	// SealedOnly Names the Sources that Sell no Loose Card, the Mirror of
+	// SinglesOnly. A Question for a Card Skips them for the same Reason, and
+	// with a Worse Failure if it does not: a Shop that Sells only Boxes
+	// Answers "Mazo de 50 Cartas" to a Card Name, and that Box Looks like an
+	// Offer for the Card until someone Reads the Title.
+	SealedOnly map[string]bool
 }
 
 func (s Service) CreateSearch(ctx context.Context, key string, input CreateInput) (Job, error) {
@@ -96,8 +102,11 @@ func (s Service) collectOffers(ctx context.Context, game Game, query offer.CardQ
 		return nil, nil, ErrInvalid
 	}
 	if query.Sealed() {
-		sources = s.keepSealedSources(sources)
+		sources = s.keepSources(sources, s.SinglesOnly)
 		hasProvider = hasProvider && !s.SinglesOnly[provider.SourceName()]
+	} else {
+		sources = s.keepSources(sources, s.SealedOnly)
+		hasProvider = hasProvider && !s.SealedOnly[provider.SourceName()]
 	}
 	items, faults, err := queryGameSources(ctx, provider, hasProvider, sources, query)
 	if err != nil && len(items) == 0 {
@@ -142,18 +151,18 @@ func nameKinds(items []offer.Offer, kind offer.ProductKind) []offer.Offer {
 	return items
 }
 
-// keepSealedSources Drops the Sources that Declared they Sell no Sealed Product.
+// keepSources Drops the Sources a Mark Excludes from this Kind of Question.
 //
 // It Fails open, like the Set Filter: a Source nobody Marked Stays Asked. The
 // Mark is a Fact about a Shop, and an unmarked Shop is one nobody Looked at
 // yet — not one that Sells nothing.
-func (s Service) keepSealedSources(sources []OfferSource) []OfferSource {
-	if len(s.SinglesOnly) == 0 {
+func (s Service) keepSources(sources []OfferSource, excluded map[string]bool) []OfferSource {
+	if len(excluded) == 0 {
 		return sources
 	}
 	kept := make([]OfferSource, 0, len(sources))
 	for _, source := range sources {
-		if !s.SinglesOnly[source.SourceName()] {
+		if !excluded[source.SourceName()] {
 			kept = append(kept, source)
 		}
 	}
@@ -332,7 +341,8 @@ func ValidateCreate(input CreateInput, maxCards, maxQuantity int) error {
 
 func validGame(game Game) bool {
 	return game == GameMagic || game == GamePokemon || game == GameYuGiOh ||
-		game == GameOnePiece || game == GameDigimon || game == GameRiftbound
+		game == GameOnePiece || game == GameDigimon || game == GameRiftbound ||
+		game == GameMitos
 }
 
 func HashPayload(value any) string {

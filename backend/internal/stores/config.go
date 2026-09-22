@@ -61,6 +61,10 @@ type StoreConfig struct {
 	// Entry Exists so its Stock can be Checked, not so it is Asked twice.
 	// Absent Means yes.
 	Searched *bool `yaml:"searched"`
+	// Singles Says whether this Store Sells Loose Cards at all. A Shop that
+	// Sells only Boxes Answers a Card Name with a Box, and that Box Reads like
+	// an Offer for the Card. Absent Means yes.
+	Singles *bool `yaml:"singles"`
 	// Sealed Says whether this Store Sells Unopened Product at all. A Singles
 	// Shop Answers every Sealed Question empty, and the Answer Comes back
 	// Marked incomplete when it Times out first. Absent Means yes.
@@ -70,6 +74,11 @@ type StoreConfig struct {
 // IsSearched Answers whether this Store is a Source of its own.
 func (c StoreConfig) IsSearched() bool {
 	return c.Searched == nil || *c.Searched
+}
+
+// SellsSingles Answers whether a Card Question is Worth Asking this Store.
+func (c StoreConfig) SellsSingles() bool {
+	return c.Singles == nil || *c.Singles
 }
 
 // SellsSealed Answers whether a Sealed Question is Worth Asking this Store.

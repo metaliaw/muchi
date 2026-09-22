@@ -7,6 +7,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"golang.org/x/text/unicode/norm"
 )
 
 var ErrInvalidOffer = errors.New("invalid offer")
@@ -56,8 +58,25 @@ func CountStock(status string, quantity int) StockReading {
 	return StockReading{Status: status, Quantity: &quantity}
 }
 
+// NormalizeCard Levels a Card Name so two Spellings of it Meet.
+//
+// Accents Fall with it. Mitos y Leyendas Names its Cards in Spanish and its
+// Index Files them without Tildes, so "Dragón de Magma" and "dragon de magma"
+// are the same Card written by two Hands. Nobody Prints two Cards that Differ
+// only in a Tilde, so Folding them Loses no Distinction.
 func NormalizeCard(name string) string {
-	return strings.Join(strings.Fields(strings.ToLower(name)), " ")
+	return strings.Join(strings.Fields(strings.ToLower(dropAccents(name))), " ")
+}
+
+// dropAccents Splits each Letter from its Mark and Keeps the Letter.
+func dropAccents(value string) string {
+	decomposed := norm.NFKD.String(value)
+	return strings.Map(func(letter rune) rune {
+		if letter >= '\u0300' && letter <= '\u036f' {
+			return -1
+		}
+		return letter
+	}, decomposed)
 }
 
 // editionBrackets Open a Tail that cannot be Part of a Card Name.
