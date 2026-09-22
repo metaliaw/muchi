@@ -2,7 +2,7 @@
 /** Muchi Presenta Búsquedas y Resultados persistidos por la API. */
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import * as api from './api.js'
-import { declaredStock, useSearch } from './search.js'
+import { declaredStock, topOf, useSearch } from './search.js'
 import {
   confirmOffers, countReachable, readFreshChecks, rememberChecks, sayAge,
 } from './stock.js'
@@ -174,12 +174,17 @@ async function confirmOne(offer) {
     say(`En ${offer.store} ya no queda`, 'idle')
     return
   }
-  // Quedan menos de las Elegidas: se Baja a lo que la Tienda Declara. Dejar
-  // tres Copias donde Hay una Prometería una Compra que no se Puede hacer.
-  const left = declaredStock(said || offer)
+  // Quedan menos de las Elegidas: se Baja al Tope de esa Tienda. Dejar tres
+  // Copias donde Hay una Prometería una Compra que no se Puede hacer, y una
+  // Tienda que Dijo que Queda sin Decir cuántas Vale una sola.
+  const counted = declaredStock(said || offer)
+  const left = topOf(said || offer)
   if (left && units.value[offer.offer_id] > left) {
     units.value = { ...units.value, [offer.offer_id]: left }
-    say(`En ${offer.store} quedan ${left}`, 'idle')
+    // Decir un Número que la Tienda no Dijo sería Inventarlo: sin Cuenta se
+    // Dice por qué Bajó, no cuántas Quedan.
+    say(counted === null ? `${offer.store} no dice cuántas quedan; te dejo una`
+                         : `En ${offer.store} quedan ${counted}`, 'idle')
     return
   }
   say(`En ${offer.store} sí queda`, 'happy')

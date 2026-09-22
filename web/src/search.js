@@ -53,13 +53,16 @@ const byCardThenPrice = (left, right) =>
  * sin Selector: Ofrecerla sería Ofrecer lo que la Tienda ya Negó.
  */
 export function pickable(offer) {
-  return offer.stock_status !== 'unavailable'
+  // Contar cero es Negar. Una Tienda que Cuenta sus Copias y Llega a cero ya
+  // Dijo que no, Diga lo que Diga la Etiqueta.
+  return offer.stock_status !== 'unavailable' && declaredStock(offer) !== 0
 }
 
 /** Llena la Cantidad pedida con estas Ofertas, de la barata a la cara.
  *
- * De cada Tienda se Toma hasta lo que Declara Tener. Sin Cantidad Declarada
- * se Asume que Alcanza, que es lo mismo que Asume el Reparto del Servidor.
+ * De cada Tienda se Toma hasta lo que Declara Tener, y una sola de la que no
+ * Cuenta: el Reparto Reparte lo mismo que el Selector Deja Elegir, y llenar
+ * cuatro Copias en un Casillero que Topa en una Dejaría el Carrito Mintiendo.
  * Devuelve también lo que Quedó sin cubrir y lo que Costaría, para Poder
  * Comparar dos Maneras de Llenar la misma Lista.
  */
@@ -71,8 +74,7 @@ function fillFrom(rows, asked) {
     (one, other) => (one.price_clp ?? Infinity) - (other.price_clp ?? Infinity))
   for (const offer of sorted) {
     if (left <= 0) break
-    const declared = offer.stock_quantity
-    const take = declared == null ? left : Math.min(left, declared)
+    const take = Math.min(left, topOf(offer))
     if (take <= 0 || !offer.offer_id) continue
     picks[offer.offer_id] = take
     cost += take * (offer.price_clp ?? 0)
@@ -87,21 +89,25 @@ function fillFrom(rows, asked) {
  * y no Cuánto, y Suponer una Cifra Convertiría un Silencio en una Promesa.
  */
 export const declaredStock = (offer) =>
-  typeof offer?.stock_quantity === 'number' && offer.stock_quantity > 0
-    ? offer.stock_quantity : 0
+  typeof offer?.stock_quantity === 'number' && offer.stock_quantity >= 0
+    ? offer.stock_quantity : null
 
-/** Hasta dónde Alcanza una Oferta. Sin Cuenta Declarada no hay Tope que Poner. */
-export const topOf = (offer) => declaredStock(offer) || MAX_UNITS
-
-/** El segundo Número del Contador.
+/** Hasta dónde Alcanza una Oferta.
  *
- * Manda el Stock: quien Suma Copias está Mirando esta Tienda, y lo que Importa
- * ahí es hasta dónde Alcanza. Sin Cuenta Vuelve a Decir lo que la Lista Pide.
+ * Con Cuenta Declarada, hasta lo que la Tienda Dijo. Sin ella, una sola: la
+ * Tienda Contestó que Queda, no Cuántas Quedan, y Ofrecer cuatro Copias de un
+ * Stock que nadie Contó es Prometer tres que la Tienda no Prometió.
  */
-export const limitOf = (offer, asked) => declaredStock(offer) || asked
+export const topOf = (offer) => {
+  const counted = declaredStock(offer)
+  return counted === null ? UNCOUNTED_UNITS : counted
+}
 
-/** El Tope de siempre, para la Tienda que no Cuenta lo suyo. */
-export const MAX_UNITS = 999
+/** El segundo Número del Contador: hasta dónde se Puede llegar en esta Tienda. */
+export const limitOf = (offer) => topOf(offer)
+
+/** Lo que Vale una Tienda que no Cuenta lo suyo: una Copia, hasta que Cuente. */
+export const UNCOUNTED_UNITS = 1
 
 /** Con qué Criterio se Reparte la Cantidad pedida. */
 export const BY_PRICE = 'precio'
