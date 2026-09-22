@@ -7,7 +7,6 @@ import {
   confirmOffers, countReachable, readFreshChecks, rememberChecks, sayAge,
 } from './stock.js'
 import MuchiPanel from './components/MuchiPanel.vue'
-import CardLookup from './components/CardLookup.vue'
 import CardArt from './components/CardArt.vue'
 import CommunityPanel from './components/CommunityPanel.vue'
 import SiteLinks from './components/SiteLinks.vue'
@@ -265,11 +264,7 @@ async function submit(text) {
   await send()
 }
 
-function loadCard(canonicalName) {
-  lookupText.value = canonicalName
-}
-
-// Del Buscador llega un Nombre; de una Oferta, la Impresion entera.
+// De una Oferta llega la Impresión entera, que es lo que el Panel Mira.
 function lookAtCard(card) {
   watched.value = card
 }
@@ -308,12 +303,6 @@ function sayLibre() {
 }
 
 // Muchi no completa el Campo: dice lo que vio y quien escribe decide.
-function suggestNames(names) {
-  const [first, ...rest] = names
-  say(rest.length ? `¿Buscabas «${first}»? También veo ${rest.map((n) => `«${n}»`).join(' y ')}.`
-                  : `¿Buscabas «${first}»?`, 'talk')
-}
-
 async function send() {
   if (!pending.value) return
   error.value = ''
@@ -511,18 +500,6 @@ onUnmounted(stopPolling)
         :limits="config.limits"
         @search="submit" @retry="send" @resume="selectSearch"
       >
-        <template #lookup>
-          <!-- El Buscador Asistido Consulta el Catálogo de Cartas. Para una
-               Caja no Tiene a quién Preguntarle, así que no se Muestra. -->
-          <CardLookup
-            v-if="game && kind !== 'sealed'"
-            :game="game"
-            @found="loadCard"
-            @failed="(text) => say(text, 'angry')"
-            @suggest="suggestNames"
-            @look="lookAtCard"
-          />
-        </template>
       </SearchForm>
 
       <section v-if="history.length" class="mu-panel">

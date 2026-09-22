@@ -301,13 +301,10 @@ const extraLines = computed(() => wide.value && written.value > 1)
       <button class="mu-ghost" @click="emit('retry')">Reintentar Envío</button>
     </p>
 
-    <!-- El Buscador del Catálogo Queda detrás de una Opción: la Lista ya se
-         Completa sola mientras se Escribe, y dos Campos que Buscan Nombres al
-         mismo tiempo Preguntan cuál de los dos es el que Vale. -->
-    <details v-if="$slots.lookup" class="mu-catalogo">
-      <summary>Buscar una Carta en el Catálogo</summary>
-      <slot name="lookup" />
-    </details>
+    <!-- El Buscador del Catálogo se Fue: la Lista ya se Completa sola mientras
+         se Escribe, y el Catálogo de Impresiones no Alcanza para todos los
+         Juegos. La Ranura Queda para quien Quiera Colgar algo acá. -->
+    <slot name="lookup" />
 
     <details>
       <summary>Retomar una Búsqueda</summary>
