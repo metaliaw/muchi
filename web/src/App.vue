@@ -254,6 +254,12 @@ function sayFrom(group) {
   say(said.text, said.state)
 }
 
+// La Oferta más barata le Saca un Comentario a Muchi. En Móvil no hay Hover y
+// no Pasa nada: el Comentario Adorna, no Informa.
+function sayCheap() {
+  sayFrom('bargain')
+}
+
 // A quien mira las Estadísticas, Muchi lo saluda como se merece.
 function sayNerd() {
   sayFrom('nerd')
