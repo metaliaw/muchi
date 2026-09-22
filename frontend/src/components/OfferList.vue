@@ -6,7 +6,17 @@ import {
   BY_EDITION, BY_PRICE, groupByCardType, pickable as canPick, spreadUnits,
 } from '../search.js'
 
-const emit = defineEmits(['look', 'confirm'])
+const emit = defineEmits(['look', 'confirm', 'cheap'])
+
+// La más barata Merece un Comentario. Solo esa: Celebrar cada Oferta Sería no
+// Celebrar ninguna. Pasar dos veces por la misma no Repite la Frase, así que
+// Recorrer la Lista con el Mouse no Deja a Muchi hablando solo.
+let cheered = ''
+function cheerCheap(offer) {
+  if (!offer.best || cheered === offer.offer_id) return
+  cheered = offer.offer_id
+  emit('cheap', offer)
+}
 
 // Cuántas Copias se Compran en cada Oferta. Cero es lo normal: de casi toda
 // Oferta no se Compra nada. Las que el Reparto Recomienda nacen con su
@@ -208,7 +218,8 @@ watch(() => groups.value, () => spreadNow(), { immediate: true })
              :class="{ mejor: offer.best, elegida: bought(offer) > 0,
                        agotada: offer.offer_id && !pickable(offer),
                        tomable: offer.offer_id && pickable(offer) }"
-             @click="touchOffer(offer, $event)">
+             @click="touchOffer(offer, $event)"
+             @mouseenter="cheerCheap(offer)">
       <!-- Tildar es Decir «de acá me Llevo». El Reparto ya Tildó lo que
            Recomienda; una Agotada ni siquiera Lleva Casilla. -->
       <input v-if="offer.offer_id && pickable(offer)" type="checkbox" class="mu-elige"
