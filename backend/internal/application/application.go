@@ -99,9 +99,10 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 			supportedGames[search.Game(key)] = game.Name
 		}
 	}
-	checker := stores.Checker{Fetcher: fetcher, Config: storeConfig}
 	sourcesByGame := buildSourcesByGame(fetcher, storeConfig, store, config.InventoryCacheTTL, logger)
 	inventories := collectInventories(sourcesByGame)
+	// The Shelf Checks its own Stock: a List has no Product Page to Visit.
+	checker := stores.Checker{Fetcher: fetcher, Config: storeConfig, Lists: inventories}
 	service := search.Service{
 		Searches:          store,
 		Providers:         buildProviders(fetcher, storeConfig),

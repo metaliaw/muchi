@@ -27,9 +27,16 @@ type CommerceAdapter interface {
 type Checker struct {
 	Fetcher SourceFetcher
 	Config  Config
+	// Lists Answers for the Stores that Publish an Inventory instead of a
+	// Storefront. Their Offers all Share one URL, so the Host below Names no
+	// Store and the Question would Die as "unknown".
+	Lists CommerceAdapter
 }
 
 func (c Checker) CheckStock(ctx context.Context, item offer.Offer) (offer.StockReading, error) {
+	if c.Lists != nil && item.Source == "moxfield" {
+		return c.Lists.CheckStock(ctx, item)
+	}
 	link, err := url.Parse(item.URL)
 	if err != nil {
 		return offer.ReadStock("unknown"), err

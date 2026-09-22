@@ -117,7 +117,9 @@ paths:
         here before trusting it. Offers are named by the id the search gave
         them: a url of the caller's choosing is refused, so this is never a
         proxy. Readings come back in the order asked, one per offer, at most
-        fifty per request.
+        fifty per request. A store that publishes lists instead of a storefront
+        is asked by reading its list again, past the inventory cache: every one
+        of its offers shares a single url, so the host names no store.
       requestBody:
         required: true
         content:
