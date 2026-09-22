@@ -1,6 +1,8 @@
 <script setup>
 /** Una Carta o una Lista. El Envío pendiente conserva su Clave de Idempotencia. */
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
+import * as api from '../api.js'
+import { completionFor, lineAround, splitOrder } from '../search.js'
 
 const GAME_EXAMPLES = {
   magic: ['Sol Ring', '4 Lightning Bolt'],
@@ -139,6 +141,78 @@ watch([() => props.games, kind], () => {
 // otra. Pero eso no lo Vuelve una Búsqueda de a una — una Lista de Cajas con
 // Cantidades es tan legítima como una de Cartas, así que el Modo angosto
 // Duerme mientras Sellado Manda, en vez de Recortar la Lista a su Primera Línea.
+// ------------------------------------------- el Final que Muchi Ofrece
+// Quien Escribe una Lista no siempre Recuerda el Nombre entero. Muchi Mira la
+// Línea donde está el Cursor cuando Paran las Teclas y Ofrece el Final. Solo en
+// Cartas sueltas: una Caja no está en ningún Catálogo de Cartas. Y solo si el
+// Juego Tiene quién Conteste — si no lo Tiene, la Consulta Falla y no se Ofrece
+// nada, que es todo el Filtro que hace falta.
+const HUSH_MS = 700
+const ENOUGH_LETTERS = 3
+
+const field = ref(null)
+const hint = ref(null)
+let hush = null
+
+function forgetHint() {
+  if (hush) clearTimeout(hush)
+  hush = null
+  hint.value = null
+}
+onUnmounted(forgetHint)
+
+/** Lo que se está escribiendo en la Línea del Cursor. */
+function writingNow() {
+  const caret = field.value ? field.value.selectionStart : text.value.length
+  const { start, end } = lineAround(text.value, caret)
+  const line = text.value.slice(start, end)
+  if (line.trim().startsWith('#')) return null
+  const { prefix, name } = splitOrder(line)
+  return { start, end, prefix, name: name.trim() }
+}
+
+function wonderLater() {
+  forgetHint()
+  if (sealed.value || !game.value) return
+  const writing = writingNow()
+  if (!writing || writing.name.length < ENOUGH_LETTERS) return
+  hush = setTimeout(() => wonder(writing.name, game.value), HUSH_MS)
+}
+
+async function wonder(written, named) {
+  let names = []
+  try {
+    names = (await api.readCardAutocomplete(named, written)).suggestions || []
+  } catch {
+    // Un Juego sin Catálogo de Nombres Contesta con un Error. Sugerir es un
+    // Favor: quien Escribe no se entera de que no se Pudo.
+    return
+  }
+  // Quien siguió Escribiendo, Cambió de Línea o de Juego ya no Quiere esto.
+  const writing = writingNow()
+  if (!writing || writing.name !== written || named !== game.value) return
+  const found = completionFor(written, names)
+  if (found) hint.value = { ...writing, name: found }
+}
+
+/** Escribe el Nombre entero en su Línea, sin Tocar las demás. */
+function acceptHint() {
+  const offer = hint.value
+  const writing = writingNow()
+  forgetHint()
+  // La Línea Pudo Moverse entre la Sugerencia y el Tab: si ya no es la misma,
+  // Escribir ahí Pisaría algo que nadie Pidió.
+  if (!offer || !writing || writing.start !== offer.start) return
+  const line = writing.prefix + offer.name
+  text.value = text.value.slice(0, writing.start) + line + text.value.slice(writing.end)
+  nextTick(() => {
+    if (!field.value) return
+    const at = writing.start + line.length
+    field.value.focus()
+    field.value.setSelectionRange(at, at)
+  })
+}
+
 const wide = computed(() => !sealed.value && match.value === 'includes')
 const asked = computed(() => (wide.value ? firstLine.value : text.value))
 const extraLines = computed(() => wide.value && written.value > 1)
@@ -172,9 +246,19 @@ const extraLines = computed(() => wide.value && written.value > 1)
         </select>
       </label>
       <textarea
-        v-model="text" rows="5" :placeholder="searchExample"
+        ref="field" v-model="text" rows="5" :placeholder="searchExample"
         :aria-label="`Una ${sealed ? 'Caja' : 'Carta'} o tu Lista de ${noun}`"
+        @input="wonderLater" @keydown.tab="hint && ($event.preventDefault(), acceptHint())"
+        @blur="forgetHint" @click="forgetHint"
       ></textarea>
+      <!-- La Sugerencia va Debajo y no Adentro: un Texto fantasma dentro del
+           Campo Tapa lo Escrito cuando la Línea se Parte en dos. -->
+      <p v-if="hint" class="mu-final">
+        <button type="button" class="mu-ghost" @click="acceptHint">
+          {{ hint.name }}
+        </button>
+        <span class="mu-caption">Tab para Completar</span>
+      </p>
       <p v-if="sealed" class="mu-caption">
         Una Caja Lleva su Set en el Nombre — «Bloomburrow» sola Trae toda Caja
         de ese Set, y un Booster Box no se Confunde con un Booster Pack.
@@ -217,7 +301,13 @@ const extraLines = computed(() => wide.value && written.value > 1)
       <button class="mu-ghost" @click="emit('retry')">Reintentar Envío</button>
     </p>
 
-    <slot name="lookup" />
+    <!-- El Buscador del Catálogo Queda detrás de una Opción: la Lista ya se
+         Completa sola mientras se Escribe, y dos Campos que Buscan Nombres al
+         mismo tiempo Preguntan cuál de los dos es el que Vale. -->
+    <details v-if="$slots.lookup" class="mu-catalogo">
+      <summary>Buscar una Carta en el Catálogo</summary>
+      <slot name="lookup" />
+    </details>
 
     <details>
       <summary>Retomar una Búsqueda</summary>
@@ -246,6 +336,10 @@ h2 { margin-top: 0; }
 /* Un Catálogo que este Juego no Vende se Ve apagado, no Desaparece: Saber que
    Existe y que acá no Hay es más Útil que un Selector que Cambia de Tamaño. */
 .mu-modo--sin { opacity: .45; }
+/* El Final Ofrecido se Lee como lo que es: una Propuesta a un Tab de Distancia,
+   pegada al Campo para que el Ojo no la Busque. */
+.mu-final { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 4px 0 0; }
+.mu-final > button { font-weight: 700; }
 .mu-modo--sin input { cursor: not-allowed; }
 .mu-modo legend { padding: 0; }
 /* Las dos Opciones Comparten Fila mientras Quepan enteras. */
