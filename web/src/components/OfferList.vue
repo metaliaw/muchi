@@ -4,10 +4,10 @@ import { computed, ref, watch } from 'vue'
 import { formatAmount, formatClp } from '../api.js'
 import {
   BY_EDITION, BY_PRICE, declaredStock, groupByCardType, limitOf,
-  pickable as canPick, spreadUnits, topOf,
+  hasStoreCatalog, pickable as canPick, spreadUnits, topOf,
 } from '../search.js'
 
-const emit = defineEmits(['look', 'confirm', 'cheap'])
+const emit = defineEmits(['look', 'confirm', 'cheap', 'detail'])
 
 // La más barata Merece un Comentario. Solo esa: Celebrar cada Oferta Sería no
 // Celebrar ninguna. Pasar dos veces por la misma no Repite la Frase, así que
@@ -298,7 +298,9 @@ watch(() => groups.value, () => spreadNow(), { immediate: true })
         </ul>
       </details>
       <p v-if="offer.note" class="mu-caption">{{ offer.note }}</p>
-      <a :href="offer.url" target="_blank" rel="noopener noreferrer">{{ offer.action }} →</a>
+      <button v-if="hasStoreCatalog(offer)" type="button" class="mu-detalle-boton"
+              @click="emit('detail', offer)">Ver detalle</button>
+      <a v-else :href="offer.url" target="_blank" rel="noopener noreferrer">{{ offer.action }} →</a>
       </div>
     </article>
     </template>
@@ -403,4 +405,6 @@ h3 { margin: 0; font-size: 1.05rem; }
 .mu-retiros summary::marker { color: var(--mu-peri); }
 .mu-retiros__mas { color: var(--mu-tinta-sw); }
 .mu-retiros ul { margin: 4px 0 0; padding-left: 20px; }
+.mu-detalle-boton { padding: 0; border-radius: 0; background: none; color: var(--mu-acento); box-shadow: none; font-weight: 700; text-decoration: underline; }
+.mu-detalle-boton:hover:not(:disabled) { transform: none; }
 </style>

@@ -18,6 +18,7 @@ import SourcesPanel from './components/SourcesPanel.vue'
 import AdSpot from './components/AdSpot.vue'
 import GoogleAdsense from './components/GoogleAdsense.vue'
 import SponsorSpot from './components/SponsorSpot.vue'
+import StoreCardDetail from './components/StoreCardDetail.vue'
 
 const THEME_KEY = 'muchi_tema'
 // Quien Busca Cartas de un Juego Vuelve al mismo: el Selector Recuerda el
@@ -72,6 +73,7 @@ const kind = ref(new URLSearchParams(location.search).get('kind') === 'sealed'
   ? 'sealed' : 'single')
 // La Carta que se mira: un Nombre, y el Idioma en que se escribió.
 const watched = ref(null)
+const detailed = ref(null)
 const history = ref(JSON.parse(localStorage.getItem('muchi_historial') || '[]'))
 // Cuántas Copias Tiene cada Oferta, contadas a mano por quien está mirando la
 // Tienda. Viven acá porque las Escribe la Lista y las Usa el Carrito.
@@ -563,6 +565,7 @@ onUnmounted(stopPolling)
         v-model:units="units"
         @confirm="confirmOne"
         @look="lookAtCard"
+        @detail="detailed = $event"
         @cheap="sayCheap"
       >
         <template #advertisement="{ group }">
@@ -596,6 +599,9 @@ onUnmounted(stopPolling)
                :repository-url="config.repository_url"
                :ready="config.cart_ready" />
   </main>
+
+  <StoreCardDetail v-if="detailed" :offer="detailed" :game="game"
+                   @close="detailed = null" />
 
 </template>
 

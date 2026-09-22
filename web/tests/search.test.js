@@ -1,7 +1,7 @@
 /** Las Páginas que el BFF manda de a una, acumuladas de este Lado. */
 import { describe, expect, it } from 'vitest'
 import {
-  BY_EDITION, BY_PRICE, groupByCardType, limitOf, pickable, replacePositions,
+  BY_EDITION, BY_PRICE, groupByCardType, hasStoreCatalog, limitOf, pickable, replacePositions,
   spreadUnits, summarizeOffers, topOf, UNCOUNTED_UNITS,
 } from '../src/search.js'
 
@@ -49,6 +49,15 @@ describe('la Oferta que se Puede comprar', () => {
     expect(pickable({ stock_status: 'unavailable' })).toBe(false)
     expect(pickable({ stock_status: 'unknown' })).toBe(true)
     expect(pickable({ stock_status: 'available' })).toBe(true)
+  })
+})
+
+describe('la Tienda cuyo Catálogo vive en Moxfield', () => {
+  it('Abre la Vista propia desde el Origen o el Enlace', () => {
+    expect(hasStoreCatalog({ source: 'moxfield' })).toBe(true)
+    expect(hasStoreCatalog({ metadata: { catalog: 'Moxfield deck' } })).toBe(true)
+    expect(hasStoreCatalog({ url: 'https://www.moxfield.com/decks/abc' })).toBe(true)
+    expect(hasStoreCatalog({ source: 'shopify', url: 'https://tienda.cl/carta' })).toBe(false)
   })
 })
 
