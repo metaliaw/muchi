@@ -67,8 +67,9 @@ const match = defineModel('match', { type: String, default: 'exact' })
 const kind = defineModel('kind', { type: String, default: 'single' })
 const identifier = ref('')
 
-// Buscar Derivados es Mirar una Familia, no Comprar una Lista: pedir 3 Kuriboh
-// y recibir un Linkuriboh no es lo mismo. Por eso el Modo ancho toma una Carta.
+// Buscar lo que Contiene el Nombre es Mirar una Familia, no Comprar una Lista:
+// pedir 3 Kuriboh y recibir un Linkuriboh no es lo mismo. Por eso el Modo ancho
+// toma una Carta.
 const firstLine = computed(() =>
   text.value.split('\n').map((line) => line.trim())
     .find((line) => line && !line.startsWith('#')) || '')
@@ -103,9 +104,6 @@ watch([game, kind], offerDefault, { immediate: true })
 // Búsqueda restaurada Nombra el suyo— y eso no Debe Borrarle el Texto a nadie.
 function pickGame(named) {
   game.value = named
-  // Un Juego que no Vende Cartas sueltas no se Puede Mirar en Cartas sueltas:
-  // el Catálogo Cede antes que el Juego, porque el Juego es lo que se Eligió.
-  if (!sells(named, kind.value)) kind.value = sealed.value ? 'single' : 'sealed'
   text.value = suggestion.value
 }
 
@@ -118,13 +116,23 @@ function sells(named, wanted) {
   const mark = wanted === 'sealed' ? found.sealed : found.singles
   return mark === undefined ? true : mark
 }
-const sellsSingles = computed(() => sells(game.value, 'single'))
-const sellsSealed = computed(() => sells(game.value, 'sealed'))
-// El Catálogo recordado puede no Caber en el Juego que Llega: quien Buscó
-// Cajas la última vez Vuelve a un Juego que no las Vende. Se Corrige cuando la
-// Lista Llega, no antes, porque antes ningún Juego Dice todavía qué Vende.
-watch([() => props.games, game], () => {
-  if (!sells(game.value, kind.value)) kind.value = sealed.value ? 'single' : 'sealed'
+// Los Juegos que Venden lo que se Está buscando. El Catálogo se Elige primero,
+// así que Manda él: un Juego que no Vende Cajas no Aparece en una Búsqueda de
+// Cajas, en vez de Aparecer para Quedar inservible al Elegirlo.
+const playable = computed(() =>
+  props.games.filter((item) => sells(item.reference_key, kind.value)))
+// Un Catálogo que ningún Juego Vende no se Puede Elegir: Elegirlo Dejaría el
+// Selector de Juegos vacío y la Búsqueda sin dónde Buscar.
+const sellsSingles = computed(() => props.games.some((item) => sells(item.reference_key, 'single')))
+const sellsSealed = computed(() => props.games.some((item) => sells(item.reference_key, 'sealed')))
+
+// El Juego recordado puede no Vender el Catálogo elegido: quien Buscó Cartas
+// de un Juego Pasa a Cajas y ese Juego no las Tiene. Se Cae al primero que sí,
+// cuando la Lista Llega, que es cuando los Juegos recién Dicen qué Venden.
+watch([() => props.games, kind], () => {
+  if (!playable.value.length || sells(game.value, kind.value)) return
+  game.value = playable.value[0].reference_key
+  text.value = suggestion.value
 })
 
 // Sellado Busca ancho siempre: ninguna Tienda Titula una Caja igual que la
@@ -141,16 +149,9 @@ const extraLines = computed(() => wide.value && written.value > 1)
     <h2>Buscar {{ selectedGame?.name || 'Cartas' }}</h2>
     <p v-if="error" class="mu-aviso error">{{ error }}</p>
     <form @submit.prevent="emit('search', asked)">
-      <label class="mu-juego">
-        Juego
-        <select :value="game" :disabled="!games.length" required
-                @change="pickGame($event.target.value)">
-          <option v-for="item in games" :key="item.reference_key"
-                  :value="item.reference_key">{{ item.name }}</option>
-        </select>
-      </label>
-      <!-- El Catálogo Elige primero: Cambia los Ejemplos, el Tope y hasta si
-           el Modo de Coincidencia Tiene algo que Decir. -->
+      <!-- Qué Buscar Abre el Formulario: primero se Decide si se Compran
+           Cartas o Cajas, y recién después en qué Juego. Al revés se Elegía un
+           Juego para un Catálogo que todavía no se Había Elegido. -->
       <fieldset class="mu-modo">
         <legend class="mu-caption">Qué Buscar</legend>
         <label :class="{ 'mu-modo--sin': !sellsSingles }">
@@ -162,6 +163,14 @@ const extraLines = computed(() => wide.value && written.value > 1)
           Producto sellado
         </label>
       </fieldset>
+      <label class="mu-juego">
+        Juego
+        <select :value="game" :disabled="!playable.length" required
+                @change="pickGame($event.target.value)">
+          <option v-for="item in playable" :key="item.reference_key"
+                  :value="item.reference_key">{{ item.name }}</option>
+        </select>
+      </label>
       <textarea
         v-model="text" rows="5" :placeholder="searchExample"
         :aria-label="`Una ${sealed ? 'Caja' : 'Carta'} o tu Lista de ${noun}`"
@@ -170,8 +179,9 @@ const extraLines = computed(() => wide.value && written.value > 1)
         Una Caja Lleva su Set en el Nombre — «Bloomburrow» sola Trae toda Caja
         de ese Set, y un Booster Box no se Confunde con un Booster Pack.
       </p>
-      <!-- El Modo de Coincidencia Habla de Impresiones y Derivados: dos Cosas
-           que una Caja sin Abrir no Tiene. En Sellado Calla. -->
+      <!-- El Modo de Coincidencia Habla de Impresiones y de Nombres que
+           Contienen a otro: dos Cosas que una Caja sin Abrir no Tiene. En
+           Sellado Calla. -->
       <fieldset v-if="!sealed" class="mu-modo">
         <legend class="mu-caption">Qué Traer</legend>
         <label>
@@ -180,7 +190,7 @@ const extraLines = computed(() => wide.value && written.value > 1)
         </label>
         <label>
           <input type="radio" value="includes" v-model="match" />
-          También sus Derivados
+          Contiene en el Nombre
         </label>
       </fieldset>
       <p v-if="wide" class="mu-caption">
