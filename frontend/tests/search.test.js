@@ -1,8 +1,8 @@
 /** Las Páginas que el BFF manda de a una, acumuladas de este Lado. */
 import { describe, expect, it } from 'vitest'
 import {
-  BY_EDITION, BY_PRICE, groupByCardType, pickable, replacePositions, spreadUnits,
-  summarizeOffers,
+  BY_EDITION, BY_PRICE, groupByCardType, limitOf, MAX_UNITS, pickable,
+  replacePositions, spreadUnits, summarizeOffers, topOf,
 } from '../src/search.js'
 
 const offer = (position, card, price, store, amount = price) =>
@@ -122,5 +122,26 @@ describe('el Criterio del Reparto', () => {
       offer('of-a', 100, 'otc', 1), offer('of-b', 200, 'cmm', 1)] }]
 
     expect(spreadUnits(scattered, four, BY_EDITION)).toEqual({ 'of-a': 1, 'of-b': 1 })
+  })
+})
+
+
+describe('el Tope de una Oferta', () => {
+  it('es lo que la Tienda Declara tener', () => {
+    expect(topOf({ stock_quantity: 2 })).toBe(2)
+    expect(limitOf({ stock_quantity: 2 }, 4)).toBe(2)
+  })
+
+  it('sin Cuenta Declarada Deja el Tope de siempre', () => {
+    // Una Tienda que Contesta que sí Tiene y no Cuánto no Pone Techo: el
+    // segundo Número Vuelve a Decir lo que la Lista Pide.
+    expect(topOf({ stock_status: 'available' })).toBe(MAX_UNITS)
+    expect(limitOf({ stock_status: 'available' }, 4)).toBe(4)
+  })
+
+  it('un Cero Declarado no es un Tope de cero', () => {
+    // Una Agotada no se Muestra con Selector: Toparla en cero Dejaría un
+    // Contador que no Sube y Parecería Roto.
+    expect(topOf({ stock_quantity: 0 })).toBe(MAX_UNITS)
   })
 })

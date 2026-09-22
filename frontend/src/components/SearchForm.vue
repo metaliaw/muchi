@@ -6,6 +6,11 @@ const GAME_EXAMPLES = {
   magic: ['Sol Ring', '4 Lightning Bolt'],
   pokemon: ['Pikachu', '4 Charizard ex'],
   yugioh: ['Dark Magician', '3 Ash Blossom & Joyous Spring'],
+  // Las Tiendas Escriben el Nombre de One Piece sin Espacios, como Sale en la
+  // Carta. Medido en sus Catálogos: con Espacios no Cae ninguna.
+  'one-piece': ['Monkey.D.Luffy', '4 Nami'],
+  digimon: ['Agumon', '4 Gabumon'],
+  riftbound: ['Yasuo, Unforgiven', '4 Jinx, Demolitionist'],
 }
 // Una Caja no se Nombra como una Carta: lleva su Set y su Formato juntos, y
 // cada Tienda los Escribe a su Manera.
@@ -16,6 +21,9 @@ const SEALED_EXAMPLES = {
   magic: ['Play Booster', '2 Play Booster Display'],
   pokemon: ['Prismatic Evolutions Booster Bundle', '2 Surging Sparks Elite Trainer Box'],
   yugioh: ['Booster Box', '2 Structure Deck'],
+  'one-piece': ['Starter Deck', '2 Booster Box'],
+  digimon: ['Starter Deck', '2 Booster Box'],
+  riftbound: ['Starter Deck', '2 Booster Box'],
 }
 
 const props = defineProps({
