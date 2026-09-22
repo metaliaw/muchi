@@ -103,8 +103,29 @@ watch([game, kind], offerDefault, { immediate: true })
 // Búsqueda restaurada Nombra el suyo— y eso no Debe Borrarle el Texto a nadie.
 function pickGame(named) {
   game.value = named
+  // Un Juego que no Vende Cartas sueltas no se Puede Mirar en Cartas sueltas:
+  // el Catálogo Cede antes que el Juego, porque el Juego es lo que se Eligió.
+  if (!sells(named, kind.value)) kind.value = sealed.value ? 'single' : 'sealed'
   text.value = suggestion.value
 }
+
+// Qué Vende cada Juego lo Dice la API, Sumado de lo que Declara cada Tienda.
+// Un Juego sin la Marca —una API vieja— se Trata como que Vende de todo: antes
+// de Existir la Marca se Ofrecían los dos Catálogos igual.
+function sells(named, wanted) {
+  const found = props.games.find((item) => item.reference_key === named)
+  if (!found) return true
+  const mark = wanted === 'sealed' ? found.sealed : found.singles
+  return mark === undefined ? true : mark
+}
+const sellsSingles = computed(() => sells(game.value, 'single'))
+const sellsSealed = computed(() => sells(game.value, 'sealed'))
+// El Catálogo recordado puede no Caber en el Juego que Llega: quien Buscó
+// Cajas la última vez Vuelve a un Juego que no las Vende. Se Corrige cuando la
+// Lista Llega, no antes, porque antes ningún Juego Dice todavía qué Vende.
+watch([() => props.games, game], () => {
+  if (!sells(game.value, kind.value)) kind.value = sealed.value ? 'single' : 'sealed'
+})
 
 // Sellado Busca ancho siempre: ninguna Tienda Titula una Caja igual que la
 // otra. Pero eso no lo Vuelve una Búsqueda de a una — una Lista de Cajas con
@@ -132,12 +153,12 @@ const extraLines = computed(() => wide.value && written.value > 1)
            el Modo de Coincidencia Tiene algo que Decir. -->
       <fieldset class="mu-modo">
         <legend class="mu-caption">Qué Buscar</legend>
-        <label>
-          <input type="radio" value="single" v-model="kind" />
+        <label :class="{ 'mu-modo--sin': !sellsSingles }">
+          <input type="radio" value="single" v-model="kind" :disabled="!sellsSingles" />
           Cartas sueltas
         </label>
-        <label>
-          <input type="radio" value="sealed" v-model="kind" />
+        <label :class="{ 'mu-modo--sin': !sellsSealed }">
+          <input type="radio" value="sealed" v-model="kind" :disabled="!sellsSealed" />
           Producto sellado
         </label>
       </fieldset>
@@ -212,6 +233,10 @@ h2 { margin-top: 0; }
 .mu-fila > input { flex: 1; }
 /* El Modo va pegado al Campo que cambia, no escondido en un Menu. */
 .mu-modo { border: 0; padding: 0; margin: 10px 0 0; display: grid; gap: 8px 16px; }
+/* Un Catálogo que este Juego no Vende se Ve apagado, no Desaparece: Saber que
+   Existe y que acá no Hay es más Útil que un Selector que Cambia de Tamaño. */
+.mu-modo--sin { opacity: .45; }
+.mu-modo--sin input { cursor: not-allowed; }
 .mu-modo legend { padding: 0; }
 /* Las dos Opciones Comparten Fila mientras Quepan enteras. */
 @media (min-width: 560px) {
