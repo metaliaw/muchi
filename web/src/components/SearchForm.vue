@@ -11,6 +11,7 @@ const GAME_EXAMPLES = {
   'one-piece': ['Monkey.D.Luffy', '4 Nami'],
   digimon: ['Agumon', '4 Gabumon'],
   riftbound: ['Yasuo, Unforgiven', '4 Jinx, Demolitionist'],
+  'mitos-y-leyendas': ['Dragón de Magma', '4 Dragón de Luz'],
 }
 // Una Caja no se Nombra como una Carta: lleva su Set y su Formato juntos, y
 // cada Tienda los Escribe a su Manera.
@@ -24,6 +25,9 @@ const SEALED_EXAMPLES = {
   'one-piece': ['Starter Deck', '2 Booster Box'],
   digimon: ['Starter Deck', '2 Booster Box'],
   riftbound: ['Starter Deck', '2 Booster Box'],
+  // Casa MyL Titula sus Cajas así: el Display y el Mazo, no la "Booster Box"
+  // que Nombra el resto de los Juegos.
+  'mitos-y-leyendas': ['Display', '2 Mazo'],
 }
 
 const props = defineProps({
