@@ -57,3 +57,12 @@ nerd:
     state: happy
   - text: fuiste digno
     state: happy
+# Lo que Muchi Dice al Pasar por encima de la Oferta más barata. Las escribió
+# una Persona, como todas las demás.
+bargain:
+  - text: uuuu que rico cartón
+    state: happy
+  - text: chayita fresca
+    state: happy
+  - text: QUE OFERTON
+    state: happy
