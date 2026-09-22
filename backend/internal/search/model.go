@@ -43,10 +43,12 @@ type CardInput struct {
 type Game string
 
 const (
-	GameMagic    Game = "magic"
-	GameOnePiece Game = "one-piece"
-	GamePokemon  Game = "pokemon"
-	GameYuGiOh   Game = "yugioh"
+	GameDigimon   Game = "digimon"
+	GameMagic     Game = "magic"
+	GameOnePiece  Game = "one-piece"
+	GamePokemon   Game = "pokemon"
+	GameRiftbound Game = "riftbound"
+	GameYuGiOh    Game = "yugioh"
 )
 
 type Options struct {

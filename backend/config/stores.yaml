@@ -27,12 +27,29 @@ games:
       - jumpseller
       - prestashop
       - woocommerce
+  # One Piece y Digimon Salen del mismo Lugar: el Marketplace los Indexa, y
+  # cuatro Tiendas ya configuradas para Magic Venden sus Cartas también.
   one-piece:
     name: One Piece
     reference_key: one-piece
-    enabled: false
+    enabled: true
     origins:
       - tcgmatch
+      - shopify
+  digimon:
+    name: Digimon
+    reference_key: digimon
+    enabled: true
+    origins:
+      - tcgmatch
+      - shopify
+  riftbound:
+    name: Riftbound
+    reference_key: riftbound
+    enabled: true
+    origins:
+      - tcgmatch
+      - shopify
 
 search_providers:
   scry:
@@ -58,7 +75,7 @@ search_providers:
     type: tcgmatch
     url: https://api.tcgmatch.cl
     enabled: true
-    games: [pokemon, yugioh, one-piece]
+    games: [pokemon, yugioh, one-piece, digimon, riftbound]
     stores: []
   tcgdex:
     type: tcgdex
@@ -100,6 +117,24 @@ stores:
     estimated_response_seconds: 10
     allow_redirects: true
     enabled: true
+  # Estas dos Llegan por scry y no se Buscan directo: la Entrada Existe para
+  # Comprobar su Stock, que su Página Cuenta y el Catálogo Ajax no.
+  inekosingles.com:
+    games: [magic]
+    searched: false
+    name: "Ineko Card Shop"
+    platform: shopify
+    timeout_seconds: 10
+    allow_redirects: true
+    enabled: true
+  www.paytowin.cl:
+    games: [magic]
+    searched: false
+    name: "Pay to Win"
+    platform: shopify
+    timeout_seconds: 10
+    allow_redirects: true
+    enabled: true
   # Jumpseller Directo Pausado: Paginación Lenta. Scry Conserva sus Ofertas Publicadas.
   lacripta.cl:
     games: [magic]
@@ -133,8 +168,9 @@ stores:
     timeout_seconds: 10
     allow_redirects: true
     enabled: true
+  # Medido en su Catálogo: la única de las cuatro que También Vende Digimon.
   gameofmagicsingles.cl:
-    games: [magic]
+    games: [magic, one-piece, digimon]
     name: "Game of Magic Singles"
     platform: shopify
     locations:
@@ -144,8 +180,9 @@ stores:
     timeout_seconds: 10
     allow_redirects: true
     enabled: true
+  # Medido en su Catálogo: Vende Cartas sueltas de Riftbound.
   singles.collectorcenter.cl:
-    games: [magic]
+    games: [magic, riftbound]
     name: "Collector Center"
     platform: shopify
     locations:
@@ -156,8 +193,9 @@ stores:
     timeout_seconds: 10
     allow_redirects: true
     enabled: true
+  # Medido en su Catálogo: Vende One Piece, no Digimon.
   www.cardsouls.cl:
-    games: [magic]
+    games: [magic, one-piece]
     name: "CardSouls"
     platform: shopify
     locations:
@@ -184,8 +222,9 @@ stores:
     timeout_seconds: 10
     allow_redirects: true
     enabled: true
+  # Medido en su Catálogo: Vende Cartas de One Piece por Nombre.
   www.oasisgames.cl:
-    games: [magic, pokemon]
+    games: [magic, pokemon, one-piece]
     name: "Oasis Games"
     platform: shopify
     locations:

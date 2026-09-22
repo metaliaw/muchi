@@ -116,12 +116,33 @@ func (c Client) CheckStock(ctx context.Context, item offer.Offer) (offer.StockRe
 		return offer.ReadStock("unknown"), err
 	}
 	for _, candidate := range product.Variants {
-		if strconv.FormatInt(candidate.ID, 10) == variant {
-			// Shopify Publishes whether a Variant Sells, never how Many Remain.
-			return offer.ReadStock(stockStatus(candidate.Available)), nil
+		if strconv.FormatInt(candidate.ID, 10) != variant {
+			continue
 		}
+		if !candidate.Available {
+			return offer.CountStock("unavailable", 0), nil
+		}
+		// The Ajax Product Answers yes or no; the Page Counts. A Buyer Adding
+		// Copies Needs the Number, so the Page is Read once the Answer is yes.
+		if units := c.countUnits(ctx, path, variant); units != nil && *units > 0 {
+			return offer.CountStock("available", *units), nil
+		}
+		return offer.ReadStock("available"), nil
 	}
 	return offer.ReadStock("unknown"), nil
+}
+
+// countUnits Reads the Storefront Page for the Count the Theme Prints. A Page
+// that will not Load Costs the Number, never the Answer: the Ajax Product
+// already Said the Variant Sells.
+func (c Client) countUnits(ctx context.Context, path, variant string) *int {
+	// The Page is Asked for this Variant: a Theme Renders its Counter for the
+	// Variant Selected, and a Page without one Answers about the wrong Card.
+	data, err := c.fetchPage(ctx, path+"?variant="+variant)
+	if err != nil {
+		return nil
+	}
+	return readVariantUnits(data, variant)
 }
 
 // SourceName Identifies this Store the Way the Health Report Names it.

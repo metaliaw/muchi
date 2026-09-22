@@ -83,15 +83,24 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 	fetcher := buildSourceClient(config, store, logger)
 	tcgmatchMetadata := buildTCGMatch(fetcher, storeConfig, string(search.GamePokemon))
 	tcgmatchYuGiOh := buildTCGMatch(fetcher, storeConfig, string(search.GameYuGiOh))
+	tcgmatchOnePiece := buildTCGMatch(fetcher, storeConfig, string(search.GameOnePiece))
+	tcgmatchDigimon := buildTCGMatch(fetcher, storeConfig, string(search.GameDigimon))
+	tcgmatchRiftbound := buildTCGMatch(fetcher, storeConfig, string(search.GameRiftbound))
 	cardMetadataProviders := map[search.Game]cardmetadata.Provider{
-		search.GameMagic:   cardmetadata.Scryfall{Fetcher: fetcher},
-		search.GamePokemon: tcgmatchMetadata,
-		search.GameYuGiOh:  tcgmatchYuGiOh,
+		search.GameMagic:     cardmetadata.Scryfall{Fetcher: fetcher},
+		search.GamePokemon:   tcgmatchMetadata,
+		search.GameYuGiOh:    tcgmatchYuGiOh,
+		search.GameOnePiece:  tcgmatchOnePiece,
+		search.GameDigimon:   tcgmatchDigimon,
+		search.GameRiftbound: tcgmatchRiftbound,
 	}
 	autocompleteProviders := map[search.Game]cardmetadata.AutocompleteProvider{
-		search.GameMagic:   cardmetadata.Scryfall{Fetcher: fetcher},
-		search.GamePokemon: tcgmatchMetadata,
-		search.GameYuGiOh:  tcgmatchYuGiOh,
+		search.GameMagic:     cardmetadata.Scryfall{Fetcher: fetcher},
+		search.GamePokemon:   tcgmatchMetadata,
+		search.GameYuGiOh:    tcgmatchYuGiOh,
+		search.GameOnePiece:  tcgmatchOnePiece,
+		search.GameDigimon:   tcgmatchDigimon,
+		search.GameRiftbound: tcgmatchRiftbound,
 	}
 	supportedGames := make(map[search.Game]string)
 	for key, game := range storeConfig.Games {
@@ -182,7 +191,7 @@ func buildSourcesByGame(fetcher stores.SourceFetcher, config stores.Config, cach
 			allowed[origin] = true
 		}
 		for domain, store := range config.Stores {
-			if !store.Enabled || !slices.Contains(store.Games, key) {
+			if !store.Enabled || !store.IsSearched() || !slices.Contains(store.Games, key) {
 				continue
 			}
 			for _, list := range store.Lists {
@@ -342,7 +351,7 @@ func buildOfferSources(fetcher stores.SourceFetcher, catalog search.OfferSource,
 		sources = append(sources, catalog)
 	}
 	for domain, store := range config.Stores {
-		if !store.Enabled {
+		if !store.Enabled || !store.IsSearched() {
 			continue
 		}
 		for _, list := range store.Lists {

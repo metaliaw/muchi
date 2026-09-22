@@ -47,11 +47,19 @@ func TestFindOffers(t *testing.T) {
 	if items[0].PriceAmount != "3500" || items[0].PriceCurrency != "CLP" || items[0].Condition != "NM" || items[0].Language != "English" || items[0].Image != "https://cdn.shopify.com/sol-ring.jpg" || items[0].Metadata["edition"] != "Final Fantasy Commander" || items[0].URL == items[1].URL || calls["/products/ring.js"] != 1 {
 		t.Fatalf("items=%+v calls=%v", items, calls)
 	}
-	for _, test := range []struct{ id, status string }{{"10", "available"}, {"11", "unavailable"}, {"99", "unknown"}, {"", "unknown"}} {
+	// A Sold Variant is a Declared Zero. The Ajax Product Never Counts what is
+	// left, and this Page Prints no Counter, so a Yes Comes back without Number.
+	for _, test := range []struct {
+		id, status string
+		units      int
+	}{{"10", "available", -1}, {"11", "unavailable", 0}, {"99", "unknown", -1}, {"", "unknown", -1}} {
 		reading, err := client.CheckStock(context.Background(), offer.Offer{URL: "https://cards.test/products/ring?variant=" + test.id})
-		// Shopify Says whether a Variant Sells, never how Many Remain.
-		if err != nil || reading.Status != test.status || reading.Quantity != nil {
-			t.Fatalf("id=%s status=%s quantity=%v err=%v", test.id, reading.Status, reading.Quantity, err)
+		counted := -1
+		if reading.Quantity != nil {
+			counted = *reading.Quantity
+		}
+		if err != nil || reading.Status != test.status || counted != test.units {
+			t.Fatalf("id=%s status=%s quantity=%d err=%v", test.id, reading.Status, counted, err)
 		}
 	}
 }

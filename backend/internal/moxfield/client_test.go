@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -66,8 +67,12 @@ func TestDynamicInventory(t *testing.T) {
 	prices := map[string]string{"nph": "3843", "plst": "2793", "brr": "3143"}
 	copies := map[string]string{"nph": "1", "plst": "3", "brr": "1"}
 	for _, item := range items {
-		if item.PriceAmount != prices[item.Metadata["set"]] || item.Metadata["quantity"] != copies[item.Metadata["set"]] || item.Source != "moxfield" || item.StockStatus != "unknown" {
+		if item.PriceAmount != prices[item.Metadata["set"]] || item.Metadata["quantity"] != copies[item.Metadata["set"]] || item.Source != "moxfield" || item.StockStatus != "available" {
 			t.Fatalf("offer=%+v", item)
+		}
+		// The List Counts its Copies: the Offer Says so before anyone Asks.
+		if item.StockQuantity == nil || strconv.Itoa(*item.StockQuantity) != copies[item.Metadata["set"]] {
+			t.Fatalf("quantity=%v offer=%+v", item.StockQuantity, item)
 		}
 	}
 	if fetcher.domain != "api2.moxfield.com" || !strings.Contains(fetcher.target, "/v3/decks/all/") {

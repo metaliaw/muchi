@@ -56,10 +56,20 @@ type StoreConfig struct {
 	Enabled                  bool            `yaml:"enabled"`
 	Name                     string          `yaml:"name"`
 	Lists                    []MoxfieldList  `yaml:"lists"`
+	// Searched Says whether we Ask this Store for Offers ourselves. A Store
+	// that Reaches us through a Search Provider is already Represented: the
+	// Entry Exists so its Stock can be Checked, not so it is Asked twice.
+	// Absent Means yes.
+	Searched *bool `yaml:"searched"`
 	// Sealed Says whether this Store Sells Unopened Product at all. A Singles
 	// Shop Answers every Sealed Question empty, and the Answer Comes back
 	// Marked incomplete when it Times out first. Absent Means yes.
 	Sealed *bool `yaml:"sealed"`
+}
+
+// IsSearched Answers whether this Store is a Source of its own.
+func (c StoreConfig) IsSearched() bool {
+	return c.Searched == nil || *c.Searched
 }
 
 // SellsSealed Answers whether a Sealed Question is Worth Asking this Store.

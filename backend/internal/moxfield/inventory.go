@@ -96,11 +96,15 @@ func (c *Client) buildOffer(entry entryReply, id, key string) (offer.Offer, bool
 	if store == "" {
 		store = c.StoreID
 	}
+	// The List Counts its Copies, so the Offer Carries that Count from the
+	// Start: a Buyer Choosing four Copies Deserves to Know the List Holds two
+	// before Asking anyone. It is the same Number the Check Reads again later.
+	units := entry.Quantity
 	return offer.Offer{
 		ID: "moxfield:" + c.StoreID + ":" + variant, VariantID: variant,
 		CardName: entry.Card.Name, Store: store, PriceAmount: price, PriceCurrency: "CLP",
 		URL: "https://moxfield.com/decks/" + id, Source: "moxfield", Finish: finish,
-		Language: entry.Card.Language, StockStatus: "unknown",
+		Language: entry.Card.Language, StockStatus: "available", StockQuantity: &units,
 		Metadata: map[string]string{
 			"list": c.Label, "set": entry.Card.Set, "quantity": strconv.Itoa(entry.Quantity),
 			"ck_usd":         strings.Trim(string(entry.Card.Prices[priceKey]), `"`),

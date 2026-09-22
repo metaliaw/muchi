@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/url"
-	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/cangrejometralleta/muchi-api/internal/jumpseller"
@@ -53,7 +51,7 @@ func (c Checker) CheckStock(ctx context.Context, item offer.Offer) (offer.StockR
 		return offer.ReadStock("unknown"), err
 	}
 	status := inspectStock(data, config)
-	units := countUnits(data)
+	units := offer.CountDeclaredUnits(data)
 	if units == nil {
 		return offer.ReadStock(status), nil
 	}
@@ -66,26 +64,6 @@ func (c Checker) CheckStock(ctx context.Context, item offer.Offer) (offer.StockR
 		return offer.CountStock("unavailable", 0), nil
 	}
 	return offer.CountStock("available", *units), nil
-}
-
-// declaredUnits Matches the Way a Storefront Writes what it has Left, in the
-// Sentence a Buyer Reads: "3 disponibles", "1 unidad", "2 en stock".
-var declaredUnits = regexp.MustCompile(`(?i)(\d{1,4})\s*(?:unidades?|disponibles?|en stock)`)
-
-// countUnits Reads how many Units the Page Declares, or nil when it Stays
-// quiet. Most Storefronts never Say a Number, and Guessing one would Turn a
-// Silence into a Promise. The First Match Wins: it Sits next to the Quantity
-// Box, before the Footer and its Unrelated Digits.
-func countUnits(data []byte) *int {
-	match := declaredUnits.FindSubmatch(data)
-	if match == nil {
-		return nil
-	}
-	units, err := strconv.Atoi(string(match[1]))
-	if err != nil {
-		return nil
-	}
-	return &units
 }
 
 func (c Checker) commerceAdapter(config StoreConfig, domain string) CommerceAdapter {

@@ -331,7 +331,8 @@ func ValidateCreate(input CreateInput, maxCards, maxQuantity int) error {
 }
 
 func validGame(game Game) bool {
-	return game == GameMagic || game == GamePokemon || game == GameYuGiOh || game == GameOnePiece
+	return game == GameMagic || game == GamePokemon || game == GameYuGiOh ||
+		game == GameOnePiece || game == GameDigimon || game == GameRiftbound
 }
 
 func HashPayload(value any) string {
