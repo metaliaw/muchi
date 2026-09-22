@@ -53,6 +53,11 @@ const {
 // El Muelle nace Cerrado: quien Busca quiere ver Ofertas, y Muchi y la Carta
 // Esperan a un Toque. Solo Existe en Móvil; en Escritorio el Lateral los Muestra.
 const dockOpen = ref(false)
+// El Carrito Tiene su propio Cajón a la Derecha. Los dos Comparten la Esquina
+// de abajo en Móvil, así que Abrir uno Guarda al otro.
+const cartOpen = ref(false)
+watch(dockOpen, (shown) => { if (shown) cartOpen.value = false })
+watch(cartOpen, (shown) => { if (shown) dockOpen.value = false })
 const error = ref('')
 const pending = ref(null)
 // El Campo nace con lo último que se Buscó. Se Lee acá, antes de que el
@@ -546,6 +551,7 @@ onUnmounted(stopPolling)
         v-model:units="units"
         @confirm="confirmOne"
         @look="lookAtCard"
+        @cheap="sayCheap"
       >
         <template #advertisement="{ group }">
           <SponsorSpot
@@ -566,10 +572,17 @@ onUnmounted(stopPolling)
         </template>
       </OfferList>
 
-      <CartPanel v-if="offers.length" :search-id="searchId" :match="match"
-                 :units="units" />
       <SourcesPanel @nerd="sayNerd" />
     </div>
+
+    <!-- Comparar ya Sirve sin Comprar, así que el Carrito está siempre. Lo
+         que el Servidor Decide es si todavía hace falta Avisar que la Compra
+         no Está. -->
+    <CartPanel v-if="offers.length"
+               :search-id="searchId" :match="match"
+               :units="units" :docked="dockOpen" v-model:open="cartOpen"
+               :repository-url="config.repository_url"
+               :ready="config.cart_ready" />
   </main>
 
 </template>
