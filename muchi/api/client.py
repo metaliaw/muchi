@@ -240,8 +240,14 @@ class SearchProvider:
         reply = self.request_reply("GET", "/health/sources")
         return self.parse_reply(lambda value: value["sources"], reply)
 
-    def read_supported_games(self) -> list[dict]:
-        reply = self.request_reply("GET", "/supported-games")
+    def read_supported_games(self, kind: str = "") -> list[dict]:
+        """Los Juegos que se Pueden buscar, y para qué Tipo.
+
+        Cada Juego Trae sus dos Marcas. `kind` Recorta la Lista a los que
+        Contestan esa Pregunta, para quien Dibuja un Selector de un Tipo solo.
+        """
+        reply = self.request_reply("GET", "/supported-games",
+                                   params={"kind": kind} if kind else None)
         return self.parse_reply(lambda value: value["games"], reply)
 
     def read_card_metadata(self, game: str, name: str, language: str = "",

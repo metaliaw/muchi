@@ -172,9 +172,13 @@ def read_languages() -> dict:
 
 
 @app.get("/api/supported-games")
-def read_supported_games() -> dict:
-    """Los Juegos disponibles los nombra muchi-api, no el Front."""
-    return {"games": build_muchi().searches.read_supported_games()}
+def read_supported_games(kind: Literal["", "single", "sealed"] = "") -> dict:
+    """Los Juegos disponibles los nombra muchi-api, no el Front.
+
+    Cada uno Dice si se Puede pedir en Cartas sueltas, en Sellado o en ambas.
+    Nadie lo Declara por Juego: lo Declara cada Tienda y el Juego lo Hereda.
+    """
+    return {"games": build_muchi().searches.read_supported_games(kind)}
 
 
 @app.get("/api/card/art")
