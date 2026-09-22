@@ -81,6 +81,28 @@ function fillFrom(rows, asked) {
   return { picks, left, cost }
 }
 
+/** Cuántas Copias Declara una Tienda, o cero cuando no lo Dice.
+ *
+ * Es un Número solo cuando la Tienda lo Dijo: la mayoría Contesta que sí Tiene
+ * y no Cuánto, y Suponer una Cifra Convertiría un Silencio en una Promesa.
+ */
+export const declaredStock = (offer) =>
+  typeof offer?.stock_quantity === 'number' && offer.stock_quantity > 0
+    ? offer.stock_quantity : 0
+
+/** Hasta dónde Alcanza una Oferta. Sin Cuenta Declarada no hay Tope que Poner. */
+export const topOf = (offer) => declaredStock(offer) || MAX_UNITS
+
+/** El segundo Número del Contador.
+ *
+ * Manda el Stock: quien Suma Copias está Mirando esta Tienda, y lo que Importa
+ * ahí es hasta dónde Alcanza. Sin Cuenta Vuelve a Decir lo que la Lista Pide.
+ */
+export const limitOf = (offer, asked) => declaredStock(offer) || asked
+
+/** El Tope de siempre, para la Tienda que no Cuenta lo suyo. */
+export const MAX_UNITS = 999
+
 /** Con qué Criterio se Reparte la Cantidad pedida. */
 export const BY_PRICE = 'precio'
 export const BY_EDITION = 'edicion'

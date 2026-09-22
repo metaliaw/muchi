@@ -3,7 +3,8 @@
 import { computed, ref, watch } from 'vue'
 import { formatAmount, formatClp } from '../api.js'
 import {
-  BY_EDITION, BY_PRICE, groupByCardType, pickable as canPick, spreadUnits,
+  BY_EDITION, BY_PRICE, declaredStock, groupByCardType, limitOf,
+  pickable as canPick, spreadUnits, topOf,
 } from '../search.js'
 
 const emit = defineEmits(['look', 'confirm', 'cheap'])
@@ -35,7 +36,9 @@ function missingFor(group, offer) {
   const others = group.rows
     .filter((row) => row.offer_id !== offer.offer_id)
     .reduce((count, row) => count + bought(row), 0)
-  return Math.max(1, total - others)
+  // Ni más de lo que la Tienda Tiene: Marcar una Oferta no Debe Pedir cuatro
+  // Copias a quien Declaró dos.
+  return Math.min(Math.max(1, total - others), topFor(offer))
 }
 
 // Tocar la Oferta Pregunta si Está, y nada más. Comprar es una Decisión con
@@ -50,7 +53,7 @@ function touchOffer(offer, event) {
 
 // Una Copia más, o una menos. Nunca bajo cero: un Carrito negativo no Existe.
 function stepUnits(offer, step) {
-  countUnits(offer, String(Math.max(0, bought(offer) + step)))
+  countUnits(offer, String(Math.min(Math.max(0, bought(offer) + step), topFor(offer))))
 }
 
 // Marcar una Oferta es Pedirle lo que Falta, no una Copia suelta: quien
@@ -64,7 +67,7 @@ function countUnits(offer, written) {
   const clean = { ...units.value }
   const had = bought(offer)
   if (written === '' || Number.isNaN(value) || value <= 0) delete clean[offer.offer_id]
-  else clean[offer.offer_id] = Math.min(value, 999)
+  else clean[offer.offer_id] = Math.min(value, topFor(offer))
   units.value = clean
   // Elegir una Oferta es Decir que se va a Comprar: ahí es cuando Importa si
   // la Tienda todavía la Tiene. Se Pregunta al pasar de cero, no en cada
@@ -93,12 +96,17 @@ const props = defineProps({
   advertiseGroups: { type: Boolean, default: false },
 })
 
-// Cuántas Copias Pide la Lista de cada Carta. El Badge lo Muestra al lado de
-// lo contado: "1 / 4" Dice de una vez que esta Tienda no Alcanza sola.
+// Cuántas Copias Pide la Lista de cada Carta. Es lo que el Contador Muestra al
+// lado de lo contado mientras la Tienda no Cuente lo suyo: "1 / 4" Dice de una
+// vez que esta Tienda no Alcanza sola.
 const asked = computed(() => Object.fromEntries(
   props.items.map((item) => [item.name.toLowerCase(), item.quantity])))
 const askedFor = (offer) =>
   asked.value[(offer.card_type || offer.card_name || '').toLowerCase()] || 0
+
+const stockOf = declaredStock
+const topFor = topOf
+const limitFor = (offer) => limitOf(offer, askedFor(offer))
 
 // Con qué Criterio Baja la Cantidad pedida sobre las Ofertas.
 const criterion = ref(BY_PRICE)
@@ -242,11 +250,13 @@ watch(() => groups.value, () => spreadNow(), { immediate: true })
                 :aria-label="`Una Copia menos en ${offer.store}`"
                 @click="stepUnits(offer, -1)">−</button>
         <label class="mu-copias__cuenta">
-          <input type="number" min="0" max="999" step="1"
+          <input type="number" min="0" :max="topFor(offer)" step="1"
                  :value="bought(offer)"
                  :aria-label="`Copias de ${offer.card_name} en ${offer.store}`"
                  @input="countUnits(offer, $event.target.value)" />
-          <span v-if="askedFor(offer)" class="mu-copias__total">/ {{ askedFor(offer) }}</span>
+          <span v-if="limitFor(offer)" class="mu-copias__total"
+                :title="stockOf(offer) ? `${offer.store} Declara ${stockOf(offer)}`
+                                       : `La Lista Pide ${askedFor(offer)}`">/ {{ limitFor(offer) }}</span>
         </label>
         <button type="button" class="mu-copias__paso"
                 :aria-label="`Una Copia más en ${offer.store}`"
