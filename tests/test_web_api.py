@@ -55,11 +55,17 @@ class FakeSearches:
     def read_sources(self):
         return [{"source": "scry", "status": "ok"}]
 
-    def read_supported_games(self):
-        return [
-            {"name": "Magic: The Gathering", "reference_key": "magic"},
-            {"name": "Pokémon", "reference_key": "pokemon"},
+    def read_supported_games(self, kind=""):
+        self.asked_kind = kind
+        games = [
+            {"name": "Magic: The Gathering", "reference_key": "magic",
+             "singles": True, "sealed": True},
+            {"name": "Mitos y Leyendas", "reference_key": "mitos-y-leyendas",
+             "singles": True, "sealed": False},
         ]
+        if kind == "sealed":
+            return [game for game in games if game["sealed"]]
+        return games
 
     def read_card_metadata(self, game, name, language="", edition="", foil=False):
         return {
@@ -178,11 +184,23 @@ def test_create_search_rejects_lines_it_cannot_read(client):
 
 
 def test_supported_games_come_from_the_api(client):
+    """Cada Juego Trae sus dos Marcas: qué se le Puede pedir."""
     http, _ = client
     assert http.get("/api/supported-games").json() == {"games": [
-        {"name": "Magic: The Gathering", "reference_key": "magic"},
-        {"name": "Pokémon", "reference_key": "pokemon"},
+        {"name": "Magic: The Gathering", "reference_key": "magic",
+         "singles": True, "sealed": True},
+        {"name": "Mitos y Leyendas", "reference_key": "mitos-y-leyendas",
+         "singles": True, "sealed": False},
     ]}
+
+
+def test_supported_games_answer_by_kind(client):
+    """Un Selector de Cajas Dibuja solo los Juegos que Tienen Cajas."""
+    http, _ = client
+
+    games = http.get("/api/supported-games", params={"kind": "sealed"}).json()["games"]
+
+    assert [game["reference_key"] for game in games] == ["magic"]
 
 
 def test_card_metadata_uses_the_selected_game(client):
