@@ -134,23 +134,35 @@ const reachable = computed(() => countReachable(
 const confirmable = computed(() =>
   Boolean(state.value?.done) && reachable.value > 0 && !stocked.value)
 
-// Tocar una Oferta Pregunta si Está, a esa Tienda y a nadie más: un Toque no
-// Debe Desatar una Ronda del Servicio. Si la Tienda no Deja preguntar —CORS
-// cerrado, otra Plataforma— se Dice, porque el Toque no Tuvo otro Efecto y
-// un Silencio Parecería que la Página se Colgó.
+// Tocar o Elegir una Oferta Pregunta si Está, a esa Tienda y a nadie más: un
+// Toque no Debe Desatar una Ronda del Servicio. Lo que el Navegador Alcanza lo
+// Pide él; por el Resto —una Tienda leída de Listas, un Catálogo sin JSON—
+// Preguntamos nosotros, pero solo por esa Oferta.
 async function confirmOne(offer) {
+  if (!offer?.offer_id) return
   const [check] = await confirmOffers([offer], fetch, 1)
-  if (!check) {
-    say(`${offer.store} no contesta desde acá; no puedo confirmarla`, 'idle')
-    return
-  }
-  rememberChecks(searchId.value, [check])
+  if (check) rememberChecks(searchId.value, [check])
+  let answer
   try {
-    applyStock(await api.confirmStock(searchId.value, [check], match.value, false))
+    answer = check
+      ? await api.confirmStock(searchId.value, [check], match.value, false)
+      : await api.confirmStock(searchId.value, [], match.value, false,
+                               [offer.offer_id])
   } catch {
+    say(`No pude preguntarle a ${offer.store}`, 'idle')
     return
   }
-  if (!check.available) {
+  applyStock(answer)
+  const said = (answer.offers || []).find((row) => row.offer_id === offer.offer_id)
+  // El Navegador Contesta sí o no; el Servicio Contesta una Fila, y una Fila
+  // que no Vuelve es una Tienda que no Dijo nada.
+  const available = check ? check.available
+    : said ? said.stock_status !== 'unavailable' : null
+  if (available === null) {
+    say(`${offer.store} no dice si queda`, 'idle')
+    return
+  }
+  if (!available) {
     // Contar una Copia de lo que ya no Está Metería al Carrito una Compra que
     // la Tienda acaba de Negar.
     const { [offer.offer_id]: gone, ...rest } = units.value
