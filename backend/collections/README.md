@@ -1,6 +1,6 @@
-# Bruno Collections
+# Colecciones de Bruno
 
-Open `bruno/Muchi API` in Bruno and select the `Local` Environment.
+Open `collections/Muchi API` in Bruno and select the `Local` Environment.
 
 Run `Create Search` before the Search status, Results, or Cancel Requests.
 The Request saves the returned Search ID into the Environment automatically.

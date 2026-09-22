@@ -10,7 +10,7 @@ Hacemos público este repositorio para Compartir cómo funciona Muchi
 y construirlo con quienes lo usan.
 
 Puedes Empezar por el entorno local, consultar el contrato [OpenAPI](openapi.yaml)
-o probar las peticiones de [Bruno](bruno/README.md).
+o probar las peticiones de [Bruno](collections/README.md).
 
 ## Desarrollo local
 

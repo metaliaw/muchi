@@ -3,7 +3,7 @@
 .env
 .env.example
 vendor/
-bruno/
+collections/
 *.md
 compose.yaml
 Dockerfile
