@@ -52,10 +52,13 @@ export const checkStock = (id, match = 'exact') =>
 // Lo que el Navegador ya Confirmó viaja en el Cuerpo: esas Tiendas no reciben
 // una segunda Visita nuestra.
 // `ask` apagado Corona con lo que el Navegador Trajo y no Visita a nadie: es
-// para el Toque suelto sobre una Oferta.
-export const confirmStock = (id, checks, match = 'exact', ask = true) =>
+// para el Toque suelto sobre una Oferta que el Navegador sí Alcanzó.
+// `asking` Nombra las Ofertas por las que Preguntamos nosotros. Es el Toque
+// sobre una Tienda que el Navegador no Alcanza: el Servicio Pregunta por esa
+// y por nadie más.
+export const confirmStock = (id, checks, match = 'exact', ask = true, asking = []) =>
   post(`/api/searches/${encodeURIComponent(id)}/stock?match=${match}&ask=${ask}`,
-       { checks })
+       { checks, asking })
 export const cancelSearch = (id, key) =>
   post(`/api/searches/${encodeURIComponent(id)}/cancel`, { key })
 export const readCart = (id, shipping, match = 'exact') =>
