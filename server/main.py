@@ -293,10 +293,13 @@ class StockRequest(BaseModel):
     # Una Lista larga no Confirma más: lo que no está en el Plan se Descarta
     # igual, y el Tope Evita un Cuerpo que crezca sin Razón.
     checks: list[BrowserCheck] = Field(default_factory=list, max_length=500)
+    # A quien Preguntamos nosotros, cuando la Pregunta es por unas pocas
+    # Ofertas y no por la Lista entera. Vacio Significa el Plan de siempre.
+    asking: list[str] = Field(default_factory=list, max_length=50)
 
 
 def answer_stock(search_id: str, match: str, known: dict[str, StockCheck],
-                 ask: bool = True) -> dict:
+                 ask: bool = True, only: tuple[str, ...] = ()) -> dict:
     """Comprueba la más barata de cada Carta y Corona la primera que sí Tiene.
 
     Pregunta por Rondas: la primera Candidata de cada Tipo de Carta viaja en
@@ -307,6 +310,11 @@ def answer_stock(search_id: str, match: str, known: dict[str, StockCheck],
     Lo que el Navegador ya Averiguó entra como Sabido: esas Ofertas no se le
     Preguntan a nadie. Una Tienda que Contestó al Comprador no necesita
     Contestarnos también a nosotros.
+
+    `only` Recorta el Plan a unas Ofertas nombradas. Es el Toque suelto sobre
+    una Tienda que el Navegador no Alcanza —un Catálogo que no Sirve JSON, una
+    Tienda leída de Listas—: se Pregunta por esa y por nadie más, para que un
+    Toque no Desate la Ronda entera.
     """
     searches = build_muchi().searches
     items = read_all_results(searches, search_id)
@@ -317,6 +325,9 @@ def answer_stock(search_id: str, match: str, known: dict[str, StockCheck],
     ranking = presenter.rank_stock_candidates(items, load_rate_settings().muchi_dolar,
                                               match=match)
     plan = {card_type: candidates[:limit] for card_type, candidates in ranking.items()}
+    if only:
+        plan = {card_type: [offer_id for offer_id in candidates if offer_id in only]
+                for card_type, candidates in ranking.items()}
     competing = {offer_id for candidates in ranking.values() for offer_id in candidates}
     # Una Oferta que no Compite no Corona ni Descorona nada: el Navegador
     # Informa sobre esta Búsqueda, no sobre el Catálogo entero. Pero sí Vale
@@ -382,7 +393,8 @@ def check_stock_with_browser(search_id: str, request: StockRequest,
         offer_id=row.offer_id,
         stock_status="available" if row.available else "unavailable",
     ) for row in request.checks}
-    return answer_stock(search_id, match, known, ask=ask)
+    return answer_stock(search_id, match, known, ask=ask or bool(request.asking),
+                        only=tuple(request.asking))
 
 
 @app.post("/api/searches/{search_id}/cancel")

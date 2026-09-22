@@ -67,6 +67,15 @@ que el Navegador ya Confirmó: el `POST` de la misma Ruta Recibe
 desde ahí. Una Tienda que le Contestó al Comprador no Necesita Contestarnos
 también a nosotros. El `GET` es ese mismo Camino sin nada Sabido.
 
+**Un Toque Pregunta por una Oferta sola.** Elegir una Oferta en la Lista
+Confirma esa Tienda y nada más. Cuando el Navegador la Alcanza —Shopify, con
+CORS abierto— la Pregunta ni siquiera Llega acá: viaja como `checks` con
+`ask=false`. Cuando no la Alcanza —una Tienda leída de Listas de Moxfield, un
+Catálogo que no Sirve JSON— el mismo `POST` Recibe
+`{"checks": [], "asking": ["<offer_id>"]}` y Preguntamos nosotros, con el `plan`
+Recortado a esa Oferta. Sin ese Recorte el Toque Quedaba sin Respuesta, o
+Costaba la Ronda entera.
+
 **El Tope es de la Pregunta, no de la Corona.** Son dos Listas: `ranking` —todas
 las Ofertas en pie de cada Carta, de la barata a la cara— Decide quién Compite,
 y `plan` —sus primeras `stock_check_limit`— Decide a quién Visitamos nosotros.

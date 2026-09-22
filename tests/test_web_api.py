@@ -645,6 +645,22 @@ def test_a_single_touch_visits_nobody(client):
     assert answer["best"] == [{"card_type": "sol ring", "offer_id": "of-1500"}]
 
 
+def test_a_touch_the_browser_cannot_reach_asks_only_that_store(client):
+    """Una Tienda sin Catálogo abierto se Pregunta desde acá, y solo ella.
+
+    Las Tiendas leídas de Listas no Sirven un JSON que el Navegador pueda Leer.
+    Antes ese Toque Quedaba sin Respuesta; ahora Preguntamos nosotros, pero por
+    esa Oferta y por nadie más: un Toque no Vale una Ronda.
+    """
+    http, searches = client
+
+    answer = http.post("/api/searches/abc/stock?ask=false",
+                       json={"checks": [], "asking": ["of-1500"]}).json()
+
+    assert searches.asked == [("of-1500",)]
+    assert [row["offer_id"] for row in answer["offers"]] == ["of-1500"]
+
+
 def test_an_offer_outside_the_search_is_ignored(client):
     """El Navegador Informa sobre esta Búsqueda: lo demás no Corona nada."""
     http, searches = client
