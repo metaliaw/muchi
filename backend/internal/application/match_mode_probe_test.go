@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"net/http"
 	"os"
 	"sort"
 	"testing"
@@ -10,7 +9,6 @@ import (
 
 	"github.com/cangrejometralleta/muchi-api/internal/offer"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
-	"github.com/cangrejometralleta/muchi-api/internal/source"
 	"github.com/cangrejometralleta/muchi-api/internal/stores"
 )
 
@@ -23,10 +21,7 @@ func TestMatchModeProbe(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fetcher := source.Client{
-		HTTP: &http.Client{Timeout: 20 * time.Second}, Gate: openGate{},
-		UserAgent: userAgent, MaxAttempts: 2, BaseDelay: 250 * time.Millisecond, MaxBodyBytes: 16 << 20,
-	}
+	fetcher := probeFetcher()
 	service := search.Service{
 		Providers:     buildProviders(fetcher, config),
 		SourcesByGame: buildSourcesByGame(fetcher, config, nil, time.Hour, nil),
