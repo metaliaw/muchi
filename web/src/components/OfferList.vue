@@ -96,9 +96,8 @@ const props = defineProps({
   advertiseGroups: { type: Boolean, default: false },
 })
 
-// Cuántas Copias Pide la Lista de cada Carta. Es lo que el Contador Muestra al
-// lado de lo contado mientras la Tienda no Cuente lo suyo: "1 / 4" Dice de una
-// vez que esta Tienda no Alcanza sola.
+// Cuántas Copias Pide la Lista de cada Carta. Con eso se Reparte sobre las
+// Ofertas que se Ven; el Contador Muestra el Tope de la Tienda, no esto.
 const asked = computed(() => Object.fromEntries(
   props.items.map((item) => [item.name.toLowerCase(), item.quantity])))
 const askedFor = (offer) =>
@@ -106,7 +105,7 @@ const askedFor = (offer) =>
 
 const stockOf = declaredStock
 const topFor = topOf
-const limitFor = (offer) => limitOf(offer, askedFor(offer))
+const limitFor = limitOf
 
 // Con qué Criterio Baja la Cantidad pedida sobre las Ofertas.
 const criterion = ref(BY_PRICE)
@@ -256,7 +255,7 @@ watch(() => groups.value, () => spreadNow(), { immediate: true })
                  @input="countUnits(offer, $event.target.value)" />
           <span v-if="limitFor(offer)" class="mu-copias__total"
                 :title="stockOf(offer) ? `${offer.store} Declara ${stockOf(offer)}`
-                                       : `La Lista Pide ${askedFor(offer)}`">/ {{ limitFor(offer) }}</span>
+                                       : `${offer.store} no Dice cuántas Quedan: una hasta que lo Diga`">/ {{ limitFor(offer) }}</span>
         </label>
         <button type="button" class="mu-copias__paso"
                 :aria-label="`Una Copia más en ${offer.store}`"
