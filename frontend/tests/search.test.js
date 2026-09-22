@@ -1,8 +1,8 @@
 /** Las Páginas que el BFF manda de a una, acumuladas de este Lado. */
 import { describe, expect, it } from 'vitest'
 import {
-  BY_EDITION, BY_PRICE, groupByCardType, limitOf, MAX_UNITS, pickable,
-  replacePositions, spreadUnits, summarizeOffers, topOf,
+  BY_EDITION, BY_PRICE, groupByCardType, limitOf, pickable, replacePositions,
+  spreadUnits, summarizeOffers, topOf, UNCOUNTED_UNITS,
 } from '../src/search.js'
 
 const offer = (position, card, price, store, amount = price) =>
@@ -58,10 +58,12 @@ describe('la Cantidad repartida sobre lo que se Ve', () => {
   const group = (card, rows) => ({ card, rows })
   const four = () => 4
 
-  it('Baja sobre la más barata cuando nadie Declara cuántas Tiene', () => {
+  it('Toma una sola de la Tienda que no Cuenta lo suyo', () => {
+    // Cuatro Copias de un Stock que nadie Contó Prometerían tres que ninguna
+    // Tienda Prometió. Lo que no Alcanza se Queda sin repartir, a la vista.
     const groups = [group('sol ring', [offer('of-2', 200), offer('of-1', 100)])]
 
-    expect(spreadUnits(groups, four)).toEqual({ 'of-1': 4 })
+    expect(spreadUnits(groups, four)).toEqual({ 'of-1': 1, 'of-2': 1 })
   })
 
   it('Reparte hasta lo que cada Tienda Declara', () => {
@@ -77,7 +79,7 @@ describe('la Cantidad repartida sobre lo que se Ve', () => {
       offer('of-2', 200, 0),
       offer('of-3', 300)])]
 
-    expect(spreadUnits(groups, four)).toEqual({ 'of-3': 4 })
+    expect(spreadUnits(groups, four)).toEqual({ 'of-3': 1 })
   })
 
   it('Cada Carta Lleva su propia Cuenta', () => {
@@ -85,7 +87,7 @@ describe('la Cantidad repartida sobre lo que se Ve', () => {
                     group('mox', [offer('of-9', 900)])]
 
     expect(spreadUnits(groups, (row) => (row.card === 'mox' ? 1 : 3)))
-      .toEqual({ 'of-1': 3, 'of-9': 1 })
+      .toEqual({ 'of-1': 1, 'of-9': 1 })
   })
 })
 
@@ -129,19 +131,19 @@ describe('el Criterio del Reparto', () => {
 describe('el Tope de una Oferta', () => {
   it('es lo que la Tienda Declara tener', () => {
     expect(topOf({ stock_quantity: 2 })).toBe(2)
-    expect(limitOf({ stock_quantity: 2 }, 4)).toBe(2)
+    expect(limitOf({ stock_quantity: 2 })).toBe(2)
   })
 
-  it('sin Cuenta Declarada Deja el Tope de siempre', () => {
-    // Una Tienda que Contesta que sí Tiene y no Cuánto no Pone Techo: el
-    // segundo Número Vuelve a Decir lo que la Lista Pide.
-    expect(topOf({ stock_status: 'available' })).toBe(MAX_UNITS)
-    expect(limitOf({ stock_status: 'available' }, 4)).toBe(4)
+  it('sin Cuenta Declarada Vale una Copia', () => {
+    // La Tienda Contestó que Queda, no Cuántas Quedan: Ofrecer cuatro Copias
+    // de un Stock que nadie Contó Prometería tres que la Tienda no Prometió.
+    expect(topOf({ stock_status: 'available' })).toBe(UNCOUNTED_UNITS)
+    expect(limitOf({ stock_status: 'available' })).toBe(1)
   })
 
-  it('un Cero Declarado no es un Tope de cero', () => {
-    // Una Agotada no se Muestra con Selector: Toparla en cero Dejaría un
-    // Contador que no Sube y Parecería Roto.
-    expect(topOf({ stock_quantity: 0 })).toBe(MAX_UNITS)
+  it('un Cero Declarado no Deja poner ninguna', () => {
+    // Contar cero es Negar: esa Oferta ya no Lleva Selector.
+    expect(topOf({ stock_quantity: 0 })).toBe(0)
+    expect(pickable({ stock_status: 'available', stock_quantity: 0 })).toBe(false)
   })
 })
