@@ -9,7 +9,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -18,6 +17,7 @@ import (
 	"github.com/cangrejometralleta/muchi-api/internal/moxfield"
 	"github.com/cangrejometralleta/muchi-api/internal/offer"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
+	"github.com/cangrejometralleta/muchi-api/internal/stores"
 )
 
 type API struct {
@@ -26,7 +26,7 @@ type API struct {
 	Inventories        InventoryShelf
 	CardMetadata       map[search.Game]cardmetadata.Provider
 	Autocomplete       map[search.Game]cardmetadata.AutocompleteProvider
-	SupportedGames     map[search.Game]string
+	SupportedGames     []stores.GameSupport
 	Token              string
 	Logger             *slog.Logger
 	HealthCheckTimeout time.Duration
@@ -121,21 +121,24 @@ func (a API) autocompleteCards(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"suggestions": names})
 }
 
-type supportedGameReply struct {
-	Name         string      `json:"name"`
-	ReferenceKey search.Game `json:"reference_key"`
-}
-
-func (a API) listSupportedGames(w http.ResponseWriter, _ *http.Request) {
-	keys := make([]string, 0, len(a.SupportedGames))
-	for game := range a.SupportedGames {
-		keys = append(keys, string(game))
+// listSupportedGames Answers which Games can be Searched, and for which Kind.
+//
+// `kind` Narrows the List to the Games that Answer that Question: a Caller
+// Drawing a Selector for Boxes Asks for `sealed` and Draws only what Exists.
+// Without it the whole List Comes back, each Game Carrying both Marks, so one
+// Call is Enough to Draw a Selector that Changes Kind without Asking again.
+func (a API) listSupportedGames(w http.ResponseWriter, r *http.Request) {
+	kind := r.URL.Query().Get("kind")
+	if kind != "" && kind != string(offer.KindSingle) && kind != string(offer.KindSealed) {
+		a.writeError(w, r, search.ErrInvalid)
+		return
 	}
-	slices.Sort(keys)
-	games := make([]supportedGameReply, 0, len(keys))
-	for _, key := range keys {
-		game := search.Game(key)
-		games = append(games, supportedGameReply{Name: a.SupportedGames[game], ReferenceKey: game})
+	games := make([]stores.GameSupport, 0, len(a.SupportedGames))
+	for _, game := range a.SupportedGames {
+		if kind != "" && !game.Asked(kind == string(offer.KindSealed)) {
+			continue
+		}
+		games = append(games, game)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"games": games})
 }

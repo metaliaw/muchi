@@ -61,7 +61,7 @@ type Runtime struct {
 	Queue                 Dispatcher
 	CardMetadataProviders map[search.Game]cardmetadata.Provider
 	AutocompleteProviders map[search.Game]cardmetadata.AutocompleteProvider
-	SupportedGames        map[search.Game]string
+	SupportedGames        []stores.GameSupport
 	Inventories           moxfield.Shelf
 }
 
@@ -105,12 +105,7 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		search.GameRiftbound: tcgmatchRiftbound,
 		search.GameMitos:     tcgmatchMitos,
 	}
-	supportedGames := make(map[search.Game]string)
-	for key, game := range storeConfig.Games {
-		if game.Enabled {
-			supportedGames[search.Game(key)] = game.Name
-		}
-	}
+	supportedGames := stores.SupportedGames(storeConfig)
 	sourcesByGame := buildSourcesByGame(fetcher, storeConfig, store, config.InventoryCacheTTL, logger)
 	inventories := collectInventories(sourcesByGame)
 	// The Shelf Checks its own Stock: a List has no Product Page to Visit.

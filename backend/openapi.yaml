@@ -27,6 +27,21 @@ paths:
                   sources: {type: array, items: {$ref: "#/components/schemas/SourceHealth"}}
   /supported-games:
     get:
+      description: >-
+        Lists the games that can be searched and what each one can be asked
+        for. Nobody declares that per game: every source declares what it
+        sells, and the game inherits the sum, so a game reaches loose cards
+        and sealed boxes from different shops without either one knowing.
+        A game no source sells is left out.
+      parameters:
+        - name: kind
+          in: query
+          description: >-
+            Narrows the list to the games that answer this kind of question.
+            A caller drawing a selector for boxes asks for `sealed` and draws
+            only what exists. Without it every game comes back carrying both
+            marks, so one call is enough to draw a selector that switches kind.
+          schema: {type: string, enum: [single, sealed]}
       responses:
         "200":
           description: Games currently supported by the API
@@ -410,14 +425,20 @@ components:
         metadata: {type: object, additionalProperties: {type: string}}
     Game:
       type: string
-      enum: [magic, pokemon, yugioh]
+      enum: [magic, pokemon, yugioh, one-piece, digimon, riftbound, mitos-y-leyendas]
       example: magic
     SupportedGame:
       type: object
-      required: [name, reference_key]
+      required: [name, reference_key, singles, sealed]
       properties:
         name: {type: string}
         reference_key: {$ref: "#/components/schemas/Game"}
+        singles:
+          type: boolean
+          description: Some source of this game sells loose cards
+        sealed:
+          type: boolean
+          description: Some source of this game sells unopened product
     CardMetadata:
       type: object
       required: [name]

@@ -36,6 +36,14 @@ type SearchProviderConfig struct {
 	// Card Printed inside the Box, and either way it Spends a Request and Waits
 	// for it. Absent Means yes, so a Source Stays Asked until someone Looks.
 	Sealed *bool `yaml:"sealed"`
+	// Singles Says whether this Aggregator Indexes Loose Cards. Absent Means
+	// yes, for the same Reason as Sealed.
+	Singles *bool `yaml:"singles"`
+}
+
+// ServesSingles Answers whether a Card Question is Worth Asking this Provider.
+func (c SearchProviderConfig) ServesSingles() bool {
+	return c.Singles == nil || *c.Singles
 }
 
 // ServesSealed Answers whether a Sealed Question is Worth Asking this Provider.
