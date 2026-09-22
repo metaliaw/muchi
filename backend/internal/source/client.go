@@ -15,8 +15,10 @@ import (
 
 var ErrCircuitOpen = errors.New("source circuit is open")
 
-// bodyCapFallback keeps an unset MaxBodyBytes from truncating every response to nothing.
-const bodyCapFallback = 4 << 20
+// bodyCapFallback keeps an unset MaxBodyBytes from truncating every response to
+// nothing. It Holds the largest published Inventory with room to Grow: a Moxfield
+// List already Weighs three Megabytes, and a truncated one Decodes into nothing.
+const bodyCapFallback = 16 << 20
 
 // retryAfterCeiling Bounds how long a Source may Hold the Caller.
 // Past it, Retry-After Reads as "come back later", not as a Wait.

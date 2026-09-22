@@ -46,6 +46,13 @@ func (c *memoryCache) SaveOffers(_ context.Context, key string, items []offer.Of
 	return nil
 }
 
+func (c *memoryCache) DropOffers(_ context.Context, key string) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	delete(c.items, key)
+	return nil
+}
+
 func TestMagicProbe(t *testing.T) {
 	if os.Getenv("MUCHI_LIVE") == "" {
 		t.Skip("set MUCHI_LIVE=1")
@@ -56,7 +63,7 @@ func TestMagicProbe(t *testing.T) {
 	}
 	fetcher := source.Client{
 		HTTP: &http.Client{Timeout: 20 * time.Second}, Gate: openGate{},
-		UserAgent: userAgent, MaxAttempts: 2, BaseDelay: 250 * time.Millisecond, MaxBodyBytes: 4 << 20,
+		UserAgent: userAgent, MaxAttempts: 2, BaseDelay: 250 * time.Millisecond, MaxBodyBytes: 16 << 20,
 	}
 	catalog := scry.Client{Fetcher: fetcher, BaseURL: "https://scry.cl"}
 	cache := &memoryCache{}

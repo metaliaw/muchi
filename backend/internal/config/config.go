@@ -68,7 +68,7 @@ func LoadConfig() (Config, error) {
 		HTTPTimeout:             readSecondsOr("MUCHI_SOURCE_TIMEOUT_SECONDS", 10),
 		SourceMaxAttempts:       readIntOr("MUCHI_SOURCE_MAX_ATTEMPTS", 3),
 		SourceRetryBaseDelay:    readMillisOr("MUCHI_SOURCE_RETRY_BASE_MS", 250),
-		SourceMaxBodyBytes:      int64(readIntOr("MUCHI_SOURCE_MAX_BODY_BYTES", 4<<20)),
+		SourceMaxBodyBytes:      int64(readIntOr("MUCHI_SOURCE_MAX_BODY_BYTES", 16<<20)),
 		ServerReadHeaderTimeout: readSecondsOr("MUCHI_SERVER_READ_HEADER_TIMEOUT_SECONDS", 5),
 		ServerReadTimeout:       readSecondsOr("MUCHI_SERVER_READ_TIMEOUT_SECONDS", 15),
 		ServerWriteTimeout:      readSecondsOr("MUCHI_SERVER_WRITE_TIMEOUT_SECONDS", 30),

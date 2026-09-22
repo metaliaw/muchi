@@ -25,7 +25,7 @@ func TestImageCoverageProbe(t *testing.T) {
 	}
 	fetcher := source.Client{
 		HTTP: &http.Client{Timeout: 20 * time.Second}, Gate: openGate{},
-		UserAgent: userAgent, MaxAttempts: 2, BaseDelay: 250 * time.Millisecond, MaxBodyBytes: 4 << 20,
+		UserAgent: userAgent, MaxAttempts: 2, BaseDelay: 250 * time.Millisecond, MaxBodyBytes: 16 << 20,
 	}
 	service := search.Service{
 		Providers:     buildProviders(fetcher, config),

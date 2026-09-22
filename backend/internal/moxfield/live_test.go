@@ -25,6 +25,8 @@ func (c *measuredCache) SaveOffers(_ context.Context, _ string, items []offer.Of
 	return err
 }
 
+func (c *measuredCache) DropOffers(context.Context, string) error { return nil }
+
 // TestPublicLists is Opt-in: it Reads the Configured Live Inventories.
 func TestPublicLists(t *testing.T) {
 	if os.Getenv("MUCHI_TEST_MOXFIELD_LIVE") != "1" {
@@ -34,7 +36,7 @@ func TestPublicLists(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fetcher := source.Client{HTTP: &http.Client{Timeout: 10 * time.Second}, UserAgent: "muchi-api/1.0", MaxAttempts: 1, MaxBodyBytes: 4 << 20}
+	fetcher := source.Client{HTTP: &http.Client{Timeout: 10 * time.Second}, UserAgent: "muchi-api/1.0", MaxAttempts: 1, MaxBodyBytes: 16 << 20}
 	for storeID, store := range config.Stores {
 		if !store.Enabled {
 			continue
