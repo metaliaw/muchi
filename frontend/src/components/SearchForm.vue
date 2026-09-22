@@ -69,11 +69,17 @@ const suggestion = computed(() => examples.value[0] || '')
 
 // El Ejemplo Sigue al Juego y al Catálogo mientras nadie Haya escrito lo suyo.
 // Un Texto propio Manda: cambiar de Juego no le Borra la Lista a nadie.
-const defaults = new Set()
+// Cuáles son Ejemplos se Sabe de la Tabla, no de lo que Pasó en esta Sesión:
+// un Texto guardado Vuelve del Navegador sin su Historia, y si hubiera que
+// Recordarlo para Reconocerlo, el Ejemplo de otro Juego se Quedaría pegado.
+const DEFAULTS = new Set([
+  ...Object.values(GAME_EXAMPLES).map((lines) => lines[0]),
+  ...Object.values(SEALED_EXAMPLES).map((lines) => lines[0]),
+  'Nombre de Carta', 'Nombre de la Caja',
+])
 function offerDefault() {
   const typed = text.value.trim()
-  if (typed && !defaults.has(typed)) return
-  defaults.add(suggestion.value)
+  if (typed && !DEFAULTS.has(typed)) return
   text.value = suggestion.value
 }
 watch([game, kind], offerDefault, { immediate: true })
