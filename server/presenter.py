@@ -6,6 +6,7 @@ mismo modo, sea cual sea la Interfaz que los consuma.
 """
 from __future__ import annotations
 
+import unicodedata
 from dataclasses import replace
 from decimal import Decimal
 
@@ -130,10 +131,22 @@ EDITION_DASHES = (" - ", " \u2013 ", " \u2014 ")
 QUOTE_PAIRS = (("\u201c", "\u201d"), ('"', '"'), ("\u00ab", "\u00bb"))
 
 
+def fold_name(value: str) -> str:
+    """El Nombre sin Acentos ni Espacios de más.
+
+    Mitos y Leyendas Nombra sus Cartas en Español y su Índice las Archiva sin
+    Tildes: «Dragón de Magma» y «dragon de magma» son la misma Carta escrita
+    por dos Manos. Nadie Imprime dos Cartas que se Diferencien en una Tilde.
+    """
+    plain = unicodedata.normalize("NFKD", value)
+    return " ".join("".join(
+        letter for letter in plain if not unicodedata.combining(letter)).lower().split())
+
+
 def names_same_card(title: str, asked: str) -> bool:
     """El Título Nombra la Carta pedida, con o sin su Impresión detrás."""
-    title = " ".join(title.lower().split())
-    asked = " ".join(asked.lower().split())
+    title = fold_name(title)
+    asked = fold_name(asked)
     if not asked:
         return False
     if title == asked:
@@ -163,8 +176,8 @@ def read_card_type(offer: SearchOffer, asked: str, match: str) -> str:
     if offer.card_key:
         return offer.card_key
     if match == MATCH_INCLUDES:
-        return offer.card_name.strip().lower()
-    return asked.strip().lower()
+        return fold_name(offer.card_name)
+    return fold_name(asked)
 
 
 def order_offers(offers: list[SearchOffer]) -> list[SearchOffer]:
