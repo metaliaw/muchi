@@ -2,7 +2,7 @@
 /** Muchi Presenta Búsquedas y Resultados persistidos por la API. */
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import * as api from './api.js'
-import { useSearch } from './search.js'
+import { declaredStock, useSearch } from './search.js'
 import {
   confirmOffers, countReachable, readFreshChecks, rememberChecks, sayAge,
 } from './stock.js'
@@ -144,7 +144,11 @@ async function confirmOne(offer) {
   if (check) rememberChecks(searchId.value, [check])
   let answer
   try {
-    answer = check
+    // Un No del Navegador Cierra el Asunto: no se Compra lo que ya no Está, y
+    // no hace falta que nadie lo Vuelva a mirar. Un Sí no Cierra nada, porque
+    // el Catálogo que el Navegador Lee Dice si Queda y no Cuántas: el Número
+    // está en la Página, y esa la Leemos nosotros.
+    answer = check && !check.available
       ? await api.confirmStock(searchId.value, [check], match.value, false)
       : await api.confirmStock(searchId.value, [], match.value, false,
                                [offer.offer_id])
@@ -156,8 +160,8 @@ async function confirmOne(offer) {
   const said = (answer.offers || []).find((row) => row.offer_id === offer.offer_id)
   // El Navegador Contesta sí o no; el Servicio Contesta una Fila, y una Fila
   // que no Vuelve es una Tienda que no Dijo nada.
-  const available = check ? check.available
-    : said ? said.stock_status !== 'unavailable' : null
+  const available = said ? said.stock_status !== 'unavailable'
+    : check ? check.available : null
   if (available === null) {
     say(`${offer.store} no dice si queda`, 'idle')
     return
@@ -168,9 +172,17 @@ async function confirmOne(offer) {
     const { [offer.offer_id]: gone, ...rest } = units.value
     units.value = rest
     say(`En ${offer.store} ya no queda`, 'idle')
-  } else {
-    say(`En ${offer.store} sí queda`, 'happy')
+    return
   }
+  // Quedan menos de las Elegidas: se Baja a lo que la Tienda Declara. Dejar
+  // tres Copias donde Hay una Prometería una Compra que no se Puede hacer.
+  const left = declaredStock(said || offer)
+  if (left && units.value[offer.offer_id] > left) {
+    units.value = { ...units.value, [offer.offer_id]: left }
+    say(`En ${offer.store} quedan ${left}`, 'idle')
+    return
+  }
+  say(`En ${offer.store} sí queda`, 'happy')
 }
 
 async function confirmStock() {
