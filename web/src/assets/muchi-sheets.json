@@ -1,19 +1,19 @@
 {
  "styles": {
-  "muchi-retro": {
+  "muchi-sofi": {
    "frameWidth": 24,
    "frameHeight": 24,
-   "columns": 16,
+   "columns": 8,
    "animations": {
     "idle": {
      "row": 0,
-     "frames": 16,
-     "ms": 130,
+     "frames": 8,
+     "ms": 260,
      "loop": true
     },
     "talk": {
      "row": 1,
-     "frames": 6,
+     "frames": 8,
      "ms": 90,
      "loop": true
     },
@@ -25,13 +25,13 @@
     },
     "alert": {
      "row": 3,
-     "frames": 6,
+     "frames": 8,
      "ms": 100,
      "loop": false
     },
     "angry": {
      "row": 4,
-     "frames": 6,
+     "frames": 8,
      "ms": 90,
      "loop": false
     }

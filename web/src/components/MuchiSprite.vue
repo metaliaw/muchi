@@ -11,12 +11,11 @@
  * ver una línea de la Fila de arriba; el transform desliza la capa ya
  * rasterizada y la Ventana la recorta limpia.
  *
- * La Hoja @4x mide 1536×480, que es exactamente 16 Columnas por 5 Filas a
- * Escala 4: con `--s:4` se dibuja píxel a píxel, sin escalado del Navegador.
- * Otra Escala funciona, pero conviene la Hoja 1x para que caiga en enteros.
+ * La Hoja Sofi tiene ocho Columnas y cinco Filas; cada Cuadro se presenta
+ * en una Ventana lógica de 24×24, a Escala 4 por defecto.
  */
 import { computed, ref, watch } from 'vue'
-import sheetUrl from '../assets/muchi-retro-sheet@4x.png'
+import sheetUrl from '../assets/muchi-sofi-sheet.png'
 import sheets from '../assets/muchi-sheets.json'
 
 const SHEET_SCALE = 4
@@ -27,7 +26,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['rested'])
 
-const meta = sheets.styles['muchi-retro']
+const meta = sheets.styles['muchi-sofi']
 const rows = Object.keys(meta.animations).length
 
 // Un Estado que la Hoja no dibuja cae en idle antes de pedirle una Fila que no
