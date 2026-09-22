@@ -62,9 +62,14 @@ function toggleOffer(group, offer, taken) {
 function countUnits(offer, written) {
   const value = Math.floor(Number(written))
   const clean = { ...units.value }
+  const had = bought(offer)
   if (written === '' || Number.isNaN(value) || value <= 0) delete clean[offer.offer_id]
   else clean[offer.offer_id] = Math.min(value, 999)
   units.value = clean
+  // Elegir una Oferta es Decir que se va a Comprar: ahí es cuando Importa si
+  // la Tienda todavía la Tiene. Se Pregunta al pasar de cero, no en cada
+  // Copia: la segunda Copia Sale de la misma Tienda que ya Contestó.
+  if (!had && clean[offer.offer_id]) emit('confirm', offer)
 }
 
 // Lo que identifica la Impresion en venta. Sin Edicion, Scryfall elige ella.
