@@ -76,7 +76,7 @@ func LoadConfig() (Config, error) {
 		ServerShutdownTimeout:   readSecondsOr("MUCHI_SERVER_SHUTDOWN_TIMEOUT_SECONDS", 10),
 		HealthCheckTimeout:      readSecondsOr("MUCHI_HEALTH_CHECK_TIMEOUT_SECONDS", 2),
 		StockCheckLimit:         readIntOr("MUCHI_STOCK_CHECK_LIMIT", 5),
-		OfferCacheTTL:           readSecondsOr("MUCHI_OFFER_CACHE_TTL_SECONDS", 259200),
+		OfferCacheTTL:           readSecondsOr("MUCHI_OFFER_CACHE_TTL_SECONDS", 86400),
 		OfferCacheEmptyTTL:      readSecondsOr("MUCHI_OFFER_CACHE_EMPTY_TTL_SECONDS", 120),
 		// A Published List Changes whenever its Store Sells or Buys a Card, far
 		// sooner than a Search Result Goes stale.

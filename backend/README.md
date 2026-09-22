@@ -101,7 +101,7 @@ precio correspondiente se omiten y se registran en logs. La cantidad queda en
 `metadata.quantity`; el stock sigue sin confirmar hasta verificarlo con la tienda.
 
 La caché de inventario completo en Firestore comparte `MUCHI_OFFER_CACHE_TTL_SECONDS`
-(259200 segundos, tres días, por defecto) y se renueva bajo demanda al vencer. La caché de resultados
+(86400 segundos, un día, por defecto) y se renueva bajo demanda al vencer. La caché de resultados
 por carta puede extender la visibilidad de cambios hasta otro período de ese TTL.
 Una respuesta bloqueada o inválida de Moxfield se trata como error, nunca como lista
 vacía. Las otras fuentes siguen disponibles.
