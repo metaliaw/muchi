@@ -11,6 +11,10 @@ import (
 const scryfallDomain = "api.scryfall.com"
 const autocompleteLimit = 3
 
+// defaultLanguage Nombra el Idioma en que Scryfall Escribe una Carta cuando
+// nadie Pide otro.
+const defaultLanguage = "en"
+
 type SourceFetcher interface {
 	FetchSource(context.Context, string, string) ([]byte, error)
 }
@@ -100,8 +104,14 @@ func (s Scryfall) artFromSearch(ctx context.Context, request Request) (Metadata,
 }
 
 func (s Scryfall) Autocomplete(ctx context.Context, text, language string) ([]string, error) {
-	if text == "" || language == "" {
+	if text == "" {
 		return []string{}, nil
+	}
+	// Sin Idioma no hay Consulta que Hacer, y Contestar vacío Parecía que la
+	// Carta no Existe. El Catálogo Está escrito en Inglés: ese es el Idioma de
+	// quien no Pidió otro.
+	if language == "" {
+		language = defaultLanguage
 	}
 	body, err := s.fetch(ctx, "/cards/search", url.Values{
 		"q":                    {fmt.Sprintf(`lang:%s %q`, language, text)},

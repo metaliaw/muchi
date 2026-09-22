@@ -114,3 +114,21 @@ func TestScryfallUsesTheFrontFaceImage(t *testing.T) {
 		t.Fatalf("CardMetadata() metadata=%#v err=%v", metadata, err)
 	}
 }
+
+// Sin Idioma, el Catálogo Contesta en el suyo. Antes Contestaba vacío, que se
+// Leía como una Carta que no Existe.
+func TestScryfallAutocompleteFallsBackToEnglish(t *testing.T) {
+	fetcher := &fakeFetcher{replies: [][]byte{
+		[]byte(`{"data":[{"name":"Sol Ring"},{"name":"Sol Talisman"}]}`),
+	}}
+	provider := Scryfall{Fetcher: fetcher}
+
+	suggestions, err := provider.Autocomplete(context.Background(), "Sol", "")
+
+	if err != nil || len(suggestions) != 2 || suggestions[0] != "Sol Ring" {
+		t.Fatalf("Autocomplete() suggestions=%#v err=%v", suggestions, err)
+	}
+	if !strings.Contains(fetcher.targets[0], "lang%3Aen") {
+		t.Fatalf("target=%q", fetcher.targets[0])
+	}
+}
