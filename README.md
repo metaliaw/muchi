@@ -22,6 +22,12 @@ formas de colaborar.
 2. Pulsa **Buscar**. Las Ofertas aparecen mientras avanza la Búsqueda.
 3. Revisa los Resultados y abre el **Carrito en CLP** para comparar la Compra.
 
+El Carrito todavía no Compra: reparte tu Lista entre Tiendas y te deja los
+Enlaces. Por eso avisa arriba que la Compra sigue en Obra y enlaza el
+Repositorio para que nos cuentes qué viste. `MUCHI_CART_READY=1` retira ese
+Aviso el Día que la Compra esté, que es una Línea en el Entorno y no un Deploy
+de la Interfaz.
+
 Cada Búsqueda admite entre 1 y 100 Entradas, con 1 a 99 copias por Entrada.
 Son los Topes de un Mazo de Commander, no una Preferencia configurable:
 

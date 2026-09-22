@@ -1,4 +1,5 @@
 """El BFF traduce el Dominio a JSON y nunca deja escapar el Token."""
+import importlib
 from decimal import Decimal
 
 import pytest
@@ -403,6 +404,24 @@ def test_art_refuses_a_language_that_is_not_offered(translating):
     reply = client.get("/api/card/art", params={"name": "Sol Ring", "language": "xx"})
     assert reply.status_code == 400
     assert translator.looked == []
+
+
+# -------------------------------------------------------------- el Carrito
+def test_the_cart_warns_until_the_purchase_is_ready(client):
+    """La Compra todavía no Está: el Carrito se Muestra, pero Avisando."""
+    reply, _ = client
+    assert reply.get("/api/config").json()["cart_ready"] is False
+
+
+def test_the_warning_goes_away_from_the_environment(monkeypatch):
+    """Retirar el Aviso es una Línea en el Entorno, no un Deploy de la Interfaz."""
+    monkeypatch.setenv("MUCHI_CART_READY", "1")
+    importlib.reload(main)
+    try:
+        assert main.CART_READY is True
+    finally:
+        monkeypatch.delenv("MUCHI_CART_READY")
+        importlib.reload(main)
 
 
 # --------------------------------------------------------------- las Redes

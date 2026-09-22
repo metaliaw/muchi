@@ -31,6 +31,11 @@ from server import links, presenter
 # La Re-verificación pega una segunda Vez por Oferta: nace Apagada, y
 # MUCHI_VERIFY_STOCK=1 la Enciende el Día que la Certeza pese más que la Carga.
 VERIFY_STOCK = os.getenv("MUCHI_VERIFY_STOCK", "0").strip() in {"1", "true", "si", "yes"}
+# El Carrito Reparte una Lista entre Tiendas, pero todavía no Compra. Se Muestra
+# igual —Comparar ya Sirve por sí solo—, con un Aviso encima que Dice en qué
+# anda. MUCHI_CART_READY=1 Retira ese Aviso el Día que la Compra esté: Apagar
+# una Frase no Debería Costar un Deploy de la Interfaz.
+CART_READY = os.getenv("MUCHI_CART_READY", "0").strip() in {"1", "true", "si", "yes"}
 WEB_DIST = ROOT / "web" / "dist"
 ADSENSE_AUTHORITY = "f08c47fec0942fa0"
 ADSENSE_CLIENT = "ca-pub-6368656861543000"
@@ -112,6 +117,7 @@ def read_config() -> dict:
         "sponsor_url": os.getenv("MUCHI_SPONSOR_URL", ""),
         "adsense_client": os.getenv("MUCHI_ADSENSE_CLIENT", "") or ADSENSE_CLIENT,
         "adsense_slot": os.getenv("MUCHI_ADSENSE_SLOT", ""),
+        "cart_ready": CART_READY,
         "repository_url": REPOSITORY_URL,
         "api_repository_url": API_REPOSITORY_URL,
         "socials": links.read_socials(),

@@ -188,6 +188,7 @@ push_service() {
     build_options+="|_SPONSOR_TEXT=${MUCHI_SPONSOR_TEXT:-}"
     build_options+="|_SPONSOR_URL=${MUCHI_SPONSOR_URL:-}"
     build_options+="|_VERIFY_STOCK=${MUCHI_VERIFY_STOCK:-}"
+    build_options+="|_CART_READY=${MUCHI_CART_READY:-}"
     gcloud builds submit --config "$CONFIG" --substitutions="$build_options"
 
     local url
