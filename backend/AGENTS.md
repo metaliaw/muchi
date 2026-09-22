@@ -5,7 +5,7 @@ This repository is a Go API that Follows OneTwoThree.
 The generated snapshot Lives in `.agents`.
 Its source is `https://github.com/cangrejometralleta/OneTwoThree.git`, branch `main`.
 The manifest `.agents/distribution.json` Records commit
-`8637fe9a772f866805dcc4653948c66f531bb735` and `dirty: true`.
+`2fa30254daf2f297181f1c9baf576c4427ece1c8` and `dirty: false`.
 This is a local working-tree Snapshot, not a published canon release.
 
 [Rules](.agents/canon/RULES.md) Holds the how; read it first.
