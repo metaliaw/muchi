@@ -109,6 +109,50 @@ export const limitOf = (offer) => topOf(offer)
 /** Lo que Vale una Tienda que no Cuenta lo suyo: una Copia, hasta que Cuente. */
 export const UNCOUNTED_UNITS = 1
 
+// -------------------------------------------- lo que se Escribe en la Lista
+// La Lista se Escribe a mano, Línea por Línea, y cada Línea Puede Llevar su
+// Cantidad adelante. Muchi Mira la Línea donde está el Cursor y Ofrece el
+// Final del Nombre; Aceptar Cambia esa Línea y ninguna otra.
+
+/** La Cantidad adelante, como la Lee el BFF: `4x Sol Ring`, `4 Sol Ring`. */
+const ORDER_QUANTITY = /^(\s*\d{1,3}\s*[xX]?\s+)(.*)$/
+
+/** El Nombre sin Acentos ni Espacios de más, como lo Compara la API. */
+export const foldName = (value) => (value || '')
+  .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase().split(/\s+/).filter(Boolean).join(' ')
+
+/** Una Línea Partida en lo que no es Nombre y el Nombre. */
+export function splitOrder(line) {
+  const found = ORDER_QUANTITY.exec(line)
+  if (!found) return { prefix: '', name: line }
+  return { prefix: found[1], name: found[2] }
+}
+
+/** Dónde Empieza y dónde Termina la Línea que Lleva el Cursor. */
+export function lineAround(text, caret) {
+  const at = Math.max(0, Math.min(caret, text.length))
+  const start = text.lastIndexOf('\n', at - 1) + 1
+  const after = text.indexOf('\n', at)
+  return { start, end: after === -1 ? text.length : after }
+}
+
+/** El Nombre completo que Sigue a lo Escrito, o nada.
+ *
+ * Solo Vale la Sugerencia que Empieza por lo Escrito: completar el Final es
+ * Terminar la Palabra de quien Escribe, no Cambiarle la Carta. Y solo si Agrega
+ * algo, porque Ofrecer lo mismo que ya está escrito no es una Sugerencia.
+ */
+export function completionFor(typed, suggestions) {
+  const written = foldName(typed)
+  if (!written) return ''
+  const found = (suggestions || []).find((name) => {
+    const folded = foldName(name)
+    return folded.startsWith(written) && folded !== written
+  })
+  return found || ''
+}
+
 /** Con qué Criterio se Reparte la Cantidad pedida. */
 export const BY_PRICE = 'precio'
 export const BY_EDITION = 'edicion'
