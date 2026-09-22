@@ -92,6 +92,16 @@ function offerDefault() {
 }
 watch([game, kind], offerDefault, { immediate: true })
 
+// Elegir otro Juego en el Selector Cambia lo que se Busca, así que el Campo
+// Cambia con él: una Lista de Magic en una Búsqueda de Pokémon no Encuentra
+// nada, y Dejarla ahí Parecía un Campo que no Escuchó el Cambio. Va en el
+// Selector y no en un Observador porque el Juego también se Mueve solo —una
+// Búsqueda restaurada Nombra el suyo— y eso no Debe Borrarle el Texto a nadie.
+function pickGame(named) {
+  game.value = named
+  text.value = suggestion.value
+}
+
 // Sellado Busca ancho siempre: ninguna Tienda Titula una Caja igual que la
 // otra. Pero eso no lo Vuelve una Búsqueda de a una — una Lista de Cajas con
 // Cantidades es tan legítima como una de Cartas, así que el Modo angosto
@@ -108,7 +118,8 @@ const extraLines = computed(() => wide.value && written.value > 1)
     <form @submit.prevent="emit('search', asked)">
       <label class="mu-juego">
         Juego
-        <select v-model="game" :disabled="!games.length" required>
+        <select :value="game" :disabled="!games.length" required
+                @change="pickGame($event.target.value)">
           <option v-for="item in games" :key="item.reference_key"
                   :value="item.reference_key">{{ item.name }}</option>
         </select>
