@@ -15,6 +15,7 @@ def test_custom_catalog_controls_messages(tmp_path):
         "light": [{"text": "prendieron las luces", "state": "alert"}],
         "nerd": [{"text": "HAAAA NERDD!", "state": "happy"}],
         "libre": [{"text": "muchi es abierto", "state": "happy"}],
+        "bargain": [{"text": "QUE OFERTON", "state": "happy"}],
     }
     path = tmp_path / "phrases.yaml"
     path.write_text(yaml.safe_dump(document))
@@ -31,7 +32,7 @@ def test_custom_catalog_controls_messages(tmp_path):
 @pytest.mark.parametrize("field,value", [
     ("every", None), ("every", True), ("every", 0),
     ("greetings", []), ("help", []), ("dark", []), ("light", []),
-    ("nerd", []), ("libre", []),
+    ("nerd", []), ("libre", []), ("bargain", []),
     ("phrases", [{"state": "anxiety", "phrases": ["Texto"]}]),
     ("phrases", [{"state": "talk", "phrases": "Texto"}]),
     ("greetings", [{"text": "", "state": "talk"}]),
@@ -81,6 +82,12 @@ def test_the_libre_group_reaches_the_front():
     """El Panel de Código Abierto necesita al menos una Frase que decir."""
     book = phrases.read_phrases()
     assert book.libre and all(p.text.strip() for p in book.libre)
+
+
+def test_the_bargain_group_reaches_the_front():
+    """Pasar por la Oferta más barata necesita al menos una Frase que decir."""
+    book = phrases.read_phrases()
+    assert book.bargain and all(p.text.strip() for p in book.bargain)
 
 
 def test_the_nerd_group_reaches_the_front():
