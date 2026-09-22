@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/cangrejometralleta/muchi-api/internal/cardmetadata"
+	"github.com/cangrejometralleta/muchi-api/internal/moxfield"
 	"github.com/cangrejometralleta/muchi-api/internal/offer"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 )
@@ -22,12 +23,19 @@ import (
 type API struct {
 	Searches           search.Service
 	Health             search.HealthStore
+	Inventories        InventoryShelf
 	CardMetadata       map[search.Game]cardmetadata.Provider
 	Autocomplete       map[search.Game]cardmetadata.AutocompleteProvider
 	SupportedGames     map[search.Game]string
 	Token              string
 	Logger             *slog.Logger
 	HealthCheckTimeout time.Duration
+}
+
+// InventoryShelf Forgets the Published Lists a Store Keeps, so the next Search
+// Reads them again instead of Waiting for their Cache to Expire.
+type InventoryShelf interface {
+	RefreshStoreLists(ctx context.Context, store, label string) (int, error)
 }
 
 type errorReply struct {
@@ -57,6 +65,7 @@ func (a API) BuildHandler() http.Handler {
 	mux.Handle("GET /v1/searches/{search_id}/results", a.authenticate(http.HandlerFunc(a.listResults)))
 	mux.Handle("POST /v1/searches/{search_id}/stock", a.authenticate(http.HandlerFunc(a.checkStock)))
 	mux.Handle("POST /v1/searches/{search_id}/cancel", a.authenticate(http.HandlerFunc(a.cancelSearch)))
+	mux.Handle("POST /v1/stores/{store_id}/inventory/refresh", a.authenticate(http.HandlerFunc(a.refreshStoreInventory)))
 	mux.Handle("GET /v1/cards/metadata", a.authenticate(http.HandlerFunc(a.getCardMetadata)))
 	mux.Handle("GET /v1/cards/autocomplete", a.authenticate(http.HandlerFunc(a.autocompleteCards)))
 	mux.Handle("GET /v1/cards/offers", a.authenticate(http.HandlerFunc(a.findCardOffers)))
@@ -239,6 +248,26 @@ func (a API) cancelSearch(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, job)
 }
 
+type refreshInventoryReply struct {
+	StoreID   string `json:"store_id"`
+	List      string `json:"list,omitempty"`
+	Refreshed int    `json:"refreshed"`
+}
+
+func (a API) refreshStoreInventory(w http.ResponseWriter, r *http.Request) {
+	if a.Inventories == nil {
+		a.writeError(w, r, search.ErrNotFound)
+		return
+	}
+	store, list := r.PathValue("store_id"), strings.TrimSpace(r.URL.Query().Get("list"))
+	refreshed, err := a.Inventories.RefreshStoreLists(r.Context(), store, list)
+	if err != nil {
+		a.writeError(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, refreshInventoryReply{StoreID: store, List: list, Refreshed: refreshed})
+}
+
 func (a API) findCardOffers(w http.ResponseWriter, r *http.Request) {
 	game := search.Game(r.URL.Query().Get("game"))
 	if game == "" {
@@ -383,6 +412,8 @@ func mapError(err error) (int, string, string) {
 		return http.StatusBadRequest, "invalid_request", "Request is invalid"
 	case errors.Is(err, search.ErrNotFound):
 		return http.StatusNotFound, "not_found", "Search was not found"
+	case errors.Is(err, moxfield.ErrNoList):
+		return http.StatusNotFound, "not_found", "Store publishes no such list"
 	case errors.Is(err, search.ErrConflict):
 		return http.StatusConflict, "idempotency_conflict", "Idempotency key was used with another request"
 	case errors.Is(err, search.ErrNotRunning):

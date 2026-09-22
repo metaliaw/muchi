@@ -39,6 +39,33 @@ paths:
                   games:
                     type: array
                     items: {$ref: "#/components/schemas/SupportedGame"}
+  /stores/{store_id}/inventory/refresh:
+    parameters:
+      - name: store_id
+        in: path
+        required: true
+        description: Store identifier or store name, as config/stores.yaml writes it
+        schema: {type: string}
+    post:
+      summary: Forget the cached published inventory of a store
+      parameters:
+        - name: list
+          in: query
+          description: Refresh only the list carrying this label
+          schema: {type: string}
+      responses:
+        "200":
+          description: Lists forgotten; the next search reads them again
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [store_id, refreshed]
+                properties:
+                  store_id: {type: string}
+                  list: {type: string}
+                  refreshed: {type: integer, minimum: 1}
+        "404": {$ref: "#/components/responses/NotFound"}
   /searches:
     post:
       parameters:

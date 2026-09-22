@@ -40,6 +40,13 @@ func (c *inventoryCache) SaveOffers(_ context.Context, key string, items []offer
 	c.items, c.found, c.key, c.ttl = items, true, key, ttl
 	return nil
 }
+func (c *inventoryCache) DropOffers(_ context.Context, key string) error {
+	if c.key == key {
+		c.items, c.found = nil, false
+	}
+	return nil
+}
+
 func newTestClient(t *testing.T) (*Client, *inventoryFetcher, *inventoryCache) {
 	t.Helper()
 	data, err := os.ReadFile("testdata/inventory.json")

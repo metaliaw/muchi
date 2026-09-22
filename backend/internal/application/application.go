@@ -62,6 +62,7 @@ type Runtime struct {
 	CardMetadataProviders map[search.Game]cardmetadata.Provider
 	AutocompleteProviders map[search.Game]cardmetadata.AutocompleteProvider
 	SupportedGames        map[search.Game]string
+	Inventories           moxfield.Shelf
 }
 
 // BuildRuntime Casts the Search Providers for one Function Instance.
@@ -99,12 +100,14 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		}
 	}
 	checker := stores.Checker{Fetcher: fetcher, Config: storeConfig}
+	sourcesByGame := buildSourcesByGame(fetcher, storeConfig, store, config.InventoryCacheTTL, logger)
+	inventories := collectInventories(sourcesByGame)
 	service := search.Service{
 		Searches:          store,
 		Providers:         buildProviders(fetcher, storeConfig),
 		PrintsByGame:      buildPrintLibraries(fetcher, storeConfig),
 		SetsByGame:        buildSetLibraries(fetcher, storeConfig),
-		SourcesByGame:     buildSourcesByGame(fetcher, storeConfig, store, config.OfferCacheTTL, logger),
+		SourcesByGame:     sourcesByGame,
 		Stocks:            checker,
 		Cache:             store,
 		CacheNamespace:    search.HashPayload([]any{"search-providers-v8", storeConfig}) + ":",
@@ -125,9 +128,9 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 			return Runtime{}, err
 		}
 		service.Tasks = queue
-		return Runtime{Service: service, Store: store, Queue: queue, CardMetadataProviders: cardMetadataProviders, AutocompleteProviders: autocompleteProviders, SupportedGames: supportedGames}, nil
+		return Runtime{Service: service, Store: store, Queue: queue, CardMetadataProviders: cardMetadataProviders, AutocompleteProviders: autocompleteProviders, SupportedGames: supportedGames, Inventories: inventories}, nil
 	}
-	return Runtime{Service: service, Store: store, CardMetadataProviders: cardMetadataProviders, AutocompleteProviders: autocompleteProviders, SupportedGames: supportedGames}, nil
+	return Runtime{Service: service, Store: store, CardMetadataProviders: cardMetadataProviders, AutocompleteProviders: autocompleteProviders, SupportedGames: supportedGames, Inventories: inventories}, nil
 }
 
 func buildStoreLocations(config stores.Config) map[string][]string {
@@ -207,6 +210,23 @@ func buildSourcesByGame(fetcher stores.SourceFetcher, config stores.Config, cach
 		}
 	}
 	return result
+}
+
+// collectInventories Shelves each Moxfield List once, however many Games Play it.
+func collectInventories(sourcesByGame map[search.Game][]search.OfferSource) moxfield.Shelf {
+	shelf := moxfield.Shelf{}
+	seen := make(map[*moxfield.Client]bool)
+	for _, sources := range sourcesByGame {
+		for _, source := range sources {
+			list, ok := source.(*moxfield.Client)
+			if !ok || seen[list] {
+				continue
+			}
+			seen[list] = true
+			shelf.Lists = append(shelf.Lists, list)
+		}
+	}
+	return shelf
 }
 
 // buildPrintLibraries Lends Printings to the Games that Have a Catalog of them.

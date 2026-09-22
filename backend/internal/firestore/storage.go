@@ -380,6 +380,14 @@ func (s *Store) SaveOffers(ctx context.Context, key string, items []offer.Offer,
 	return err
 }
 
+// DropOffers Forgets one Cached Entry; a Missing Entry is already Forgotten.
+func (s *Store) DropOffers(ctx context.Context, key string) error {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
+	_, err := s.client.Collection("offer_cache").Doc(hashKey(key)).Delete(ctx)
+	return err
+}
+
 func (s *Store) AwaitSource(ctx context.Context, domain string) error {
 	boundCtx, cancel := boundContext(ctx)
 	defer cancel()

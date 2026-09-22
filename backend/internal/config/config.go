@@ -35,6 +35,7 @@ type Config struct {
 	StockCheckLimit         int
 	OfferCacheTTL           time.Duration
 	OfferCacheEmptyTTL      time.Duration
+	InventoryCacheTTL       time.Duration
 	SearchTTL               time.Duration
 	MaxCardsPerSearch       int
 	SweepMaxWakes           int
@@ -77,8 +78,11 @@ func LoadConfig() (Config, error) {
 		StockCheckLimit:         readIntOr("MUCHI_STOCK_CHECK_LIMIT", 5),
 		OfferCacheTTL:           readSecondsOr("MUCHI_OFFER_CACHE_TTL_SECONDS", 259200),
 		OfferCacheEmptyTTL:      readSecondsOr("MUCHI_OFFER_CACHE_EMPTY_TTL_SECONDS", 120),
-		SearchTTL:               readSecondsOr("MUCHI_SEARCH_TTL_SECONDS", 86400),
-		MaxCardsPerSearch:       readIntOr("MUCHI_MAX_CARDS_PER_SEARCH", 500),
+		// A Published List Changes whenever its Store Sells or Buys a Card, far
+		// sooner than a Search Result Goes stale.
+		InventoryCacheTTL: readSecondsOr("MUCHI_INVENTORY_CACHE_TTL_SECONDS", 3600),
+		SearchTTL:         readSecondsOr("MUCHI_SEARCH_TTL_SECONDS", 86400),
+		MaxCardsPerSearch: readIntOr("MUCHI_MAX_CARDS_PER_SEARCH", 500),
 		// One Sweep wakes at most this many Turns. Higher, a single Sweep
 		// would hit the Sources harder than any Search ever does.
 		SweepMaxWakes:          readIntOr("MUCHI_SWEEP_MAX_WAKES", 50),

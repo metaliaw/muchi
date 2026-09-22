@@ -22,6 +22,7 @@ type SourceFetcher interface {
 type InventoryCache interface {
 	LoadOffers(context.Context, string) ([]offer.Offer, bool, error)
 	SaveOffers(context.Context, string, []offer.Offer, time.Duration) error
+	DropOffers(context.Context, string) error
 }
 
 // Client Resolves one Configured List when its Cached Inventory Expires.
@@ -77,7 +78,7 @@ func (c *Client) loadInventory(ctx context.Context, id string) ([]offer.Offer, e
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	key := fmt.Sprintf("moxfield:v1:%x", sha256.Sum256([]byte(fmt.Sprintf("%s|%s|%s|%s|%d", c.StoreID, c.Store, c.Label, id, c.Rate))))
+	key := c.inventoryKey(id)
 	if c.Cache != nil {
 		if items, found, err := c.Cache.LoadOffers(ctx, key); err == nil && found {
 			return items, nil
@@ -105,6 +106,26 @@ func (c *Client) fetchInventory(ctx context.Context, id string) ([]offer.Offer, 
 		c.Logger.WarnContext(ctx, "Inventory Prices Missing", "list", id, "count", missing)
 	}
 	return items, err
+}
+
+// DropInventory Forgets the Cached List, so the next Search Reads it from Moxfield.
+// A Store that Adds a Card cannot Wait for the TTL to Notice it.
+func (c *Client) DropInventory(ctx context.Context) error {
+	id, err := ExtractListID(c.ListURL)
+	if err != nil {
+		return err
+	}
+	if c.Cache == nil {
+		return nil
+	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c.Cache.DropOffers(ctx, c.inventoryKey(id))
+}
+
+// inventoryKey Binds the Cached List to every Field that Shapes its Offers.
+func (c *Client) inventoryKey(id string) string {
+	return fmt.Sprintf("moxfield:v1:%x", sha256.Sum256([]byte(fmt.Sprintf("%s|%s|%s|%s|%d", c.StoreID, c.Store, c.Label, id, c.Rate))))
 }
 
 // SourceName Names the List, not the Store: one Store may Hold several.

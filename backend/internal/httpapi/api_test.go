@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/cangrejometralleta/muchi-api/internal/cardmetadata"
+	"github.com/cangrejometralleta/muchi-api/internal/moxfield"
 	"github.com/cangrejometralleta/muchi-api/internal/offer"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 )
@@ -325,5 +326,47 @@ func TestEverySourceFallingIsAnAnswerNotAFailure(t *testing.T) {
 	}
 	if len(reply.Faults) != 1 || reply.Faults[0].Source != "lacripta.cl" {
 		t.Errorf("faults = %#v", reply.Faults)
+	}
+}
+
+type fakeShelf struct {
+	store, list string
+	err         error
+}
+
+func (s *fakeShelf) RefreshStoreLists(_ context.Context, store, list string) (int, error) {
+	s.store, s.list = store, list
+	if s.err != nil {
+		return 0, s.err
+	}
+	return 2, nil
+}
+
+func refreshInventory(api API, target string) *httptest.ResponseRecorder {
+	request := httptest.NewRequest(http.MethodPost, target, nil)
+	request.Header.Set("Authorization", "Bearer secret")
+	response := httptest.NewRecorder()
+	api.BuildHandler().ServeHTTP(response, request)
+	return response
+}
+
+func TestRefreshStoreInventory(t *testing.T) {
+	shelf := &fakeShelf{}
+	response := refreshInventory(API{Token: "secret", Inventories: shelf}, "/v1/stores/el-wombat-rabioso-tcg/inventory/refresh?list=Negro")
+
+	if response.Code != http.StatusOK || response.Body.String() != `{"store_id":"el-wombat-rabioso-tcg","list":"Negro","refreshed":2}`+"\n" {
+		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
+	}
+	if shelf.store != "el-wombat-rabioso-tcg" || shelf.list != "Negro" {
+		t.Fatalf("store=%s list=%s", shelf.store, shelf.list)
+	}
+}
+
+func TestRefreshUnknownStoreAnswersNotFound(t *testing.T) {
+	shelf := &fakeShelf{err: moxfield.ErrNoList}
+	response := refreshInventory(API{Token: "secret", Inventories: shelf}, "/v1/stores/la-cripta/inventory/refresh")
+
+	if response.Code != http.StatusNotFound {
+		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
 	}
 }
