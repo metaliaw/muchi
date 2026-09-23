@@ -635,10 +635,9 @@ onUnmounted(stopPolling)
 }
 .mu-abierto {
   grid-area: abierto;
-  /* Un Anuncio que todavía Aterriza aquí no puede Abrir la Fila: Muchi
-     Empieza debajo del Aviso, y cada Pixel de más lo Empuja fuera. */
-  max-height: 240px;
-  overflow: hidden;
+  /* El Panel Decide su alto. Recortarlo acá Corta su Borde inferior cuando el
+     Texto Crece o los Enlaces Bajan a otra Línea. */
+  min-width: 0;
 }
 /* Muchi y la Carta Acompañan el Recorrido de la Lista. Flotan juntos, en un
    solo Bloque: dos Pegados por separado se Taparían uno al otro al Bajar. */
