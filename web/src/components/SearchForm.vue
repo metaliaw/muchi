@@ -15,18 +15,16 @@ const GAME_EXAMPLES = {
   riftbound: ['Yasuo, Unforgiven', '4 Jinx, Demolitionist'],
   'mitos-y-leyendas': ['Dragón de Magma', '4 Dragón de Luz'],
 }
-// Una Caja no se Nombra como una Carta: lleva su Set y su Formato juntos, y
-// cada Tienda los Escribe a su Manera.
-// Medidos contra las Tiendas, no Inventados. Los Títulos largos que Trae la
-// Caja de Fábrica no Encuentran nada: cada Tienda Escribe el Set a su manera y
-// el Formato al final. Un Nombre corto Cae en todos.
+// Una Caja no se Nombra como una Carta: lleva su Set y su Formato juntos.
+// Cada Juego Trae un Producto concreto para que Buscar tenga sentido desde el
+// primer Toque; la segunda Línea Muestra que también Acepta cantidades.
 const SEALED_EXAMPLES = {
-  magic: ['Play Booster', '2 Play Booster Display'],
+  magic: ['Bloomburrow Play Booster Box', '2 Foundations Bundle'],
   pokemon: ['Prismatic Evolutions Booster Bundle', '2 Surging Sparks Elite Trainer Box'],
-  yugioh: ['Booster Box', '2 Structure Deck'],
-  'one-piece': ['Starter Deck', '2 Booster Box'],
-  digimon: ['Starter Deck', '2 Booster Box'],
-  riftbound: ['Starter Deck', '2 Booster Box'],
+  yugioh: ['Blue-Eyes White Destiny Structure Deck', '2 Quarter Century Stampede Booster Box'],
+  'one-piece': ['ST-01 Straw Hat Crew Starter Deck', '2 OP-01 Romance Dawn Booster Box'],
+  digimon: ['ST-1 Gaia Red Starter Deck', '2 BT-01 New Evolution Booster Box'],
+  riftbound: ['Origins Booster Box', '2 Proving Grounds Box Set'],
   // Casa MyL Titula sus Cajas así: el Display y el Mazo, no la "Booster Box"
   // que Nombra el resto de los Juegos.
   'mitos-y-leyendas': ['Display', '2 Mazo'],
@@ -106,6 +104,13 @@ watch([game, kind], offerDefault, { immediate: true })
 // Búsqueda restaurada Nombra el suyo— y eso no Debe Borrarle el Texto a nadie.
 function pickGame(named) {
   game.value = named
+  text.value = suggestion.value
+}
+
+// Elegir otro Catálogo también Elige su ejemplo. Una Carta escrita no es el
+// Nombre de una Caja, y conservarla hace parecer que el Cambio no ocurrió.
+function pickKind(named) {
+  kind.value = named
   text.value = suggestion.value
 }
 
@@ -229,11 +234,13 @@ const extraLines = computed(() => wide.value && written.value > 1)
       <fieldset class="mu-modo">
         <legend class="mu-caption">Qué buscar</legend>
         <label :class="{ 'mu-modo--sin': !sellsSingles }">
-          <input type="radio" value="single" v-model="kind" :disabled="!sellsSingles" />
+          <input type="radio" value="single" :checked="kind === 'single'"
+                 :disabled="!sellsSingles" @change="pickKind('single')" />
           Cartas sueltas
         </label>
         <label :class="{ 'mu-modo--sin': !sellsSealed }">
-          <input type="radio" value="sealed" v-model="kind" :disabled="!sellsSealed" />
+          <input type="radio" value="sealed" :checked="kind === 'sealed'"
+                 :disabled="!sellsSealed" @change="pickKind('sealed')" />
           Producto sellado
         </label>
       </fieldset>
