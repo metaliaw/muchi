@@ -1,5 +1,7 @@
 # Producto Sellado
 
+[English](sealed-products.md) | **Español**
+
 ## Resumen
 
 Una caja de sobres no es una carta cara. Es otro objeto, con otro catálogo, otras

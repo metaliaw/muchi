@@ -1,5 +1,7 @@
 # Despliegue, Revisiones y Rotación de Secretos
 
+[English](deployment-revisions-secrets.md) | **Español**
+
 ## Resumen
 
 Una rotación de `MUCHI_API_TOKEN` dejó la API respondiendo `401` aunque Secret

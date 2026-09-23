@@ -1,5 +1,7 @@
 # Hallazgos en los Buscadores
 
+[English](search-findings.md) | **Español**
+
 ## Resumen
 
 Una pregunta simple abrió el resto: buscar `Kuriboh` devolvía `Winged Kuriboh`,

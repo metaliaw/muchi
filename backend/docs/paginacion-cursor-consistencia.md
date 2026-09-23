@@ -1,5 +1,7 @@
 # Paginación por Cursor y Consistencia
 
+[English](cursor-pagination-consistency.md) | **Español**
+
 ## Resumen
 
 Los resultados de una búsqueda se completan fuera de orden: varios workers pueden

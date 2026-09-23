@@ -1,5 +1,7 @@
 # Créditos de Google Cloud para startups
 
+[English](google-cloud-startup-credits.md) | **Español**
+
 Este documento Registra lo averiguado el 20 de septiembre de 2026 sobre el
 Google for Startups Cloud Program, y por qué Muchi todavía no puede postular.
 No describe trabajo realizado ni comprometido: es una nota para decidir cuándo

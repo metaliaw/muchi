@@ -1,5 +1,7 @@
 # Plan: probar la frontera del almacén con un segundo adaptador
 
+[English](provider-agnostic-store-plan.md) | **Español**
+
 Este documento describe trabajo **no realizado**. Es el plan para demostrar que
 la frontera descrita en [Arquitectura](arquitectura.md#la-frontera-del-almacén)
 aguanta un cambio de proveedor. Hoy esa frontera es una intención bien formada:

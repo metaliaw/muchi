@@ -1,5 +1,7 @@
 # Identidad de Cartas entre Juegos y Ediciones
 
+[English](card-identity-games-sets.md) | **Español**
+
 ## Resumen
 
 Una carta no tiene una única identidad útil para todo el sistema. Muchi separa

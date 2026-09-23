@@ -1,5 +1,7 @@
 # Compras con agentes web 🐈
 
+[English](web-agent-purchases-proposal.md) | **Español**
+
 Propuesta para conversar · 20 de septiembre de 2026 · Montos en USD
 
 ## Un carrito, más posibilidades

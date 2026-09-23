@@ -1,5 +1,7 @@
 # Incidente de Ítems Huérfanos en la Cola
 
+[English](orphaned-queue-items.md) | **Español**
+
 ## Resumen
 
 Una búsqueda se guardaba correctamente y Cloud Tasks entregaba sus tareas, pero

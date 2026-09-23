@@ -1,5 +1,7 @@
 # Protocolos de comercio agéntico
 
+[English](agentic-commerce-protocols.md) | **Español**
+
 Este documento Ordena los estándares que aparecieron entre 2025 y 2026 para que
 un agente compre en nombre de una persona, y Dice cuáles alcanzan a las tiendas
 chilenas que Muchi consulta hoy. Es material de apoyo para la

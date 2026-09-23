@@ -1,39 +1,38 @@
 # Muchi API
 
-API en Go que Busca y compara ofertas de cartas TCG en tiendas de Chile,
-verifica stock y procesa listas de búsqueda reanudables.
-Soporta Magic: The Gathering, Pokémon y Yu-Gi-Oh!, con precios en pesos chilenos.
-El cartón es Caro; buscarlo no debería costarte también la tarde.
+[English](README.md) | [Español](README.es.md)
 
-La comunidad Cree en nosotros; nosotros creemos en la comunidad.
-Hacemos público este repositorio para Compartir cómo funciona Muchi
-y construirlo con quienes lo usan.
+A Go API that searches and compares TCG card offers from Chilean stores,
+checks stock, and processes resumable search lists. It supports Magic: The
+Gathering, Pokémon, and Yu-Gi-Oh!, with prices in Chilean pesos.
 
-Puedes Empezar por el entorno local, consultar el contrato [OpenAPI](openapi.yaml)
-o probar las peticiones de [Bruno](collections/README.md).
+Our community believes in us; we believe in the community. This public
+repository shares how Muchi works and invites people to build it with us.
 
-## Desarrollo local
+Start with local development, read the [OpenAPI contract](openapi.yaml), or try
+the [Bruno requests](collections/README.md). The
+[documentation index](docs/README.md) lists guides in both languages.
 
-Necesitas Docker con Compose para Levantar la API, el worker y el emulador
-local de Firestore; este flujo no requiere una cuenta de Google Cloud.
-Desde la raíz del repositorio, Ejecuta:
+## Local Development
+
+You need Docker Compose to run the API, worker, and local Firestore emulator;
+this flow does not require a Google Cloud account. From the repository root, run:
 
 ```sh
 docker compose up --build
 ```
 
-La API queda en `http://localhost:8081`; el token local es
-`local-development-token`. Métricas Prometheus: `/metrics`.
+The API is available at `http://localhost:8081`; the local token is
+`local-development-token`. Prometheus metrics are at `/metrics`.
 
-`./start.sh [serve|work]` usa Docker Compose para compilar e iniciar la API
-(`serve`, por defecto) o el worker (`work`), junto con el emulador de Firestore.
-Los servicios arrancan en segundo plano y el script sigue sus logs. Ctrl+C deja
-de mostrar logs; `docker compose down` detiene los servicios. Esto evita la ruta
-de arranque adjunto de Podman Compose al reutilizar contenedores activos.
-Para iniciar todos los servicios, usa el comando
-anterior. `./build.sh` compila el binario local tras pasar formato, vet y pruebas.
-En Windows, `start.cmd` y `build.cmd` hacen lo mismo.
-Para compilar fuera de Docker, Necesitas Go 1.26 o posterior.
+`./start.sh [serve|work]` uses Docker Compose to build and start the API
+(`serve` by default) or worker (`work`), along with the Firestore emulator. The
+services run in the background while the script follows their logs. Ctrl+C stops
+following logs; `docker compose down` stops the services. This avoids the
+Podman Compose attached startup path when reusing active containers. Use the
+command above to start all services. `./build.sh` builds a local binary after
+formatting, vetting, and testing. On Windows, `start.cmd` and `build.cmd` do the
+same. Building outside Docker requires Go 1.26 or later.
 
 ```sh
 curl -X POST http://localhost:8081/v1/searches \
@@ -43,167 +42,159 @@ curl -X POST http://localhost:8081/v1/searches \
   -d '{"cards":[{"name":"Sol Ring","quantity":1}],"options":{"verify_stock":true,"stores_only":true}}'
 ```
 
-La respuesta Devuelve un `id`; reemplaza `ID_DE_BUSQUEDA` con ese valor
-para consultar resultados mientras el worker avanza:
+The response returns an `id`. Replace `SEARCH_ID` with that value to read
+results while the worker processes the request:
 
 ```sh
-curl http://localhost:8081/v1/searches/ID_DE_BUSQUEDA/results \
+curl http://localhost:8081/v1/searches/SEARCH_ID/results \
   -H 'Authorization: Bearer local-development-token'
 ```
 
-Consulta `GET /v1/searches/ID_DE_BUSQUEDA` para Conocer el estado de la búsqueda.
-El token del ejemplo es Solo para desarrollo local.
+Use `GET /v1/searches/SEARCH_ID` to check search status. The example token is
+for local development only.
 
-## Fuentes y precios
+## Sources and Prices
 
-Las fuentes de ofertas son [scry.cl](https://scry.cl) y las tiendas habilitadas
-en `config/stores.yaml`: catálogos WooCommerce, Shopify y Jumpseller, e inventarios publicados en Moxfield.
-Por ahora las conexiones directas de Magic4Ever, Cartas La Fortaleza, ChronoMagic
-y GameQuest están deshabilitadas por la latencia de su paginación Jumpseller.
-Scry permanece habilitado y puede seguir mostrando sus ofertas publicadas.
-`enabled: false` también evita consultar directamente su stock. Para reactivarlas,
-cambia ese valor en `config/stores.yaml` y reinicia API y worker.
+Offer sources are [scry.cl](https://scry.cl) and the stores enabled in
+`config/stores.yaml`: WooCommerce, Shopify, and Jumpseller catalogs, plus
+inventories published through Moxfield. Direct connections to Magic4Ever,
+Cartas La Fortaleza, ChronoMagic, and GameQuest are currently disabled because
+their Jumpseller pagination is slow. Scry remains enabled and can still show its
+published offers. `enabled: false` also prevents direct stock checks. To
+reactivate a store, change that value in `config/stores.yaml` and restart the API
+and worker.
 
-De Scry se leen los precios guardados en sus páginas, en CLP, junto con tienda y variante.
-La verificación de stock consulta las tiendas configuradas; un precio publicado no confirma stock.
-La URL, Activación y Comunidad de Scry se Configuran en `search_providers` dentro de `config/stores.yaml`.
-El lector depende del HTML público de Scry y no fuerza una actualización de su caché.
+Muchi reads published prices from Scry pages in CLP, along with the store and
+variant. Stock verification queries configured stores; a published price does
+not confirm stock. Scry's URL, enabled state, and community setting are configured
+under `search_providers` in `config/stores.yaml`. The reader uses Scry's public
+HTML and does not force a cache refresh.
 
-El [flujo de búsqueda por juego](docs/busqueda-proveedores.md) explica cómo se
-combinan agregadores y tiendas desde el YAML, cómo se elige cada adaptador y cómo
-se tratan tiempos y duplicados.
-La [identidad de cartas entre juegos y ediciones](docs/identidad-cartas-juegos-ediciones.md)
-describe qué identifica una búsqueda, una impresión y una variante comercial.
-Los [hallazgos en los buscadores](docs/hallazgos-buscadores.md) registran los
-defectos encontrados en la costura entre el título que publica una tienda y la
-carta que el código deduce de él, con lo que queda abierto.
-El [producto sellado](docs/producto-sellado.md) explica qué identifica una caja,
-qué fuente sirve para buscarla, la propiedad `sealed` de agregadores y tiendas, y
-por qué un 429 no cuenta como caída.
-La [tienda caída ocho días](docs/tienda-caida-netdecker.md) cuenta el caso de
-`v3.netdecker.cl`, por qué un circuito de un minuto fijo no alcanzaba y qué
-queda abierto —`www.deckscards.cl` no está caída, es lenta, y eso es otro
-problema.
+The [game search flow](docs/busqueda-proveedores.md) explains how YAML combines
+aggregators and stores, selects each adapter, and handles timing and duplicates.
+The [card identity guide](docs/identidad-cartas-juegos-ediciones.md) explains
+what identifies a search, a printing, and a commercial variant. The
+[search findings](docs/hallazgos-buscadores.md) track defects at the seam
+between a store's product title and the card inferred by the code. The
+[sealed product guide](docs/producto-sellado.md) explains box identity, source
+selection, the `sealed` property, and why HTTP 429 is not a source failure. The
+[eight-day store outage](docs/tienda-caida-netdecker.md) covers why a fixed
+one-minute circuit breaker was insufficient and what remains open: `www.deckscards.cl`
+is slow, not down.
 
-El [castigo y perdón](docs/castigo-y-perdon.md) reúne la política completa hacia
-las fuentes: qué se castiga, cuánto dura, qué respuestas honestas nunca cuentan
-como falla y por qué la duda beneficia a quien pregunta.
+The [source pacing policy](docs/castigo-y-perdon.md) describes what counts as a
+failure, how long sources are paused, which honest responses never count as
+failures, and why uncertainty should favor the caller.
 
-Las listas Moxfield se resuelven automáticamente por la API v3 a partir de cada
-`lists[].url`. Para agregar una tienda, define `name`, `enabled: true` y sus listas
-con `label`, `url` y `clp_per_ck_usd`; reinicia el servicio para cargar la configuración.
-No requieren exportaciones ni importaciones manuales.
+Moxfield lists are resolved automatically through API v3 from each
+`lists[].url`. To add a store, set `name`, `enabled: true`, and its lists with
+`label`, `url`, and `clp_per_ck_usd`, then restart the service. Manual export and
+import are not required.
 
-Cada lista conserva sus ediciones, acabados y cantidades publicadas. El precio es
-Card Kingdom USD multiplicado por la tasa de la lista, redondeado al peso más cercano
-(las mitades suben). Foil usa `ck_foil` y etched usa `ck_etched`; las variantes sin
-precio correspondiente se omiten y se registran en logs. La cantidad queda en
-`metadata.quantity`; el stock sigue sin confirmar hasta verificarlo con la tienda.
+Each list retains its published sets, finishes, and quantities. The price is
+Card Kingdom USD multiplied by the list rate and rounded to the nearest peso
+(half values round up). Foil uses `ck_foil`, and etched uses `ck_etched`; entries
+without a matching price are omitted and logged. Quantity is stored in
+`metadata.quantity`; stock remains unconfirmed until checked with the store.
 
-La caché de inventario completo en Firestore comparte `MUCHI_OFFER_CACHE_TTL_SECONDS`
-(86400 segundos, un día, por defecto) y se renueva bajo demanda al vencer. La caché de resultados
-por carta puede extender la visibilidad de cambios hasta otro período de ese TTL.
-Una respuesta bloqueada o inválida de Moxfield se trata como error, nunca como lista
-vacía. Las otras fuentes siguen disponibles.
+The full inventory cache in Firestore shares `MUCHI_OFFER_CACHE_TTL_SECONDS`
+(86400 seconds, one day by default) and refreshes on demand after expiration.
+Per-card result caching can extend how long changes remain invisible by another
+TTL period. A blocked or invalid Moxfield response is treated as an error, never
+as an empty list. Other sources remain available.
 
-Para comprobar las nueve listas públicas configuradas:
+To check the nine configured public lists:
 
 ```sh
 MUCHI_TEST_MOXFIELD_LIVE=1 go test ./internal/moxfield -run TestPublicLists -v
 ```
 
-## Comandos
+## Commands
 
-- `muchi-api serve`: sirve HTTP y métricas.
-- `muchi-api work`: procesa elementos pendientes con leases renovables.
+- `muchi-api serve`: serves HTTP and metrics.
+- `muchi-api work`: processes pending items with renewable leases.
 
-Firestore conserva búsquedas y resultados durante 24 horas. La caché de ofertas
-mantiene sus TTL positivos y negativos independientes. Cloud Tasks ejecuta una
-función privada por cada carta, sin un worker residente.
+Firestore retains searches and results for 24 hours. Offer caching keeps
+independent positive and negative TTLs. Cloud Tasks invokes a private function
+for each card, without a resident worker.
 
-El [incidente de ítems huérfanos](docs/cola-items-huerfanos.md) documenta cómo
-una cola activa dejó de avanzar, el patrón de reclamo que lo resolvió y las
-invariantes necesarias para reproducir esta arquitectura con seguridad.
-La [paginación por cursor](docs/paginacion-cursor-consistencia.md) explica cómo
-los clientes consumen resultados incrementales mientras varios workers terminan
-cartas fuera del orden de entrada.
+The [orphaned queue items incident](docs/cola-items-huerfanos.md) explains how
+an active queue stopped progressing, the claim pattern that fixed it, and the
+invariants needed to reproduce this architecture safely. The
+[cursor pagination guide](docs/paginacion-cursor-consistencia.md) explains how
+clients read incremental results while workers finish cards out of order.
 
 ## Google Cloud
 
-El [diagrama de arquitectura](docs/arquitectura.md) muestra los límites entre
-entrada HTTP, cola, workers, persistencia, fuentes, identidades y secretos.
-El [incidente de despliegue, revisiones y secretos](docs/despliegue-revisiones-secretos.md)
-explica por qué una rotación correcta también debe mover tráfico y actualizar a
-todos los consumidores.
-El [plan de almacén agnóstico](docs/plan-almacen-agnostico.md) describe el
-trabajo pendiente para que el proyecto corra sin nube y para que cambiar de
-proveedor siga siendo una decisión.
+The [architecture guide](docs/arquitectura.md) shows boundaries among HTTP
+entry points, queue, workers, persistence, sources, identities, and secrets. The
+[deployment, revisions, and secrets incident](docs/despliegue-revisiones-secretos.md)
+explains why a correct rotation must also move traffic and update every
+consumer. The [provider-agnostic storage plan](docs/plan-almacen-agnostico.md)
+describes the remaining work to run without a cloud provider and keep provider
+replacement an explicit choice.
 
-La función pública usa el entry point `ServeAPI`. La función privada de Cloud
-Tasks usa `ProcessSearch` y no debe permitir invocaciones sin autenticar.
+The public function uses the `ServeAPI` entry point. The private Cloud Tasks
+function uses `ProcessSearch` and must reject unauthenticated invocations.
 
-Variables requeridas: `GOOGLE_CLOUD_PROJECT`, `MUCHI_API_TOKEN`,
-`MUCHI_TASK_REGION`, `MUCHI_TASK_QUEUE`, `MUCHI_TASK_URL` y
+Required variables: `GOOGLE_CLOUD_PROJECT`, `MUCHI_API_TOKEN`,
+`MUCHI_TASK_REGION`, `MUCHI_TASK_QUEUE`, `MUCHI_TASK_URL`, and
 `MUCHI_TASK_SERVICE_ACCOUNT`.
 
-Activa una política TTL sobre el campo `expires_at` en los collection groups
-`searches`, `items`, `item_offers`, `idempotency` y `offer_cache`. El código
-rechaza documentos vencidos aunque Firestore aún no los haya eliminado.
+Enable a TTL policy on `expires_at` for the `searches`, `items`, `item_offers`,
+`idempotency`, and `offer_cache` collection groups. The code rejects expired
+documents even if Firestore has not deleted them yet.
 
-## Despliegue
+## Deployment
 
-El [despliegue con gatos](docs/despliegue.md) explica cómo `deploy.sh` orquesta
-los cuatro componentes, qué hace cada script, los permisos que necesita quien
-despliega, las opciones compartidas de `config/deploy.env` y el manejo del token.
+The [deployment guide](docs/despliegue.md) explains how `deploy.sh` orchestrates
+the four components, what each script does, required permissions, shared
+`config/deploy.env` options, and token handling.
 
 ```sh
-./deploy.sh --project mi-proyecto
+./deploy.sh --project my-project
 ```
 
-Cada despliegue sale de una máquina con `gcloud auth login`; no hay despliegue
-automático desde GitHub.
+Deployments run from a machine authenticated with `gcloud auth login`; GitHub
+does not deploy automatically.
 
-## Participa
+## Contributing
 
-Puedes Ayudar reportando una búsqueda incorrecta, proponiendo una tienda
-o enviando una mejora de código o documentación.
-Abre un [issue](https://github.com/cangrejometralleta/muchi-api/issues)
-con el juego, la carta, la tienda y el resultado esperado para Reproducir el problema.
-Omite tokens, credenciales y datos personales.
+Help by reporting an incorrect search, suggesting a store, or submitting a code
+or documentation improvement. Open an
+[issue](https://github.com/cangrejometralleta/muchi-api/issues) with the game,
+card, store, and expected result so the issue can be reproduced. Do not include
+tokens, credentials, or personal information.
 
-Para contribuir código, Crea un fork y envía un pull request con el problema
-que resuelve y cómo lo comprobaste.
-Ejecuta `./build.sh` o `build.cmd` para Validar formato, análisis y pruebas
-antes de enviarlo.
-Las pruebas contra tiendas reales son Opcionales y generan consultas externas;
-actívalas solo cuando estés revisando esa integración.
+To contribute code, fork the repository and open a pull request describing the
+problem and how you checked the change. Run `./build.sh` or `build.cmd` to check
+formatting, analysis, and tests. Tests against live stores are optional and make
+external requests; enable them only when reviewing that integration.
 
-## Licencia
+## License
 
-Muchi API es Software Libre bajo la **[GNU Affero General Public License v3.0 o
-posterior](LICENSE)**.
-
-Puedes usarla, leerla, modificarla y redistribuirla. La Affero agrega una sola
-condición más que la GPL, y es la que importa acá: **quien opere esta API —o
-una versión modificada— como servicio en una red debe ofrecer su código fuente
-a quienes la usan.** Un fork mejor es bienvenido; un fork cerrado y alojado en
-otra parte, no.
+Muchi API is free software under the **GNU Affero General Public License v3.0 or
+later**. You may use, read, modify, and redistribute it. The Affero adds one
+condition to the GPL: anyone operating this API, or a modified version, as a
+network service must offer its users the corresponding source code. Forks are
+welcome; a closed fork operated elsewhere is not.
 
 ```text
 Copyright (C) 2026 Muchi
 
-Este programa es software libre: puedes redistribuirlo y/o modificarlo bajo
-los términos de la GNU Affero General Public License publicada por la Free
-Software Foundation, en su versión 3 o cualquier versión posterior.
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
-Este programa se distribuye con la esperanza de que sea útil, pero SIN
-GARANTÍA ALGUNA; ni siquiera la garantía implícita de COMERCIALIZACIÓN o
-ADECUACIÓN A UN PROPÓSITO PARTICULAR. Lee la GNU Affero General Public
-License para más detalles.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
 
-Deberías haber recibido una copia de la GNU Affero General Public License
-junto a este programa. Si no, mira <https://www.gnu.org/licenses/>.
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
 ```
 
-El [Front](https://github.com/metaliaw/muchi) lleva la misma licencia. Son dos
-repositorios, una sola regla.
+The [Muchi Front](https://github.com/metaliaw/muchi) uses the same license.
+Two repositories, one rule.

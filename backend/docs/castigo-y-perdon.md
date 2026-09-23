@@ -1,5 +1,7 @@
 # Castigo y Perdón
 
+[English](source-pacing.md) | **Español**
+
 ## Resumen
 
 Muchi depende de fuentes que no controla. Una tienda se cae, otra tarda, otra

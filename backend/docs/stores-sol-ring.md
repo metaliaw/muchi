@@ -1,5 +1,7 @@
 # Tiendas Candidatas desde Sol Ring
 
+[English](candidate-stores-sol-ring.md) | **Español**
+
 Verificación: 7 de septiembre de 2026. Búsqueda real en GCP: `search_1bad0a3b9c8aacc035c23576`.
 La búsqueda terminó `completed`, con una carta encontrada y cero errores. Devolvió **208 ofertas**: 198 de scry.cl, 4 directas de La Cripta y 6 de Moxfield.
 

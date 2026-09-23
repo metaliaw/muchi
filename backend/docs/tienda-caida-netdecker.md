@@ -1,5 +1,7 @@
 # Una Tienda Caída Ocho Días
 
+[English](store-down-eight-days.md) | **Español**
+
 Septiembre 2026 · el caso `v3.netdecker.cl`, y lo que enseñó sobre el circuito
 
 ## El síntoma

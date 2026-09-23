@@ -1,5 +1,7 @@
 # Arquitectura de Muchi API
 
+[English](architecture.md) | **Español**
+
 Muchi es Software Libre entero, y son dos Repositorios. La recolección,
 persistencia y procesamiento de las búsquedas viven acá, en
 [cangrejometralleta/muchi-api](https://github.com/cangrejometralleta/muchi-api),
@@ -149,11 +151,14 @@ flowchart LR
 ```
 
 El dominio declara necesidades como `SearchStore`, `TaskQueue`, `Provider`,
-`OfferSource`, `StockChecker` y `OfferCache`. `internal/application` construye
-los agregadores en `Providers` y agrupa las tiendas en `SourcesByGame` usando los
-juegos, orígenes, plataformas y estados del YAML. Los paquetes de proveedores
-implementan esos puertos. Así, las reglas de búsqueda no importan tipos de
-Firestore, Cloud Tasks ni clientes HTTP concretos.
+`OfferSource`, `StockChecker` y `OfferCache`. `internal/application/catalog.go`
+construye los agregadores en `Providers` y agrupa las tiendas en `SourcesByGame`
+usando los juegos, orígenes, plataformas y estados del YAML. El archivo también
+reúne los catálogos de impresiones y ediciones, además de los límites por tipo de
+producto. `internal/application/application.go` abre las conexiones y arma el
+`Runtime` con esas piezas. Los paquetes de proveedores implementan los puertos;
+así, las reglas de búsqueda no importan tipos de Firestore, Cloud Tasks ni
+clientes HTTP concretos.
 
 El [flujo de búsqueda por juego](busqueda-proveedores.md) detalla esa composición.
 La [identidad de cartas](identidad-cartas-juegos-ediciones.md) separa búsqueda,

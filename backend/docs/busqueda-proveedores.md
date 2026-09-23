@@ -1,5 +1,7 @@
 # Búsqueda por juego, agregadores y tiendas
 
+[English](game-search-providers.md) | **Español**
+
 Cada juego combina dos clases de fuente declaradas en `config/stores.yaml`:
 
 - Los agregadores de `search_providers` buscan ofertas publicadas por terceros.
