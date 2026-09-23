@@ -234,11 +234,9 @@ def read_card(name: str = Query(min_length=1, max_length=200),
     try:
         canonical = translator.translate_name(name, language)
     except CardNotFound:
-        book = phrases.read_phrases()
-        # El Grupo «not_found» del Catálogo nombra el Fracaso con voz propia.
-        phrase = next((row for row in book.phrases if "no la encontré" in row.text), None)
-        detail = phrase.text if phrase else f"No encontramos «{name}»."
-        raise HTTPException(404, detail)
+        # El Fracaso se Nombra sin Voz: la Frase que Muchi Dice al no encontrar
+        # una Carta la Elige el Front con el Catálogo que ya Tiene.
+        raise HTTPException(404, f"No encontramos «{name}».")
     except TranslationFailed as error:
         raise HTTPException(502, str(error))
     return {"name": name, "canonical_name": canonical, "language": language}

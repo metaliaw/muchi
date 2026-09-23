@@ -21,12 +21,10 @@ def test_custom_catalog_controls_messages(tmp_path):
     path.write_text(yaml.safe_dump(document))
     book = phrases.read_phrases(path)
     assert book.every == 7
-    assert phrases.speaks_now(7, book.every)
-    assert not phrases.speaks_now(10, book.every)
-    assert phrases.select_greeting(book, 10) == phrases.Phrase("Bienvenido", "idle")
+    assert book.greetings == (phrases.Phrase("Bienvenido", "idle"),)
     assert book.help_topics == (("Ayuda", "Consulta una Carta"),)
-    assert phrases.pick_theme_phrase(book, True).text == "me pongo darkzz"
-    assert phrases.pick_theme_phrase(book, False).text == "prendieron las luces"
+    assert book.dark == (phrases.Phrase("me pongo darkzz", "happy"),)
+    assert book.light == (phrases.Phrase("prendieron las luces", "alert"),)
 
 
 @pytest.mark.parametrize("field,value", [
@@ -66,7 +64,7 @@ def test_missing_frequency_has_no_fallback(tmp_path):
 
 def test_absent_catalog_has_no_greeting(tmp_path):
     book = phrases.read_phrases(tmp_path / "missing.yaml")
-    assert phrases.select_greeting(book) is None
+    assert book.greetings == ()
     assert book.help_topics == ()
 
 
