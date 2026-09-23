@@ -1,35 +1,37 @@
-# 🐱 Muchi.cl
+[English](README.md) · [Español](README.es.md)
 
-Muchi te ayuda a buscar Cartas de Magic y comparar Ofertas de Tiendas.
-Puedes consultar una Carta o pegar una Lista completa y calcular una propuesta
-de Compra en CLP que considere también el costo de los Envíos.
+# 🐱 MUCHI.cl
 
-La API de Muchi realiza las Búsquedas y conserva sus Resultados. Este Front,
-construido con Vue 3, muestra el Avance, las Ofertas y el Carrito.
+MUCHI helps you find Magic Cards and compare Store offers. Search for one
+Card or paste a complete List to calculate a proposed Purchase in CLP,
+including Shipping costs.
 
-Quienes quieran mirar detrás de la Pantalla pueden recorrer la
-[Arquitectura de Muchi](docs/arquitectura.md), sus Decisiones públicas y las
-formas de colaborar.
+The MUCHI API performs Searches and retains their Results. This Vue 3
+Frontend displays Progress, Offers and the Cart.
 
-> 📚 **Este Repositorio se lee, no sólo se ejecuta.** Cada Decisión de Muchi
-> tiene un Documento que la cuenta con sus Motivos, incluidas las que salieron
-> mal. Si llegaste a aprender, parte por la
-> [Documentación](#documentación) y vuelve después al Código.
+To look behind the Screen, explore
+[MUCHI's Architecture](docs/arquitectura-en.md), its public Decisions and
+ways to contribute.
 
-## Buscar Cartas
+> 📚 **This Repository is meant to be read as well as run.** Every MUCHI
+> Decision has a Document explaining its Reasons, including Decisions that
+> went wrong. If you came to learn, start with the
+> [Documentation](#documentation-in-english) and return to the Code afterward.
 
-1. Escribe el Nombre de una Carta o pega una Lista con Cantidades.
-2. Pulsa **Buscar**. Las Ofertas aparecen mientras avanza la Búsqueda.
-3. Revisa los Resultados y abre el **Carrito en CLP** para comparar la Compra.
+## Search for Cards
 
-El Carrito todavía no Compra: reparte tu Lista entre Tiendas y te deja los
-Enlaces. Por eso avisa arriba que la Compra sigue en Obra y enlaza el
-Repositorio para que nos cuentes qué viste. `MUCHI_CART_READY=1` retira ese
-Aviso el Día que la Compra esté, que es una Línea en el Entorno y no un Deploy
-de la Interfaz.
+1. Enter a Card name or paste a List with Quantities.
+2. Press **Buscar** (Search). Offers appear as the Search progresses.
+3. Review Results and open **Carrito en CLP** (Cart in CLP) to compare the Purchase.
 
-Cada Búsqueda admite entre 1 y 100 Entradas, con 1 a 99 copias por Entrada.
-Son los Topes de un Mazo de Commander, no una Preferencia configurable:
+The Cart does not buy yet: it allocates your List across Stores and gives
+you their Links. A Notice at the top says purchasing is still under
+construction and links to the Repository so you can tell us what you saw.
+`MUCHI_CART_READY=1` removes that Notice when purchasing is ready: one
+Environment line, without an Interface deployment.
+
+Each Search accepts 1–100 Entries, with 1–99 copies per Entry. These are
+the Limits of a Commander deck rather than a configurable Preference:
 
 ```text
 1 Sol Ring
@@ -37,399 +39,393 @@ Son los Topes de un Mazo de Commander, no una Preferencia configurable:
 2 Counterspell
 ```
 
-Puedes cancelar una Búsqueda en curso o retomarla con su enlace o Identificador.
+You can cancel an active Search or resume it through its Link or Identifier.
 
-La Columna **Tratamiento** resume el Acabado, el Idioma y el Estado de cada
-Oferta. La API entrega esos Campos casi siempre nulos, así que se leen también
-del Texto de la Variante y del Título de la Tienda. Una Oferta sin ninguna
-Pista queda con la Columna vacía; ninguna Etiqueta se inventa.
+The **Tratamiento** (Treatment) column summarizes each Offer's Finish,
+Language and Condition. The API usually returns null for those Fields,
+so they are also read from the Variant text and Store title. With no Clue,
+the Column stays empty; no Label is invented.
 
-La Columna **Stock** dice `No confirmado` cuando la Fuente no publica
-Inventario: los Agregadores indexan Precios, no Stock. No significa Agotado, y
-esas Ofertas siguen entrando al Carrito.
+The **Stock** column says `No confirmado` (Unconfirmed) when the Source
+publishes no Inventory: Aggregators index Prices, not Stock. It does not
+mean sold out, and those Offers still enter the Cart.
 
-La Tabla abre ordenada por Precio, de la más barata a la más cara, mezclando
-todas las Cartas de la Lista. Cada Moneda se ordena en su propio Bloque. Desde
-ahí puedes reordenar por cualquier Columna con un clic en su Encabezado. El
-Precio se escribe a la Chilena, `1.791`, y solo muestra Decimales si alguna
-Oferta los trae.
+The Table opens sorted from cheapest to most expensive, mixing all Cards
+in the List. Each Currency has its own sorted Block. Click any Column
+heading to reorder. Prices use Chilean formatting, `1.791`, with Decimal
+places only if an Offer includes them.
 
-La Columna **Sospechoso** dice por qué Muchi desconfía de un Precio, en
-Palabras y no en el Código que entrega la API. Vacía cuando no hay Alerta. El
-Carrito descarta esas Ofertas.
+The **Sospechoso** (Suspicious) column explains why MUCHI distrusts a Price,
+using words instead of the API's code. It stays empty without an Alert.
+The Cart excludes those Offers.
 
-**Búsquedas Recientes** permite abrir las Búsquedas visitadas en la Sesión sin
-volver a enviarlas. Guarda sus Enlaces para recuperarlas al abrir otra Sesión;
-la API debe conservar todavía esos Resultados.
+**Búsquedas Recientes** (Recent Searches) reopens Searches visited during
+the Session without submitting them again. Save their Links to recover
+them in another Session; the API must still retain those Results.
 
-El Estado y las Ofertas se consultan cada **3 segundos** mientras la Búsqueda
-está pendiente, y cada Consulta espera a lo más **10 segundos** antes de darse
-por perdida. Los dos Números viven en
-[`config/api.defaults.yaml`](config/api.defaults.yaml) y se ajustan con
-`MUCHI_API_POLL_SECONDS` y `MUCHI_API_TIMEOUT_SECONDS`. El Front no los adivina:
-los lee de `/api/config` al arrancar, así que el Intervalo que escribe en
-Pantalla es el mismo que usa el Reloj.
-Al recibir los Resultados finales, las Consultas automáticas se detienen.
-Si falla la Consulta de Resultados, se conserva el Estado recibido y se reintenta.
-Una Búsqueda vencida o rechazada detiene los Reintentos y permite crear otra.
+While a Search is pending, State and Offers are polled every 3 seconds.
+Each Request waits at most 10 seconds before timing out. Both Numbers live in
+[`config/api.defaults.yaml`](config/api.defaults.yaml), adjustable through
+`MUCHI_API_POLL_SECONDS` and `MUCHI_API_TIMEOUT_SECONDS`. The Frontend reads
+them from `/api/config` at startup, so the Interval displayed matches the
+one used by its Timer.
 
-El intervalo de Consulta no limita la duración de la Búsqueda. La API local
-consulta las Tiendas en secuencia y guarda las Ofertas al terminar cada Carta;
-la paginación de una Tienda puede mantener el Avance en `0 de 1` varios minutos.
-La hora del último Estado recibido permite comprobar que la conexión sigue activa.
-Si falla el Envío, **Reintentar Envío** conserva el Pedido y su clave de
-Idempotencia para evitar crear otra Búsqueda por el mismo intento.
+Automatic Polling stops after final Results. If fetching Results fails,
+the received State is retained and the Request retried. An expired or
+rejected Search stops Retries and lets you create another.
 
-Las Ofertas muestran su Moneda original y las señales de Stock y Precio
-sospechoso informadas por la API. El Carrito utiliza Ofertas sin alerta de
-Precio ni Stock agotado, convertidas a Pesos cuando hace falta. Un Stock
-desconocido no equivale a disponibilidad confirmada; revisa la Oferta en la
-Tienda antes de comprar.
+The Polling interval does not limit Search duration. The local API queries
+Stores sequentially and saves Offers after each Card; Store pagination
+can leave Progress at `0 of 1` for several minutes. The last received State's
+Time lets you check that the connection remains active. If Submission fails,
+**Reintentar Envío** (Retry Submission) retains the Request and its
+Idempotency key to avoid creating another Search for the same attempt.
 
-## El Muchi Dólar
+Offers display their original Currency and API-reported Stock and Price
+warnings. The Cart uses Offers with no Price alert and no sold-out Stock,
+converted to Pesos when needed. Unknown Stock is not confirmed availability;
+check the Store's Offer before buying.
 
-Algunas Tiendas publican su propio Cambio y la API convierte con él antes de
-entregar la Oferta. Cuando una Oferta llega en Dólares sin esa Referencia,
-Muchi usa el **Muchi Dólar**, un Valor único, público y a la vista:
+## The MUCHI Dollar
+
+Some Stores publish their own exchange Rate, and the API converts with it
+before returning the Offer. When an Offer arrives in Dollars without that
+reference, MUCHI uses the MUCHI Dollar: one public, visible Value.
 
 ```yaml
 # config/rates.defaults.yaml
 muchi_dolar: 1000
 ```
 
-**No es el Dólar del Mercado ni intenta seguirlo.** Es el Cambio que Muchi
-cobra: cubre el Costo de traer la Carta y el Margen de los Intermediarios que
-harán la Compra cuando Muchi compre. Por eso se mueve cuando cambian esos
-Costos, no cuando se mueve el Dólar, y por eso está a la Vista: quien compra
-merece saber con qué Número se le convirtió el Precio.
+**It is a commercial exchange Rate, not the market Dollar rate.** It covers
+the Cost of bringing in the Card and the Margin of the Intermediaries who
+will make the Purchase when MUCHI buys. It moves when those Costs change,
+and is visible because Buyers deserve to know the Number used to convert
+the Price.
 
-Se muestra en el Carrito junto al Total, y se ajusta editando ese Archivo o
-con `MUCHI_RATES_MUCHI_DOLAR`. Las Ofertas en otras Monedas se muestran con su
-Valor original y quedan fuera del Carrito: sin Cambio declarado, Muchi no
-inventa uno.
+It appears beside the Cart Total and can be changed in that File or with
+`MUCHI_RATES_MUCHI_DOLAR`. Offers in other Currencies keep their original
+Value and are excluded from the Cart: without a declared Rate, MUCHI
+invents none.
 
-> 🚧 **Todavía estamos fijando cómo se usa.** Lo que está cerrado es *qué es*:
-> un Cambio comercial, con Costo y Margen dentro, publicado a la Vista. Lo que
-> sigue abierto es *cómo se opera*: cada cuánto se revisa el Número, quién lo
-> mueve y con qué Señal, si un solo Valor alcanza para todas las Tiendas o si
-> cada una termina pidiendo el suyo, y qué pasa con una Búsqueda guardada
-> cuando el Número cambia después. Hoy es **un Valor, fijo, editado a Mano**:
-> la Opción más simple que funciona mientras decidimos, no la Decisión tomada.
-> Si lees esto para aprender del Patrón, ese es el Estado real, y el Número que
-> ves en el Carrito es siempre el que se aplicó a ese Carrito.
-> Parte de esa Duda depende de otra Cosa que aún no pasa:
-> [Cuando Muchi Compre](docs/la-compra.md).
+> 🚧 We are still deciding how to operate it. What it is has been settled:
+> a visible commercial Rate including Cost and Margin. What remains open
+> is how often to review it, who changes it and on what Signal, whether
+> one Value covers all Stores, and what happens to a saved Search when
+> the Number changes later. Today it is one fixed Value, edited manually:
+> the simplest working Option while we decide. If you are learning from
+> this Pattern, that is its actual State. The Number shown in the Cart
+> is always the one applied to that Cart.
+> Part of this uncertainty depends on something that has yet to happen:
+> [When MUCHI Buys](docs/la-compra-en.md).
 
-## Estamos trabajando en poder Comprar
+## We Are Working toward Purchasing
 
-Hoy Muchi te deja en la puerta de la Tienda: comparas, armas el Carrito y la
-Compra la haces tú, una vez por Tienda. **Queremos que Muchi Compre por ti** —
-elegir el Carrito una vez, pagar una vez, recibir las Cartas juntas.
+Today MUCHI leaves you at the Store's door: you compare, build a Cart and
+make the Purchase yourself, once per Store. We want MUCHI to buy for you:
+choose once, pay once and receive the Cards together.
 
-El Plan es automatizar esa Compra con **Agentes** que hagan el Checkout de cada
-Tienda en vez de una Persona repitiéndolo doce veces. Todavía estamos viendo la
-Implementación y los Costos, y eso no es una Frase de Cortesía: no hay Agente
-corriendo ni Fecha que prometer.
+The Plan is to automate purchasing with Agents that complete each Store's
+Checkout instead of a Person repeating it twelve times. We are still
+examining Implementation and Costs. No Agent is running and there is no
+Date to promise.
 
-Tiene que ver directo con el [Muchi Dólar](#el-muchi-dólar). Ese Cambio ya
-incluye el Margen de los Intermediarios que harán la Compra *cuando Muchi
-compre*; hoy esos Intermediarios son Personas, y son la parte del Costo que un
-Agente podría mover. Si se mueve, falta decidir si el Muchi Dólar baja o si el
-Costo de comprar sale a la Superficie con su propio Nombre, separado del Cambio.
+This directly relates to the [MUCHI Dollar](#the-muchi-dollar), which
+already includes the Margin of Intermediaries who will buy when MUCHI does.
+Today they are People, and their part of the Cost could change with an
+Agent. If it changes, we must decide whether the MUCHI Dollar falls or
+the purchasing Cost becomes its own visible charge, separate from the Rate.
 
-📄 [Cuando Muchi Compre](docs/la-compra.md) lo cuenta entero: qué falta
-resolver —el Costo por Compra, la Compra a medias, los Pagos, las Tiendas—, cómo
-se arma el Total hoy y qué Parte se le agregaría.
+[When MUCHI Buys](docs/la-compra-en.md) explains the unresolved Cost per
+Purchase, partial Purchases, Payments and Store relationships, how today's
+Total is built and which component would be added.
 
-## Aparecer en Muchi
+## Getting Listed on MUCHI
 
-Muchi no tiene Formulario de alta. Todo lo que aparece acá entró porque alguien
-lo pidió y alguien del otro lado lo conectó, así que el Camino siempre empieza
-con una Conversación:
+MUCHI has no registration Form. Everything shown here arrived because
+someone requested it and someone connected it. The path begins with a
+Conversation:
 
-- 🐙 [Issues del Proyecto](https://github.com/metaliaw/muchi/issues), que es el
-  Canal preferido: queda escrito y cualquiera puede leer el Hilo después.
-- 📸 [Instagram](https://www.instagram.com/muchi_tgc) o
-  🎵 [TikTok](https://www.tiktok.com/@muchi_tgc), si prefieres escribir por ahí.
+- [Project Issues](https://github.com/metaliaw/muchi/issues) are preferred:
+  the discussion stays written and anyone can read it later.
+- [Instagram](https://www.instagram.com/muchi_tgc) or
+  [TikTok](https://www.tiktok.com/@muchi_tgc), if you prefer those channels.
 
-Nunca mandes Contraseñas ni Tokens en la Solicitud. Si la Integración necesita
-una Credencial, se coordina por un Canal privado y con permisos de sólo
-Lectura sobre el Inventario que quieras compartir.
+Never send Passwords or Tokens in a Request. If Integration requires a
+Credential, coordinate through a private Channel with read-only access
+to the Inventory you want to share.
 
-### Si tienes una Tienda
+### If You Have a Store
 
-Puedes proponer la incorporación de tu Inventario mediante:
+You can propose adding Inventory through:
 
-- **Listas de Moxfield:** comparte los enlaces de las Listas, las Cantidades
-  disponibles y el criterio que utilizas para determinar los Precios.
-- **Tu sitio web:** comparte la dirección del Catálogo o de una API de Stock,
-  con los Precios, la disponibilidad y los enlaces de Compra.
+- Moxfield lists: share List links, available Quantities and your Pricing method.
+- Your website: share a Catalog or Stock API address, including Prices,
+  availability and Purchase links.
 
-Consulta [Cómo compartir el Stock de tu Tienda](INTEGRAR-TIENDA.md) para saber
-qué información preparar y cómo solicitar la integración. La conexión se
-realiza en la API de Muchi; publicar un enlace no incorpora automáticamente
-la Tienda.
+See [How to Share Your Store's Stock](INTEGRAR-TIENDA-en.md) for what to
+prepare and how to request Integration. Connection happens in the MUCHI
+API; publishing a Link does not automatically add a Store.
 
-### Si eres una Persona que vende
+### If You Sell Cards Individually
 
-No hace falta tener Tienda. Si vendes tus repetidas y las mantienes en una
-Lista pública de Moxfield, esa es la misma **Opción 1** de la Guía de arriba, y
-sirve igual: lo que Muchi necesita no es un Rol comercial, sino una Lista que
-se pueda leer sin tu Sesión, con Cantidades, Precios y una forma de contactarte
-para comprar.
+You do not need a Store. If you sell spare Cards and keep them in a public
+Moxfield list, Option 1 of the Guide works for you too. MUCHI needs a List
+readable without your Session, with Quantities, Prices and a way to contact
+you to buy.
 
-Lo que sí se te va a pedir es lo mismo que a una Tienda, porque quien busca no
-distingue: decir si las Cantidades son Stock real o sólo una Lista de
-referencia, mantenerla al día y marcar lo agotado. Una Oferta que ya no existe
-le cuesta a quien viajó hasta ella. Si vender es algo que haces de vez en
-cuando y no vas a poder actualizar, mejor decirlo antes que aparecer y
-desaparecer.
+The same expectations apply: say whether Quantities are actual Stock or
+reference-list contents, keep them current and mark sold-out Cards. An
+Offer that no longer exists costs the Person who follows it. If you sell
+only occasionally and cannot update regularly, say so beforehand.
 
-### Si quieres que Muchi soporte otro Juego
+### If You Want MUCHI to Support Another Game
 
-Muchi hoy busca Cartas de Magic, pero el Front nunca tuvo esa Lista escrita: la
-pide con `GET /api/supported-games` y dibuja lo que le respondan. Sumar un
-Juego es Trabajo del lado de la API —las Fuentes que lo conocen, los Nombres,
-las Ediciones— y no un cambio en este Repositorio.
+MUCHI currently searches Magic Cards, but the Frontend never hardcoded
+that Game list: it requests `GET /api/supported-games` and renders the
+response. Adding a Game is API-side Work — Sources, Names and Editions —
+rather than a change in this Repository.
 
-Abre un Issue contando **qué Juego** y, sobre todo, **dónde se compra en Chile**:
-las Tiendas o Listas que ya venden esas Cartas. Un Juego sin Fuentes que
-consultar da una Búsqueda vacía, así que esa parte pesa más que la Petición
-misma. Si además vendes ese Juego, dilo en el mismo Issue: un Juego nuevo que
-llega con su primera Fuente adentro parte con algo que mostrar.
+Open an Issue describing the Game and, especially, where people buy it
+in Chile: Stores or Lists already selling those Cards. A Game without
+Sources returns empty Searches, so that information matters more than
+the request itself. If you also sell that Game, mention it: a new Game
+arriving with its first Source already has something to show.
 
-## Publicidad y Apoyo
+## Advertising and Support
 
-El Panel de la Búsqueda conserva un solo Espacio publicitario mientras consulta
-y después de terminar. Una de cada cuatro Búsquedas muestra la Tienda
-promocionada; las otras tres muestran una Unidad adaptable de Google AdSense.
-La elección depende del Identificador de la Búsqueda y no cambia durante las
-Consultas automáticas.
+The Search panel keeps one advertising Space during and after a Search.
+One in four Searches shows the promoted Store; the other three show a
+responsive Google AdSense unit. Selection depends on the Search ID and
+stays stable across Polls.
 
-Configura `MUCHI_ADSENSE_CLIENT` y `MUCHI_ADSENSE_SLOT` con los Identificadores
-públicos entregados por AdSense. Si faltan, Muchi muestra una Promoción interna
-en vez de solicitar un Anuncio externo. La Tienda promocionada utiliza
-`MUCHI_SPONSOR_NAME`, `MUCHI_SPONSOR_TEXT` y `MUCHI_SPONSOR_URL`.
+Set `MUCHI_ADSENSE_CLIENT` and `MUCHI_ADSENSE_SLOT` to AdSense's public
+Identifiers. If missing, MUCHI shows an internal Promotion. The promoted
+Store uses `MUCHI_SPONSOR_NAME`, `MUCHI_SPONSOR_TEXT` and `MUCHI_SPONSOR_URL`.
 
-## Ejecutar el Proyecto
+## Run the Project
 
-Necesitas Python con `venv` y acceso a una instancia de Muchi API. Copia
-[.env.example](.env.example) a `.env` y configura estas Variables:
+You need Python with `venv` and access to a MUCHI API instance. Copy
+[.env.example](.env.example) to `.env` and configure:
 
 ```dotenv
 MUCHI_ENV=development
 MUCHI_API_URL=http://127.0.0.1:8081
-MUCHI_API_TOKEN=tu-codigo-de-seguridad
+MUCHI_API_TOKEN=your-security-token
 ```
 
-`MUCHI_API_URL` acepta la URL base con o sin `/v1`. El Código de Seguridad es
-obligatorio y se envía como `Authorization: Bearer <MUCHI_API_TOKEN>`, según
-la [Especificación de la API](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml).
-Se configura en el
-Servidor del Front; no debe publicarse en el Repositorio ni en enlaces.
+`MUCHI_API_URL` accepts the base URL with or without `/v1`. The Security
+token is required and sent as `Authorization: Bearer <MUCHI_API_TOKEN>`,
+following the [API Specification](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml).
+Configure it on the Frontend Server; never publish it in the Repository or Links.
 
-En Linux o macOS:
+On Linux or macOS:
 
 ```bash
-./start-web.sh   # BFF en :8000, Front en http://127.0.0.1:5173
+./start-web.sh   # BFF on :8000, Frontend at http://127.0.0.1:5173
 ```
 
-La API local requiere dos Procesos. Desde el
-[Repositorio muchi-api](https://github.com/cangrejometralleta/muchi-api), ejecuta
-`./run.sh serve` y `./run.sh work`: el primero recibe los Pedidos y el segundo
-los procesa. El Token del Front debe coincidir con el configurado en la API.
-Una Búsqueda que permanece en `queued` necesita un Worker disponible.
+The local API needs two Processes. From the
+[muchi-api Repository](https://github.com/cangrejometralleta/muchi-api),
+run `./run.sh serve` and `./run.sh work`: the former receives Requests,
+the latter processes them. The Frontend Token must match the API's Token.
+A Search stuck in `queued` needs an available Worker.
 
-Para Producción, selecciona `MUCHI_ENV=production` y configura la URL y el Token
-en el Entorno de Despliegue.
+For Production, choose `MUCHI_ENV=production` and configure the URL and
+Token in the Deployment environment.
 
-### El Token
+### The Token
 
-`./get-secret.sh` baja el Token vigente de Secret Manager y lo escribe en tu
-`.env`. Es para el Desarrollo local: en la Nube, Cloud Run lo monta solo.
+`./get-secret.sh` downloads the current Token from Secret Manager and
+writes it to `.env`. It is for local Development; Cloud Run mounts it
+automatically in the Cloud.
 
-Para **rotarlo**, usa `./rotate-secret.sh` del
-[Repositorio muchi-api](https://github.com/cangrejometralleta/muchi-api). Ahí se
-crea el Secreto y ahí se versiona, y esa Rotación alcanza a los tres Servicios
-que lo consumen —el Worker, la API y este Front—. Un segundo Rotador de este
-lado solo se volvería viejo sin que nadie lo notara.
+Rotate it using `./rotate-secret.sh` from the
+[muchi-api Repository](https://github.com/cangrejometralleta/muchi-api).
+The Secret is created and versioned there, and Rotation reaches all
+three Consumers: Worker, API and this Frontend. A second Rotator here
+would silently become stale.
 
-## El Front Vue
+## The Vue Frontend
 
-El Front es Vue 3 y lo sirve un BFF en FastAPI que conserva el Código de
-Seguridad y decide por él.
+The Frontend is Vue 3, served by a FastAPI BFF that keeps the Security
+token and makes decisions on its behalf.
 
-En Producción, Cloud Run sirve el BFF y conserva una copia del Front. Firebase
-Hosting publica los Archivos estáticos y deriva las Rutas dinámicas al mismo
-Servicio. Un solo Script despliega ambos en ese orden:
+In Production, Cloud Run serves the BFF and retains a Frontend copy.
+Firebase Hosting publishes static Files and forwards dynamic Routes to
+the same Service. One Script deploys both in that Order:
 
 ```bash
 ./deploy.sh
 ```
 
-La [Nota de Migración](docs/migracion-web.md) explica la Frontera entre
-`web/` y `server/` y las Rutas del BFF.
+The [Migration note](docs/migracion-web-en.md) explains the Boundary
+between `web/` and `server/` and the BFF Routes.
 
-## Configuración y Arquitectura
+## Configuration and Architecture
 
-El Front carga su Configuración en este orden:
+The Frontend loads Configuration in this Order:
 
-1. [Defaults de conexión](config/api.defaults.yaml).
-2. `config/api.development.yaml` o `config/api.production.yaml`, según `MUCHI_ENV`.
-3. `MUCHI_API_TIMEOUT_SECONDS` y `MUCHI_API_POLL_SECONDS`, si están definidas.
+1. [Connection defaults](config/api.defaults.yaml).
+2. `config/api.development.yaml` or `config/api.production.yaml`, according
+   to `MUCHI_ENV`.
+3. `MUCHI_API_TIMEOUT_SECONDS` and `MUCHI_API_POLL_SECONDS`, if defined.
 
-Los Tiempos deben ser positivos y finitos; hoy son 3 segundos de Intervalo y 10
-de Espera. Los Topes de una Búsqueda —cien
-Entradas, noventa y nueve copias— no se configuran: salen del Formato, un Mazo
-de Commander de cien Cartas. El Front los lee de `/api/config` y los escribe
-junto al Formulario, así que el Número vive en un solo lugar. Los Archivos de Configuración usan
-YAML; las Credenciales se inyectan por separado. Las Frases de Muchi están en
-[constants/phrases.yaml](constants/phrases.yaml), incluidos los Saludos y la Ayuda.
-`muchi/mtg/phrases.py` carga ese Contenido y genera las Burbujas y los Corazones;
-`messaging.py` sólo decide la prioridad de los Mensajes.
+Times must be positive and finite; defaults are a 3-second Interval and
+10-second Timeout. Search limits — a hundred Entries, ninety-nine Copies —
+come from the Commander format rather than Configuration. The Frontend
+reads them from `/api/config` and displays them beside the Form, keeping
+the Number in one place. Configuration files use YAML; Credentials are
+injected separately.
 
-La API recibe la Lista mediante `POST /v1/searches`. El Front consulta su
-Estado y Resultados, y conserva en la Sesión la Búsqueda visible y las Ofertas
-ya recibidas. La persistencia de las Búsquedas corresponde a la API.
+MUCHI's Phrases, including Greetings and Help, live in
+[constants/phrases.yaml](constants/phrases.yaml). `muchi/mtg/phrases.py`
+loads that Content and generates Bubbles and Hearts; `messaging.py`
+only decides Message priority.
 
-El Front ya no utiliza SQLite ni indexa Tiendas directamente. La Especificación
-actual no incluye Historial de Precios, indexación manual, búsqueda de Cartas
-por texto de habilidades ni Recomendaciones de Comandante. Los Adaptadores y
-Defaults heredados que permanecen en el Repositorio no se conectan al flujo
-actual. Los archivos de SQLite existentes no se eliminan ni se importan.
+The API receives the List through `POST /v1/searches`. The Frontend polls
+State and Results, retaining the visible Search and received Offers in
+the Session. Search persistence belongs to the API.
 
-## Pruebas
+The Frontend no longer uses SQLite or indexes Stores directly. The current
+Specification does not include Price history, manual indexing, Card
+search by rules text or Commander recommendations. Legacy Adapters and
+Defaults remaining in this Repository are not connected to the current
+Flow. Existing SQLite files are neither deleted nor imported.
 
-Con el Entorno virtual activo:
+## Tests
+
+With your virtual Environment active:
 
 ```bash
 pip install -r requirements-dev.txt
 python -m pytest -q
 ```
 
-La suite habitual prueba el Cliente HTTP y la Interfaz con Servicios simulados,
-sin conectarse a la API. Para comprobar la Integración real, inicia la API,
-configura `.env` y ejecuta:
+The regular Suite tests the HTTP client and Interface with mocked Services,
+without connecting to the API. For real Integration, start the API,
+configure `.env` and run:
 
 ```bash
 MUCHI_API_INTEGRATION=1 python -m pytest tests/test_muchi_api_integration.py
 ```
 
-Para probar **Sol Ring desde el Front hasta las Ofertas reales**, con el Worker
-levantado (puede tardar varios minutos):
+To test Sol Ring from the Frontend through real Offers, with the Worker
+running — this may take several minutes:
 
 ```bash
 MUCHI_API_INTEGRATION=1 MUCHI_API_SEARCH_INTEGRATION=1 python -m pytest -q tests/test_muchi_api_integration.py
 ```
 
-Puedes añadir `MUCHI_API_SEARCH_ID` para verificar una Búsqueda existente.
+Add `MUCHI_API_SEARCH_ID` to verify an existing Search.
 
-## Documentación
+## Documentation in English
 
-Muchi se escribe para que alguien más lo lea. Cada Documento cuenta una
-Decisión con sus Motivos y, cuando corresponde, con el Supuesto que se cayó.
-Ese es el Orden sugerido para quien llega a aprender.
+MUCHI is written for others to read. Every Document explains a Decision,
+its Reasons and, where relevant, the Assumption that failed. The following
+index links every Document in `docs/` in English. For the matching Spanish
+index, see [Documentación en español](README.es.md#documentación-en-español).
 
-### Empieza por acá
+### Start Here
 
-| Documento | Qué aprendes |
+| Document | What You Learn |
 | --- | --- |
-| 🏛️ [Arquitectura de Muchi](docs/arquitectura.md) | La Frontera entre este Front y la API, la Seguridad, los Datos, la Operación y una Guía neutral para replicar el Patrón con otros Proveedores. |
-| 🪟 [El Front y su Frontera](docs/migracion-web.md) | Qué dibuja el Front, qué decide el BFF, cuáles son sus Rutas y cómo se despliega en Cloud Run. |
-| 🐱 [Cómo Habla Muchi](docs/muchi-habla.md) | El Catálogo de Frases, quién le gana el turno a la Burbuja, los tres Canales de Aviso, la Hoja de Sprites y qué queda con Movimiento reducido. |
-| 📦 [Producto Sellado](docs/producto-sellado.md) | Cómo se elige el Catálogo, los Valores por Defecto medidos contra las Tiendas, por qué la Caja no Tiene a quién pedirle su Foto y por qué decir «No hay Ofertas» puede ser Mentira. |
-| 📜 [Contrato de Muchi API](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml) | Todas las Rutas que Muchi consume, con sus Formas de Entrada y Salida. Vive en muchi-api. |
+| [MUCHI Architecture](docs/arquitectura-en.md) | Frontend/API boundaries, Security, Data, Operations and a Provider-neutral guide to reproducing the Pattern. |
+| [The Frontend and Its Boundary](docs/migracion-web-en.md) | What the Frontend renders, what the BFF decides, its Routes and Cloud Run deployment. |
+| [How Muchi Speaks](docs/muchi-habla-en.md) | Phrase Catalog, Bubble precedence, three Notice channels, Sprite sheet and reduced Motion. |
+| [Sprite Lab](docs/muchi-sprite-lab-en.html) | Interactive Sprite previews, States, Sheets and animation examples. Open the HTML in a Browser. |
+| [Sealed Products](docs/producto-sellado-en.md) | Catalog selection, measured Defaults, Box photos and misleading empty Results. |
+| [MUCHI API Contract](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml) | Consumed Routes and their Input/Output shapes. Owned by muchi-api. |
 
-### La API vive en su propio Repositorio
+### The API Has Its Own Repository
 
-Muchi son dos Repositorios públicos. Éste dibuja la Experiencia y guarda el BFF
-que habla con la API. [muchi-api](https://github.com/cangrejometralleta/muchi-api)
-consulta las Tiendas, ordena las Ofertas y conserva los Resultados.
+MUCHI spans two public Repositories. This one renders the Experience and
+holds the BFF. [muchi-api](https://github.com/cangrejometralleta/muchi-api)
+queries Stores, orders Offers and retains Results.
 
-Cada Cosa se lee en un solo lugar, y por eso acá ya no hay Copias:
+Each subject is documented in its owning location:
 
-- 📜 El [Contrato OpenAPI](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml)
-  vive allá. Una Copia acá envejecía en silencio, y quien la leía creía estar
-  mirando el Contrato.
-- 🧪 Las [Colecciones de Bruno](https://github.com/cangrejometralleta/muchi-api/tree/main/bruno)
-  viven allá. Sirven para pegarle a la API sin pasar por el BFF, que es como se
-  separa un Fallo del Front de uno del Servicio.
-- 🏛️ La [Arquitectura del Backend](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/arquitectura.md)
-  —Cola, Worker, Persistencia y Caducidad— se cuenta allá.
-  [Acá](docs/arquitectura.md) se cuenta la del Front y su Frontera.
-- ⚖️ El [Castigo y Perdón](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/castigo-y-perdon.md)
-  explica cómo la API trata a una Tienda que se cae, que tarda o que pide calma.
-  Importa acá porque de esa Política salen los Avisos que Muchi muestra: una
-  Fuente que no contestó nunca debe leerse como una Carta que no existe.
+- The [OpenAPI Contract](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml)
+  lives there. A Copy here aged silently while Readers thought it was current.
+- The [Bruno collections](https://github.com/cangrejometralleta/muchi-api/tree/main/bruno)
+  live there. They call the API without the BFF, helping distinguish
+  Frontend failures from Service failures.
+- [Backend Architecture](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/arquitectura.md)
+  covers Queue, Worker, Persistence and Expiration there. The Frontend
+  and its Boundary are described [here](docs/arquitectura-en.md).
+- [Punishment and Forgiveness](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/castigo-y-perdon.md)
+  explains how the API treats Stores that fail, run slowly or request
+  a pause. That Policy informs MUCHI's Notices: a Source that did not
+  answer must never be mistaken for a nonexistent Card.
 
-### Decisiones aún abiertas
+External Repository documents keep their upstream language; this
+Repository's translations cover the Documents maintained here.
 
-- 💵 [El Muchi Dólar](#el-muchi-dólar): qué es ya está cerrado —un Cambio
-  comercial, publicado— pero cómo se opera no. Se explica ahí mismo, con las
-  Preguntas que siguen sin Respuesta, porque un Número que convierte Precios
-  ajenos merece contarse incluso a medio decidir.
-- 🛒 [Cuando Muchi Compre](docs/la-compra.md): el Plan de automatizar la Compra
-  con Agentes, la Implementación y los Costos que seguimos mirando, y cómo eso
-  toca el Muchi Dólar y el Costeo del Carrito. Un Plan en voz alta, sin Fecha.
+### Decisions Still Open
 
-### Decisiones contadas en detalle
+- [The MUCHI Dollar](#the-muchi-dollar): a public commercial Rate whose
+  definition is settled but whose operation remains open. A Number
+  converting other people's Prices deserves an explanation even while
+  Decisions are unfinished.
+- [When MUCHI Buys](docs/la-compra-en.md): the Plan for automated Agent
+  purchases, Implementation and Costs under consideration, and their
+  relationship to the MUCHI Dollar and Cart costing. A Plan without a Date.
 
-- 📦 [El Pedido de Stock](docs/api/pedido-stock.md): cómo se pregunta por Rondas
-  —la Candidata más barata de cada Tipo en una sola Consulta— para que el Costo
-  crezca con la Duda y no con el Largo de la Lista. El BFF conserva la Ruta y el
-  Tope `stock_check_limit` (hoy **3**). El Front la llama al Final, con lo que
-  su Navegador ya pudo Confirmar por su cuenta.
-- ⚖️ [Por qué la Re-verificación de Stock es Opcional](docs/reverificacion-opcional.md):
-  la Cadena de Carga que aparece cuando cada Oferta barata pide una segunda
-  Visita a la Tienda, por qué esa Vuelta no puede ser obligatoria, y cómo el
-  Navegador de quien Compra paga una de cada cinco sin que nadie la Note.
-- 🌐 [El Tráfico que no Pagamos](docs/trafico-del-navegador.md): quién paga cada
-  Petición que Muchi hace, cuándo una se mueve al Navegador de quien Compra, y
-  la Raya entre aprovechar una Puerta abierta y usar Visitantes de Flota.
-- 🔍 [Hallazgos en los Buscadores](docs/hallazgos-buscadores.md): los Supuestos
-  que se cayeron cuando una Búsqueda empezó a traer Cartas distintas y no
-  Variantes de una, qué los cerró y qué queda abierto. Los del otro lado de la
-  Frontera viven en el Repositorio de la API.
-- 📣 [La Publicidad, de Punta a Punta](docs/publicidad.md): los Identificadores,
-  el Flujo hasta el primer Anuncio, lo que la Revisión de Google mira y qué
-  hacer cuando algo no anda.
+### Decisions in Detail
 
-### Para quien quiera aparecer en Muchi
+- [The Stock Request](docs/api/pedido-stock-en.md): rounds containing each
+  Card type's cheapest Candidate in one Request, so Cost grows with
+  Uncertainty rather than List length. The BFF retains the Route and
+  `stock_check_limit` (currently 3). The Frontend calls it at the end,
+  including what the Browser has already Confirmed.
+- [Why Stock Reverification Is Optional](docs/reverificacion-opcional-en.md):
+  the Load of revisiting Stores for every cheap Offer, why that Pass
+  cannot be mandatory, and how the Buyer's Browser covers one in five.
+- [The Traffic We Do Not Pay For](docs/trafico-del-navegador-en.md): who
+  pays for each Request, when it moves to the Browser, and the Boundary
+  between using open access and treating Visitors as a scraping fleet.
+- [Search Findings](docs/hallazgos-buscadores-en.md): Assumptions broken
+  when Searches returned different Cards rather than Printings, their
+  Fixes and remaining Questions. API-side Findings live in its Repository.
+- [Advertising, End to End](docs/publicidad-en.md): Identifiers, the path
+  to the first Ad, Google's Review requirements and troubleshooting.
 
-- 🏪 [Compartir el Stock de una Tienda](INTEGRAR-TIENDA.md): qué información
-  preparar y cómo pedir la integración. Sirve igual si vendes sin Tienda.
-- 🙋 [Aparecer en Muchi](#aparecer-en-muchi): los tres Caminos —Tienda, Persona
-  o un Juego nuevo— y por dónde se piden.
+### Getting Your Offers onto MUCHI
 
-## Licencia
+- [Share a Store's Stock](INTEGRAR-TIENDA-en.md): what to prepare and how
+  to request Integration, including sellers without a Store.
+- [Getting Listed on MUCHI](#getting-listed-on-muchi): Stores, individual
+  sellers and new Games, and where to request each.
 
-Muchi es Software Libre bajo la **[GNU Affero General Public License v3.0 o
-posterior](LICENSE)**.
+## License
 
-Puedes usarlo, leerlo, modificarlo y redistribuirlo. La Affero agrega una sola
-Condición más que la GPL, y es la que importa acá: **quien opere Muchi —o una
-Versión modificada— como Servicio en una Red debe ofrecer su Código fuente a
-las Personas que lo usan.** Un Fork mejor es bienvenido; un Fork cerrado y
-alojado en otra parte, no.
+MUCHI is Free Software under the
+[GNU Affero General Public License v3.0 or later](LICENSE).
 
-Por eso Muchi muestra **Ver el código** en su propia Pantalla: es la Oferta de
-Fuente que pide la Sección 13, y apunta a este Repositorio.
+You may use, read, modify and redistribute it. Affero adds the condition
+relevant here: anyone operating MUCHI — or a modified Version — as a
+Network service must offer its Source code to the People using it.
+Improved Forks are welcome; closed hosted Forks are not.
+
+That is why MUCHI displays **Ver el código** (View the code) on its own
+Screen: the Source offer required by Section 13 points to this Repository.
 
 ```text
-Copyright (C) 2026 Muchi
+Copyright (C) 2026 MUCHI
 
-Este Programa es Software Libre: puedes redistribuirlo y/o modificarlo bajo
-los términos de la GNU Affero General Public License publicada por la Free
-Software Foundation, en su versión 3 o cualquier versión posterior.
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
-Este Programa se distribuye con la esperanza de que sea útil, pero SIN
-GARANTÍA ALGUNA; ni siquiera la garantía implícita de COMERCIALIZACIÓN o
-ADECUACIÓN A UN PROPÓSITO PARTICULAR. Lee la GNU Affero General Public
-License para más detalles.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
 
-Deberías haber recibido una copia de la GNU Affero General Public License
-junto a este Programa. Si no, mira <https://www.gnu.org/licenses/>.
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
 ```
 
-[muchi-api](https://github.com/cangrejometralleta/muchi-api) lleva la misma
-Licencia. Son dos Repositorios, una sola Regla.
+[muchi-api](https://github.com/cangrejometralleta/muchi-api) uses the same
+License. Two Repositories, one Rule.

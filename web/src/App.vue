@@ -1,11 +1,12 @@
 <script setup>
-/** Muchi Presenta Búsquedas y Resultados persistidos por la API. */
+/** MUCHI Presenta Búsquedas y Resultados persistidos por la API. */
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import * as api from './api.js'
 import { declaredStock, topOf, useSearch } from './search.js'
 import {
   confirmOffers, countReachable, readFreshChecks, rememberChecks, sayAge,
 } from './stock.js'
+import { useMuchiSleep } from './sleep.js'
 import MuchiPanel from './components/MuchiPanel.vue'
 import CardArt from './components/CardArt.vue'
 import CommunityPanel from './components/CommunityPanel.vue'
@@ -21,7 +22,7 @@ import SponsorSpot from './components/SponsorSpot.vue'
 import StoreCardDetail from './components/StoreCardDetail.vue'
 
 // La Emoción de una Frase Decide si Interrumpe. «angry» es el Estado grave:
-// algo Salió mal y Muchi Abre el Muelle solo para Contarlo. Los otros cuatro
+// algo Salió mal y MUCHI Abre el Muelle solo para Contarlo. Los otros cuatro
 // Acompañan, y Caben en la Barra sin Robarle la Pantalla a nadie.
 const ALARM_STATE = 'angry'
 
@@ -57,7 +58,7 @@ const {
   checked, unavailable, stocked, start: startSearch, applyState, applyResults,
   applyStock,
 } = useSearch()
-// El Muelle nace Cerrado: quien Busca quiere ver Ofertas, y Muchi y la Carta
+// El Muelle nace Cerrado: quien Busca quiere ver Ofertas, y MUCHI y la Carta
 // Esperan a un Toque. Solo Existe en Móvil; en Escritorio el Lateral los Muestra.
 const dockOpen = ref(false)
 // El Carrito Tiene su propio Cajón a la Derecha. Los dos Comparten la Esquina
@@ -94,6 +95,8 @@ let refreshing = false
 const busy = computed(() => Boolean(
   state.value && (!state.value.done || hasMore.value) && !unavailable.value
 ))
+const sleeping = useMuchiSleep(busy, message)
+const muchiMessage = computed(() => sleeping.value || message.value)
 // Fuera de Producción el Algoritmo Decide igual, pero AdSpot Dibuja
 // un Placeholder en vez del Anuncio: así se Prueba la Elección sin Google.
 const googleReady = computed(() =>
@@ -293,10 +296,10 @@ function blameFor(status) {
   return status >= 400 && status < 500 ? 'client' : 'server'
 }
 
-// Cualquier Fallo le Saca una Frase a Muchi: una Consulta que no llegó, un
+// Cualquier Fallo le Saca una Frase a MUCHI: una Consulta que no llegó, un
 // Servicio caído, una Carta que no existe. Es una Alerta asíncrona y no el
 // Detalle, que sigue saliendo por el Aviso del Formulario; la Frase lo Deja
-// entrar solo si Abre una Ranura. Sin Catálogo todavía, Muchi igual reacciona:
+// entrar solo si Abre una Ranura. Sin Catálogo todavía, MUCHI igual reacciona:
 // callarse haría parecer que nada falló.
 function sayFault(failure) {
   const rows = book.value?.fault?.[blameFor(failure?.status)]
@@ -306,13 +309,13 @@ function sayFault(failure) {
               .replaceAll('{codigo}', failure?.status || ''), said.state)
 }
 
-// La Oferta más barata le Saca un Comentario a Muchi. En Móvil no hay Hover y
+// La Oferta más barata le Saca un Comentario a MUCHI. En Móvil no hay Hover y
 // no Pasa nada: el Comentario Adorna, no Informa.
 function sayCheap() {
   sayFrom('bargain')
 }
 
-// A quien mira las Estadísticas, Muchi lo saluda como se merece.
+// A quien mira las Estadísticas, MUCHI lo saluda como se merece.
 function sayNerd() {
   sayFrom('nerd')
 }
@@ -325,12 +328,12 @@ function closeLibre() {
   libreOpen.value = false
 }
 
-// Quien Toca el Aviso del Código Abierto escucha a Muchi hablar de su Licencia.
+// Quien Toca el Aviso del Código Abierto escucha a MUCHI hablar de su Licencia.
 function sayLibre() {
   sayFrom('libre')
 }
 
-// Muchi no completa el Campo: dice lo que vio y quien escribe decide.
+// MUCHI no completa el Campo: dice lo que vio y quien escribe decide.
 async function send() {
   if (!pending.value) return
   error.value = ''
@@ -386,7 +389,7 @@ async function refresh() {
       unavailable.value = failure.message
       stopPolling()
       // Un Fallo reintentable Pasa en silencio: hablar en cada Vuelta del
-      // Sondeo sería Muchi gritando lo mismo cada tres segundos.
+      // Sondeo sería MUCHI gritando lo mismo cada tres segundos.
       sayFault(failure)
     }
   } finally {
@@ -395,9 +398,9 @@ async function refresh() {
 }
 
 // Mirar una Carta ya no Abre el Muelle: la Carta se Muestra sola arriba de la
-// Lista, y Muchi encima de ella sería un Gato tapando lo que le pediste ver.
+// Lista, y MUCHI encima de ella sería un Gato tapando lo que le pediste ver.
 // Se Abre solo con un Toque, o cuando algo Salió mal y hay que Contarlo. Lo
-// demás que Muchi Dice Cabe en la Barra, sin Robarle la Pantalla a nadie.
+// demás que MUCHI Dice Cabe en la Barra, sin Robarle la Pantalla a nadie.
 watch(message, (said) => { if (said?.state === ALARM_STATE) dockOpen.value = true })
 
 async function cancel() {
@@ -484,7 +487,7 @@ onUnmounted(stopPolling)
 
   <header class="mu-hero">
     <div class="mu-hero__nombre">
-      <h1><a href="/">🐱 Muchi</a></h1>
+      <h1><a href="/">🐱 MUCHI</a></h1>
       <p>Busca cartas y cotiza tu lista</p>
     </div>
     <SiteLinks
@@ -494,8 +497,8 @@ onUnmounted(stopPolling)
   </header>
 
   <main class="mu-grilla">
-    <!-- El Aviso se Lee una vez y se Queda quieto. Muchi y la Carta Acompañan
-         el Recorrido: Flotan juntos en Escritorio, y en Móvil Muchi Espera en
+    <!-- El Aviso se Lee una vez y se Queda quieto. MUCHI y la Carta Acompañan
+         el Recorrido: Flotan juntos en Escritorio, y en Móvil MUCHI Espera en
          la Esquina mientras la Carta se Pega arriba de la Lista. -->
     <div v-if="libreOpen" class="mu-abierto">
       <CommunityPanel :repository-url="config.repository_url"
@@ -507,13 +510,13 @@ onUnmounted(stopPolling)
       <div class="mu-muelle" :class="{ abierto: dockOpen, dijo: Boolean(message) }">
         <button class="mu-muelle__tirador" type="button"
                 :aria-expanded="dockOpen" @click="dockOpen = !dockOpen"
-                :aria-label="dockOpen ? 'Guardar a Muchi' : 'Llamar a Muchi'">
-          <span class="mu-muelle__gato" aria-hidden="true">🐱</span>
-          <span class="mu-muelle__dicho">{{ message?.text || 'Muchi' }}</span>
+                :aria-label="dockOpen ? 'Guardar a MUCHI' : 'Llamar a MUCHI'">
+          <span class="mu-muelle__gato" aria-hidden="true">{{ sleeping ? '😴' : '🐱' }}</span>
+          <span class="mu-muelle__dicho">{{ muchiMessage?.text || 'MUCHI' }}</span>
           <span class="mu-muelle__flecha" aria-hidden="true">{{ dockOpen ? '▼' : '▲' }}</span>
         </button>
         <div class="mu-muelle__cuerpo">
-          <MuchiPanel :book="book" v-model:dark="dark" :message="message" />
+          <MuchiPanel :book="book" v-model:dark="dark" :message="muchiMessage" />
         </div>
       </div>
 
@@ -660,7 +663,7 @@ onUnmounted(stopPolling)
   display: grid; grid-template-columns: 260px 1fr; gap: 16px 20px;
   grid-template-areas: "abierto lista" "flotante lista";
   /* La Lista Cruza las dos Filas. Sin esto, el Alto extra de las Ofertas
-     Engorda la Fila del Aviso y Muchi Arranca más abajo. */
+     Engorda la Fila del Aviso y MUCHI Arranca más abajo. */
   grid-template-rows: max-content 1fr;
   max-width: 1100px; margin: 22px auto; padding: 0 16px; align-items: start;
 }
@@ -670,21 +673,21 @@ onUnmounted(stopPolling)
      Texto Crece o los Enlaces Bajan a otra Línea. */
   min-width: 0;
 }
-/* Muchi y la Carta Acompañan el Recorrido de la Lista. Flotan juntos, en un
+/* MUCHI y la Carta Acompañan el Recorrido de la Lista. Flotan juntos, en un
    solo Bloque: dos Pegados por separado se Taparían uno al otro al Bajar. */
 .mu-flotante {
   grid-area: flotante; position: sticky; top: 16px;
   display: flex; flex-direction: column; gap: 16px;
   /* El Bloque nunca Pasa del Alto de la Ventana. Si algo le Crece adentro
-     —Auto Ads Mete Anuncios donde Encuentra un Hueco— Muchi Quedaría empujado
+     —Auto Ads Mete Anuncios donde Encuentra un Hueco— MUCHI Quedaría empujado
      fuera de la Pantalla, Flotando debajo del Borde. */
   max-height: calc(100vh - 32px);
   overflow-y: auto;
 }
-/* Lo que Muchi no Puso ahí va al Final del Bloque, nunca delante de Muchi ni
+/* Lo que MUCHI no Puso ahí va al Final del Bloque, nunca delante de MUCHI ni
    de la Carta. No se Esconde: se Ordena. */
 .mu-flotante > :not(.mu-muelle):not(.mu-tarjeta) { order: 9; }
-/* Un Anuncio suelto en la Rejilla no Abre una Fila encima de Muchi. El Slot
+/* Un Anuncio suelto en la Rejilla no Abre una Fila encima de MUCHI. El Slot
    de las Ofertas Vive dentro de AdSpot, no como Hijo de la Grilla. */
 .mu-grilla > ins,
 .mu-grilla > .google-auto-placed {
@@ -702,7 +705,7 @@ summary { cursor: pointer; font-weight: 600; }
 /* En Escritorio el Muelle es el Lateral de siempre: sin Barra ni Tirador. */
 .mu-muelle__tirador { display: none; }
 /* En Móvil la Grilla es una sola Columna: el Lateral Suelta el Flote
-   para no Tapar el Contenido al Bajar, y Muchi y la Carta Bajan al Muelle.
+   para no Tapar el Contenido al Bajar, y MUCHI y la Carta Bajan al Muelle.
    Dos Columnas de verdad dejarían cada Oferta en 200px: el Precio y las
    Pastillas se Parten, y la Carta se Mira con lupa. */
 @media (max-width: 800px) {
@@ -713,7 +716,7 @@ summary { cursor: pointer; font-weight: 600; }
     grid-template-columns: 1fr;
     grid-template-areas: "carta" "lista" "abierto";
   }
-  /* El Bloque flotante se Desarma: Muchi se Va a la Esquina por su cuenta y la
+  /* El Bloque flotante se Desarma: MUCHI se Va a la Esquina por su cuenta y la
      Carta se Pega arriba de la Lista. */
   .mu-flotante { display: contents; }
   /* El Muelle Vuelve a ser un Bloque para poder Fijarse al pie. */
@@ -743,7 +746,7 @@ summary { cursor: pointer; font-weight: 600; }
   }
   .mu-muelle__dicho { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   /* Cerrado no es una Barra: es un Botón redondo en la Esquina. Mientras hay
-     una Carta a la Vista, Muchi Espera ahí en vez de Ocupar un Borde entero. */
+     una Carta a la Vista, MUCHI Espera ahí en vez de Ocupar un Borde entero. */
   .mu-muelle:not(.abierto) {
     left: auto; right: 12px; width: auto;
     bottom: calc(12px + env(safe-area-inset-bottom, 0px));
@@ -755,7 +758,7 @@ summary { cursor: pointer; font-weight: 600; }
     width: 54px; height: 54px; padding: 0;
     justify-content: center; font-size: 1.5rem;
   }
-  /* Un Punto Avisa que Muchi Dijo algo, sin Abrirse encima de la Carta. */
+  /* Un Punto Avisa que MUCHI Dijo algo, sin Abrirse encima de la Carta. */
   .mu-muelle:not(.abierto).dijo .mu-muelle__gato::after {
     content: ""; position: absolute; top: 10px; right: 10px;
     width: 10px; height: 10px; border-radius: 50%;

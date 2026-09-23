@@ -1,3 +1,5 @@
+[English](la-compra-en.md) · [Español](la-compra.md)
+
 # Cuando Muchi Compre
 
 Septiembre 2026 · un Plan en Voz alta, no una Fecha
@@ -14,7 +16,7 @@ juntas. Estamos trabajando en eso, y este Documento cuenta hasta dónde llegamos
 
 ## El Muchi Dólar ya lo Decía
 
-El [Muchi Dólar](../README.md#el-muchi-dólar) no es el Dólar del Mercado. Es un
+El [Muchi Dólar](../README.es.md#el-muchi-dólar) no es el Dólar del Mercado. Es un
 Cambio comercial, y lo que trae adentro está escrito desde el principio en
 [`config/rates.defaults.yaml`](../config/rates.defaults.yaml):
 
@@ -94,4 +96,4 @@ para qué sirve escribirlo.
 Mientras tanto, Muchi compara, y la Compra la sigues haciendo tú. Lo que ves en
 el Carrito es lo que pagas en las Tiendas.
 
-[Volver al README](../README.md).
+[Volver al README](../README.es.md).
