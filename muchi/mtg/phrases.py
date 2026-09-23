@@ -5,7 +5,7 @@ Tema se Encendió. Acá el Catálogo solo se Lee entero y se Comprueba.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
 
@@ -17,6 +17,9 @@ from muchi.paths import ROOT
 PHRASES_PATH = ROOT / "constants" / "phrases.yaml"
 # Estados del Protocolo visual, compartidos por Frases y Burbujas.
 STATES = frozenset({"idle", "talk", "happy", "alert", "angry"})
+# De quién fue la Culpa. Un 4xx es «client»; un 5xx y la Consulta que nunca
+# Llegó son «server», porque en ninguno de los dos Casos falló quien Pidió.
+FAULT_FAMILIES = ("client", "server")
 
 
 @dataclass(frozen=True)
@@ -36,7 +39,7 @@ class PhraseBook:
     nerd: tuple[Phrase, ...] = ()
     libre: tuple[Phrase, ...] = ()
     bargain: tuple[Phrase, ...] = ()
-    fault: tuple[Phrase, ...] = ()
+    fault: dict[str, tuple[Phrase, ...]] = field(default_factory=dict)
 
 
 def require_text(value) -> str:
@@ -65,8 +68,9 @@ def build_phrase_book(doc: dict) -> PhraseBook:
             "light, nerd, libre, bargain y fault.")
     if type(doc["every"]) is not int or doc["every"] <= 0:
         raise ValueError("every debe ser un entero positivo.")
+    # fault no Entra acá: es un Mapa de Familias, no una Lista.
     for key in ("phrases", "greetings", "help", "dark", "light", "nerd",
-                "libre", "bargain", "fault"):
+                "libre", "bargain"):
         if not isinstance(doc[key], list) or not doc[key]:
             raise ValueError(f"{key} debe ser una Lista no vacía.")
 
@@ -81,10 +85,20 @@ def build_phrase_book(doc: dict) -> PhraseBook:
     nerd = build_line_phrases(doc["nerd"])
     libre = build_line_phrases(doc["libre"])
     bargain = build_line_phrases(doc["bargain"])
-    fault = build_line_phrases(doc["fault"])
+    fault = build_fault_families(doc["fault"])
 
     return PhraseBook(doc["every"], phrases, greetings, help_topics, dark,
                       light, nerd, libre, bargain, fault)
+
+
+def build_fault_families(doc) -> dict[str, tuple[Phrase, ...]]:
+    """Las Familias Existen todas: un Fallo sin Frase Dejaría a Muchi mudo."""
+    if not isinstance(doc, dict) or set(doc) != set(FAULT_FAMILIES):
+        raise ValueError(f"fault requiere {' y '.join(FAULT_FAMILIES)}.")
+    for family in FAULT_FAMILIES:
+        if not isinstance(doc[family], list) or not doc[family]:
+            raise ValueError(f"fault.{family} debe ser una Lista no vacía.")
+    return {family: build_line_phrases(doc[family]) for family in FAULT_FAMILIES}
 
 
 def read_group_texts(group: dict) -> list[str]:
