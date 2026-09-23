@@ -14,7 +14,6 @@ phrases:
     phrases:
       - ¿Otra vez sin Stock? Grrr, las Tiendas se portan mal
       - El Envío salió más caro que la Carta, no puede ser
-      - rayozz no la encontré
   - state: idle
     phrases:
       - Mira, si me dejas acariciar me duermo
@@ -57,6 +56,13 @@ nerd:
     state: happy
   - text: fuiste digno
     state: happy
+# Lo que Muchi Dice cuando algo Falla: una Consulta que no Llegó, un Servicio
+# caído, una Carta que no Existe. Es una Alerta asíncrona, no el Detalle del
+# Error: el Mensaje técnico Sigue saliendo por el Aviso del Formulario.
+# Las escribió una Persona, como todas las demás.
+fault:
+  - text: rayozz no la encontré
+    state: angry
 # Lo que Muchi Dice al Pasar por encima de la Oferta más barata. Las escribió
 # una Persona, como todas las demás.
 bargain:
