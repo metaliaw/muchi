@@ -49,13 +49,13 @@ watch([() => props.card, () => props.game, () => props.kind],
 
 <template>
   <section class="mu-panel">
-    <h2>{{ kind === 'sealed' ? 'La Caja' : 'La Carta' }}</h2>
+    <h2>{{ kind === 'sealed' ? 'La caja' : 'La carta' }}</h2>
 
     <p v-if="!card" class="mu-caption">
-      Pulsa el Nombre de una {{ kind === 'sealed' ? 'Caja' : 'Carta' }} y Muchi
+      Pulsa el nombre de una {{ kind === 'sealed' ? 'caja' : 'carta' }} y Muchi
       te la muestra.
     </p>
-    <p v-else-if="busy" class="mu-caption">Buscando la Imagen…</p>
+    <p v-else-if="busy" class="mu-caption">Buscando la imagen…</p>
     <p v-else-if="failed" class="mu-caption">{{ failed }}</p>
 
     <component v-else-if="art?.image" class="mu-mirada"

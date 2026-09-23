@@ -108,15 +108,15 @@ const incomplete = computed(() =>
   notices.value.some((notice) => notice.level === 'warning'))
 
 const placeholder = computed(() => {
-  if (unavailable.value) return 'No hay Ofertas recibidas para mostrar.'
+  if (unavailable.value) return 'No hay ofertas recibidas para mostrar.'
   // Decir «No hay» Cuando alguien no Contestó es Afirmar lo que no se Sabe.
   if (state.value?.done && incomplete.value)
-    return 'Ninguna Oferta llegó, y algunas Fuentes no contestaron. Lo que falta puede existir igual: reintenta en un rato.'
-  if (state.value?.done) return 'No hay Ofertas para mostrar.'
+    return 'Ninguna oferta llegó, y algunas fuentes no contestaron. Lo que falta puede existir igual: reintenta en un rato.'
+  if (state.value?.done) return 'No hay ofertas para mostrar.'
   if (state.value?.status === 'queued')
-    return 'Búsqueda en Cola. Esperando que el Servicio la procese.'
+    return 'Búsqueda en cola. Esperando que el servicio la procese.'
   if (state.value)
-    return 'Consultando Ofertas. Una Carta puede tardar varios minutos; los Resultados aparecen cuando la API termina de consultarla.'
+    return 'Consultando ofertas. Una carta puede tardar varios minutos; los resultados aparecen cuando la API termina de consultarla.'
   return ''
 })
 
@@ -193,7 +193,7 @@ async function confirmOne(offer) {
 
 async function confirmStock() {
   confirming.value = true
-  say('Estoy preguntando en las Tiendas', 'talk')
+  say('Estoy preguntando en las tiendas', 'talk')
   try {
     // Se Comprueba lo que se va a Comprar. Sin nada Elegido todavía, se
     // Comprueban las más baratas, que es lo que alguien Compraría.
@@ -454,7 +454,7 @@ onUnmounted(stopPolling)
   <header class="mu-hero">
     <div class="mu-hero__nombre">
       <h1><a href="/">🐱 Muchi</a></h1>
-      <p>Busca Cartas y cotiza tu Lista</p>
+      <p>Busca cartas y cotiza tu lista</p>
     </div>
     <SiteLinks
       :donation-url="config.donation_url"
@@ -506,8 +506,8 @@ onUnmounted(stopPolling)
 
       <section v-if="history.length" class="mu-panel">
         <details>
-          <summary>Búsquedas Recientes</summary>
-          <p class="mu-caption">Guarda el Enlace para retomarlas después.</p>
+          <summary>Búsquedas recientes</summary>
+          <p class="mu-caption">Guarda el enlace para retomarlas después.</p>
           <p v-for="entry in history" :key="entry.id" class="mu-historia">
             <button class="mu-ghost" @click="selectSearch(entry.id)">Abrir</button>
             <span>{{ entry.label }}</span>
@@ -542,19 +542,19 @@ onUnmounted(stopPolling)
            media Búsqueda Corona una Oferta que la siguiente Página abarata. -->
       <p v-if="stocked" class="mu-panel mu-confirmar">
         <span class="mu-caption">
-          Stock confirmado {{ sayAge(confirmedAge) }} en las Tiendas que lo Dicen.
-          Vale por un Rato, no por el Día.
+          Stock confirmado {{ sayAge(confirmedAge) }} en las tiendas que lo dicen.
+          Vale por un rato, no por el día.
         </span>
       </p>
 
       <p v-if="confirmable" class="mu-panel mu-confirmar">
         <button class="mu-ghost" :disabled="confirming" @click="confirmStock">
-          {{ confirming ? 'Preguntando…' : 'Confirmar Stock' }}
+          {{ confirming ? 'Preguntando…' : 'Confirmar stock' }}
         </button>
         <span class="mu-caption">
-          Tu Navegador le Pregunta directo a hasta {{ reachable }} Tiendas, y
-          Corta en cuanto una Dice que sí. Lo que Confirme vale para este
-          Minuto, no para mañana.
+          Tu navegador le pregunta directo a hasta {{ reachable }} tiendas y
+          corta en cuanto una dice que sí. Lo que confirme vale para este
+          minuto, no para mañana.
         </span>
       </p>
 

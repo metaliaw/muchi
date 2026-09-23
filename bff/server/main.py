@@ -189,10 +189,10 @@ def read_card_art(name: str = Query(min_length=1, max_length=200),
     """La Imagen de una Carta, servida por Scryfall directo al Navegador."""
     translator = build_muchi().translator
     if language and language not in translator.codes:
-        raise HTTPException(400, f"El Idioma «{language}» no está en la Lista.")
+        raise HTTPException(400, f"El idioma «{language}» no está en la lista.")
     art = translator.find_art(name, language, edition, foil)
     if not art:
-        raise HTTPException(404, f"No hay Imagen de «{name}».")
+        raise HTTPException(404, f"No hay imagen de «{name}».")
     return art
 
 
@@ -220,7 +220,7 @@ def read_suggestions(name: str = Query(min_length=1, max_length=200),
     """Nombres que empiezan como lo escrito, para quien dudó en el Campo."""
     translator = build_muchi().translator
     if language not in translator.codes:
-        raise HTTPException(400, f"El Idioma «{language}» no está en la Lista.")
+        raise HTTPException(400, f"El idioma «{language}» no está en la lista.")
     return {"suggestions": list(translator.suggest_names(name, language))}
 
 
@@ -230,7 +230,7 @@ def read_card(name: str = Query(min_length=1, max_length=200),
     """Busca una Carta: el Front escribe en su Idioma, Scryfall traduce."""
     translator = build_muchi().translator
     if language and language not in translator.codes:
-        raise HTTPException(400, f"El Idioma «{language}» no está en la Lista.")
+        raise HTTPException(400, f"El idioma «{language}» no está en la lista.")
     try:
         canonical = translator.translate_name(name, language)
     except CardNotFound:
@@ -249,12 +249,12 @@ def create_search(request: SearchRequest) -> dict:
     orders, ignored = decklist.parse_decklist(request.text,
                                               sealed=request.kind == "sealed")
     if ignored:
-        raise HTTPException(422, {"detail": "Revisa estas Líneas: " + ", ".join(ignored),
+        raise HTTPException(422, {"detail": "Revisa estas líneas: " + ", ".join(ignored),
                                   "ignored": list(ignored)})
     if not 1 <= len(orders) <= MAX_CARDS or any(
             not 1 <= order.quantity <= MAX_QUANTITY for order in orders):
-        raise HTTPException(422, {"detail": f"Ingresa entre 1 y {MAX_CARDS} Cartas, "
-                                            f"con Cantidades de 1 a {MAX_QUANTITY}."})
+        raise HTTPException(422, {"detail": f"Ingresa entre 1 y {MAX_CARDS} cartas, "
+                                            f"con cantidades de 1 a {MAX_QUANTITY}."})
     state = build_muchi().searches.create_search(
         orders=orders, verify_stock=VERIFY_STOCK,
         key=request.key, game=request.game, match=request.match,
@@ -453,7 +453,7 @@ def read_all_results(searches, search_id: str):
         if not page.has_more:
             return tuple(items)
         if page.cursor <= cursor:
-            raise QueryFailed("La API no avanzó el Cursor de Resultados.")
+            raise QueryFailed("La API no avanzó el cursor de resultados.")
         cursor = page.cursor
 
 

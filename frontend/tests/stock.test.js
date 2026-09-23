@@ -201,7 +201,7 @@ describe('lo Confirmado con su Hora', () => {
 describe('la Edad dicha', () => {
   it('Habla como alguien, no como un Reloj', () => {
     expect(sayAge(20)).toBe('recién')
-    expect(sayAge(65)).toBe('hace un Minuto')
-    expect(sayAge(400)).toBe('hace 7 Minutos')
+    expect(sayAge(65)).toBe('hace un minuto')
+    expect(sayAge(400)).toBe('hace 7 minutos')
   })
 })

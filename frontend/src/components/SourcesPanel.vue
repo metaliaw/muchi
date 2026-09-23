@@ -21,11 +21,11 @@ const SOURCE_LABELS = {
 const COLUMN_LABELS = {
   source: 'Fuente',
   status: 'Estado',
-  last_success: 'Último Acierto',
-  last_failure: 'Último Fallo',
-  consecutive_failures: 'Fallos Seguidos',
+  last_success: 'Último acierto',
+  last_failure: 'Último fallo',
+  consecutive_failures: 'Fallos seguidos',
   latency_ms: 'Demora',
-  circuit_open_until: 'Descansa Hasta',
+  circuit_open_until: 'Descansa hasta',
 }
 
 const showColumn = (key) => COLUMN_LABELS[key] || key
@@ -58,7 +58,7 @@ async function toggle() {
 <template>
   <section class="mu-panel">
     <button class="mu-ghost" :aria-expanded="open" @click="toggle">
-      {{ open ? '▾' : '▸' }} Estadísticas para Nerds
+      {{ open ? '▾' : '▸' }} Estadísticas para nerds
     </button>
     <p v-if="open && error" class="mu-aviso error">{{ error }}</p>
     <table v-if="open && rows?.length">

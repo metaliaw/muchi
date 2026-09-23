@@ -49,12 +49,12 @@ const maxQuantity = computed(() => props.limits.max_quantity || 99)
 const selectedGame = computed(() =>
   props.games.find((item) => item.reference_key === game.value))
 const examples = computed(() => (sealed.value
-  ? SEALED_EXAMPLES[game.value] || ['Nombre de la Caja', '2 Otra Caja']
-  : GAME_EXAMPLES[game.value] || ['Nombre de Carta', '4 Otra Carta']))
+  ? SEALED_EXAMPLES[game.value] || ['Nombre de la caja', '2 Otra caja']
+  : GAME_EXAMPLES[game.value] || ['Nombre de carta', '4 Otra carta']))
 const searchExample = computed(() => examples.value.join('\n'))
 // Cómo Llamar a lo que se Busca. El Formulario lo Dice en varios Lugares, y
 // escrito una vez no se Despegan entre sí.
-const noun = computed(() => (sealed.value ? 'Cajas' : 'Cartas'))
+const noun = computed(() => (sealed.value ? 'cajas' : 'cartas'))
 
 // Contar Líneas con algo escrito basta para avisar antes de enviar. Quien
 // decide de verdad es el Servidor; esto solo evita el viaje perdido.
@@ -90,7 +90,7 @@ const suggestion = computed(() => examples.value[0] || '')
 const DEFAULTS = new Set([
   ...Object.values(GAME_EXAMPLES).map((lines) => lines[0]),
   ...Object.values(SEALED_EXAMPLES).map((lines) => lines[0]),
-  'Nombre de Carta', 'Nombre de la Caja',
+  'Nombre de carta', 'Nombre de la caja',
 ])
 function offerDefault() {
   const typed = text.value.trim()
@@ -220,14 +220,14 @@ const extraLines = computed(() => wide.value && written.value > 1)
 
 <template>
   <section class="mu-panel">
-    <h2>Buscar {{ selectedGame?.name || 'Cartas' }}</h2>
+    <h2>Buscar {{ selectedGame?.name || 'cartas' }}</h2>
     <p v-if="error" class="mu-aviso error">{{ error }}</p>
     <form @submit.prevent="emit('search', asked)">
       <!-- Qué Buscar Abre el Formulario: primero se Decide si se Compran
            Cartas o Cajas, y recién después en qué Juego. Al revés se Elegía un
            Juego para un Catálogo que todavía no se Había Elegido. -->
       <fieldset class="mu-modo">
-        <legend class="mu-caption">Qué Buscar</legend>
+        <legend class="mu-caption">Qué buscar</legend>
         <label :class="{ 'mu-modo--sin': !sellsSingles }">
           <input type="radio" value="single" v-model="kind" :disabled="!sellsSingles" />
           Cartas sueltas
@@ -247,7 +247,7 @@ const extraLines = computed(() => wide.value && written.value > 1)
       </label>
       <textarea
         ref="field" v-model="text" rows="5" :placeholder="searchExample"
-        :aria-label="`Una ${sealed ? 'Caja' : 'Carta'} o tu Lista de ${noun}`"
+        :aria-label="`Una ${sealed ? 'caja' : 'carta'} o tu lista de ${noun}`"
         @input="wonderLater" @keydown.tab="hint && ($event.preventDefault(), acceptHint())"
         @blur="forgetHint" @click="forgetHint"
       ></textarea>
@@ -257,48 +257,48 @@ const extraLines = computed(() => wide.value && written.value > 1)
         <button type="button" class="mu-ghost" @click="acceptHint">
           {{ hint.name }}
         </button>
-        <span class="mu-caption">Tab para Completar</span>
+        <span class="mu-caption">Tab para completar</span>
       </p>
       <p v-if="sealed" class="mu-caption">
-        Una Caja Lleva su Set en el Nombre — «Bloomburrow» sola Trae toda Caja
-        de ese Set, y un Booster Box no se Confunde con un Booster Pack.
+        Una caja lleva su set en el nombre — «Bloomburrow» sola trae toda caja
+        de ese set, y un Booster Box no se confunde con un Booster Pack.
       </p>
       <!-- El Modo de Coincidencia Habla de Impresiones y de Nombres que
            Contienen a otro: dos Cosas que una Caja sin Abrir no Tiene. En
            Sellado Calla. -->
       <fieldset v-if="!sealed" class="mu-modo">
-        <legend class="mu-caption">Qué Traer</legend>
+        <legend class="mu-caption">Qué traer</legend>
         <label>
           <input type="radio" value="exact" v-model="match" />
-          La Carta y sus Impresiones
+          La carta y sus impresiones
         </label>
         <label>
           <input type="radio" value="includes" v-model="match" />
-          Contiene en el Nombre
+          Contiene en el nombre
         </label>
       </fieldset>
       <p v-if="wide" class="mu-caption">
-        Trae toda Oferta que Lleve el Nombre — buscar «Kuriboh» encuentra Winged
-        Kuriboh y Linkuriboh. Es para Mirar una Familia, así que va de a una
-        Carta<template v-if="firstLine">: <strong>{{ firstLine }}</strong></template>.
+        Trae toda oferta que lleve el nombre — buscar «Kuriboh» encuentra Winged
+        Kuriboh y Linkuriboh. Es para mirar una familia, así que va de a una
+        carta<template v-if="firstLine">: <strong>{{ firstLine }}</strong></template>.
       </p>
       <p v-if="extraLines" class="mu-aviso">
-        Las otras {{ written - 1 }} Líneas quedan fuera de esta Búsqueda.
+        Las otras {{ written - 1 }} líneas quedan fuera de esta búsqueda.
       </p>
       <div class="mu-fila">
         <button type="submit" :disabled="busy || pending || !game || !asked.trim() || (!wide && tooMany)">
           Buscar
         </button>
         <span v-if="maxCards && !wide" class="mu-caption" :class="{ pasado: tooMany }">
-          Hasta {{ maxCards }} {{ noun }} por Búsqueda, de 1 a {{ maxQuantity }} copias.
+          Hasta {{ maxCards }} {{ noun }} por búsqueda, de 1 a {{ maxQuantity }} copias.
           <template v-if="written">Llevas {{ written }}.</template>
         </span>
       </div>
     </form>
 
     <p v-if="pending" class="mu-aviso">
-      El Envío está pendiente. Reintentar conserva la misma Búsqueda.
-      <button class="mu-ghost" @click="emit('retry')">Reintentar Envío</button>
+      El envío está pendiente. Reintentar conserva la misma búsqueda.
+      <button class="mu-ghost" @click="emit('retry')">Reintentar envío</button>
     </p>
 
     <!-- El Buscador del Catálogo se Fue: la Lista ya se Completa sola mientras
@@ -307,9 +307,9 @@ const extraLines = computed(() => wide.value && written.value > 1)
     <slot name="lookup" />
 
     <details>
-      <summary>Retomar una Búsqueda</summary>
+      <summary>Retomar una búsqueda</summary>
       <div class="mu-fila">
-        <input v-model="identifier" placeholder="Identificador de Búsqueda" />
+        <input v-model="identifier" placeholder="Identificador de búsqueda" />
         <button class="mu-ghost" :disabled="!identifier.trim()"
                 @click="emit('resume', identifier.trim())">Retomar</button>
       </div>
