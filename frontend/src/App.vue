@@ -40,8 +40,10 @@ const LAST_KEY = 'muchi_ultima'
 
 // El Ritmo lo manda el Servidor; este es el mismo de config/api.defaults.yaml,
 // para los milisegundos que van entre que arranca la Página y llega la Config.
-const config = ref({ poll_seconds: 3, adsense_client: 'ca-pub-6368656861543000',
-                     stock_fresh_seconds: 600, browser_check_limit: 5 })
+// Quién Publica lo Dice el Servidor y nadie más: sin Config todavía no hay
+// Publicidad, que es lo Correcto mientras la Página recién Arranca.
+const config = ref({ poll_seconds: 3, stock_fresh_seconds: 600,
+                     browser_check_limit: 5 })
 const book = ref(null)
 const games = ref([])
 const game = ref('')
