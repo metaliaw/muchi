@@ -50,7 +50,7 @@ onUnmounted(() => { if (forget) clearTimeout(forget) })
   <section class="mu-panel">
     <slot />
     <div class="mu-barra"><div class="mu-barra-int" :style="{ width: `${ratio * 100}%` }"></div></div>
-    <p>{{ statusLabel }}: {{ state.processed }} de {{ state.total }} Cartas</p>
+    <p>{{ statusLabel }}: {{ state.processed }} de {{ state.total }} cartas</p>
     <div class="mu-id">
       <label class="mu-caption" :for="`id-${state.id}`">Búsqueda</label>
       <input :id="`id-${state.id}`" class="mu-id-campo" :value="state.id" readonly
@@ -59,7 +59,7 @@ onUnmounted(() => { if (forget) clearTimeout(forget) })
         {{ copied ? '✅ Copiado' : '📋 Copiar' }}
       </button>
     </div>
-    <p v-if="checked" class="mu-caption">Último Estado recibido: {{ checked }}</p>
+    <p v-if="checked" class="mu-caption">Último estado recibido: {{ checked }}</p>
     <p v-if="!state.done && !unavailable" class="mu-caption">
       Consulta automática cada {{ pollSeconds }} segundos.
     </p>
@@ -67,14 +67,14 @@ onUnmounted(() => { if (forget) clearTimeout(forget) })
       Consultando: {{ state.current_card }}
     </p>
     <p v-if="state.status === 'failed'" class="mu-aviso error">
-      La Búsqueda falló en el Servicio. Puedes crear otra.
+      La búsqueda falló en el servicio. Puedes crear otra.
     </p>
     <p v-if="unavailable" class="mu-aviso error">
       {{ unavailable }}
-      <span class="mu-caption">La Consulta automática se detuvo. Puedes retomar otra Búsqueda o crear una nueva.</span>
+      <span class="mu-caption">La consulta automática se detuvo. Puedes retomar otra búsqueda o crear una nueva.</span>
     </p>
     <button v-if="!state.done && !unavailable" class="mu-ghost" @click="$emit('cancel')">
-      Cancelar Búsqueda
+      Cancelar búsqueda
     </button>
   </section>
 </template>

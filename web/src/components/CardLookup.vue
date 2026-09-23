@@ -67,11 +67,11 @@ onUnmounted(forgetDoubt)
 
 <template>
   <details>
-    <summary>Buscar una Carta en el Catálogo</summary>
-    <p class="mu-caption">Escribe el Nombre y Muchi consulta el Juego seleccionado.</p>
+    <summary>Buscar una carta en el catálogo</summary>
+    <p class="mu-caption">Escribe el nombre y Muchi consulta el juego seleccionado.</p>
     <form class="mu-fila" @submit.prevent="lookup">
-      <input v-model="name" :disabled="busy" placeholder="Nombre de la Carta"
-             aria-label="Nombre de la Carta" />
+      <input v-model="name" :disabled="busy" placeholder="Nombre de la carta"
+             aria-label="Nombre de la carta" />
       <button class="mu-ghost" type="submit" :disabled="busy || !name.trim()">
         {{ busy ? 'Buscando…' : 'Buscar' }}
       </button>
