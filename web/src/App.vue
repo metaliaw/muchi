@@ -20,6 +20,11 @@ import GoogleAdsense from './components/GoogleAdsense.vue'
 import SponsorSpot from './components/SponsorSpot.vue'
 import StoreCardDetail from './components/StoreCardDetail.vue'
 
+// La Emoción de una Frase Decide si Interrumpe. «angry» es el Estado grave:
+// algo Salió mal y Muchi Abre el Muelle solo para Contarlo. Los otros cuatro
+// Acompañan, y Caben en la Barra sin Robarle la Pantalla a nadie.
+const ALARM_STATE = 'angry'
+
 const THEME_KEY = 'muchi_tema'
 // Quien Busca Cartas de un Juego Vuelve al mismo: el Selector Recuerda el
 // último, y no lo Devuelve a Magic en cada Visita.
@@ -287,7 +292,7 @@ function sayFrom(group) {
 function sayFault() {
   const rows = book.value?.fault
   const said = rows?.length ? rows[Math.floor(Math.random() * rows.length)] : null
-  say(said?.text || 'Miau', said?.state || 'angry')
+  say(said?.text || 'Miau', said?.state || ALARM_STATE)
 }
 
 // La Oferta más barata le Saca un Comentario a Muchi. En Móvil no hay Hover y
@@ -382,7 +387,7 @@ async function refresh() {
 // Lista, y Muchi encima de ella sería un Gato tapando lo que le pediste ver.
 // Se Abre solo con un Toque, o cuando algo Salió mal y hay que Contarlo. Lo
 // demás que Muchi Dice Cabe en la Barra, sin Robarle la Pantalla a nadie.
-watch(message, (said) => { if (said?.state === 'angry') dockOpen.value = true })
+watch(message, (said) => { if (said?.state === ALARM_STATE) dockOpen.value = true })
 
 async function cancel() {
   try {

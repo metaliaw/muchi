@@ -1,3 +1,14 @@
+# Cada Frase Lleva su Emoción, y la Emoción Decide cómo Llega.
+#
+#   idle   · quieto, dormido
+#   talk   · comenta
+#   happy  · celebra
+#   alert  · nervioso
+#   angry  · algo Salió mal
+#
+# «angry» es el Estado grave: Abre el Muelle de Muchi solo, sin que nadie Mire
+# el Formulario. Los otros cuatro Caben en la Barra y no Interrumpen. Una Frase
+# que Avisa de un Fallo va en «angry»; una que Adorna, nunca.
 every: 10
 phrases:
   - state: alert
