@@ -1,3 +1,5 @@
+[English](migracion-web-en.md) · [Español](migracion-web.md)
+
 # El Front y su Frontera
 
 Muchi tenía una sola Interfaz posible: el Front dibujaba, decidía y guardaba

@@ -1,3 +1,5 @@
+[English](publicidad-en.md) · [Español](publicidad.md)
+
 # La Publicidad, de Punta a Punta
 
 Muchi muestra Anuncios de Google AdSense entre las Ofertas. Este Documento

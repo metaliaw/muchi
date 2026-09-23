@@ -1,3 +1,5 @@
+[English](INTEGRAR-TIENDA-en.md) · [Español](INTEGRAR-TIENDA.md)
+
 # Cómo compartir el Stock de tu Tienda con Muchi
 
 Si tienes una Tienda de Cartas y quieres que sus Ofertas aparezcan en Muchi,
@@ -79,4 +81,4 @@ Estado de Stock y enlace. La Compra se completa fuera de Muchi, mediante el
 enlace de la Oferta. Mantener el Inventario actualizado ayuda a evitar que
 aparezcan Cartas agotadas o Precios desactualizados.
 
-[Volver al README](README.md).
+[Volver al README](README.es.md).
