@@ -159,7 +159,7 @@ watch(() => groups.value, () => spreadNow(), { immediate: true })
 <template>
   <section>
     <div v-if="items.length" class="mu-panel mu-lista">
-      <h2>Cartas de la Lista</h2>
+      <h2>Cartas de la lista</h2>
       <p v-for="item in items" :key="item.position" class="mu-lista-fila">
         <span class="mu-mirable" tabindex="0" role="button"
               :title="`Mira ${item.name}`"
@@ -169,7 +169,7 @@ watch(() => groups.value, () => spreadNow(), { immediate: true })
               @keydown.enter="emit('look', { name: item.name })">
           <strong>{{ item.quantity }}×</strong> {{ item.name }}
         </span>
-        <span class="mu-caption">{{ item.offers }} Ofertas</span>
+        <span class="mu-caption">{{ item.offers }} ofertas</span>
       </p>
     </div>
 
@@ -182,7 +182,7 @@ watch(() => groups.value, () => spreadNow(), { immediate: true })
         <select v-model="criterion">
           <option :value="BY_PRICE">La más barata</option>
           <!-- Sin dos Ediciones no hay nada que Elegir, y el Criterio Sobra. -->
-          <option v-if="editions.length > 1" :value="BY_EDITION">Una sola Edición</option>
+          <option v-if="editions.length > 1" :value="BY_EDITION">Una sola edición</option>
         </select>
       </label>
     </div>
@@ -206,7 +206,7 @@ watch(() => groups.value, () => spreadNow(), { immediate: true })
 
     <div v-if="offers.length" class="mu-fichas">
       <div class="mu-panel mu-ficha">
-        <span class="mu-caption">Menor Observado</span>
+        <span class="mu-caption">Menor observado</span>
         <strong>{{ formatClp(summary?.lowest_clp) }}</strong>
       </div>
       <div class="mu-panel mu-ficha">
@@ -222,7 +222,7 @@ watch(() => groups.value, () => spreadNow(), { immediate: true })
 
     <template v-for="group in groups" :key="group.card">
     <h2 v-if="grouped || advertiseGroups" class="mu-grupo">{{ group.name }}
-      <span class="mu-caption">{{ group.rows.length }} Ofertas</span>
+      <span class="mu-caption">{{ group.rows.length }} ofertas</span>
     </h2>
     <slot v-if="advertiseGroups" name="advertisement" :group="group" />
     <article v-for="(offer, index) in group.rows" :key="`${offer.url}-${index}`"
@@ -246,7 +246,7 @@ watch(() => groups.value, () => spreadNow(), { immediate: true })
       <div v-if="offer.offer_id && pickable(offer)" class="mu-copias"
            :class="{ vacia: !bought(offer) }">
         <button type="button" class="mu-copias__paso" :disabled="!bought(offer)"
-                :aria-label="`Una Copia menos en ${offer.store}`"
+                :aria-label="`Una copia menos en ${offer.store}`"
                 @click="stepUnits(offer, -1)">−</button>
         <label class="mu-copias__cuenta">
           <input type="number" min="0" :max="topFor(offer)" step="1"
@@ -254,11 +254,11 @@ watch(() => groups.value, () => spreadNow(), { immediate: true })
                  :aria-label="`Copias de ${offer.card_name} en ${offer.store}`"
                  @input="countUnits(offer, $event.target.value)" />
           <span v-if="limitFor(offer)" class="mu-copias__total"
-                :title="stockOf(offer) ? `${offer.store} Declara ${stockOf(offer)}`
-                                       : `${offer.store} no Dice cuántas Quedan: una hasta que lo Diga`">/ {{ limitFor(offer) }}</span>
+                :title="stockOf(offer) ? `${offer.store} declara ${stockOf(offer)}`
+                                       : `${offer.store} no dice cuántas quedan: una hasta que lo diga`">/ {{ limitFor(offer) }}</span>
         </label>
         <button type="button" class="mu-copias__paso"
-                :aria-label="`Una Copia más en ${offer.store}`"
+                :aria-label="`Una copia más en ${offer.store}`"
                 @click="stepUnits(offer, 1)">+</button>
         <span class="mu-copias__rotulo">Copias</span>
       </div>
@@ -373,7 +373,7 @@ watch(() => groups.value, () => spreadNow(), { immediate: true })
 .mu-copias__paso:disabled { opacity: .35; cursor: default; }
 .mu-copias__rotulo {
   grid-column: 1 / -1; text-align: center;
-  font-size: .72rem; letter-spacing: .04em; text-transform: uppercase;
+  font-size: .72rem; letter-spacing: .04em;
   color: var(--mu-tinta-sw);
 }
 .mu-lista { margin-bottom: 14px; }

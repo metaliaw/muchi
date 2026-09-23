@@ -9,7 +9,7 @@ async function request(path, options = {}) {
     })
   } catch {
     // Sin Respuesta no hay Status: la Red se cortó antes de llegar al BFF.
-    const error = new Error('La Consulta no llegó al Servicio. Se puede reintentar.')
+    const error = new Error('La consulta no llegó al servicio. Se puede reintentar.')
     error.retriable = true
     throw error
   }
@@ -26,7 +26,7 @@ async function request(path, options = {}) {
       : ''
     const error = new Error(
       (typeof detail === 'string' ? detail : detail?.detail || validation) ||
-        `La Consulta falló: HTTP ${response.status}.`
+        `La consulta falló: HTTP ${response.status}.`
     )
     // Un 502 se reintenta; un 409 detiene el Ciclo, la Búsqueda ya no existe.
     error.retriable = body?.retriable ?? response.status >= 500
