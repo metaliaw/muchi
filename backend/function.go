@@ -13,6 +13,7 @@ import (
 	"github.com/cangrejometralleta/muchi-api/internal/config"
 	"github.com/cangrejometralleta/muchi-api/internal/httpapi"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
+	"github.com/cangrejometralleta/muchi-api/internal/sweep"
 )
 
 var (
@@ -23,7 +24,7 @@ var (
 	taskWorker search.Worker
 	taskError  error
 	sweepOnce  sync.Once
-	sweeper    search.Sweeper
+	sweeper    sweep.Sweeper
 	sweepError error
 )
 
@@ -114,7 +115,7 @@ func SweepQueue(w http.ResponseWriter, r *http.Request) {
 			sweepError = errors.New("sweep needs a Task Queue: MUCHI_TASK_URL is empty")
 			return
 		}
-		sweeper = search.Sweeper{
+		sweeper = sweep.Sweeper{
 			Items: runtime.Store, Queue: runtime.Queue,
 			Logger: buildLogger(), MaxWakes: settings.SweepMaxWakes,
 		}

@@ -1,4 +1,4 @@
-package application
+package catalog
 
 import (
 	"context"
@@ -25,8 +25,8 @@ func TestEveryGameProbe(t *testing.T) {
 	}
 	fetcher := probeFetcher()
 	service := search.Service{
-		Providers:     buildProviders(fetcher, config),
-		SourcesByGame: buildSourcesByGame(fetcher, config, nil, time.Hour, nil),
+		Providers:     BuildProviders(fetcher, config),
+		SourcesByGame: BuildSourcesByGame(fetcher, config, nil, time.Hour, nil),
 	}
 	for _, probe := range []struct {
 		game search.Game
@@ -49,7 +49,7 @@ func TestEveryGameProbe(t *testing.T) {
 				t.Fatal(err)
 			}
 			for _, fault := range faults {
-				t.Logf("falla fuente=%s motivo=%s", fault.Source, fault.Reason)
+				t.Logf("fault source=%s reason=%s", fault.Source, fault.Reason)
 			}
 			bySource := map[string]int{}
 			byStore := map[string]int{}
@@ -60,7 +60,7 @@ func TestEveryGameProbe(t *testing.T) {
 				byStore[item.Store]++
 				if product := item.Metadata["product_id"]; !seen[product] {
 					seen[product] = true
-					t.Logf("  carta=%q card_key=%q set_id=%q set_code=%q",
+					t.Logf("  card=%q card_key=%q set_id=%q set_code=%q",
 						item.CardName, item.CardKey, item.Metadata["set_id"], item.Metadata["set_code"])
 				}
 				key := sameOffer(item)
@@ -73,16 +73,16 @@ func TestEveryGameProbe(t *testing.T) {
 			for key, sources := range origins {
 				if len(sources) > 1 {
 					duplicates++
-					t.Logf("  duplicado entre fuentes=%s fuentes=%d", key, len(sources))
+					t.Logf("  duplicate across sources=%s sources=%d", key, len(sources))
 				}
 			}
-			t.Logf("juego=%s carta=%q duracion=%s ofertas=%d fuentes=%d tiendas=%d duplicados=%d",
+			t.Logf("game=%s card=%q duration=%s offers=%d sources=%d stores=%d duplicates=%d",
 				probe.game, probe.card, time.Since(started), len(items), len(bySource), len(byStore), duplicates)
 			for _, name := range sortedKeys(bySource) {
-				t.Logf("  fuente=%s ofertas=%d", name, bySource[name])
+				t.Logf("  source=%s offers=%d", name, bySource[name])
 			}
 			if len(items) == 0 {
-				t.Fatalf("%s devolvió cero ofertas para %q", probe.game, probe.card)
+				t.Fatalf("%s returned zero offers for %q", probe.game, probe.card)
 			}
 		})
 	}

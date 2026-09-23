@@ -1,4 +1,4 @@
-package application
+package catalog
 
 import (
 	"slices"
@@ -93,7 +93,7 @@ func TestConfiguredLocationNamesItsStore(t *testing.T) {
 		"nowhere.test": {},
 	}}
 
-	locations := buildStoreLocations(config)
+	locations := BuildStoreLocations(config)
 	wanted := []string{"Viña del Mar", "Quilpué - Mesa 1"}
 	if !slices.Equal(locations["cards.test"], wanted) || !slices.Equal(locations["Cards Test"], wanted) {
 		t.Fatalf("locations=%v", locations)

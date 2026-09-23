@@ -1,4 +1,7 @@
-package search
+// Package sweep Reconciles the Work that Waits with the Wake-ups a quiet Turn
+// spent. It backs the SweepQueue Entry-point, one of the three Doors declared
+// together at the Root.
+package sweep
 
 import (
 	"context"

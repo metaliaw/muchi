@@ -6,17 +6,17 @@ import (
 	"net/http"
 
 	"github.com/cangrejometralleta/muchi-api/internal/cardmetadata"
+	"github.com/cangrejometralleta/muchi-api/internal/catalog"
 	"github.com/cangrejometralleta/muchi-api/internal/config"
+	"github.com/cangrejometralleta/muchi-api/internal/constants"
 	firestorestore "github.com/cangrejometralleta/muchi-api/internal/firestore"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 	"github.com/cangrejometralleta/muchi-api/internal/source"
 	"github.com/cangrejometralleta/muchi-api/internal/stores"
 	"github.com/cangrejometralleta/muchi-api/internal/stores/moxfield"
+	"github.com/cangrejometralleta/muchi-api/internal/sweep"
 	"github.com/cangrejometralleta/muchi-api/internal/taskqueue"
 )
-
-// userAgent identifies this service to card sources; it does not vary by environment.
-const userAgent = "muchi-api/1.0"
 
 // Vault Names every Role one Store Plays for a Runtime: it Keeps the Searches,
 // Caches the Offers, Answers for its own Health, Counts the Work that Waits and
@@ -30,7 +30,7 @@ type Vault interface {
 	search.SearchItemRepository
 	search.OfferCache
 	search.HealthStore
-	search.WaitingCounter
+	sweep.WaitingCounter
 	source.TrafficGate
 }
 
@@ -38,7 +38,7 @@ type Vault interface {
 // when a silent one Spent it.
 type Dispatcher interface {
 	search.TaskQueue
-	search.Waker
+	sweep.Waker
 }
 
 // Teller Takes a Logger from a Store that has something to Say. A Store that
@@ -73,12 +73,12 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		return Runtime{}, err
 	}
 	fetcher := buildSourceClient(config, store, logger)
-	tcgmatchMetadata := buildTCGMatch(fetcher, storeConfig, string(search.GamePokemon))
-	tcgmatchYuGiOh := buildTCGMatch(fetcher, storeConfig, string(search.GameYuGiOh))
-	tcgmatchOnePiece := buildTCGMatch(fetcher, storeConfig, string(search.GameOnePiece))
-	tcgmatchDigimon := buildTCGMatch(fetcher, storeConfig, string(search.GameDigimon))
-	tcgmatchRiftbound := buildTCGMatch(fetcher, storeConfig, string(search.GameRiftbound))
-	tcgmatchMitos := buildTCGMatch(fetcher, storeConfig, string(search.GameMitos))
+	tcgmatchMetadata := catalog.BuildTCGMatch(fetcher, storeConfig, string(search.GamePokemon))
+	tcgmatchYuGiOh := catalog.BuildTCGMatch(fetcher, storeConfig, string(search.GameYuGiOh))
+	tcgmatchOnePiece := catalog.BuildTCGMatch(fetcher, storeConfig, string(search.GameOnePiece))
+	tcgmatchDigimon := catalog.BuildTCGMatch(fetcher, storeConfig, string(search.GameDigimon))
+	tcgmatchRiftbound := catalog.BuildTCGMatch(fetcher, storeConfig, string(search.GameRiftbound))
+	tcgmatchMitos := catalog.BuildTCGMatch(fetcher, storeConfig, string(search.GameMitos))
 	cardMetadataProviders := map[search.Game]cardmetadata.Provider{
 		search.GameMagic:     cardmetadata.Scryfall{Fetcher: fetcher},
 		search.GamePokemon:   tcgmatchMetadata,
@@ -98,15 +98,15 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		search.GameMitos:     tcgmatchMitos,
 	}
 	supportedGames := stores.SupportedGames(storeConfig)
-	sourcesByGame := buildSourcesByGame(fetcher, storeConfig, store, config.InventoryCacheTTL, logger)
-	inventories := collectInventories(sourcesByGame)
+	sourcesByGame := catalog.BuildSourcesByGame(fetcher, storeConfig, store, config.InventoryCacheTTL, logger)
+	inventories := catalog.CollectInventories(sourcesByGame)
 	// The Shelf Checks its own Stock: a List has no Product Page to Visit.
 	checker := stores.Checker{Fetcher: fetcher, Config: storeConfig, Lists: inventories}
 	service := search.Service{
 		Repository:        store,
-		Providers:         buildProviders(fetcher, storeConfig),
-		PrintsByGame:      buildPrintLibraries(fetcher, storeConfig),
-		SetsByGame:        buildSetLibraries(fetcher, storeConfig),
+		Providers:         catalog.BuildProviders(fetcher, storeConfig),
+		PrintsByGame:      catalog.BuildPrintLibraries(fetcher, storeConfig),
+		SetsByGame:        catalog.BuildSetLibraries(fetcher, storeConfig),
 		SourcesByGame:     sourcesByGame,
 		Stocks:            checker,
 		Cache:             store,
@@ -116,9 +116,9 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		MaxCards:          config.MaxCardsPerSearch,
 		MaxQuantity:       config.MaxQuantityPerCard,
 		SuspiciousPercent: config.SuspiciousPricePercent,
-		StoreLocations:    buildStoreLocations(storeConfig),
-		SinglesOnly:       buildSinglesOnly(storeConfig),
-		SealedOnly:        buildSealedOnly(storeConfig),
+		StoreLocations:    catalog.BuildStoreLocations(storeConfig),
+		SinglesOnly:       catalog.BuildSinglesOnly(storeConfig),
+		SealedOnly:        catalog.BuildSealedOnly(storeConfig),
 	}
 	if dispatch && config.TaskURL != "" {
 		queue, err := taskqueue.OpenQueue(
@@ -139,7 +139,7 @@ func buildSourceClient(config config.Config, gate source.TrafficGate, logger *sl
 		HTTP:         &http.Client{Timeout: config.HTTPTimeout},
 		Gate:         gate,
 		Logger:       logger,
-		UserAgent:    userAgent,
+		UserAgent:    constants.UserAgent,
 		MaxAttempts:  config.SourceMaxAttempts,
 		BaseDelay:    config.SourceRetryBaseDelay,
 		MaxBodyBytes: config.SourceMaxBodyBytes,

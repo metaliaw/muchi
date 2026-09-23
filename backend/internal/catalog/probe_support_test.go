@@ -1,10 +1,11 @@
-package application
+package catalog
 
 import (
 	"context"
 	"net/http"
 	"time"
 
+	"github.com/cangrejometralleta/muchi-api/internal/constants"
 	"github.com/cangrejometralleta/muchi-api/internal/source"
 )
 
@@ -21,6 +22,6 @@ func (openGate) RecordSource(context.Context, string, time.Duration, error) erro
 func probeFetcher() source.Client {
 	return source.Client{
 		HTTP: &http.Client{Timeout: 20 * time.Second}, Gate: openGate{},
-		UserAgent: userAgent, MaxAttempts: 2, BaseDelay: 250 * time.Millisecond, MaxBodyBytes: 16 << 20,
+		UserAgent: constants.UserAgent, MaxAttempts: 2, BaseDelay: 250 * time.Millisecond, MaxBodyBytes: 16 << 20,
 	}
 }

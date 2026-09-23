@@ -1,4 +1,4 @@
-package application
+package catalog
 
 import (
 	"context"
@@ -24,9 +24,9 @@ func TestSealedProbe(t *testing.T) {
 	}
 	fetcher := probeFetcher()
 	service := search.Service{
-		Providers:     buildProviders(fetcher, config),
-		SourcesByGame: buildSourcesByGame(fetcher, config, nil, time.Hour, nil),
-		SetsByGame:    buildSetLibraries(fetcher, config),
+		Providers:     BuildProviders(fetcher, config),
+		SourcesByGame: BuildSourcesByGame(fetcher, config, nil, time.Hour, nil),
+		SetsByGame:    BuildSetLibraries(fetcher, config),
 	}
 	probes := []struct {
 		game search.Game

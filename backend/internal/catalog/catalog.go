@@ -1,4 +1,8 @@
-package application
+// Package catalog Turns the Store and Provider Config into the Sources a Search
+// asks. It Reads stores.yaml and Builds Providers, SourcesByGame, print and set
+// libraries, and the product-kind limits; the Application Composes the Runtime
+// from those Parts.
+package catalog
 
 import (
 	"log/slog"
@@ -21,7 +25,8 @@ import (
 
 const setCatalogTTL = 24 * time.Hour
 
-func buildStoreLocations(config stores.Config) map[string][]string {
+// BuildStoreLocations Names each Store by the Places it Serves.
+func BuildStoreLocations(config stores.Config) map[string][]string {
 	result := make(map[string][]string)
 	for domain, store := range config.Stores {
 		locations := formatStoreLocations(store.Locations)
@@ -58,7 +63,8 @@ func removeEmpty(values []string) []string {
 	return result
 }
 
-func buildSourcesByGame(fetcher stores.SourceFetcher, config stores.Config, cache moxfield.InventoryCache, ttl time.Duration, logger *slog.Logger) map[search.Game][]search.OfferSource {
+// BuildSourcesByGame Groups the Enabled Stores under each Game they Sell.
+func BuildSourcesByGame(fetcher stores.SourceFetcher, config stores.Config, cache moxfield.InventoryCache, ttl time.Duration, logger *slog.Logger) map[search.Game][]search.OfferSource {
 	result := make(map[search.Game][]search.OfferSource)
 	for key, game := range config.Games {
 		if !game.Enabled {
@@ -105,8 +111,8 @@ func appendConfiguredSources(sources []search.OfferSource, fetcher stores.Source
 	return sources
 }
 
-// collectInventories Shelves each Moxfield List once, however many Games Play it.
-func collectInventories(sourcesByGame map[search.Game][]search.OfferSource) moxfield.Shelf {
+// CollectInventories Shelves each Moxfield List once, however many Games Play it.
+func CollectInventories(sourcesByGame map[search.Game][]search.OfferSource) moxfield.Shelf {
 	shelf := moxfield.Shelf{}
 	seen := make(map[*moxfield.Client]bool)
 	for _, sources := range sourcesByGame {
@@ -122,9 +128,9 @@ func collectInventories(sourcesByGame map[search.Game][]search.OfferSource) moxf
 	return shelf
 }
 
-// buildPrintLibraries Lends Printings to the Games that Have a Catalog of them.
+// BuildPrintLibraries Lends Printings to the Games that Have a Catalog of them.
 // Scryfall Knows Magic; the other Games Keep the Image their Source Sends.
-func buildPrintLibraries(fetcher stores.SourceFetcher, config stores.Config) map[search.Game]search.PrintLibrary {
+func BuildPrintLibraries(fetcher stores.SourceFetcher, config stores.Config) map[search.Game]search.PrintLibrary {
 	libraries := make(map[search.Game]search.PrintLibrary)
 	if game, found := config.Games[string(search.GameMagic)]; found && game.Enabled {
 		libraries[search.GameMagic] = cardmetadata.Scryfall{Fetcher: fetcher}
@@ -132,8 +138,8 @@ func buildPrintLibraries(fetcher stores.SourceFetcher, config stores.Config) map
 	return libraries
 }
 
-// buildSetLibraries Lends every Enabled Game its Sets from TCGMatch.
-func buildSetLibraries(fetcher stores.SourceFetcher, config stores.Config) map[search.Game]search.SetLibrary {
+// BuildSetLibraries Lends every Enabled Game its Sets from TCGMatch.
+func BuildSetLibraries(fetcher stores.SourceFetcher, config stores.Config) map[search.Game]search.SetLibrary {
 	provider, found := config.SearchProviders["tcgmatch"]
 	if !found || !provider.Enabled {
 		return nil
@@ -148,8 +154,8 @@ func buildSetLibraries(fetcher stores.SourceFetcher, config stores.Config) map[s
 	return libraries
 }
 
-// buildSinglesOnly and buildSealedOnly Name Sources by the Product Kind They Sell.
-func buildSealedOnly(config stores.Config) map[string]bool {
+// BuildSealedOnly and BuildSinglesOnly Name Sources by the Product Kind They Sell.
+func BuildSealedOnly(config stores.Config) map[string]bool {
 	named := map[string]bool{}
 	for domain, store := range config.Stores {
 		if !store.SellsSingles() {
@@ -159,7 +165,8 @@ func buildSealedOnly(config stores.Config) map[string]bool {
 	return named
 }
 
-func buildSinglesOnly(config stores.Config) map[string]bool {
+// BuildSinglesOnly Names the Sources that Sell Loose Cards only.
+func BuildSinglesOnly(config stores.Config) map[string]bool {
 	named := map[string]bool{}
 	for _, provider := range config.SearchProviders {
 		if provider.ServesSealed() {
@@ -185,7 +192,8 @@ func readHost(raw string) string {
 	return parsed.Host
 }
 
-func buildProviders(fetcher stores.SourceFetcher, config stores.Config) map[search.Game]search.Provider {
+// BuildProviders Casts each Enabled Search Provider under the Games it Serves.
+func BuildProviders(fetcher stores.SourceFetcher, config stores.Config) map[search.Game]search.Provider {
 	providers := make(map[search.Game]search.Provider, len(config.Games))
 	for _, provider := range config.SearchProviders {
 		if !provider.Enabled {
@@ -199,14 +207,15 @@ func buildProviders(fetcher stores.SourceFetcher, config stores.Config) map[sear
 			case "scrycl":
 				providers[search.Game(game)] = scrycl.Client{Fetcher: fetcher, BaseURL: provider.URL, ExcludeCommunity: !provider.Community}
 			case "tcgmatch":
-				providers[search.Game(game)] = buildTCGMatch(fetcher, config, game)
+				providers[search.Game(game)] = BuildTCGMatch(fetcher, config, game)
 			}
 		}
 	}
 	return providers
 }
 
-func buildTCGMatch(fetcher stores.SourceFetcher, config stores.Config, game string) tcgmatch.Client {
+// BuildTCGMatch Casts the TCGMatch Client for one Game.
+func BuildTCGMatch(fetcher stores.SourceFetcher, config stores.Config, game string) tcgmatch.Client {
 	client := tcgmatch.Client{Fetcher: fetcher, BaseURL: config.SearchProviders["tcgmatch"].URL, Game: game}
 	if game == string(search.GamePokemon) {
 		client.PokemonCatalogURL = config.SearchProviders["tcgdex"].URL

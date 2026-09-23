@@ -1,4 +1,4 @@
-package application
+package catalog
 
 import (
 	"context"
@@ -23,8 +23,8 @@ func TestMatchModeProbe(t *testing.T) {
 	}
 	fetcher := probeFetcher()
 	service := search.Service{
-		Providers:     buildProviders(fetcher, config),
-		SourcesByGame: buildSourcesByGame(fetcher, config, nil, time.Hour, nil),
+		Providers:     BuildProviders(fetcher, config),
+		SourcesByGame: BuildSourcesByGame(fetcher, config, nil, time.Hour, nil),
 	}
 	for _, mode := range []offer.MatchMode{offer.MatchExact, offer.MatchIncludes} {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)

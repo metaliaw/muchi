@@ -1,4 +1,4 @@
-package application
+package catalog
 
 import (
 	"context"
@@ -23,9 +23,9 @@ func TestImageCoverageProbe(t *testing.T) {
 	}
 	fetcher := probeFetcher()
 	service := search.Service{
-		Providers:     buildProviders(fetcher, config),
-		SourcesByGame: buildSourcesByGame(fetcher, config, nil, time.Hour, nil),
-		PrintsByGame:  buildPrintLibraries(fetcher, config),
+		Providers:     BuildProviders(fetcher, config),
+		SourcesByGame: BuildSourcesByGame(fetcher, config, nil, time.Hour, nil),
+		PrintsByGame:  BuildPrintLibraries(fetcher, config),
 	}
 	for _, card := range []string{"Sol Ring", "Lightning Bolt"} {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
@@ -60,13 +60,13 @@ func reportImages(t *testing.T, card string, items []offer.Offer, faults []searc
 		names = append(names, name)
 	}
 	sort.Strings(names)
-	t.Logf("== %s == ofertas=%d con imagen=%d (%d%%)", card, total.offers, total.images, percent(total.images, total.offers))
+	t.Logf("== %s == offers=%d with image=%d (%d%%)", card, total.offers, total.images, percent(total.images, total.offers))
 	for _, name := range names {
 		row := bySource[name]
-		t.Logf("   %-28s %3d ofertas  %3d con imagen  %d%%", name, row.offers, row.images, percent(row.images, row.offers))
+		t.Logf("   %-28s %3d offers  %3d with image  %d%%", name, row.offers, row.images, percent(row.images, row.offers))
 	}
 	for _, fault := range faults {
-		t.Logf("   falla %s", fault.Source)
+		t.Logf("   fault %s", fault.Source)
 	}
 }
 
