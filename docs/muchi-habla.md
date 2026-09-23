@@ -1,3 +1,5 @@
+[English](muchi-habla-en.md) · [Español](muchi-habla.md)
+
 # Cómo Habla Muchi
 
 Muchi es un Gato que comenta lo que está pasando. Dice «ya salí a buscar»,
