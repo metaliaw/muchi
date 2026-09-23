@@ -51,6 +51,7 @@ watch(() => props.message, (value) => { if (value) said.value = null })
 // El Estado lo manda la Burbuja, salvo mientras MUCHI festeja una Caricia.
 // Los cinco Nombres son los mismos que las Filas de la Hoja.
 const state = computed(() => {
+  if (props.message?.state === 'sleep') return 'sleep'
   if (petted.value) return 'happy'
   return bubble.value?.state || 'idle'
 })

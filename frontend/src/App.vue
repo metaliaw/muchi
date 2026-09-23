@@ -6,6 +6,7 @@ import { declaredStock, topOf, useSearch } from './search.js'
 import {
   confirmOffers, countReachable, readFreshChecks, rememberChecks, sayAge,
 } from './stock.js'
+import { useMuchiSleep } from './sleep.js'
 import MuchiPanel from './components/MuchiPanel.vue'
 import CardArt from './components/CardArt.vue'
 import CommunityPanel from './components/CommunityPanel.vue'
@@ -94,6 +95,8 @@ let refreshing = false
 const busy = computed(() => Boolean(
   state.value && (!state.value.done || hasMore.value) && !unavailable.value
 ))
+const sleeping = useMuchiSleep(busy, message)
+const muchiMessage = computed(() => sleeping.value || message.value)
 // Fuera de Producción el Algoritmo Decide igual, pero AdSpot Dibuja
 // un Placeholder en vez del Anuncio: así se Prueba la Elección sin Google.
 const googleReady = computed(() =>
@@ -508,12 +511,12 @@ onUnmounted(stopPolling)
         <button class="mu-muelle__tirador" type="button"
                 :aria-expanded="dockOpen" @click="dockOpen = !dockOpen"
                 :aria-label="dockOpen ? 'Guardar a MUCHI' : 'Llamar a MUCHI'">
-          <span class="mu-muelle__gato" aria-hidden="true">🐱</span>
-          <span class="mu-muelle__dicho">{{ message?.text || 'MUCHI' }}</span>
+          <span class="mu-muelle__gato" aria-hidden="true">{{ sleeping ? '😴' : '🐱' }}</span>
+          <span class="mu-muelle__dicho">{{ muchiMessage?.text || 'MUCHI' }}</span>
           <span class="mu-muelle__flecha" aria-hidden="true">{{ dockOpen ? '▼' : '▲' }}</span>
         </button>
         <div class="mu-muelle__cuerpo">
-          <MuchiPanel :book="book" v-model:dark="dark" :message="message" />
+          <MuchiPanel :book="book" v-model:dark="dark" :message="muchiMessage" />
         </div>
       </div>
 
