@@ -1,3 +1,5 @@
+[English](reverificacion-opcional-en.md) · [Español](reverificacion-opcional.md)
+
 # Por qué la Re-verificación de Stock es Opcional
 
 Septiembre 2026 · Rama `deploy.next`, ampliado el 20 de Septiembre

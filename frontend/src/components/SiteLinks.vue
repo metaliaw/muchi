@@ -1,5 +1,5 @@
 <script setup>
-/** Los Enlaces de Muchi en la Barra de arriba: Redes y Apoyo, como Iconos. */
+/** Los Enlaces de MUCHI en la Barra de arriba: Redes y Apoyo, como Iconos. */
 import { computed } from 'vue'
 
 const props = defineProps({
@@ -19,7 +19,7 @@ const apoyos = computed(() => (props.donationUrl
 
 <template>
   <nav v-if="redes.length || apoyos.length" class="mu-insignias"
-       aria-label="Apoyar y participar en Muchi">
+       aria-label="Apoyar y participar en MUCHI">
     <a
       v-for="red in redes" :key="red.name"
       class="mu-icono" :href="red.url" :title="red.name" :aria-label="red.name"
@@ -31,8 +31,8 @@ const apoyos = computed(() => (props.donationUrl
     <a
       v-for="apoyo in apoyos" :key="apoyo.name"
       class="mu-icono apoyo" :href="apoyo.url"
-      :title="`Ayuda a Muchi por ${apoyo.name}`"
-      :aria-label="`Ayuda a Muchi por ${apoyo.name}`"
+      :title="`Ayuda a MUCHI por ${apoyo.name}`"
+      :aria-label="`Ayuda a MUCHI por ${apoyo.name}`"
       target="_blank" rel="noopener noreferrer"
     >{{ apoyo.icon }}</a>
   </nav>

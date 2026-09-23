@@ -14,7 +14,7 @@ const DOUBT_SECONDS = 4
 const name = ref('')
 const busy = ref(false)
 
-// Quien deja de escribir sin buscar quizás no recuerda el Nombre entero. Muchi
+// Quien deja de escribir sin buscar quizás no recuerda el Nombre entero. MUCHI
 // espera, mira lo escrito y sugiere; cada Tecla nueva reinicia la Espera.
 let doubt = null
 let asked = ''
@@ -68,7 +68,7 @@ onUnmounted(forgetDoubt)
 <template>
   <details>
     <summary>Buscar una carta en el catálogo</summary>
-    <p class="mu-caption">Escribe el nombre y Muchi consulta el juego seleccionado.</p>
+    <p class="mu-caption">Escribe el nombre y MUCHI consulta el juego seleccionado.</p>
     <form class="mu-fila" @submit.prevent="lookup">
       <input v-model="name" :disabled="busy" placeholder="Nombre de la carta"
              aria-label="Nombre de la carta" />

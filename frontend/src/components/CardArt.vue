@@ -52,7 +52,7 @@ watch([() => props.card, () => props.game, () => props.kind],
     <h2>{{ kind === 'sealed' ? 'La caja' : 'La carta' }}</h2>
 
     <p v-if="!card" class="mu-caption">
-      Pulsa el nombre de una {{ kind === 'sealed' ? 'caja' : 'carta' }} y Muchi
+      Pulsa el nombre de una {{ kind === 'sealed' ? 'caja' : 'carta' }} y MUCHI
       te la muestra.
     </p>
     <p v-else-if="busy" class="mu-caption">Buscando la imagen…</p>

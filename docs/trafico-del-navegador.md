@@ -1,3 +1,5 @@
+[English](trafico-del-navegador-en.md) · [Español](trafico-del-navegador.md)
+
 # El Tráfico que no Pagamos
 
 Septiembre 2026 · el Patrón, no el Truco
