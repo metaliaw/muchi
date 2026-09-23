@@ -137,6 +137,7 @@ flowchart LR
     function[function.go<br/>Entradas Cloud Functions]
     transport[internal/httpapi<br/>Handlers y DTO HTTP]
     application[internal/application<br/>Composición]
+    catalog[internal/catalog<br/>Construcción de Fuentes]
     domain[internal/search y offer<br/>Servicio de Búsqueda]
     repository[SearchRepository<br/>Interfaz de Persistencia]
     worker[search.Worker<br/>Trabajo en segundo plano]
@@ -149,7 +150,8 @@ flowchart LR
     worker --> domain
     domain --> repository
     repository --> adapters
-    config --> application
+    config --> catalog
+    catalog --> application
     application --> domain
     application --> adapters
     adapters --> domain
@@ -161,11 +163,11 @@ accede a la persistencia mediante `SearchRepository`: Firestore lo implementa y
 las pruebas pueden inyectar una implementación en memoria.
 
 El dominio también declara necesidades como `TaskQueue`, `Provider`,
-`OfferSource`, `StockChecker` y `OfferCache`. `internal/application/catalog.go`
+`OfferSource`, `StockChecker` y `OfferCache`. `internal/catalog`
 construye los agregadores en `Providers` y agrupa las tiendas en `SourcesByGame`
-usando los juegos, orígenes, plataformas y estados del YAML. El archivo también
+usando los juegos, orígenes, plataformas y estados del YAML. El paquete también
 reúne los catálogos de impresiones y ediciones, además de los límites por tipo de
-producto. `internal/application/application.go` abre las conexiones y arma el
+producto. `internal/application` abre las conexiones y arma el
 `Runtime` con esas piezas. Los paquetes de proveedores implementan los puertos;
 así, las reglas de búsqueda no importan tipos de Firestore, Cloud Tasks ni
 clientes HTTP concretos.

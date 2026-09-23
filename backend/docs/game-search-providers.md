@@ -40,8 +40,8 @@ condition—not only the card name.
 
 ```mermaid
 flowchart LR
-    YAML[config/stores.yaml] --> Providers[buildProviders]
-    YAML --> GameSources[buildSourcesByGame]
+    YAML[config/stores.yaml] --> Providers[BuildProviders]
+    YAML --> GameSources[BuildSourcesByGame]
 
     Providers --> Service[search.Service]
     GameSources --> Service

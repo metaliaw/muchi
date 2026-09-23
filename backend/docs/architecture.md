@@ -137,6 +137,7 @@ flowchart LR
     function[function.go<br/>Cloud Function Entry Points]
     transport[internal/httpapi<br/>Handlers and HTTP DTOs]
     application[internal/application<br/>Composition]
+    catalog[internal/catalog<br/>Source Construction]
     domain[internal/search and offer<br/>Search Service]
     repository[SearchRepository<br/>Persistence Interface]
     worker[search.Worker<br/>Background Work]
@@ -149,7 +150,8 @@ flowchart LR
     worker --> domain
     domain --> repository
     repository --> adapters
-    config --> application
+    config --> catalog
+    catalog --> application
     application --> domain
     application --> adapters
     adapters --> domain
@@ -161,11 +163,11 @@ persistence through `SearchRepository`, which Firestore implements and tests can
 replace with an in-memory implementation.
 
 The domain also declares needs such as `TaskQueue`, `Provider`,
-`OfferSource`, `StockChecker`, and `OfferCache`. `internal/application/catalog.go`
-builds the aggregators in `Providers` and groups stores in `SourcesByGame` from
-the games, origins, platforms, and enabled states in YAML. It also gathers print
-and set catalogs, plus the product-kind limits. `internal/application/application.go`
-opens connections and assembles the `Runtime` from those parts. Provider
+`OfferSource`, `StockChecker`, and `OfferCache`. `internal/catalog` builds the
+aggregators in `Providers` and groups stores in `SourcesByGame` from the games,
+origins, platforms, and enabled states in YAML. It also gathers print and set
+catalogs, plus the product-kind limits. `internal/application` opens connections
+and assembles the `Runtime` from those parts. Provider
 packages implement the ports, so search rules do not import Firestore, Cloud
 Tasks, or concrete HTTP client types.
 
