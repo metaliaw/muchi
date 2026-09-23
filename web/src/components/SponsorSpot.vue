@@ -9,7 +9,7 @@ const props = defineProps({
 })
 
 const genericText = computed(() => props.searching
-  ? 'Muchi sigue buscando. Tu tienda puede acompañar esta espera.'
+  ? 'MUCHI sigue buscando. Tu tienda puede acompañar esta espera.'
   : 'Tu tienda puede acompañar el resultado de cada búsqueda.'
 )
 </script>
@@ -22,7 +22,7 @@ const genericText = computed(() => props.searching
       <span v-if="sponsorText">{{ sponsorText }}</span>
     </p>
     <p v-else>
-      <strong>Publicidad en Muchi</strong>
+      <strong>Publicidad en MUCHI</strong>
       <span>{{ genericText }}</span>
     </p>
     <a

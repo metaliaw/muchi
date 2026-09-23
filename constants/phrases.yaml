@@ -6,7 +6,7 @@
 #   alert  · nervioso
 #   angry  · algo Salió mal
 #
-# «angry» es el Estado grave: Abre el Muelle de Muchi solo, sin que nadie Mire
+# «angry» es el Estado grave: Abre el Muelle de MUCHI solo, sin que nadie Mire
 # el Formulario. Los otros cuatro Caben en la Barra y no Interrumpen. Una Frase
 # que Avisa de un Fallo va en «angry»; una que Adorna, nunca.
 every: 10
@@ -46,7 +46,7 @@ help:
   - title: Cotizar un Mazo
     detail: Pega tu Lista con Cantidades. El Carrito compara Ofertas en CLP y Envíos.
   - title: De dónde salen los Precios
-    detail: El Servicio de Muchi consulta sus Fuentes. Puedes ver su Estado en Fuentes.
+    detail: El Servicio de MUCHI consulta sus Fuentes. Puedes ver su Estado en Fuentes.
 dark:
   - text: me puse darkzz
     state: happy
@@ -58,7 +58,7 @@ light:
   - text: aayy mis ojos, avisa antes de prender la luz
     state: alert
 libre:
-  - text: muchi es abierto
+  - text: MUCHI es abierto
     state: happy
   - text: GPL no es GANA PLATA LARRY
     state: happy
@@ -67,10 +67,10 @@ nerd:
     state: happy
   - text: fuiste digno
     state: happy
-# Lo que Muchi Dice cuando algo Falla. Es una Alerta asíncrona: el Mensaje
+# Lo que MUCHI Dice cuando algo Falla. Es una Alerta asíncrona: el Mensaje
 # técnico Sigue saliendo por el Aviso del Formulario, y acá solo Entra si la
 # Frase le Abre una Ranura. Las escribió una Persona, como todas las demás.
-# «client» Habla de un 4xx: la Petición estaba mal y Muchi lo Toma personal.
+# «client» Habla de un 4xx: la Petición estaba mal y MUCHI lo Toma personal.
 # «server» Habla de un 5xx y también de la Consulta que nunca Llegó: la Culpa
 # está del otro Lado. «{detalle}» Deja entrar el Resumen técnico; «{codigo}»,
 # el Número que Vino. Una Frase sin Ranura igual Sirve.
@@ -83,7 +83,7 @@ fault:
       state: angry
     - text: rayozz no la encontré
       state: angry
-# Lo que Muchi Dice al Pasar por encima de la Oferta más barata. Las escribió
+# Lo que MUCHI Dice al Pasar por encima de la Oferta más barata. Las escribió
 # una Persona, como todas las demás.
 bargain:
   - text: uuuu que rico cartón

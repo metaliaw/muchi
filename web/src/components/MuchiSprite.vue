@@ -1,6 +1,6 @@
 <script setup>
 /**
- * Muchi animada por Hoja de Sprites: una Ventana y un Film que se desliza.
+ * MUCHI animada por Hoja de Sprites: una Ventana y un Film que se desliza.
  *
  * La Hoja trae una Fila por Estado y una Columna por Cuadro. La Fila se elige
  * moviendo el Film en Y; los Cuadros se recorren animándolo en X con `steps()`,
@@ -30,7 +30,7 @@ const meta = sheets.styles['muchi-sofi']
 const rows = Object.keys(meta.animations).length
 
 // Un Estado que la Hoja no dibuja cae en idle antes de pedirle una Fila que no
-// existe: sin esto el Film se iría fuera de la Hoja y Muchi quedaría en blanco.
+// existe: sin esto el Film se iría fuera de la Hoja y MUCHI quedaría en blanco.
 const anim = computed(() => meta.animations[props.state] || meta.animations.idle)
 
 // Las Animaciones con principio y final corren un Cuadro menos: en bucle, el
@@ -58,7 +58,7 @@ const style = computed(() => ({
   '--fill': looping.value ? 'none' : 'forwards',
 }))
 
-// Una Animación de un solo Paso avisa al terminar, y Muchi vuelve a Reposo.
+// Una Animación de un solo Paso avisa al terminar, y MUCHI vuelve a Reposo.
 // Sin ese Aviso se congelaría en su último Cuadro para siempre.
 function reportRest() {
   if (!looping.value) emit('rested')
@@ -72,7 +72,7 @@ function reportRest() {
     :style="style"
     :data-state="state"
     role="img"
-    :aria-label="`Muchi ${state}`"
+    :aria-label="`MUCHI ${state}`"
     @animationend="reportRest"
   />
 </template>
