@@ -1,7 +1,10 @@
-"""Carga los Textos de Muchi y Presenta su Burbuja y sus Corazones."""
+"""Carga y Valida el Catálogo de Textos de Muchi.
+
+Elegir Frase es Trabajo del Front: el Navegador Sabe qué Clic ocurrió y qué
+Tema se Encendió. Acá el Catálogo solo se Lee entero y se Comprueba.
+"""
 from __future__ import annotations
 
-import random
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -99,20 +102,3 @@ def read_phrases(path: Path = PHRASES_PATH) -> PhraseBook:
         return build_phrase_book(doc)
     except (KeyError, TypeError, yaml.YAMLError) as error:
         raise ValueError("Estructura de Frases inválida.") from error
-
-
-def select_greeting(book: PhraseBook, index: int = 0) -> Phrase | None:
-    return book.greetings[index % len(book.greetings)] if book.greetings else None
-
-
-def speaks_now(clicks: int, every: int) -> bool:
-    return every > 0 and clicks > 0 and clicks % every == 0
-
-
-def pick_phrase(phrases) -> Phrase | None:
-    return random.choice(phrases) if phrases else None
-
-
-def pick_theme_phrase(book: PhraseBook, dark: bool) -> Phrase | None:
-    """Una Frase del Modo que acaba de quedar encendido."""
-    return pick_phrase(book.dark if dark else book.light)

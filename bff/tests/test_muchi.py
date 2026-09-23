@@ -239,24 +239,6 @@ def test_phrase_book_missing_file_is_harmless():
 
 
 
-def test_pick_phrase_returns_one_of_the_list():
-    from muchi.mtg import phrases
-
-    pool = (phrases.Phrase("a", "happy"), phrases.Phrase("b", "alert"))
-    assert phrases.pick_phrase(pool) in pool
-    assert phrases.pick_phrase(()) is None
-
-
-def test_speaks_now_on_the_boundary():
-    from muchi.mtg import phrases
-
-    assert phrases.speaks_now(10, 10) is True
-    assert phrases.speaks_now(20, 10) is True
-    assert phrases.speaks_now(9, 10) is False
-    assert phrases.speaks_now(0, 10) is False
-    assert phrases.speaks_now(5, 0) is False
-
-
 def test_phrases_file_ships_with_example():
     import yaml
 
