@@ -263,6 +263,25 @@ def test_config_publishes_support_links(client, monkeypatch):
     assert reply["adsense_slot"] == "1234567890"
 
 
+def test_without_a_publisher_there_is_no_advertising(client, monkeypatch):
+    """Sin Variable no hay Publicidad: ni Config, ni ads.txt, ni Etiqueta."""
+    http, _ = client
+    monkeypatch.delenv("MUCHI_ADSENSE_CLIENT", raising=False)
+
+    assert http.get("/api/config").json()["adsense_client"] == ""
+    assert http.get("/ads.txt").status_code == 404
+    assert main.write_index("<head></head>", "") == "<head></head>"
+
+
+def test_the_page_carries_the_publisher_it_was_given():
+    """Quien Verifica la Cuenta Lee el HTML crudo, no lo que Vue Monta."""
+    page = main.write_index("<head></head>", "ca-pub-1234567890123456")
+
+    assert 'content="ca-pub-1234567890123456"' in page
+    assert "adsbygoogle.js?client=ca-pub-1234567890123456" in page
+    assert page.endswith("</head>")
+
+
 def test_ads_txt_authorizes_configured_publisher(monkeypatch):
     monkeypatch.setenv("MUCHI_ADSENSE_CLIENT", "ca-pub-1234567890123456")
 
