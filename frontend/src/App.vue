@@ -208,7 +208,7 @@ async function confirmStock() {
              : 'Pregunté, y las baratas siguen en pie', gone ? 'idle' : 'happy')
   } catch (failure) {
     error.value = failure.message
-    say(failure.message, 'angry')
+    sayFault()
   } finally {
     confirming.value = false
   }
@@ -280,6 +280,16 @@ function sayFrom(group) {
   say(said.text, said.state)
 }
 
+// Cualquier Fallo le Saca una Frase a Muchi: una Consulta que no llegó, un
+// Servicio caído, una Carta que no existe. Es una Alerta asíncrona y no el
+// Detalle, que sigue saliendo por el Aviso del Formulario. Sin Catálogo
+// todavía, Muchi igual reacciona: callarse haría parecer que nada falló.
+function sayFault() {
+  const rows = book.value?.fault
+  const said = rows?.length ? rows[Math.floor(Math.random() * rows.length)] : null
+  say(said?.text || 'Miau', said?.state || 'angry')
+}
+
 // La Oferta más barata le Saca un Comentario a Muchi. En Móvil no hay Hover y
 // no Pasa nada: el Comentario Adorna, no Informa.
 function sayCheap() {
@@ -321,7 +331,7 @@ async function send() {
     error.value = failure.message
     // Un Rechazo no se reintenta: el Envío pendiente se descarta.
     if (!failure.retriable) pending.value = null
-    say(failure.message, 'angry')
+    sayFault()
   }
 }
 
@@ -359,6 +369,9 @@ async function refresh() {
     } else {
       unavailable.value = failure.message
       stopPolling()
+      // Un Fallo reintentable Pasa en silencio: hablar en cada Vuelta del
+      // Sondeo sería Muchi gritando lo mismo cada tres segundos.
+      sayFault()
     }
   } finally {
     refreshing = false
@@ -378,6 +391,7 @@ async function cancel() {
     say('Ya paré de buscar', 'idle')
   } catch (failure) {
     error.value = failure.message
+    sayFault()
   }
 }
 
@@ -436,6 +450,7 @@ onMounted(async () => {
     ;[config.value, book.value] = await Promise.all([api.readConfig(), api.readMuchi()])
   } catch (failure) {
     error.value = failure.message
+    sayFault()
   }
   // La URL Manda: con Búsqueda escrita, esa se Mira. Sin ella, Vuelve la última.
   if (searchId.value) {

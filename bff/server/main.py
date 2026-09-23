@@ -148,6 +148,7 @@ def read_muchi() -> dict:
         "nerd": rows(book.nerd),
         "libre": rows(book.libre),
         "bargain": rows(book.bargain),
+        "fault": rows(book.fault),
         "help": [{"title": title, "detail": detail} for title, detail in book.help_topics],
     }
 
