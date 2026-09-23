@@ -187,5 +187,5 @@ export function readFreshChecks(searchId, freshSeconds, now = Date.now(),
 export function sayAge(seconds) {
   if (seconds < 60) return 'recién'
   const minutes = Math.round(seconds / 60)
-  return minutes === 1 ? 'hace un Minuto' : `hace ${minutes} Minutos`
+  return minutes === 1 ? 'hace un minuto' : `hace ${minutes} minutos`
 }

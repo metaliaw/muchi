@@ -21,7 +21,7 @@ const newIssueUrl = computed(() => `${props.repositoryUrl}/issues/new`)
 // Muchi son dos Repositorios y una sola Licencia. Enlazar solo uno Dejaria la
 // mitad del Programa sin Puerta.
 const repositories = computed(() => [
-  { label: 'La Interfaz', url: props.repositoryUrl },
+  { label: 'La interfaz', url: props.repositoryUrl },
   { label: 'La API', url: props.apiRepositoryUrl },
 ].filter((repo) => repo.url))
 
@@ -38,10 +38,10 @@ const AUTHORS = [
     <!-- La X Cierra el Aviso y no lo Contesta: por eso Vive fuera de lo que
          hace hablar a Muchi. -->
     <button class="mu-comunidad__cerrar" type="button" @click="emit('close')"
-            aria-label="Cerrar el Aviso">×</button>
+            aria-label="Cerrar el aviso">×</button>
     <p class="mu-comunidad__eyebrow" @click="sayLibre">Muchi es código abierto</p>
     <h2 @click="sayLibre">Aprende con Muchi</h2>
-    <p @click="sayLibre">Está entera a la vista, Interfaz y API. Revisa cómo está
+    <p @click="sayLibre">Está entera a la vista, interfaz y API. Revisa cómo está
       hecha y ayúdanos a mejorarla.</p>
     <!-- La Dirección Llega con la Configuración, un Instante después del primer
          Pintado. El `nav` se Queda igual: si Apareciera recién con ella,
@@ -92,7 +92,6 @@ const AUTHORS = [
   font-size: .72rem;
   font-weight: 800;
   letter-spacing: .09em;
-  text-transform: uppercase;
 }
 h2 { margin: 0 0 4px; font-size: 1rem; }
 p { margin: 0; }

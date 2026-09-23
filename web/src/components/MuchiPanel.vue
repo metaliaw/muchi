@@ -101,7 +101,7 @@ function askForHelp() {
 
     <label class="mu-toggle">
       <input type="checkbox" :checked="dark" @change="toggleDark" />
-      Modo Oscuro
+      Modo oscuro
     </label>
 
     <div class="mu-pedido">

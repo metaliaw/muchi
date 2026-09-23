@@ -16,7 +16,7 @@ from muchi.mtg.search import SearchItem, SearchOffer, SearchState, StockCheck
 
 # La API marca "unknown" cuando la Fuente no publica Stock: Agregadores como
 # scry.cl indexan Precios, no Inventario. No es Ausencia de Carta.
-STOCK_LABELS = {"available": "En Stock", "unavailable": "Agotado",
+STOCK_LABELS = {"available": "En stock", "unavailable": "Agotado",
                 "unknown": "No confirmado"}
 # Los Acabados van en Dorado; el resto del Tratamiento, en Gris.
 FOIL_TAGS = ("Foil", "Etched")
@@ -81,7 +81,7 @@ def name_stock(status: str, quantity: int | None = None,
     if quantity == 0 or status == "unavailable":
         return STOCK_LABELS["unavailable"]
     if quantity is not None:
-        return f"{quantity} {'Unidad' if quantity == 1 else 'Unidades'}"
+        return f"{quantity} {'unidad' if quantity == 1 else 'unidades'}"
     return STOCK_LABELS.get(status, status)
 
 
@@ -318,8 +318,8 @@ def name_fallen_sources(card: str, faults: tuple[str, ...]) -> str:
     """
     tiendas = ", ".join(faults)
     if len(faults) == 1:
-        return f"{card}: no se pudo consultar {tiendas}; faltan sus Ofertas."
-    return f"{card}: no se pudieron consultar {tiendas}; faltan sus Ofertas."
+        return f"{card}: no se pudo consultar {tiendas}; faltan sus ofertas."
+    return f"{card}: no se pudieron consultar {tiendas}; faltan sus ofertas."
 
 
 def build_state(state: SearchState) -> dict:
@@ -342,11 +342,11 @@ def build_results(items: tuple[SearchItem, ...], muchi_dolar: int,
         if item.status == "source_error":
             notices.append({"level": "warning", "card": item.name,
                             "item_position": item.position,
-                            "text": f"{item.name}: no se pudo completar la Consulta."})
+                            "text": f"{item.name}: no se pudo completar la consulta."})
         elif item.status == "not_found":
             notices.append({"level": "caption", "card": item.name,
                             "item_position": item.position,
-                            "text": f"{item.name}: sin Ofertas."})
+                            "text": f"{item.name}: sin ofertas."})
         if item.faults:
             notices.append({"level": "warning", "card": item.name,
                             "item_position": item.position,

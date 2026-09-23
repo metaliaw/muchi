@@ -57,7 +57,7 @@ watch([open, () => props.searchId, () => props.match, () => props.units], refres
   <aside class="mu-carrito" :class="{ abierto: open, ocupado: docked }">
     <button class="mu-carrito__tirador" type="button"
             :aria-expanded="open" @click="open = !open"
-            :aria-label="open ? 'Cerrar el Carrito' : 'Abrir el Carrito'">
+            :aria-label="open ? 'Cerrar el carrito' : 'Abrir el carrito'">
       <span class="mu-carrito__icono" aria-hidden="true">🛒</span>
       <span class="mu-carrito__dicho">Carrito en CLP</span>
       <span class="mu-carrito__flecha" aria-hidden="true">✕</span>
@@ -70,10 +70,10 @@ watch([open, () => props.searchId, () => props.match, () => props.units], refres
              se Topa con algo raro Tiene dónde Contarlo sin salir a buscarlo. -->
         <p v-if="!ready" class="mu-aviso mu-obra">
           <span aria-hidden="true">⚠️</span>
-          Todavía estamos Trabajando en la Compra: por ahora el Carrito Reparte
-          tu Lista entre Tiendas y te Deja los Enlaces para Comprar en cada una.
+          Todavía estamos trabajando en la compra: por ahora el carrito reparte
+          tu lista entre tiendas y te deja los enlaces para comprar en cada una.
           <a v-if="repositoryUrl" :href="feedbackUrl"
-             target="_blank" rel="noopener noreferrer">Cuéntanos qué te Pasó</a>
+             target="_blank" rel="noopener noreferrer">Cuéntanos qué te pasó</a>
           <span v-else>Cuéntanos cualquier cosa que veas rara.</span>
         </p>
         <p v-if="error" class="mu-aviso error">{{ error }}</p>
@@ -84,15 +84,15 @@ watch([open, () => props.searchId, () => props.match, () => props.units], refres
                Parecía parte del Despacho: quien Leía "1 USD = $1.000" junto a
                un Envío en Pesos Concluía otra cosa. El Cambio sigue Aplicándose
                igual; lo que se Fue es la Explicación en el Lugar equivocado. -->
-          <p class="mu-caption">Usa Ofertas sin alertas de Precio ni Stock agotado.</p>
+          <p class="mu-caption">Usa ofertas sin alertas de precio ni stock agotado.</p>
           <!-- El Total es el de las Cartas. Sumarle un Envío que Muchi Inventó
                Sería Dar por cierto un Número que ninguna Tienda Dijo. -->
-          <p class="mu-total">Total de las Cartas: {{ formatClp(plan.cards_cost) }}</p>
+          <p class="mu-total">Total de las cartas: {{ formatClp(plan.cards_cost) }}</p>
 
           <div v-for="store in plan.stores" :key="store.store" class="mu-tienda">
             <h3>{{ store.store }}</h3>
             <p class="mu-caption">
-              {{ store.cards }} Cartas · {{ formatClp(store.subtotal) }} · Envío aparte
+              {{ store.cards }} cartas · {{ formatClp(store.subtotal) }} · Envío aparte
             </p>
             <p v-for="line in store.lines" :key="`${line.card_name}-${line.url}`" class="mu-linea">
               <span>
@@ -111,13 +111,13 @@ watch([open, () => props.searchId, () => props.match, () => props.units], refres
           </div>
 
           <p v-if="plan.missing.length" class="mu-caption">
-            Sin Oferta apta: {{ plan.missing.join(', ') }}
+            Sin oferta apta: {{ plan.missing.join(', ') }}
           </p>
           <!-- Entregar menos Copias de las pedidas sin Decirlo es Mentir el Total. -->
           <p v-for="row in plan.short" :key="row.card_name" class="mu-aviso">
-            {{ row.card_name }}: Faltan {{ row.units }}
-            {{ row.units === 1 ? 'Copia' : 'Copias' }} — las Tiendas contadas no
-            Tienen tantas.
+            {{ row.card_name }}: faltan {{ row.units }}
+            {{ row.units === 1 ? 'copia' : 'copias' }} — las tiendas contadas no
+            tienen tantas.
           </p>
         </template>
       </div>

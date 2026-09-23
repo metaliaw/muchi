@@ -19,7 +19,7 @@ const live = computed(() =>
   <GoogleAd v-if="live" :client="client" :slot="slot" />
   <aside v-else class="mu-aviso" aria-label="Publicidad">
     <span class="mu-aviso__marca">Publicidad</span>
-    <p class="mu-caption">Acá debería ir una Publicidad de Google (Placeholder).</p>
+    <p class="mu-caption">Acá debería ir una publicidad de Google (placeholder).</p>
   </aside>
 </template>
 

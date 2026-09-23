@@ -548,8 +548,8 @@ def test_the_crown_moves_to_the_next_offer_with_stock(client):
     assert answer["best"] == [{"card_type": "sol ring", "offer_id": "of-1500"}]
     assert answer["uncrowned"] == []
     coronada = next(row for row in answer["offers"] if row["offer_id"] == "of-1500")
-    assert coronada["stock_label"] == "2 Unidades"
-    assert {"kind": "tienda", "text": "2 Unidades"} in coronada["pills"]
+    assert coronada["stock_label"] == "2 unidades"
+    assert {"kind": "tienda", "text": "2 unidades"} in coronada["pills"]
     agotada = next(row for row in answer["offers"] if row["offer_id"] == "of-10")
     assert agotada["stock_label"] == "Agotado"
 
@@ -781,8 +781,8 @@ def test_a_checked_offer_declares_its_units(client):
     row = presenter.build_offer(build_offer(stock_quantity=3), muchi_dolar=1000,
                                 verified=False)
 
-    assert row["stock_quantity"] == 3 and row["stock_label"] == "3 Unidades"
-    assert {"kind": "tienda", "text": "3 Unidades"} in row["pills"]
+    assert row["stock_quantity"] == 3 and row["stock_label"] == "3 unidades"
+    assert {"kind": "tienda", "text": "3 unidades"} in row["pills"]
 
 
 def test_an_offer_tells_the_front_where_its_catalog_lives():
