@@ -1,3 +1,5 @@
+[English](arquitectura-en.md) · [Español](arquitectura.md)
+
 # Arquitectura de Muchi
 
 Muchi separa lo que las Personas ven y pueden discutir de la Lógica que opera
