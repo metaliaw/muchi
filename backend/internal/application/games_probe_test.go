@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -52,12 +53,31 @@ func TestEveryGameProbe(t *testing.T) {
 			}
 			bySource := map[string]int{}
 			byStore := map[string]int{}
+			origins := map[string]map[string]bool{}
+			seen := map[string]bool{}
 			for _, item := range items {
 				bySource[item.Source]++
 				byStore[item.Store]++
+				if product := item.Metadata["product_id"]; !seen[product] {
+					seen[product] = true
+					t.Logf("  carta=%q card_key=%q set_id=%q set_code=%q",
+						item.CardName, item.CardKey, item.Metadata["set_id"], item.Metadata["set_code"])
+				}
+				key := sameOffer(item)
+				if origins[key] == nil {
+					origins[key] = map[string]bool{}
+				}
+				origins[key][item.Source] = true
 			}
-			t.Logf("juego=%s carta=%q duracion=%s ofertas=%d fuentes=%d tiendas=%d",
-				probe.game, probe.card, time.Since(started), len(items), len(bySource), len(byStore))
+			duplicates := 0
+			for key, sources := range origins {
+				if len(sources) > 1 {
+					duplicates++
+					t.Logf("  duplicado entre fuentes=%s fuentes=%d", key, len(sources))
+				}
+			}
+			t.Logf("juego=%s carta=%q duracion=%s ofertas=%d fuentes=%d tiendas=%d duplicados=%d",
+				probe.game, probe.card, time.Since(started), len(items), len(bySource), len(byStore), duplicates)
 			for _, name := range sortedKeys(bySource) {
 				t.Logf("  fuente=%s ofertas=%d", name, bySource[name])
 			}
@@ -75,4 +95,13 @@ func sortedKeys(counts map[string]int) []string {
 	}
 	sort.Strings(names)
 	return names
+}
+
+// sameOffer Names the Offer a Reader would Call the same one, whichever Source
+// Brought it. Dos Fuentes que Traen la misma Carta al mismo Precio Cuentan una.
+func sameOffer(item offer.Offer) string {
+	return strings.Join([]string{
+		offer.NormalizeCard(item.CardName), strings.ToLower(item.Store),
+		item.PriceAmount, item.PriceCurrency, strings.ToLower(item.Language),
+	}, "|")
 }
