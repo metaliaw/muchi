@@ -1,17 +1,17 @@
-# 🐱 Muchi.cl
+# 🐱 MUCHI.cl
 
-Muchi te ayuda a buscar Cartas de Magic y comparar Ofertas de Tiendas.
+MUCHI te ayuda a buscar Cartas de Magic y comparar Ofertas de Tiendas.
 Puedes consultar una Carta o pegar una Lista completa y calcular una propuesta
 de Compra en CLP que considere también el costo de los Envíos.
 
-La API de Muchi realiza las Búsquedas y conserva sus Resultados. Este Front,
+La API de MUCHI realiza las Búsquedas y conserva sus Resultados. Este Front,
 construido con Vue 3, muestra el Avance, las Ofertas y el Carrito.
 
 Quienes quieran mirar detrás de la Pantalla pueden recorrer la
-[Arquitectura de Muchi](docs/arquitectura.md), sus Decisiones públicas y las
+[Arquitectura de MUCHI](docs/arquitectura.md), sus Decisiones públicas y las
 formas de colaborar.
 
-> 📚 **Este Repositorio se lee, no sólo se ejecuta.** Cada Decisión de Muchi
+> 📚 **Este Repositorio se lee, no sólo se ejecuta.** Cada Decisión de MUCHI
 > tiene un Documento que la cuenta con sus Motivos, incluidas las que salieron
 > mal. Si llegaste a aprender, parte por la
 > [Documentación](#documentación) y vuelve después al Código.
@@ -54,7 +54,7 @@ ahí puedes reordenar por cualquier Columna con un clic en su Encabezado. El
 Precio se escribe a la Chilena, `1.791`, y solo muestra Decimales si alguna
 Oferta los trae.
 
-La Columna **Sospechoso** dice por qué Muchi desconfía de un Precio, en
+La Columna **Sospechoso** dice por qué MUCHI desconfía de un Precio, en
 Palabras y no en el Código que entrega la API. Vacía cuando no hay Alerta. El
 Carrito descarta esas Ofertas.
 
@@ -86,26 +86,26 @@ Precio ni Stock agotado, convertidas a Pesos cuando hace falta. Un Stock
 desconocido no equivale a disponibilidad confirmada; revisa la Oferta en la
 Tienda antes de comprar.
 
-## El Muchi Dólar
+## El MUCHI Dólar
 
 Algunas Tiendas publican su propio Cambio y la API convierte con él antes de
 entregar la Oferta. Cuando una Oferta llega en Dólares sin esa Referencia,
-Muchi usa el **Muchi Dólar**, un Valor único, público y a la vista:
+MUCHI usa el **MUCHI Dólar**, un Valor único, público y a la vista:
 
 ```yaml
 # config/rates.defaults.yaml
 muchi_dolar: 1000
 ```
 
-**No es el Dólar del Mercado ni intenta seguirlo.** Es el Cambio que Muchi
+**No es el Dólar del Mercado ni intenta seguirlo.** Es el Cambio que MUCHI
 cobra: cubre el Costo de traer la Carta y el Margen de los Intermediarios que
-harán la Compra cuando Muchi compre. Por eso se mueve cuando cambian esos
+harán la Compra cuando MUCHI compre. Por eso se mueve cuando cambian esos
 Costos, no cuando se mueve el Dólar, y por eso está a la Vista: quien compra
 merece saber con qué Número se le convirtió el Precio.
 
 Se muestra en el Carrito junto al Total, y se ajusta editando ese Archivo o
 con `MUCHI_RATES_MUCHI_DOLAR`. Las Ofertas en otras Monedas se muestran con su
-Valor original y quedan fuera del Carrito: sin Cambio declarado, Muchi no
+Valor original y quedan fuera del Carrito: sin Cambio declarado, MUCHI no
 inventa uno.
 
 > 🚧 **Todavía estamos fijando cómo se usa.** Lo que está cerrado es *qué es*:
@@ -118,12 +118,12 @@ inventa uno.
 > Si lees esto para aprender del Patrón, ese es el Estado real, y el Número que
 > ves en el Carrito es siempre el que se aplicó a ese Carrito.
 > Parte de esa Duda depende de otra Cosa que aún no pasa:
-> [Cuando Muchi Compre](docs/la-compra.md).
+> [Cuando MUCHI Compre](docs/la-compra.md).
 
 ## Estamos trabajando en poder Comprar
 
-Hoy Muchi te deja en la puerta de la Tienda: comparas, armas el Carrito y la
-Compra la haces tú, una vez por Tienda. **Queremos que Muchi Compre por ti** —
+Hoy MUCHI te deja en la puerta de la Tienda: comparas, armas el Carrito y la
+Compra la haces tú, una vez por Tienda. **Queremos que MUCHI Compre por ti** —
 elegir el Carrito una vez, pagar una vez, recibir las Cartas juntas.
 
 El Plan es automatizar esa Compra con **Agentes** que hagan el Checkout de cada
@@ -131,19 +131,19 @@ Tienda en vez de una Persona repitiéndolo doce veces. Todavía estamos viendo l
 Implementación y los Costos, y eso no es una Frase de Cortesía: no hay Agente
 corriendo ni Fecha que prometer.
 
-Tiene que ver directo con el [Muchi Dólar](#el-muchi-dólar). Ese Cambio ya
-incluye el Margen de los Intermediarios que harán la Compra *cuando Muchi
+Tiene que ver directo con el [MUCHI Dólar](#el-muchi-dólar). Ese Cambio ya
+incluye el Margen de los Intermediarios que harán la Compra *cuando MUCHI
 compre*; hoy esos Intermediarios son Personas, y son la parte del Costo que un
-Agente podría mover. Si se mueve, falta decidir si el Muchi Dólar baja o si el
+Agente podría mover. Si se mueve, falta decidir si el MUCHI Dólar baja o si el
 Costo de comprar sale a la Superficie con su propio Nombre, separado del Cambio.
 
-📄 [Cuando Muchi Compre](docs/la-compra.md) lo cuenta entero: qué falta
+📄 [Cuando MUCHI Compre](docs/la-compra.md) lo cuenta entero: qué falta
 resolver —el Costo por Compra, la Compra a medias, los Pagos, las Tiendas—, cómo
 se arma el Total hoy y qué Parte se le agregaría.
 
-## Aparecer en Muchi
+## Aparecer en MUCHI
 
-Muchi no tiene Formulario de alta. Todo lo que aparece acá entró porque alguien
+MUCHI no tiene Formulario de alta. Todo lo que aparece acá entró porque alguien
 lo pidió y alguien del otro lado lo conectó, así que el Camino siempre empieza
 con una Conversación:
 
@@ -167,14 +167,14 @@ Puedes proponer la incorporación de tu Inventario mediante:
 
 Consulta [Cómo compartir el Stock de tu Tienda](INTEGRAR-TIENDA.md) para saber
 qué información preparar y cómo solicitar la integración. La conexión se
-realiza en la API de Muchi; publicar un enlace no incorpora automáticamente
+realiza en la API de MUCHI; publicar un enlace no incorpora automáticamente
 la Tienda.
 
 ### Si eres una Persona que vende
 
 No hace falta tener Tienda. Si vendes tus repetidas y las mantienes en una
 Lista pública de Moxfield, esa es la misma **Opción 1** de la Guía de arriba, y
-sirve igual: lo que Muchi necesita no es un Rol comercial, sino una Lista que
+sirve igual: lo que MUCHI necesita no es un Rol comercial, sino una Lista que
 se pueda leer sin tu Sesión, con Cantidades, Precios y una forma de contactarte
 para comprar.
 
@@ -185,9 +185,9 @@ le cuesta a quien viajó hasta ella. Si vender es algo que haces de vez en
 cuando y no vas a poder actualizar, mejor decirlo antes que aparecer y
 desaparecer.
 
-### Si quieres que Muchi soporte otro Juego
+### Si quieres que MUCHI soporte otro Juego
 
-Muchi hoy busca Cartas de Magic, pero el Front nunca tuvo esa Lista escrita: la
+MUCHI hoy busca Cartas de Magic, pero el Front nunca tuvo esa Lista escrita: la
 pide con `GET /api/supported-games` y dibuja lo que le respondan. Sumar un
 Juego es Trabajo del lado de la API —las Fuentes que lo conocen, los Nombres,
 las Ediciones— y no un cambio en este Repositorio.
@@ -207,13 +207,13 @@ La elección depende del Identificador de la Búsqueda y no cambia durante las
 Consultas automáticas.
 
 Configura `MUCHI_ADSENSE_CLIENT` y `MUCHI_ADSENSE_SLOT` con los Identificadores
-públicos entregados por AdSense. Si faltan, Muchi muestra una Promoción interna
+públicos entregados por AdSense. Si faltan, MUCHI muestra una Promoción interna
 en vez de solicitar un Anuncio externo. La Tienda promocionada utiliza
 `MUCHI_SPONSOR_NAME`, `MUCHI_SPONSOR_TEXT` y `MUCHI_SPONSOR_URL`.
 
 ## Ejecutar el Proyecto
 
-Necesitas Python con `venv` y acceso a una instancia de Muchi API. Copia
+Necesitas Python con `venv` y acceso a una instancia de MUCHI API. Copia
 [.env.example](.env.example) a `.env` y configura estas Variables:
 
 ```dotenv
@@ -283,7 +283,7 @@ de Espera. Los Topes de una Búsqueda —cien
 Entradas, noventa y nueve copias— no se configuran: salen del Formato, un Mazo
 de Commander de cien Cartas. El Front los lee de `/api/config` y los escribe
 junto al Formulario, así que el Número vive en un solo lugar. Los Archivos de Configuración usan
-YAML; las Credenciales se inyectan por separado. Las Frases de Muchi están en
+YAML; las Credenciales se inyectan por separado. Las Frases de MUCHI están en
 [constants/phrases.yaml](constants/phrases.yaml), incluidos los Saludos y la Ayuda.
 `muchi/mtg/phrases.py` carga ese Contenido y genera las Burbujas y los Corazones;
 `messaging.py` sólo decide la prioridad de los Mensajes.
@@ -326,7 +326,7 @@ Puedes añadir `MUCHI_API_SEARCH_ID` para verificar una Búsqueda existente.
 
 ## Documentación
 
-Muchi se escribe para que alguien más lo lea. Cada Documento cuenta una
+MUCHI se escribe para que alguien más lo lea. Cada Documento cuenta una
 Decisión con sus Motivos y, cuando corresponde, con el Supuesto que se cayó.
 Ese es el Orden sugerido para quien llega a aprender.
 
@@ -334,15 +334,15 @@ Ese es el Orden sugerido para quien llega a aprender.
 
 | Documento | Qué aprendes |
 | --- | --- |
-| 🏛️ [Arquitectura de Muchi](docs/arquitectura.md) | La Frontera entre este Front y la API, la Seguridad, los Datos, la Operación y una Guía neutral para replicar el Patrón con otros Proveedores. |
+| 🏛️ [Arquitectura de MUCHI](docs/arquitectura.md) | La Frontera entre este Front y la API, la Seguridad, los Datos, la Operación y una Guía neutral para replicar el Patrón con otros Proveedores. |
 | 🪟 [El Front y su Frontera](docs/migracion-web.md) | Qué dibuja el Front, qué decide el BFF, cuáles son sus Rutas y cómo se despliega en Cloud Run. |
-| 🐱 [Cómo Habla Muchi](docs/muchi-habla.md) | El Catálogo de Frases, quién le gana el turno a la Burbuja, los tres Canales de Aviso, la Hoja de Sprites y qué queda con Movimiento reducido. |
+| 🐱 [Cómo Habla MUCHI](docs/muchi-habla.md) | El Catálogo de Frases, quién le gana el turno a la Burbuja, los tres Canales de Aviso, la Hoja de Sprites y qué queda con Movimiento reducido. |
 | 📦 [Producto Sellado](docs/producto-sellado.md) | Cómo se elige el Catálogo, los Valores por Defecto medidos contra las Tiendas, por qué la Caja no Tiene a quién pedirle su Foto y por qué decir «No hay Ofertas» puede ser Mentira. |
-| 📜 [Contrato de Muchi API](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml) | Todas las Rutas que Muchi consume, con sus Formas de Entrada y Salida. Vive en muchi-api. |
+| 📜 [Contrato de MUCHI API](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml) | Todas las Rutas que MUCHI consume, con sus Formas de Entrada y Salida. Vive en muchi-api. |
 
 ### La API vive en su propio Repositorio
 
-Muchi son dos Repositorios públicos. Éste dibuja la Experiencia y guarda el BFF
+MUCHI son dos Repositorios públicos. Éste dibuja la Experiencia y guarda el BFF
 que habla con la API. [muchi-api](https://github.com/cangrejometralleta/muchi-api)
 consulta las Tiendas, ordena las Ofertas y conserva los Resultados.
 
@@ -359,18 +359,18 @@ Cada Cosa se lee en un solo lugar, y por eso acá ya no hay Copias:
   [Acá](docs/arquitectura.md) se cuenta la del Front y su Frontera.
 - ⚖️ El [Castigo y Perdón](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/castigo-y-perdon.md)
   explica cómo la API trata a una Tienda que se cae, que tarda o que pide calma.
-  Importa acá porque de esa Política salen los Avisos que Muchi muestra: una
+  Importa acá porque de esa Política salen los Avisos que MUCHI muestra: una
   Fuente que no contestó nunca debe leerse como una Carta que no existe.
 
 ### Decisiones aún abiertas
 
-- 💵 [El Muchi Dólar](#el-muchi-dólar): qué es ya está cerrado —un Cambio
+- 💵 [El MUCHI Dólar](#el-muchi-dólar): qué es ya está cerrado —un Cambio
   comercial, publicado— pero cómo se opera no. Se explica ahí mismo, con las
   Preguntas que siguen sin Respuesta, porque un Número que convierte Precios
   ajenos merece contarse incluso a medio decidir.
-- 🛒 [Cuando Muchi Compre](docs/la-compra.md): el Plan de automatizar la Compra
+- 🛒 [Cuando MUCHI Compre](docs/la-compra.md): el Plan de automatizar la Compra
   con Agentes, la Implementación y los Costos que seguimos mirando, y cómo eso
-  toca el Muchi Dólar y el Costeo del Carrito. Un Plan en voz alta, sin Fecha.
+  toca el MUCHI Dólar y el Costeo del Carrito. Un Plan en voz alta, sin Fecha.
 
 ### Decisiones contadas en detalle
 
@@ -384,7 +384,7 @@ Cada Cosa se lee en un solo lugar, y por eso acá ya no hay Copias:
   Visita a la Tienda, por qué esa Vuelta no puede ser obligatoria, y cómo el
   Navegador de quien Compra paga una de cada cinco sin que nadie la Note.
 - 🌐 [El Tráfico que no Pagamos](docs/trafico-del-navegador.md): quién paga cada
-  Petición que Muchi hace, cuándo una se mueve al Navegador de quien Compra, y
+  Petición que MUCHI hace, cuándo una se mueve al Navegador de quien Compra, y
   la Raya entre aprovechar una Puerta abierta y usar Visitantes de Flota.
 - 🔍 [Hallazgos en los Buscadores](docs/hallazgos-buscadores.md): los Supuestos
   que se cayeron cuando una Búsqueda empezó a traer Cartas distintas y no
@@ -394,29 +394,29 @@ Cada Cosa se lee en un solo lugar, y por eso acá ya no hay Copias:
   el Flujo hasta el primer Anuncio, lo que la Revisión de Google mira y qué
   hacer cuando algo no anda.
 
-### Para quien quiera aparecer en Muchi
+### Para quien quiera aparecer en MUCHI
 
 - 🏪 [Compartir el Stock de una Tienda](INTEGRAR-TIENDA.md): qué información
   preparar y cómo pedir la integración. Sirve igual si vendes sin Tienda.
-- 🙋 [Aparecer en Muchi](#aparecer-en-muchi): los tres Caminos —Tienda, Persona
+- 🙋 [Aparecer en MUCHI](#aparecer-en-muchi): los tres Caminos —Tienda, Persona
   o un Juego nuevo— y por dónde se piden.
 
 ## Licencia
 
-Muchi es Software Libre bajo la **[GNU Affero General Public License v3.0 o
+MUCHI es Software Libre bajo la **[GNU Affero General Public License v3.0 o
 posterior](LICENSE)**.
 
 Puedes usarlo, leerlo, modificarlo y redistribuirlo. La Affero agrega una sola
-Condición más que la GPL, y es la que importa acá: **quien opere Muchi —o una
+Condición más que la GPL, y es la que importa acá: **quien opere MUCHI —o una
 Versión modificada— como Servicio en una Red debe ofrecer su Código fuente a
 las Personas que lo usan.** Un Fork mejor es bienvenido; un Fork cerrado y
 alojado en otra parte, no.
 
-Por eso Muchi muestra **Ver el código** en su propia Pantalla: es la Oferta de
+Por eso MUCHI muestra **Ver el código** en su propia Pantalla: es la Oferta de
 Fuente que pide la Sección 13, y apunta a este Repositorio.
 
 ```text
-Copyright (C) 2026 Muchi
+Copyright (C) 2026 MUCHI
 
 Este Programa es Software Libre: puedes redistribuirlo y/o modificarlo bajo
 los términos de la GNU Affero General Public License publicada por la Free

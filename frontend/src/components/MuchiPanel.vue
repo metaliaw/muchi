@@ -48,7 +48,7 @@ function toggleDark() {
 
 watch(() => props.message, (value) => { if (value) said.value = null })
 
-// El Estado lo manda la Burbuja, salvo mientras Muchi festeja una Caricia.
+// El Estado lo manda la Burbuja, salvo mientras MUCHI festeja una Caricia.
 // Los cinco Nombres son los mismos que las Filas de la Hoja.
 const state = computed(() => {
   if (petted.value) return 'happy'
@@ -56,7 +56,7 @@ const state = computed(() => {
 })
 
 // Las Animaciones de un solo Paso avisan al terminar; ahí suelta la Caricia y
-// Muchi vuelve al Estado que diga la Burbuja.
+// MUCHI vuelve al Estado que diga la Burbuja.
 function restMuchi() {
   petted.value = false
 }
@@ -93,11 +93,11 @@ function askForHelp() {
 
 <template>
   <aside class="mu-panel mu-muchi">
-    <button class="mu-sprite" :class="{ salta: jumping }" @click="pet" title="Apreta a Muchi">
+    <button class="mu-sprite" :class="{ salta: jumping }" @click="pet" title="Apreta a MUCHI">
       <MuchiSprite :state="state" @rested="restMuchi" />
     </button>
     <p v-if="bubble" class="mu-globo" :class="`mu-globo--${bubble.state}`">{{ bubble.text }}</p>
-    <p v-if="clicks >= 3" class="mu-caption">🐾 Has acariciado a Muchi {{ clicks }} veces</p>
+    <p v-if="clicks >= 3" class="mu-caption">🐾 Has acariciado a MUCHI {{ clicks }} veces</p>
 
     <label class="mu-toggle">
       <input type="checkbox" :checked="dark" @change="toggleDark" />
@@ -106,7 +106,7 @@ function askForHelp() {
 
     <div class="mu-pedido">
       <button class="mu-ghost" @click="askForHelp">
-        {{ helping ? 'Gracias Muchi 💝' : 'Muchi, ayudame!' }}
+        {{ helping ? 'Gracias MUCHI 💝' : 'MUCHI, ayudame!' }}
       </button>
       <span class="mu-corazones" aria-hidden="true">
         <span v-for="heart in hearts" :key="heart.id" class="mu-corazon"

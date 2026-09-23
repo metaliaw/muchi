@@ -7,7 +7,7 @@ const props = defineProps({
   apiRepositoryUrl: { type: String, default: '' },
 })
 
-// Muchi comenta su propia Licencia cuando alguien Toca algo del Aviso, y
+// MUCHI comenta su propia Licencia cuando alguien Toca algo del Aviso, y
 // tambien al Acercarse. El Acercamiento habla una vez: el `mouseenter` va en el
 // Aviso entero, asi que Pasar de un Enlace al otro no suelta dos Frases.
 const emit = defineEmits(['libre', 'close'])
@@ -18,14 +18,14 @@ function sayLibre() {
 
 const newIssueUrl = computed(() => `${props.repositoryUrl}/issues/new`)
 
-// Muchi son dos Repositorios y una sola Licencia. Enlazar solo uno Dejaria la
+// MUCHI son dos Repositorios y una sola Licencia. Enlazar solo uno Dejaria la
 // mitad del Programa sin Puerta.
 const repositories = computed(() => [
   { label: 'La interfaz', url: props.repositoryUrl },
   { label: 'La API', url: props.apiRepositoryUrl },
 ].filter((repo) => repo.url))
 
-// Quienes escriben Muchi. Las Redes de Muchi viven en el Pie; estas son
+// Quienes escriben MUCHI. Las Redes de MUCHI viven en el Pie; estas son
 // Personas, y van donde se habla del Código.
 const AUTHORS = [
   { name: 'metaliaw', url: 'https://github.com/metaliaw' },
@@ -36,17 +36,17 @@ const AUTHORS = [
 <template>
   <aside class="mu-panel mu-comunidad" @mouseenter="sayLibre">
     <!-- La X Cierra el Aviso y no lo Contesta: por eso Vive fuera de lo que
-         hace hablar a Muchi. -->
+         hace hablar a MUCHI. -->
     <button class="mu-comunidad__cerrar" type="button" @click="emit('close')"
             aria-label="Cerrar el aviso">×</button>
-    <p class="mu-comunidad__eyebrow" @click="sayLibre">Muchi es código abierto</p>
-    <h2 @click="sayLibre">Aprende con Muchi</h2>
+    <p class="mu-comunidad__eyebrow" @click="sayLibre">MUCHI es código abierto</p>
+    <h2 @click="sayLibre">Aprende con MUCHI</h2>
     <p @click="sayLibre">Está entera a la vista, interfaz y API. Revisa cómo está
       hecha y ayúdanos a mejorarla.</p>
     <!-- La Dirección Llega con la Configuración, un Instante después del primer
          Pintado. El `nav` se Queda igual: si Apareciera recién con ella,
-         Empujaría hacia abajo a Muchi y a la Carta con la Página ya a la Vista. -->
-    <nav aria-label="Participar en Muchi" class="mu-comunidad__enlaces"
+         Empujaría hacia abajo a MUCHI y a la Carta con la Página ya a la Vista. -->
+    <nav aria-label="Participar en MUCHI" class="mu-comunidad__enlaces"
          @click="sayLibre">
       <a v-for="repo in repositories" :key="repo.url" :href="repo.url"
          target="_blank" rel="noopener noreferrer">{{ repo.label }}</a>
@@ -67,7 +67,7 @@ const AUTHORS = [
   box-shadow: none;
   /* La X se Apoya en esta Esquina. */
   position: relative;
-  /* Abre la Columna y lo que Sigue Flota: cada Línea de más acá Empuja a Muchi
+  /* Abre la Columna y lo que Sigue Flota: cada Línea de más acá Empuja a MUCHI
      y a la Carta un Renglón más abajo del primer Vistazo. */
   padding: 14px 16px;
   /* Al lado hay Paneles blancos: un 9% se perdia contra ellos. El Tinte

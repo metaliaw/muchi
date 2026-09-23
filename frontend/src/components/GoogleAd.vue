@@ -24,7 +24,7 @@ onMounted(async () => {
 <template>
   <aside class="mu-google" aria-label="Publicidad">
     <span class="mu-google__marca">Publicidad</span>
-    <p v-if="failed" class="mu-caption">Muchi sigue buscando las mejores ofertas para ti.</p>
+    <p v-if="failed" class="mu-caption">MUCHI sigue buscando las mejores ofertas para ti.</p>
     <ins
       v-else
       class="adsbygoogle"

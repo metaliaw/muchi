@@ -146,8 +146,8 @@ watch([() => props.games, kind], () => {
 // otra. Pero eso no lo Vuelve una Búsqueda de a una — una Lista de Cajas con
 // Cantidades es tan legítima como una de Cartas, así que el Modo angosto
 // Duerme mientras Sellado Manda, en vez de Recortar la Lista a su Primera Línea.
-// ------------------------------------------- el Final que Muchi Ofrece
-// Quien Escribe una Lista no siempre Recuerda el Nombre entero. Muchi Mira la
+// ------------------------------------------- el Final que MUCHI Ofrece
+// Quien Escribe una Lista no siempre Recuerda el Nombre entero. MUCHI Mira la
 // Línea donde está el Cursor cuando Paran las Teclas y Ofrece el Final. Solo en
 // Cartas sueltas: una Caja no está en ningún Catálogo de Cartas. Y solo si el
 // Juego Tiene quién Conteste — si no lo Tiene, la Consulta Falla y no se Ofrece
