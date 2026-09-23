@@ -1,3 +1,5 @@
+[English](hallazgos-buscadores-en.md) · [Español](hallazgos-buscadores.md)
+
 # Hallazgos en los Buscadores
 
 Muchi Mostraba una Lista de Ofertas y Coronaba la más barata. Eso Funcionó
