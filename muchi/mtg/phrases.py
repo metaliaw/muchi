@@ -36,6 +36,7 @@ class PhraseBook:
     nerd: tuple[Phrase, ...] = ()
     libre: tuple[Phrase, ...] = ()
     bargain: tuple[Phrase, ...] = ()
+    fault: tuple[Phrase, ...] = ()
 
 
 def require_text(value) -> str:
@@ -57,15 +58,15 @@ def build_line_phrases(rows) -> tuple[Phrase, ...]:
 def build_phrase_book(doc: dict) -> PhraseBook:
     """Valida el Catálogo completo; no introduce Defaults alternativos."""
     expected = {"every", "phrases", "greetings", "help", "dark", "light",
-                "nerd", "libre", "bargain"}
+                "nerd", "libre", "bargain", "fault"}
     if not isinstance(doc, dict) or set(doc) != expected:
         raise ValueError(
             "El Catálogo requiere every, phrases, greetings, help, dark, "
-            "light, nerd, libre y bargain.")
+            "light, nerd, libre, bargain y fault.")
     if type(doc["every"]) is not int or doc["every"] <= 0:
         raise ValueError("every debe ser un entero positivo.")
     for key in ("phrases", "greetings", "help", "dark", "light", "nerd",
-                "libre", "bargain"):
+                "libre", "bargain", "fault"):
         if not isinstance(doc[key], list) or not doc[key]:
             raise ValueError(f"{key} debe ser una Lista no vacía.")
 
@@ -80,9 +81,10 @@ def build_phrase_book(doc: dict) -> PhraseBook:
     nerd = build_line_phrases(doc["nerd"])
     libre = build_line_phrases(doc["libre"])
     bargain = build_line_phrases(doc["bargain"])
+    fault = build_line_phrases(doc["fault"])
 
     return PhraseBook(doc["every"], phrases, greetings, help_topics, dark,
-                      light, nerd, libre, bargain)
+                      light, nerd, libre, bargain, fault)
 
 
 def read_group_texts(group: dict) -> list[str]:

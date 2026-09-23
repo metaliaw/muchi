@@ -247,7 +247,7 @@ def test_phrases_file_ships_with_example():
     assert phrases.PHRASES_PATH.exists(), "constants/phrases.yaml is missing"
     doc = yaml.safe_load(phrases.PHRASES_PATH.read_text(encoding="utf-8"))
     assert set(doc) == {"every", "phrases", "greetings", "help", "dark",
-                        "light", "nerd", "libre", "bargain"}
+                        "light", "nerd", "libre", "bargain", "fault"}
 
 
 def test_normalize_name():
