@@ -67,13 +67,22 @@ nerd:
     state: happy
   - text: fuiste digno
     state: happy
-# Lo que Muchi Dice cuando algo Falla: una Consulta que no Llegó, un Servicio
-# caído, una Carta que no Existe. Es una Alerta asíncrona, no el Detalle del
-# Error: el Mensaje técnico Sigue saliendo por el Aviso del Formulario.
-# Las escribió una Persona, como todas las demás.
+# Lo que Muchi Dice cuando algo Falla. Es una Alerta asíncrona: el Mensaje
+# técnico Sigue saliendo por el Aviso del Formulario, y acá solo Entra si la
+# Frase le Abre una Ranura. Las escribió una Persona, como todas las demás.
+# «client» Habla de un 4xx: la Petición estaba mal y Muchi lo Toma personal.
+# «server» Habla de un 5xx y también de la Consulta que nunca Llegó: la Culpa
+# está del otro Lado. «{detalle}» Deja entrar el Resumen técnico; «{codigo}»,
+# el Número que Vino. Una Frase sin Ranura igual Sirve.
 fault:
-  - text: rayozz no la encontré
-    state: angry
+  client:
+    - text: "ERROR 400, qué hice mal? lo siento solo soy un gasto"
+      state: angry
+  server:
+    - text: "AGHHH UNA TIENDA ME MIRÓ FEO ERROR 500: {detalle}"
+      state: angry
+    - text: rayozz no la encontré
+      state: angry
 # Lo que Muchi Dice al Pasar por encima de la Oferta más barata. Las escribió
 # una Persona, como todas las demás.
 bargain:

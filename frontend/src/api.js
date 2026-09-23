@@ -11,6 +11,8 @@ async function request(path, options = {}) {
     // Sin Respuesta no hay Status: la Red se cortó antes de llegar al BFF.
     const error = new Error('La consulta no llegó al servicio. Se puede reintentar.')
     error.retriable = true
+    // Sin Status, la Culpa igual es de este Lado: quien pidió no hizo nada mal.
+    error.status = 0
     throw error
   }
   let body = null
@@ -31,6 +33,7 @@ async function request(path, options = {}) {
     // Un 502 se reintenta; un 409 detiene el Ciclo, la Búsqueda ya no existe.
     error.retriable = body?.retriable ?? response.status >= 500
     error.payload = body
+    error.status = response.status
     throw error
   }
   return body

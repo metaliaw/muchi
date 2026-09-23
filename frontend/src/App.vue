@@ -213,7 +213,7 @@ async function confirmStock() {
              : 'Pregunté, y las baratas siguen en pie', gone ? 'idle' : 'happy')
   } catch (failure) {
     error.value = failure.message
-    sayFault()
+    sayFault(failure)
   } finally {
     confirming.value = false
   }
@@ -285,14 +285,23 @@ function sayFrom(group) {
   say(said.text, said.state)
 }
 
+// De quién fue la Culpa. Un 4xx lo Pidió mal quien Pide; todo lo demás —un
+// 5xx, y la Consulta que nunca Llegó— pasó del otro Lado.
+function blameFor(status) {
+  return status >= 400 && status < 500 ? 'client' : 'server'
+}
+
 // Cualquier Fallo le Saca una Frase a Muchi: una Consulta que no llegó, un
 // Servicio caído, una Carta que no existe. Es una Alerta asíncrona y no el
-// Detalle, que sigue saliendo por el Aviso del Formulario. Sin Catálogo
-// todavía, Muchi igual reacciona: callarse haría parecer que nada falló.
-function sayFault() {
-  const rows = book.value?.fault
+// Detalle, que sigue saliendo por el Aviso del Formulario; la Frase lo Deja
+// entrar solo si Abre una Ranura. Sin Catálogo todavía, Muchi igual reacciona:
+// callarse haría parecer que nada falló.
+function sayFault(failure) {
+  const rows = book.value?.fault?.[blameFor(failure?.status)]
   const said = rows?.length ? rows[Math.floor(Math.random() * rows.length)] : null
-  say(said?.text || 'Miau', said?.state || ALARM_STATE)
+  if (!said) return say('Miau', ALARM_STATE)
+  say(said.text.replaceAll('{detalle}', failure?.message || '')
+              .replaceAll('{codigo}', failure?.status || ''), said.state)
 }
 
 // La Oferta más barata le Saca un Comentario a Muchi. En Móvil no hay Hover y
@@ -336,7 +345,7 @@ async function send() {
     error.value = failure.message
     // Un Rechazo no se reintenta: el Envío pendiente se descarta.
     if (!failure.retriable) pending.value = null
-    sayFault()
+    sayFault(failure)
   }
 }
 
@@ -376,7 +385,7 @@ async function refresh() {
       stopPolling()
       // Un Fallo reintentable Pasa en silencio: hablar en cada Vuelta del
       // Sondeo sería Muchi gritando lo mismo cada tres segundos.
-      sayFault()
+      sayFault(failure)
     }
   } finally {
     refreshing = false
@@ -396,7 +405,7 @@ async function cancel() {
     say('Ya paré de buscar', 'idle')
   } catch (failure) {
     error.value = failure.message
-    sayFault()
+    sayFault(failure)
   }
 }
 
@@ -455,7 +464,7 @@ onMounted(async () => {
     ;[config.value, book.value] = await Promise.all([api.readConfig(), api.readMuchi()])
   } catch (failure) {
     error.value = failure.message
-    sayFault()
+    sayFault(failure)
   }
   // La URL Manda: con Búsqueda escrita, esa se Mira. Sin ella, Vuelve la última.
   if (searchId.value) {
