@@ -88,61 +88,6 @@ Precio ni Stock agotado, convertidas a Pesos cuando hace falta. Un Stock
 desconocido no equivale a disponibilidad confirmada; revisa la Oferta en la
 Tienda antes de comprar.
 
-## El MUCHI Dólar
-
-Algunas Tiendas publican su propio Cambio y la API convierte con él antes de
-entregar la Oferta. Cuando una Oferta llega en Dólares sin esa Referencia,
-MUCHI usa el **MUCHI Dólar**, un Valor único, público y a la vista:
-
-```yaml
-# config/rates.defaults.yaml
-muchi_dolar: 1000
-```
-
-**No es el Dólar del Mercado ni intenta seguirlo.** Es el Cambio que MUCHI
-cobra: cubre el Costo de traer la Carta y el Margen de los Intermediarios que
-harán la Compra cuando MUCHI compre. Por eso se mueve cuando cambian esos
-Costos, no cuando se mueve el Dólar, y por eso está a la Vista: quien compra
-merece saber con qué Número se le convirtió el Precio.
-
-Se muestra en el Carrito junto al Total, y se ajusta editando ese Archivo o
-con `MUCHI_RATES_MUCHI_DOLAR`. Las Ofertas en otras Monedas se muestran con su
-Valor original y quedan fuera del Carrito: sin Cambio declarado, MUCHI no
-inventa uno.
-
-> 🚧 **Todavía estamos fijando cómo se usa.** Lo que está cerrado es *qué es*:
-> un Cambio comercial, con Costo y Margen dentro, publicado a la Vista. Lo que
-> sigue abierto es *cómo se opera*: cada cuánto se revisa el Número, quién lo
-> mueve y con qué Señal, si un solo Valor alcanza para todas las Tiendas o si
-> cada una termina pidiendo el suyo, y qué pasa con una Búsqueda guardada
-> cuando el Número cambia después. Hoy es **un Valor, fijo, editado a Mano**:
-> la Opción más simple que funciona mientras decidimos, no la Decisión tomada.
-> Si lees esto para aprender del Patrón, ese es el Estado real, y el Número que
-> ves en el Carrito es siempre el que se aplicó a ese Carrito.
-> Parte de esa Duda depende de otra Cosa que aún no pasa:
-> [Cuando MUCHI Compre](docs/la-compra.md).
-
-## Estamos trabajando en poder Comprar
-
-Hoy MUCHI te deja en la puerta de la Tienda: comparas, armas el Carrito y la
-Compra la haces tú, una vez por Tienda. **Queremos que MUCHI Compre por ti** —
-elegir el Carrito una vez, pagar una vez, recibir las Cartas juntas.
-
-El Plan es automatizar esa Compra con **Agentes** que hagan el Checkout de cada
-Tienda en vez de una Persona repitiéndolo doce veces. Todavía estamos viendo la
-Implementación y los Costos, y eso no es una Frase de Cortesía: no hay Agente
-corriendo ni Fecha que prometer.
-
-Tiene que ver directo con el [MUCHI Dólar](#el-muchi-dólar). Ese Cambio ya
-incluye el Margen de los Intermediarios que harán la Compra *cuando MUCHI
-compre*; hoy esos Intermediarios son Personas, y son la parte del Costo que un
-Agente podría mover. Si se mueve, falta decidir si el MUCHI Dólar baja o si el
-Costo de comprar sale a la Superficie con su propio Nombre, separado del Cambio.
-
-📄 [Cuando MUCHI Compre](docs/la-compra.md) lo cuenta entero: qué falta
-resolver —el Costo por Compra, la Compra a medias, los Pagos, las Tiendas—, cómo
-se arma el Total hoy y qué Parte se le agregaría.
-
 ## Aparecer en MUCHI
 
 MUCHI no tiene Formulario de alta. Todo lo que aparece acá entró porque alguien
@@ -212,6 +157,66 @@ Configura `MUCHI_ADSENSE_CLIENT` y `MUCHI_ADSENSE_SLOT` con los Identificadores
 públicos entregados por AdSense. Si faltan, MUCHI muestra una Promoción interna
 en vez de solicitar un Anuncio externo. La Tienda promocionada utiliza
 `MUCHI_SPONSOR_NAME`, `MUCHI_SPONSOR_TEXT` y `MUCHI_SPONSOR_URL`.
+
+## El MUCHI Dólar
+
+Algunas Tiendas publican su propio Cambio y la API convierte con él antes de
+entregar la Oferta. Cuando una Oferta llega en Dólares sin esa Referencia,
+MUCHI usa el **MUCHI Dólar**, un Valor único, público y a la vista:
+
+```yaml
+# config/rates.defaults.yaml
+muchi_dolar: 1000
+```
+
+**No es el Dólar del Mercado ni intenta seguirlo.** Es el Cambio que MUCHI
+cobra: cubre el Costo de traer la Carta y el Margen de los Intermediarios que
+harán la Compra cuando MUCHI compre. Por eso se mueve cuando cambian esos
+Costos, no cuando se mueve el Dólar, y por eso está a la Vista: quien compra
+merece saber con qué Número se le convirtió el Precio.
+
+Ya no aparece en la Interfaz del Carrito: se mostraba junto al Envío y al
+Total, y ahí se leía como parte del Envío en vez de una Conversión de
+Moneda, así que la Vista salió hasta que pueda ir junto a un Precio en
+Dólares en vez de junto al Envío. El Cambio se sigue aplicando igual. Se
+ajusta editando ese Archivo o con `MUCHI_RATES_MUCHI_DOLAR`, y la Respuesta
+del Carrito en la API sigue informando el Valor usado, aunque la Interfaz
+no diga nada de él. Las Ofertas en otras Monedas se muestran con su Valor
+original y quedan fuera del Carrito: sin Cambio declarado, MUCHI no
+inventa uno.
+
+> 🚧 **Todavía estamos fijando cómo se usa.** Lo que está cerrado es *qué es*:
+> un Cambio comercial, con Costo y Margen dentro, publicado a la Vista. Lo que
+> sigue abierto es *cómo se opera*: cada cuánto se revisa el Número, quién lo
+> mueve y con qué Señal, si un solo Valor alcanza para todas las Tiendas o si
+> cada una termina pidiendo el suyo, y qué pasa con una Búsqueda guardada
+> cuando el Número cambia después. Hoy es **un Valor, fijo, editado a Mano**:
+> la Opción más simple que funciona mientras decidimos, no la Decisión tomada.
+> Si lees esto para aprender del Patrón, ese es el Estado real, y el Valor
+> usado es siempre el que informa la Respuesta de ese Carrito.
+> Parte de esa Duda depende de otra Cosa que aún no pasa:
+> [Cuando MUCHI Compre](docs/la-compra.md).
+
+## Estamos trabajando en poder Comprar
+
+Hoy MUCHI te deja en la puerta de la Tienda: comparas, armas el Carrito y la
+Compra la haces tú, una vez por Tienda. **Queremos que MUCHI Compre por ti** —
+elegir el Carrito una vez, pagar una vez, recibir las Cartas juntas.
+
+El Plan es automatizar esa Compra con **Agentes** que hagan el Checkout de cada
+Tienda en vez de una Persona repitiéndolo doce veces. Todavía estamos viendo la
+Implementación y los Costos, y eso no es una Frase de Cortesía: no hay Agente
+corriendo ni Fecha que prometer.
+
+Tiene que ver directo con el [MUCHI Dólar](#el-muchi-dólar). Ese Cambio ya
+incluye el Margen de los Intermediarios que harán la Compra *cuando MUCHI
+compre*; hoy esos Intermediarios son Personas, y son la parte del Costo que un
+Agente podría mover. Si se mueve, falta decidir si el MUCHI Dólar baja o si el
+Costo de comprar sale a la Superficie con su propio Nombre, separado del Cambio.
+
+📄 [Cuando MUCHI Compre](docs/la-compra.md) lo cuenta entero: qué falta
+resolver —el Costo por Compra, la Compra a medias, los Pagos, las Tiendas—, cómo
+se arma el Total hoy y qué Parte se le agregaría.
 
 ## Ejecutar el Proyecto
 

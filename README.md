@@ -86,60 +86,6 @@ warnings. The Cart uses Offers with no Price alert and no sold-out Stock,
 converted to Pesos when needed. Unknown Stock is not confirmed availability;
 check the Store's Offer before buying.
 
-## The MUCHI Dollar
-
-Some Stores publish their own exchange Rate, and the API converts with it
-before returning the Offer. When an Offer arrives in Dollars without that
-reference, MUCHI uses the MUCHI Dollar: one public, visible Value.
-
-```yaml
-# config/rates.defaults.yaml
-muchi_dolar: 1000
-```
-
-**It is a commercial exchange Rate, not the market Dollar rate.** It covers
-the Cost of bringing in the Card and the Margin of the Intermediaries who
-will make the Purchase when MUCHI buys. It moves when those Costs change,
-and is visible because Buyers deserve to know the Number used to convert
-the Price.
-
-It appears beside the Cart Total and can be changed in that File or with
-`MUCHI_RATES_MUCHI_DOLAR`. Offers in other Currencies keep their original
-Value and are excluded from the Cart: without a declared Rate, MUCHI
-invents none.
-
-> 🚧 We are still deciding how to operate it. What it is has been settled:
-> a visible commercial Rate including Cost and Margin. What remains open
-> is how often to review it, who changes it and on what Signal, whether
-> one Value covers all Stores, and what happens to a saved Search when
-> the Number changes later. Today it is one fixed Value, edited manually:
-> the simplest working Option while we decide. If you are learning from
-> this Pattern, that is its actual State. The Number shown in the Cart
-> is always the one applied to that Cart.
-> Part of this uncertainty depends on something that has yet to happen:
-> [When MUCHI Buys](docs/la-compra-en.md).
-
-## We Are Working toward Purchasing
-
-Today MUCHI leaves you at the Store's door: you compare, build a Cart and
-make the Purchase yourself, once per Store. We want MUCHI to buy for you:
-choose once, pay once and receive the Cards together.
-
-The Plan is to automate purchasing with Agents that complete each Store's
-Checkout instead of a Person repeating it twelve times. We are still
-examining Implementation and Costs. No Agent is running and there is no
-Date to promise.
-
-This directly relates to the [MUCHI Dollar](#the-muchi-dollar), which
-already includes the Margin of Intermediaries who will buy when MUCHI does.
-Today they are People, and their part of the Cost could change with an
-Agent. If it changes, we must decide whether the MUCHI Dollar falls or
-the purchasing Cost becomes its own visible charge, separate from the Rate.
-
-[When MUCHI Buys](docs/la-compra-en.md) explains the unresolved Cost per
-Purchase, partial Purchases, Payments and Store relationships, how today's
-Total is built and which component would be added.
-
 ## Getting Listed on MUCHI
 
 MUCHI has no registration Form. Everything shown here arrived because
@@ -202,6 +148,64 @@ stays stable across Polls.
 Set `MUCHI_ADSENSE_CLIENT` and `MUCHI_ADSENSE_SLOT` to AdSense's public
 Identifiers. If missing, MUCHI shows an internal Promotion. The promoted
 Store uses `MUCHI_SPONSOR_NAME`, `MUCHI_SPONSOR_TEXT` and `MUCHI_SPONSOR_URL`.
+
+## The MUCHI Dollar
+
+Some Stores publish their own exchange Rate, and the API converts with it
+before returning the Offer. When an Offer arrives in Dollars without that
+reference, MUCHI uses the MUCHI Dollar: one public, visible Value.
+
+```yaml
+# config/rates.defaults.yaml
+muchi_dolar: 1000
+```
+
+**It is a commercial exchange Rate, not the market Dollar rate.** It covers
+the Cost of bringing in the Card and the Margin of the Intermediaries who
+will make the Purchase when MUCHI buys. It moves when those Costs change,
+and is visible because Buyers deserve to know the Number used to convert
+the Price.
+
+It no longer appears in the Cart's interface: shown beside Shipping and
+the Total, it read like part of Shipping instead of a currency Conversion,
+so the display came out until it can sit next to a Dollar Price instead.
+The Conversion still applies the same. It can be changed in that File or
+with `MUCHI_RATES_MUCHI_DOLAR`, and the Cart's API response still reports
+the Value it used, even while the Interface stays quiet about it. Offers
+in other Currencies keep their original Value and are excluded from the
+Cart: without a declared Rate, MUCHI invents none.
+
+> 🚧 We are still deciding how to operate it. What it is has been settled:
+> a visible commercial Rate including Cost and Margin. What remains open
+> is how often to review it, who changes it and on what Signal, whether
+> one Value covers all Stores, and what happens to a saved Search when
+> the Number changes later. Today it is one fixed Value, edited manually:
+> the simplest working Option while we decide. If you are learning from
+> this Pattern, that is its actual State. The Value used is always the
+> one the Cart's response reports for that Cart.
+> Part of this uncertainty depends on something that has yet to happen:
+> [When MUCHI Buys](docs/la-compra-en.md).
+
+## We Are Working toward Purchasing
+
+Today MUCHI leaves you at the Store's door: you compare, build a Cart and
+make the Purchase yourself, once per Store. We want MUCHI to buy for you:
+choose once, pay once and receive the Cards together.
+
+The Plan is to automate purchasing with Agents that complete each Store's
+Checkout instead of a Person repeating it twelve times. We are still
+examining Implementation and Costs. No Agent is running and there is no
+Date to promise.
+
+This directly relates to the [MUCHI Dollar](#the-muchi-dollar), which
+already includes the Margin of Intermediaries who will buy when MUCHI does.
+Today they are People, and their part of the Cost could change with an
+Agent. If it changes, we must decide whether the MUCHI Dollar falls or
+the purchasing Cost becomes its own visible charge, separate from the Rate.
+
+[When MUCHI Buys](docs/la-compra-en.md) explains the unresolved Cost per
+Purchase, partial Purchases, Payments and Store relationships, how today's
+Total is built and which component would be added.
 
 ## Run the Project
 
