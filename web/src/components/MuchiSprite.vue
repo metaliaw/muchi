@@ -69,10 +69,11 @@ function reportRest() {
   <span
     :key="tick"
     class="mu-film"
+    :class="{ 'mu-film--sleep': state === 'sleep' }"
     :style="style"
     :data-state="state"
     role="img"
-    :aria-label="`MUCHI ${state}`"
+    :aria-label="state === 'sleep' ? 'MUCHI durmiendo' : `MUCHI ${state}`"
     @animationend="reportRest"
   />
 </template>
@@ -102,6 +103,25 @@ function reportRest() {
   animation-fill-mode: var(--fill);
 }
 
+.mu-film--sleep { transform-origin: bottom center; animation: mu-breathe 3s ease-in-out infinite; }
+.mu-film--sleep::before {
+  animation: none;
+  transform: translate(calc(-2 * var(--fw) * var(--s) * 1px), 0);
+}
+.mu-film--sleep::after {
+  content: 'zzz'; position: absolute; right: 0; top: 0;
+  color: var(--mu-tinta, #493249); font: bold 14px monospace;
+  line-height: 1; animation: mu-dream 3s ease-out infinite;
+}
+@keyframes mu-breathe {
+  0%, 100% { transform: scale(1, .96) rotate(-3deg); }
+  50% { transform: scale(1.025, 1) rotate(-3deg); }
+}
+@keyframes mu-dream {
+  0% { opacity: 0; translate: 0 8px; }
+  40% { opacity: 1; }
+  100% { opacity: 0; translate: 0 -2px; }
+}
 @keyframes mu-play {
   from { transform: translate(0, calc(var(--row) * var(--fh) * var(--s) * -1px)); }
   to   { transform: translate(calc(var(--n) * var(--fw) * var(--s) * -1px),
@@ -111,6 +131,6 @@ function reportRest() {
 /* Quien pide menos Movimiento se queda con el primer Cuadro, que es una Pose
    de reposo completa: la Hoja no necesita un dibujo aparte para esto. */
 @media (prefers-reduced-motion: reduce) {
-  .mu-film::before { animation: none; }
+  .mu-film, .mu-film::before, .mu-film::after { animation: none; }
 }
 </style>
