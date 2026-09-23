@@ -9,8 +9,8 @@ const props = defineProps({
   match: { type: String, default: 'exact' },
   // Cuántas Copias se Compran en cada Oferta. Vacío Devuelve la Recomendación.
   units: { type: Object, default: () => ({}) },
-  // Muchi Abierto se Queda con el Borde de abajo en Móvil. El Botón del
-  // Carrito Espera a que Muchi se Guarde en vez de Pisarle la Barra.
+  // MUCHI Abierto se Queda con el Borde de abajo en Móvil. El Botón del
+  // Carrito Espera a que MUCHI se Guarde en vez de Pisarle la Barra.
   docked: { type: Boolean, default: false },
   // La Dirección la sirve el Servidor, igual que en el Aviso de la Comunidad.
   repositoryUrl: { type: String, default: '' },
@@ -19,7 +19,7 @@ const props = defineProps({
   ready: { type: Boolean, default: false },
 })
 
-// El Envío ya no se Pregunta: Muchi no Sabe cuánto Cobra cada Tienda, y un
+// El Envío ya no se Pregunta: MUCHI no Sabe cuánto Cobra cada Tienda, y un
 // Número inventado en el Total Hacía Dudar de todo el resto. Este Valor no
 // Aparece en ninguna Cifra mostrada; solo Sirve para que el Reparto Prefiera
 // Juntar Cartas en pocas Tiendas, que es lo que alguien Haría igual.
@@ -53,7 +53,7 @@ watch([open, () => props.searchId, () => props.match, () => props.units], refres
 
 <template>
   <!-- El Carrito Vive en un Cajón a la Derecha. Cerrado es un Botón redondo,
-       igual que Muchi: la Lista se Lee entera y el Total Espera al Lado. -->
+       igual que MUCHI: la Lista se Lee entera y el Total Espera al Lado. -->
   <aside class="mu-carrito" :class="{ abierto: open, ocupado: docked }">
     <button class="mu-carrito__tirador" type="button"
             :aria-expanded="open" @click="open = !open"
@@ -80,12 +80,12 @@ watch([open, () => props.searchId, () => props.match, () => props.units], refres
         <p v-else-if="loading" class="mu-caption">Calculando…</p>
 
         <template v-if="plan && !loading">
-          <!-- El Muchi Dólar Salía acá, al lado del Envío y del Total, y ahí
+          <!-- El MUCHI Dólar Salía acá, al lado del Envío y del Total, y ahí
                Parecía parte del Despacho: quien Leía "1 USD = $1.000" junto a
                un Envío en Pesos Concluía otra cosa. El Cambio sigue Aplicándose
                igual; lo que se Fue es la Explicación en el Lugar equivocado. -->
           <p class="mu-caption">Usa ofertas sin alertas de precio ni stock agotado.</p>
-          <!-- El Total es el de las Cartas. Sumarle un Envío que Muchi Inventó
+          <!-- El Total es el de las Cartas. Sumarle un Envío que MUCHI Inventó
                Sería Dar por cierto un Número que ninguna Tienda Dijo. -->
           <p class="mu-total">Total de las cartas: {{ formatClp(plan.cards_cost) }}</p>
 
@@ -170,7 +170,7 @@ label { display: flex; flex-direction: column; gap: 6px; max-width: 240px; font-
 .mu-tienda h3 { margin: 0; }
 .mu-linea { display: flex; justify-content: space-between; gap: 12px; margin: 4px 0; }
 
-/* En Móvil el Botón se Pone al lado del de Muchi, en la misma Esquina, y el
+/* En Móvil el Botón se Pone al lado del de MUCHI, en la misma Esquina, y el
    Cajón Toma la Pantalla entera: 380px sobre un Teléfono no Dejan Lista
    detrás que Mirar. */
 @media (max-width: 800px) {
@@ -178,7 +178,7 @@ label { display: flex; flex-direction: column; gap: 6px; max-width: 240px; font-
     right: calc(12px + 54px + 10px);
     bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   }
-  /* Muchi abierto se Queda con el Borde entero: el Botón Espera su Turno. */
+  /* MUCHI abierto se Queda con el Borde entero: el Botón Espera su Turno. */
   .mu-carrito.ocupado:not(.abierto) { display: none; }
   .mu-carrito.abierto {
     width: 100%; border-radius: 0; border-left-width: 0;

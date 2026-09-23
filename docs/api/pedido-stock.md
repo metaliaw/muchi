@@ -1,3 +1,5 @@
+[English](pedido-stock-en.md) · [Español](pedido-stock.md)
+
 # Comprobar el Stock antes de Coronar
 
 Septiembre 2026 · la Conversación entre el BFF y la API

@@ -11,7 +11,7 @@ const emit = defineEmits(['look', 'confirm', 'cheap', 'detail'])
 
 // La más barata Merece un Comentario. Solo esa: Celebrar cada Oferta Sería no
 // Celebrar ninguna. Pasar dos veces por la misma no Repite la Frase, así que
-// Recorrer la Lista con el Mouse no Deja a Muchi hablando solo.
+// Recorrer la Lista con el Mouse no Deja a MUCHI hablando solo.
 let cheered = ''
 function cheerCheap(offer) {
   if (!offer.best || cheered === offer.offer_id) return

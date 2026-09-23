@@ -111,7 +111,7 @@ onUnmounted(() => document.removeEventListener('keydown', closeWithKey))
       </div>
 
       <div class="mu-detalle__contenido">
-        <p class="mu-detalle__muchi"><span aria-hidden="true">🐱</span> Esta tienda está dentro de Muchi</p>
+        <p class="mu-detalle__muchi"><span aria-hidden="true">🐱</span> Esta tienda está dentro de MUCHI</p>
         <p class="mu-detalle__tienda">{{ offer.store }}</p>
         <h2 :id="`card-${offer.offer_id}`">{{ name }}</h2>
 
