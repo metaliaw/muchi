@@ -8,10 +8,10 @@ import (
 	"github.com/cangrejometralleta/muchi-api/internal/cardmetadata"
 	"github.com/cangrejometralleta/muchi-api/internal/config"
 	firestorestore "github.com/cangrejometralleta/muchi-api/internal/firestore"
-	"github.com/cangrejometralleta/muchi-api/internal/moxfield"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 	"github.com/cangrejometralleta/muchi-api/internal/source"
 	"github.com/cangrejometralleta/muchi-api/internal/stores"
+	"github.com/cangrejometralleta/muchi-api/internal/stores/moxfield"
 	"github.com/cangrejometralleta/muchi-api/internal/taskqueue"
 )
 
@@ -26,7 +26,8 @@ const userAgent = "muchi-api/1.0"
 // Happens to Satisfy all five with one Firestore Store, and nothing above it
 // Depends on that. Only this Package Names a Vendor.
 type Vault interface {
-	search.SearchStore
+	search.SearchRepository
+	search.SearchItemRepository
 	search.OfferCache
 	search.HealthStore
 	search.WaitingCounter
@@ -102,7 +103,7 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 	// The Shelf Checks its own Stock: a List has no Product Page to Visit.
 	checker := stores.Checker{Fetcher: fetcher, Config: storeConfig, Lists: inventories}
 	service := search.Service{
-		Searches:          store,
+		Repository:        store,
 		Providers:         buildProviders(fetcher, storeConfig),
 		PrintsByGame:      buildPrintLibraries(fetcher, storeConfig),
 		SetsByGame:        buildSetLibraries(fetcher, storeConfig),

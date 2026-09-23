@@ -7,9 +7,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/cangrejometralleta/muchi-api/internal/jumpseller"
 	"github.com/cangrejometralleta/muchi-api/internal/offer"
-	"github.com/cangrejometralleta/muchi-api/internal/shopify"
+	"github.com/cangrejometralleta/muchi-api/internal/stores/jumpseller"
+	"github.com/cangrejometralleta/muchi-api/internal/stores/shopify"
 )
 
 // SourceFetcher Reads Store pages interpreted with https://schema.org/availability.

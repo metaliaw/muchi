@@ -47,12 +47,12 @@ Cada juego entra por un agregador distinto, y no todos indexan lo mismo.
 
 | Juego | Agregador | ¿Trae cajas? |
 | --- | --- | --- |
-| Magic | scry | **No.** Indexa singles |
+| Magic | scry.cl | **No.** Indexa singles |
 | Pokémon | tcgmatch | Sí |
 | Yu-Gi-Oh | tcgmatch | Sí |
 
 Medido, no supuesto. Una pregunta sellada de Magic devolvió 32 ofertas y las 32
-salieron de una tienda directa; scry aportó cero. La misma pregunta por singles
+salieron de una tienda directa; scry.cl aportó cero. La misma pregunta por singles
 le saca más de cien.
 
 Preguntarle igual no es gratis: gasta una petición, espera su timeout completo y
@@ -65,7 +65,7 @@ Por eso un agregador y una tienda pueden declararlo en `config/stores.yaml`:
 
 ```yaml
 search_providers:
-  scry:
+  scrycl:
     sealed: false   # indexa cartas sueltas
   tcgmatch:
     sealed: true

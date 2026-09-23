@@ -17,7 +17,7 @@ import (
 const maxConcurrentSources = 4
 
 type Service struct {
-	Searches          SearchStore
+	Repository        SearchRepository
 	Providers         map[Game]Provider
 	Sources           []OfferSource
 	SourcesByGame     map[Game][]OfferSource
@@ -56,7 +56,7 @@ func (s Service) CreateSearch(ctx context.Context, key string, input CreateInput
 		return Job{}, err
 	}
 	hash := HashPayload(input)
-	job, err := s.Searches.CreateSearch(ctx, key, hash, input)
+	job, err := s.Repository.CreateSearch(ctx, key, hash, input)
 	if err != nil || s.Tasks == nil {
 		return job, err
 	}
@@ -64,16 +64,16 @@ func (s Service) CreateSearch(ctx context.Context, key string, input CreateInput
 }
 
 func (s Service) GetSearch(ctx context.Context, id string) (Job, error) {
-	return s.Searches.GetSearch(ctx, id)
+	return s.Repository.GetSearch(ctx, id)
 }
 
 func (s Service) ListResults(ctx context.Context, id string, page ResultPage) (Result, error) {
-	return s.Searches.ListResults(ctx, id, page)
+	return s.Repository.ListResults(ctx, id, page)
 }
 
 func (s Service) CancelSearch(ctx context.Context, id, key string) (Job, error) {
 	hash := HashPayload(map[string]string{"search_id": id, "action": "cancel"})
-	return s.Searches.CancelSearch(ctx, id, key, hash)
+	return s.Repository.CancelSearch(ctx, id, key, hash)
 }
 
 func (s Service) FindCardOffers(ctx context.Context, game Game, query offer.CardQuery) ([]offer.Offer, []SourceFault, error) {

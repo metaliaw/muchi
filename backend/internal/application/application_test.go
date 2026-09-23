@@ -5,12 +5,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cangrejometralleta/muchi-api/internal/jumpseller"
-	"github.com/cangrejometralleta/muchi-api/internal/moxfield"
-	"github.com/cangrejometralleta/muchi-api/internal/prestashop"
-	"github.com/cangrejometralleta/muchi-api/internal/scry"
-	"github.com/cangrejometralleta/muchi-api/internal/shopify"
+	"github.com/cangrejometralleta/muchi-api/internal/aggregators/scrycl"
 	"github.com/cangrejometralleta/muchi-api/internal/stores"
+	"github.com/cangrejometralleta/muchi-api/internal/stores/jumpseller"
+	"github.com/cangrejometralleta/muchi-api/internal/stores/moxfield"
+	"github.com/cangrejometralleta/muchi-api/internal/stores/prestashop"
+	"github.com/cangrejometralleta/muchi-api/internal/stores/shopify"
+	"github.com/cangrejometralleta/muchi-api/internal/stores/woocommerce"
 )
 
 func TestConfiguredSources(t *testing.T) {
@@ -22,7 +23,7 @@ func TestConfiguredSources(t *testing.T) {
 		store.Enabled = true
 		config.Stores[domain] = store
 	}
-	sources := buildOfferSources(nil, scry.Client{}, config, nil, time.Minute, nil)
+	sources := buildOfferSources(nil, scrycl.Client{}, config, nil, time.Minute, nil)
 	lists := 0
 	catalogs := 0
 	shopifyStores := 0
@@ -41,7 +42,7 @@ func TestConfiguredSources(t *testing.T) {
 			shopifyStores++
 		case prestashop.Client:
 			prestashopStores++
-		case stores.Catalog:
+		case woocommerce.Client:
 			catalogs++
 		}
 	}
@@ -57,7 +58,7 @@ func TestConfiguredSources(t *testing.T) {
 	store := config.Stores["el-wombat-rabioso-tcg"]
 	store.Enabled = false
 	config.Stores["el-wombat-rabioso-tcg"] = store
-	if sources := buildOfferSources(nil, scry.Client{}, config, nil, time.Minute, nil); len(sources) != 15 {
+	if sources := buildOfferSources(nil, scrycl.Client{}, config, nil, time.Minute, nil); len(sources) != 15 {
 		t.Fatalf("disabled lists still active: %d", len(sources))
 	}
 	for domain, store := range config.Stores {
@@ -66,7 +67,7 @@ func TestConfiguredSources(t *testing.T) {
 			config.Stores[domain] = store
 		}
 	}
-	if sources := buildOfferSources(nil, scry.Client{}, config, nil, time.Minute, nil); len(sources) != 10 {
+	if sources := buildOfferSources(nil, scrycl.Client{}, config, nil, time.Minute, nil); len(sources) != 10 {
 		t.Fatalf("disabled Shopify stores still active: %d", len(sources))
 	}
 	for domain, store := range config.Stores {
@@ -75,7 +76,7 @@ func TestConfiguredSources(t *testing.T) {
 			config.Stores[domain] = store
 		}
 	}
-	if sources := buildOfferSources(nil, scry.Client{}, config, nil, time.Minute, nil); len(sources) != 5 {
+	if sources := buildOfferSources(nil, scrycl.Client{}, config, nil, time.Minute, nil); len(sources) != 5 {
 		t.Fatalf("disabled Jumpseller stores still active: %d", len(sources))
 	}
 }
@@ -102,15 +103,15 @@ func TestConfiguredLocationNamesItsStore(t *testing.T) {
 	}
 }
 
-func TestSourcesWithoutScry(t *testing.T) {
+func TestSourcesWithoutScryCL(t *testing.T) {
 	config, err := stores.LoadStoreConfig("../../config/stores.yaml", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	sources := buildOfferSources(nil, nil, config, nil, time.Minute, nil)
 	for _, source := range sources {
-		if _, found := source.(scry.Client); found {
-			t.Fatal("Scry still active")
+		if _, found := source.(scrycl.Client); found {
+			t.Fatal("Scry.cl still active")
 		}
 	}
 	if len(sources) != 19 {
@@ -118,7 +119,7 @@ func TestSourcesWithoutScry(t *testing.T) {
 	}
 }
 
-func TestSlowCatalogsPausedWithScryAvailable(t *testing.T) {
+func TestSlowCatalogsPausedWithScryCLAvailable(t *testing.T) {
 	config, err := stores.LoadStoreConfig("../../config/stores.yaml", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -129,12 +130,12 @@ func TestSlowCatalogsPausedWithScryAvailable(t *testing.T) {
 			t.Fatalf("slow catalog active or missing: %s", domain)
 		}
 	}
-	sources := buildOfferSources(nil, scry.Client{}, config, nil, time.Minute, nil)
+	sources := buildOfferSources(nil, scrycl.Client{}, config, nil, time.Minute, nil)
 	if len(sources) != 20 {
 		t.Fatalf("sources=%d", len(sources))
 	}
-	if _, ok := sources[0].(scry.Client); !ok {
-		t.Fatal("Scry missing")
+	if _, ok := sources[0].(scrycl.Client); !ok {
+		t.Fatal("Scry.cl missing")
 	}
 	for _, source := range sources {
 		if client, ok := source.(jumpseller.Client); ok && client.Domain != "www.deckscards.cl" {

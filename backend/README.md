@@ -59,15 +59,15 @@ Offer sources are [scry.cl](https://scry.cl) and the stores enabled in
 `config/stores.yaml`: WooCommerce, Shopify, and Jumpseller catalogs, plus
 inventories published through Moxfield. Direct connections to Magic4Ever,
 Cartas La Fortaleza, ChronoMagic, and GameQuest are currently disabled because
-their Jumpseller pagination is slow. Scry remains enabled and can still show its
+their Jumpseller pagination is slow. scry.cl remains enabled and can still show its
 published offers. `enabled: false` also prevents direct stock checks. To
 reactivate a store, change that value in `config/stores.yaml` and restart the API
 and worker.
 
-Muchi reads published prices from Scry pages in CLP, along with the store and
+Muchi reads published prices from scry.cl pages in CLP, along with the store and
 variant. Stock verification queries configured stores; a published price does
-not confirm stock. Scry's URL, enabled state, and community setting are configured
-under `search_providers` in `config/stores.yaml`. The reader uses Scry's public
+not confirm stock. scry.cl's URL, enabled state, and community setting are configured
+under `search_providers` in `config/stores.yaml`. The reader uses scry.cl's public
 HTML and does not force a cache refresh.
 
 The [game search flow](docs/busqueda-proveedores.md) explains how YAML combines
@@ -106,13 +106,21 @@ as an empty list. Other sources remain available.
 To check the nine configured public lists:
 
 ```sh
-MUCHI_TEST_MOXFIELD_LIVE=1 go test ./internal/moxfield -run TestPublicLists -v
+MUCHI_TEST_MOXFIELD_LIVE=1 go test ./internal/stores/moxfield -run TestPublicLists -v
 ```
 
 ## Commands
 
 - `muchi-api serve`: serves HTTP and metrics.
 - `muchi-api work`: processes pending items with renewable leases.
+
+Worker navigation: local `work` enters through
+[`cmd/muchi-api/main.go`](cmd/muchi-api/main.go); Cloud Tasks enters through
+[`ProcessSearch`](function.go), selected by
+[`deploy-worker.sh`](deploy-worker.sh). Both build the worker in
+[`internal/application/worker.go`](internal/application/worker.go) and run
+[`internal/search/worker.go`](internal/search/worker.go), which calls the shared
+search service.
 
 Firestore retains searches and results for 24 hours. Offer caching keeps
 independent positive and negative TTLs. Cloud Tasks invokes a private function

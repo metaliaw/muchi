@@ -140,7 +140,7 @@ hundredths to currency units. It accepts set suffixes and rejects names of other
 cards. Each offer retains a URL with `?variant=ID`; stock checks query that
 variant, even when it is sold out.
 
-Optional live test: `MUCHI_TEST_SHOPIFY_LIVE=1 go test ./internal/shopify -run TestLiveSolRing -v`.
+Optional live test: `MUCHI_TEST_SHOPIFY_LIVE=1 go test ./internal/stores/shopify -run TestLiveSolRing -v`.
 These configuration and reader changes need a new deployment to reach GCP.
 
 Direct validation with the Go reader found **74 available Sol Ring offers**:
@@ -179,7 +179,7 @@ them returned HTTP 403. Search uses this API; prices and stock are read from the
 JSON data published on product pages.
 
 Optional test:
-`MUCHI_TEST_JUMPSELLER_LIVE=1 go test ./internal/jumpseller -run TestLiveSolRing -v -timeout 90m`.
+`MUCHI_TEST_JUMPSELLER_LIVE=1 go test ./internal/stores/jumpseller -run TestLiveSolRing -v -timeout 90m`.
 Fixtures for the four stores retain relevant public fragments for checking price
 and stock without network access. Deployment to GCP is still required.
 

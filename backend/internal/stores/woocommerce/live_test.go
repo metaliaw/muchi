@@ -1,4 +1,4 @@
-package stores_test
+package woocommerce_test
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/cangrejometralleta/muchi-api/internal/source"
-	"github.com/cangrejometralleta/muchi-api/internal/stores"
+	"github.com/cangrejometralleta/muchi-api/internal/stores/woocommerce"
 
 	"github.com/cangrejometralleta/muchi-api/internal/offer"
 )
@@ -18,7 +18,7 @@ func TestKonohaLiveProbe(t *testing.T) {
 	if os.Getenv("MUCHI_TEST_STORES_LIVE") != "1" {
 		t.Skip("set MUCHI_TEST_STORES_LIVE=1")
 	}
-	client := stores.Catalog{
+	client := woocommerce.Client{
 		Fetcher: source.Client{
 			HTTP: &http.Client{Timeout: 15 * time.Second}, MaxAttempts: 2,
 			BaseDelay: time.Second, UserAgent: "muchi-api/1.0",

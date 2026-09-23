@@ -46,15 +46,15 @@ Each game uses a different aggregator, and they do not all index the same things
 
 | Game | Aggregator | Returns boxes? |
 | --- | --- | --- |
-| Magic | scry | **No.** It indexes singles |
+| Magic | scry.cl | **No.** It indexes singles |
 | Pokémon | tcgmatch | Yes |
 | Yu-Gi-Oh! | tcgmatch | Yes |
 
 This was measured, not assumed. A sealed Magic query returned 32 offers, all 32
-from direct stores; scry contributed none. The same singles query returns more
+from direct stores; scry.cl contributed none. The same singles query returns more
 than one hundred.
 
-Querying scry anyway is not free: it spends a request, waits for its full timeout,
+Querying scry.cl anyway is not free: it spends a request, waits for its full timeout,
 and returns nothing. That wait is marked as an incomplete response, making the
 caller think the box might exist somewhere that was not searched.
 
@@ -64,7 +64,7 @@ That is why an aggregator or store can declare it in `config/stores.yaml`:
 
 ```yaml
 search_providers:
-  scry:
+  scrycl:
     sealed: false   # indexes loose cards
   tcgmatch:
     sealed: true
@@ -121,7 +121,7 @@ The server knew exactly which store failed and why, yet returned a blank error.
 
 It looked like pure intermittency. The same query returned 500 once and 32 offers
 the next time, depending on whether any store managed to answer. Sealed Magic was
-stacked against success because scry contributed a guaranteed failure to every
+stacked against success because scry.cl contributed a guaranteed failure to every
 query.
 
 Today `findCardOffers` returns 500 only when there is an error **and** no

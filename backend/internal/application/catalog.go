@@ -7,15 +7,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cangrejometralleta/muchi-api/internal/aggregators/scrycl"
+	"github.com/cangrejometralleta/muchi-api/internal/aggregators/tcgmatch"
 	"github.com/cangrejometralleta/muchi-api/internal/cardmetadata"
-	"github.com/cangrejometralleta/muchi-api/internal/jumpseller"
-	"github.com/cangrejometralleta/muchi-api/internal/moxfield"
-	"github.com/cangrejometralleta/muchi-api/internal/prestashop"
-	"github.com/cangrejometralleta/muchi-api/internal/scry"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
-	"github.com/cangrejometralleta/muchi-api/internal/shopify"
 	"github.com/cangrejometralleta/muchi-api/internal/stores"
-	"github.com/cangrejometralleta/muchi-api/internal/tcgmatch"
+	"github.com/cangrejometralleta/muchi-api/internal/stores/jumpseller"
+	"github.com/cangrejometralleta/muchi-api/internal/stores/moxfield"
+	"github.com/cangrejometralleta/muchi-api/internal/stores/prestashop"
+	"github.com/cangrejometralleta/muchi-api/internal/stores/shopify"
+	"github.com/cangrejometralleta/muchi-api/internal/stores/woocommerce"
 )
 
 const setCatalogTTL = 24 * time.Hour
@@ -94,7 +95,7 @@ func appendConfiguredSources(sources []search.OfferSource, fetcher stores.Source
 		}
 	case "woocommerce":
 		if allowed["woocommerce"] {
-			sources = append(sources, stores.Catalog{Fetcher: fetcher, Domain: domain, Name: store.Name})
+			sources = append(sources, woocommerce.Client{Fetcher: fetcher, Domain: domain, Name: store.Name})
 		}
 	case "prestashop":
 		if allowed["prestashop"] {
@@ -195,8 +196,8 @@ func buildProviders(fetcher stores.SourceFetcher, config stores.Config) map[sear
 				continue
 			}
 			switch provider.Type {
-			case "scry":
-				providers[search.Game(game)] = scry.Client{Fetcher: fetcher, BaseURL: provider.URL, ExcludeCommunity: !provider.Community}
+			case "scrycl":
+				providers[search.Game(game)] = scrycl.Client{Fetcher: fetcher, BaseURL: provider.URL, ExcludeCommunity: !provider.Community}
 			case "tcgmatch":
 				providers[search.Game(game)] = buildTCGMatch(fetcher, config, game)
 			}
@@ -213,7 +214,7 @@ func buildTCGMatch(fetcher stores.SourceFetcher, config stores.Config, game stri
 	return client
 }
 
-// buildOfferSources Combines Scry with Enabled Store Catalogs. A nil Catalog Leaves Scry Out.
+// buildOfferSources Combines Scry.cl with Enabled Store Catalogs. A nil Catalog Leaves Scry.cl Out.
 func buildOfferSources(fetcher stores.SourceFetcher, catalog search.OfferSource, config stores.Config, cache moxfield.InventoryCache, ttl time.Duration, logger *slog.Logger) []search.OfferSource {
 	sources := []search.OfferSource{}
 	if catalog != nil {

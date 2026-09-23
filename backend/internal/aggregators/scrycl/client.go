@@ -1,4 +1,4 @@
-package scry
+package scrycl
 
 import (
 	"bytes"
@@ -25,8 +25,8 @@ type SourceFetcher interface {
 type Client struct {
 	Fetcher SourceFetcher
 	BaseURL string
-	// ExcludeCommunity Drops the Offers Scry hosts itself: a Community Seller
-	// holds a page under the Scry Domain, never a Storefront of its own.
+	// ExcludeCommunity Drops the Offers Scry.cl hosts itself: a Community Seller
+	// holds a page under the Scry.cl Domain, never a Storefront of its own.
 	ExcludeCommunity bool
 }
 
@@ -36,16 +36,16 @@ func (c Client) Search(ctx context.Context, query offer.CardQuery) ([]offer.Offe
 
 var slugSeparators = regexp.MustCompile(`[^a-z0-9]+`)
 
-// FindOffers Reads the Saved Offers Published on a Scry Card Page.
+// FindOffers Reads the Saved Offers Published on a Scry.cl Card Page.
 func (c Client) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer.Offer, error) {
 	name := query.Name
 	base, err := url.Parse(c.BaseURL)
 	if err != nil || base.Host == "" || (base.Scheme != "https" && base.Scheme != "http") {
-		return nil, errors.New("invalid Scry URL")
+		return nil, errors.New("invalid Scry.cl URL")
 	}
 	slug := buildCardSlug(name)
 	if slug == "" {
-		return nil, errors.New("empty Scry card slug")
+		return nil, errors.New("empty Scry.cl card slug")
 	}
 	target := strings.TrimRight(c.BaseURL, "/") + "/card/" + slug
 	data, err := c.Fetcher.FetchSource(ctx, base.Host, target)
@@ -80,7 +80,7 @@ func buildCardSlug(name string) string {
 func readOffers(data []byte) ([]offer.Offer, error) {
 	document, err := html.Parse(bytes.NewReader(data))
 	if err != nil {
-		return nil, fmt.Errorf("decode Scry page: %w", err)
+		return nil, fmt.Errorf("decode Scry.cl page: %w", err)
 	}
 	items := make([]offer.Offer, 0)
 	found := false
@@ -99,7 +99,7 @@ func readOffers(data []byte) ([]offer.Offer, error) {
 		items = append(items, item)
 	}
 	if !found {
-		return nil, errors.New("Scry page missing results container")
+		return nil, errors.New("Scry.cl page missing results container")
 	}
 	return offer.DeduplicateOffers(items), nil
 }
@@ -113,7 +113,7 @@ func readAttributes(node *html.Node) map[string]string {
 }
 
 // withoutCommunityOffers Keeps the Offers that link out to a Storefront. A
-// Community Offer points back under the Scry Domain —marketplace.scry.cl—
+// Community Offer points back under the Scry.cl Domain —marketplace.scry.cl—
 // because the Seller has no Site of its own to link to.
 func withoutCommunityOffers(items []offer.Offer, host string) []offer.Offer {
 	kept := items[:0]
@@ -137,7 +137,7 @@ func buildOffer(attrs map[string]string) (offer.Offer, error) {
 	}
 	price, err := strconv.ParseInt(item.PriceAmount, 10, 64)
 	if err != nil || price <= 0 || item.CardName == "" || offer.ValidateOffer(item) != nil {
-		return offer.Offer{}, errors.New("invalid Scry offer")
+		return offer.Offer{}, errors.New("invalid Scry.cl offer")
 	}
 	identity := strings.Join([]string{item.Store, item.URL, item.VariantID}, "|")
 	item.ID = fmt.Sprintf("scry:%x", sha256.Sum256([]byte(identity)))

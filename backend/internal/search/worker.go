@@ -10,7 +10,7 @@ import (
 )
 
 type Worker struct {
-	Store           SearchStore
+	Store           SearchItemRepository
 	Service         Service
 	Owner           string
 	LeaseDuration   time.Duration
@@ -45,7 +45,7 @@ func (w Worker) processNext(ctx context.Context) error {
 	go w.renewLease(work, item.ID)
 
 	query := offer.CardQuery{Name: item.NormalizedName, Match: item.Match, Kind: item.Kind}
-	items, faults, sourceErr := w.Service.collectOffers(work, item.Game, query)
+	items, faults, sourceErr := w.Service.FindCardOffers(work, item.Game, query)
 	if item.VerifyStock {
 		items = w.verifyStocks(work, items)
 	}

@@ -8,17 +8,6 @@ import (
 	"github.com/cangrejometralleta/muchi-api/internal/offer"
 )
 
-// SearchStore Persists Searches under https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml.
-type SearchStore interface {
-	CreateSearch(context.Context, string, string, CreateInput) (Job, error)
-	GetSearch(context.Context, string) (Job, error)
-	ListResults(context.Context, string, ResultPage) (Result, error)
-	CancelSearch(context.Context, string, string, string) (Job, error)
-	ClaimSearchItem(context.Context, string, time.Duration) (Item, error)
-	RenewItemLease(context.Context, string, string, time.Duration) error
-	CompleteSearchItem(context.Context, Item, []offer.Offer) error
-}
-
 // TaskQueue Dispatches Card Work through https://cloud.google.com/tasks/docs/reference/rest.
 type TaskQueue interface {
 	DispatchSearch(context.Context, Job) error

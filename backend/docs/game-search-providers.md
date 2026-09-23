@@ -48,7 +48,7 @@ flowchart LR
 
     subgraph Aggregators[Aggregators]
         TCGMatch[TCGMatch]
-        Scry[Scry]
+        ScryCL[scry.cl]
     end
 
     subgraph Commerce[Commerce adapters]

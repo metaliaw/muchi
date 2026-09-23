@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/cangrejometralleta/muchi-api/internal/moxfield"
+	"github.com/cangrejometralleta/muchi-api/internal/stores/moxfield"
 	"gopkg.in/yaml.v3"
 )
 
@@ -195,7 +195,7 @@ func validateSearchProviders(providers map[string]SearchProviderConfig, games ma
 	}
 	for name, provider := range providers {
 		providerURL, err := url.ParseRequestURI(provider.URL)
-		validType := provider.Type == "scry" || provider.Type == "tcgmatch" || provider.Type == "tcgdex"
+		validType := provider.Type == "scrycl" || provider.Type == "tcgmatch" || provider.Type == "tcgdex"
 		if name == "" || !validType || err != nil || providerURL.Scheme != "https" || providerURL.Host == "" || len(provider.Games) == 0 {
 			return errors.New("invalid search provider configuration")
 		}

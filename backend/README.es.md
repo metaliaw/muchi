@@ -64,14 +64,14 @@ Las fuentes de ofertas son [scry.cl](https://scry.cl) y las tiendas habilitadas
 en `config/stores.yaml`: catálogos WooCommerce, Shopify y Jumpseller, e inventarios publicados en Moxfield.
 Por ahora las conexiones directas de Magic4Ever, Cartas La Fortaleza, ChronoMagic
 y GameQuest están deshabilitadas por la latencia de su paginación Jumpseller.
-Scry permanece habilitado y puede seguir mostrando sus ofertas publicadas.
+scry.cl permanece habilitado y puede seguir mostrando sus ofertas publicadas.
 `enabled: false` también evita consultar directamente su stock. Para reactivarlas,
 cambia ese valor en `config/stores.yaml` y reinicia API y worker.
 
-De Scry se leen los precios guardados en sus páginas, en CLP, junto con tienda y variante.
+De scry.cl se leen los precios guardados en sus páginas, en CLP, junto con tienda y variante.
 La verificación de stock consulta las tiendas configuradas; un precio publicado no confirma stock.
-La URL, Activación y Comunidad de Scry se Configuran en `search_providers` dentro de `config/stores.yaml`.
-El lector depende del HTML público de Scry y no fuerza una actualización de su caché.
+La URL, Activación y Comunidad de scry.cl se Configuran en `search_providers` dentro de `config/stores.yaml`.
+El lector depende del HTML público de scry.cl y no fuerza una actualización de su caché.
 
 El [flujo de búsqueda por juego](docs/busqueda-proveedores.md) explica cómo se
 combinan agregadores y tiendas desde el YAML, cómo se elige cada adaptador y cómo
@@ -113,13 +113,21 @@ vacía. Las otras fuentes siguen disponibles.
 Para comprobar las nueve listas públicas configuradas:
 
 ```sh
-MUCHI_TEST_MOXFIELD_LIVE=1 go test ./internal/moxfield -run TestPublicLists -v
+MUCHI_TEST_MOXFIELD_LIVE=1 go test ./internal/stores/moxfield -run TestPublicLists -v
 ```
 
 ## Comandos
 
 - `muchi-api serve`: sirve HTTP y métricas.
 - `muchi-api work`: procesa elementos pendientes con leases renovables.
+
+Ruta del worker: `work` local entra por
+[`cmd/muchi-api/main.go`](cmd/muchi-api/main.go); Cloud Tasks entra por
+[`ProcessSearch`](function.go), seleccionado por
+[`deploy-worker.sh`](deploy-worker.sh). Ambos construyen el worker en
+[`internal/application/worker.go`](internal/application/worker.go) y ejecutan
+[`internal/search/worker.go`](internal/search/worker.go), que llama al servicio
+de búsqueda compartido.
 
 Firestore conserva búsquedas y resultados durante 24 horas. La caché de ofertas
 mantiene sus TTL positivos y negativos independientes. Cloud Tasks ejecuta una

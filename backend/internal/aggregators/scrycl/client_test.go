@@ -1,4 +1,4 @@
-package scry
+package scrycl
 
 import (
 	"context"

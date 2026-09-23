@@ -70,7 +70,7 @@ func (s Service) readOfferStock(ctx context.Context, item offer.Offer) OfferStoc
 func (s Service) collectSearchOffers(ctx context.Context, id string) (map[string]offer.Offer, error) {
 	found := map[string]offer.Offer{}
 	for cursor := 0; ; {
-		page, err := s.Searches.ListResults(ctx, id, ResultPage{After: cursor, Limit: maxResultPage})
+		page, err := s.Repository.ListResults(ctx, id, ResultPage{After: cursor, Limit: maxResultPage})
 		if err != nil {
 			return nil, err
 		}

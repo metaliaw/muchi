@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cangrejometralleta/muchi-api/internal/moxfield"
 	"github.com/cangrejometralleta/muchi-api/internal/source"
 	"github.com/cangrejometralleta/muchi-api/internal/stores"
+	"github.com/cangrejometralleta/muchi-api/internal/stores/moxfield"
 )
 
 type measuredCache struct{ count, size int }
@@ -32,7 +32,7 @@ func TestPublicLists(t *testing.T) {
 	if os.Getenv("MUCHI_TEST_MOXFIELD_LIVE") != "1" {
 		t.Skip("set MUCHI_TEST_MOXFIELD_LIVE=1 to query public lists")
 	}
-	config, err := stores.LoadStoreConfig("../../config/stores.yaml", nil)
+	config, err := stores.LoadStoreConfig("../../../config/stores.yaml", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

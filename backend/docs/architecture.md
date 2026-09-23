@@ -69,7 +69,7 @@ flowchart TB
     end
 
     subgraph providers[External Sources]
-      aggregators[Scry and TCGMatch<br/>Aggregators]
+      aggregators[scry.cl and TCGMatch<br/>Aggregators]
       stores[WooCommerce, Shopify,<br/>Jumpseller, and PrestaShop]
         lists[Moxfield Lists]
     end
@@ -135,22 +135,32 @@ explains this invariant.
 ```mermaid
 flowchart LR
     function[function.go<br/>Cloud Function Entry Points]
-    transport[internal/httpapi<br/>HTTP Contract]
+    transport[internal/httpapi<br/>Handlers and HTTP DTOs]
     application[internal/application<br/>Composition]
-    domain[internal/search and offer<br/>Domain and Ports]
+    domain[internal/search and offer<br/>Search Service]
+    repository[SearchRepository<br/>Persistence Interface]
+    worker[search.Worker<br/>Background Work]
     config[config/stores.yaml<br/>Games, Origins, and Stores]
     adapters[Adapters<br/>Firestore, Tasks, and Sources]
 
     function --> transport
     function --> application
     transport --> domain
+    worker --> domain
+    domain --> repository
+    repository --> adapters
     config --> application
     application --> domain
     application --> adapters
     adapters --> domain
 ```
 
-The domain declares needs such as `SearchStore`, `TaskQueue`, `Provider`,
+The HTTP handlers decode request DTOs and pass business inputs to the search
+service. The worker calls the same service without HTTP. The service reaches
+persistence through `SearchRepository`, which Firestore implements and tests can
+replace with an in-memory implementation.
+
+The domain also declares needs such as `TaskQueue`, `Provider`,
 `OfferSource`, `StockChecker`, and `OfferCache`. `internal/application/catalog.go`
 builds the aggregators in `Providers` and groups stores in `SourcesByGame` from
 the games, origins, platforms, and enabled states in YAML. It also gathers print
@@ -158,6 +168,11 @@ and set catalogs, plus the product-kind limits. `internal/application/applicatio
 opens connections and assembles the `Runtime` from those parts. Provider
 packages implement the ports, so search rules do not import Firestore, Cloud
 Tasks, or concrete HTTP client types.
+
+Store configuration and stock checking live in `internal/stores`. Its
+`jumpseller`, `shopify`, `prestashop`, `woocommerce`, and `moxfield` subpackages
+contain the platform-specific clients. Offer aggregators live separately in
+`internal/aggregators`.
 
 The [game provider flow](busqueda-proveedores.md) details this composition. The
 [card identity guide](identidad-cartas-juegos-ediciones.md) separates searches,

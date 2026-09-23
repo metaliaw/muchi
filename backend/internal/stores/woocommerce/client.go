@@ -1,4 +1,4 @@
-package stores
+package woocommerce
 
 import (
 	"context"
@@ -12,8 +12,12 @@ import (
 	"github.com/cangrejometralleta/muchi-api/internal/offer"
 )
 
-// Catalog Reads the Public WooCommerce Store API for a Configured Store.
-type Catalog struct {
+type SourceFetcher interface {
+	FetchSource(context.Context, string, string) ([]byte, error)
+}
+
+// Client Reads the Public WooCommerce Store API for a Configured Store.
+type Client struct {
 	Fetcher SourceFetcher
 	Domain  string
 	Name    string
@@ -31,7 +35,7 @@ type productReply struct {
 	} `json:"prices"`
 }
 
-func (c Catalog) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer.Offer, error) {
+func (c Client) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer.Offer, error) {
 	name := query.Name
 	items := make([]offer.Offer, 0)
 	for page := 1; ; page++ {
@@ -60,7 +64,7 @@ func (c Catalog) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer
 	}
 }
 
-func (c Catalog) buildOffer(product productReply) (offer.Offer, error) {
+func (c Client) buildOffer(product productReply) (offer.Offer, error) {
 	price, err := formatPrice(product.Prices.Price, product.Prices.MinorUnit)
 	if err != nil {
 		return offer.Offer{}, err
@@ -98,4 +102,4 @@ func formatPrice(value string, minor int) (string, error) {
 }
 
 // SourceName Identifies this Store the Way the Health Report Names it.
-func (c Catalog) SourceName() string { return c.Domain }
+func (c Client) SourceName() string { return c.Domain }

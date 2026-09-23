@@ -14,10 +14,10 @@ import (
 	"time"
 
 	"github.com/cangrejometralleta/muchi-api/internal/cardmetadata"
-	"github.com/cangrejometralleta/muchi-api/internal/moxfield"
 	"github.com/cangrejometralleta/muchi-api/internal/offer"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 	"github.com/cangrejometralleta/muchi-api/internal/stores"
+	"github.com/cangrejometralleta/muchi-api/internal/stores/moxfield"
 )
 
 type API struct {
@@ -161,16 +161,6 @@ func (a API) createSearch(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusAccepted, job)
 }
 
-func decodeSearch(r *http.Request) (search.CreateInput, error) {
-	var input search.CreateInput
-	err := decodeJSON(r, &input)
-	if err == nil && input.Game == "" {
-		input.Game = search.GameMagic
-	}
-
-	return input, err
-}
-
 func (a API) getSearch(w http.ResponseWriter, r *http.Request) {
 	job, err := a.Searches.GetSearch(r.Context(), r.PathValue("search_id"))
 	if err != nil {
@@ -272,23 +262,12 @@ func (a API) refreshStoreInventory(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a API) findCardOffers(w http.ResponseWriter, r *http.Request) {
-	game := search.Game(r.URL.Query().Get("game"))
-	if game == "" {
-		game = search.GameMagic
-	}
-	match, err := offer.ReadMatchMode(r.URL.Query().Get("match"))
+	game, query, err := decodeOfferQuery(r)
 	if err != nil {
 		a.writeError(w, r, search.ErrInvalid)
 		return
 	}
-	kind, err := offer.ReadProductKind(r.URL.Query().Get("kind"))
-	if err != nil {
-		a.writeError(w, r, search.ErrInvalid)
-		return
-	}
-	name := r.URL.Query().Get("name")
-	items, faults, err := a.Searches.FindCardOffers(r.Context(), game,
-		offer.CardQuery{Name: name, Match: match, Kind: kind})
+	items, faults, err := a.Searches.FindCardOffers(r.Context(), game, query)
 	// Every Source Falling is an Answer, not a Broken Server. The Faults Name
 	// which ones Fell and Why, and the Contract already Says a non-empty List
 	// Means the Offers are Incomplete. A 500 Threw that List away and Told the
@@ -311,7 +290,7 @@ func (a API) findCardOffers(w http.ResponseWriter, r *http.Request) {
 		items = []offer.Offer{}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"name": name, "match": match, "kind": kind, "offers": items, "faults": faults,
+		"name": query.Name, "match": query.Match, "kind": query.Kind, "offers": items, "faults": faults,
 	})
 }
 

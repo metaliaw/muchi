@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cangrejometralleta/muchi-api/internal/prestashop"
 	"github.com/cangrejometralleta/muchi-api/internal/source"
+	"github.com/cangrejometralleta/muchi-api/internal/stores/prestashop"
 
 	"github.com/cangrejometralleta/muchi-api/internal/offer"
 )

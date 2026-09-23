@@ -14,7 +14,6 @@ import (
 	"github.com/cangrejometralleta/muchi-api/internal/config"
 	"github.com/cangrejometralleta/muchi-api/internal/httpapi"
 	"github.com/cangrejometralleta/muchi-api/internal/metrics"
-	"github.com/cangrejometralleta/muchi-api/internal/search"
 )
 
 func main() {
@@ -42,7 +41,7 @@ func runCommand(logger *slog.Logger, args []string) error {
 	if args[0] == "serve" {
 		return serveAPI(ctx, config, logger, runtime)
 	}
-	return workSearches(ctx, config, runtime.Service)
+	return workSearches(ctx, config, runtime)
 }
 
 func serveAPI(ctx context.Context, config config.Config, logger *slog.Logger, runtime application.Runtime) error {
@@ -78,15 +77,8 @@ func buildAPIServer(config config.Config, handler http.Handler) *http.Server {
 	}
 }
 
-func workSearches(ctx context.Context, config config.Config, service search.Service) error {
-	worker := search.Worker{
-		Store:           service.Searches,
-		Service:         service,
-		Owner:           config.WorkerID,
-		LeaseDuration:   config.LeaseDuration,
-		PollInterval:    config.PollInterval,
-		StockCheckLimit: config.StockCheckLimit,
-	}
+func workSearches(ctx context.Context, config config.Config, runtime application.Runtime) error {
+	worker := application.BuildSearchWorker(runtime, config)
 	return worker.RunWorker(ctx)
 }
 

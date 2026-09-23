@@ -12,7 +12,7 @@ type productFetcher struct{ target string }
 
 func (f *productFetcher) FetchSource(_ context.Context, _, target string) ([]byte, error) {
 	f.target = target
-	return os.ReadFile("../jumpseller/testdata/www.magic4ever.cl.html")
+	return os.ReadFile("jumpseller/testdata/www.magic4ever.cl.html")
 }
 func TestCheckJumpsellerVariant(t *testing.T) {
 	fetcher := &productFetcher{}

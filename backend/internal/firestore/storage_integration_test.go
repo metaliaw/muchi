@@ -11,9 +11,18 @@ import (
 	"time"
 
 	"github.com/cangrejometralleta/muchi-api/internal/search"
+	"github.com/cangrejometralleta/muchi-api/internal/search/repositorytest"
 )
 
 const testSearchTTL = 24 * time.Hour
+
+func TestSearchItemRepositoryContract(t *testing.T) {
+	repositorytest.RunItemLeaseContract(t, func(t *testing.T) search.SearchItemRepository {
+		store := openTestStore(t)
+		createTestSearch(t, store, "item-contract")
+		return store
+	})
+}
 
 func TestRecoverClaims(t *testing.T) {
 	store := openTestStore(t)

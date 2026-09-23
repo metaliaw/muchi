@@ -104,7 +104,7 @@ Los resultados son una muestra de una carta y del estado observado en esta fecha
 
 Consulta `/search` con el nombre entre comillas, tipo producto y filtro de disponibilidad. Recorre la paginación y lee `/products/{handle}.js` para obtener variantes disponibles, precios y opciones. Consulta `/cart.js` para verificar la moneda; convierte los importes de centésimas a unidades monetarias. Acepta sufijos de edición y descarta nombres de otras cartas. Cada oferta conserva una URL con `?variant=ID`; la comprobación de stock consulta esa variante, incluso si está agotada.
 
-Prueba real optativa: `MUCHI_TEST_SHOPIFY_LIVE=1 go test ./internal/shopify -run TestLiveSolRing -v`. Estos cambios de configuración y lector requieren un nuevo despliegue para llegar a GCP.
+Prueba real optativa: `MUCHI_TEST_SHOPIFY_LIVE=1 go test ./internal/stores/shopify -run TestLiveSolRing -v`. Estos cambios de configuración y lector requieren un nuevo despliegue para llegar a GCP.
 
 Validación directa con el lector Go: **74 ofertas disponibles de Sol Ring**, repartidas en Game of Magic Singles (34), Collector Center (19) y CardSouls (21). Las tres consultas terminaron correctamente; todas las ofertas indicaron CLP y se comprobó una variante disponible por tienda. Duración total: 28,36 segundos, sin la coordinación Firestore de producción. Estos conteos corresponden a esta prueba directa, no a la búsqueda GCP histórica de arriba.
 
@@ -118,7 +118,7 @@ Las consultas se serializan dentro de cada proceso y se espacian cuatro segundos
 
 Contrato de referencia: [Liquid de Jumpseller](https://jumpseller.com/support/liquid/) y [Búsqueda de Productos](https://jumpseller.com/support/search/). La API pública requiere los encabezados del escaparate (`X-Requested-With` y `Referer`). Las consultas sin ellos respondieron HTTP 403. La búsqueda usa esta API y la lectura de precios y stock usa los datos JSON publicados en las páginas de producto.
 
-Prueba optativa: `MUCHI_TEST_JUMPSELLER_LIVE=1 go test ./internal/jumpseller -run TestLiveSolRing -v -timeout 90m`. Los fixtures de las cuatro tiendas conservan fragmentos públicos relevantes para comprobar precios y stock sin red. Cambios pendientes de despliegue en GCP.
+Prueba optativa: `MUCHI_TEST_JUMPSELLER_LIVE=1 go test ./internal/stores/jumpseller -run TestLiveSolRing -v -timeout 90m`. Los fixtures de las cuatro tiendas conservan fragmentos públicos relevantes para comprobar precios y stock sin red. Cambios pendientes de despliegue en GCP.
 
 El plazo de despliegue y de las tareas HTTP se amplió a 1800 segundos para permitir el recorrido completo con pausas. El flujo local asíncrono evita el límite de escritura HTTP de la API local. [Cloud Tasks admite plazos HTTP de hasta 30 minutos](https://docs.cloud.google.com/tasks/docs/creating-http-target-tasks).
 

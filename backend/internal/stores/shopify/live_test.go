@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cangrejometralleta/muchi-api/internal/shopify"
 	"github.com/cangrejometralleta/muchi-api/internal/source"
 	"github.com/cangrejometralleta/muchi-api/internal/stores"
+	"github.com/cangrejometralleta/muchi-api/internal/stores/shopify"
 
 	"github.com/cangrejometralleta/muchi-api/internal/offer"
 )
@@ -18,7 +18,7 @@ func TestLiveSolRing(t *testing.T) {
 	if os.Getenv("MUCHI_TEST_SHOPIFY_LIVE") != "1" {
 		t.Skip("set MUCHI_TEST_SHOPIFY_LIVE=1")
 	}
-	config, err := stores.LoadStoreConfig("../../config/stores.yaml", nil)
+	config, err := stores.LoadStoreConfig("../../../config/stores.yaml", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

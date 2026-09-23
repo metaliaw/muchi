@@ -4,7 +4,7 @@ games:
     reference_key: magic
     enabled: true
     origins:
-      - scry
+      - scrycl
       - moxfield
       - jumpseller
       - shopify
@@ -61,13 +61,13 @@ games:
       - shopify
 
 search_providers:
-  scry:
-    type: scry
+  scrycl:
+    type: scrycl
     url: https://scry.cl
     enabled: true
     community: false
     # Indexa Cartas sueltas. Medido: una Pregunta sellada de Magic trajo 32
-    # Ofertas y las 32 Salieron de una Tienda; scry Aporto cero. La misma
+    # Ofertas y las 32 Salieron de una Tienda; scry.cl Aporto cero. La misma
     # Pregunta por Singles le Saca mas de cien.
     sealed: false
     games: [magic]
@@ -126,7 +126,7 @@ stores:
     estimated_response_seconds: 10
     allow_redirects: true
     enabled: true
-  # Estas dos Llegan por scry y no se Buscan directo: la Entrada Existe para
+  # Estas dos Llegan por scry.cl y no se Buscan directo: la Entrada Existe para
   # Comprobar su Stock, que su Página Cuenta y el Catálogo Ajax no.
   inekosingles.com:
     games: [magic]
@@ -155,7 +155,7 @@ stores:
     timeout_seconds: 10
     allow_redirects: true
     enabled: true
-  # Jumpseller Directo Pausado: Paginación Lenta. Scry Conserva sus Ofertas Publicadas.
+  # Jumpseller Directo Pausado: Paginación Lenta. Scry.cl Conserva sus Ofertas Publicadas.
   lacripta.cl:
     games: [magic]
     platform: woocommerce

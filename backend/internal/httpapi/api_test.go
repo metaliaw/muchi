@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/cangrejometralleta/muchi-api/internal/cardmetadata"
-	"github.com/cangrejometralleta/muchi-api/internal/moxfield"
 	"github.com/cangrejometralleta/muchi-api/internal/offer"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 	"github.com/cangrejometralleta/muchi-api/internal/stores"
+	"github.com/cangrejometralleta/muchi-api/internal/stores/moxfield"
 )
 
 type fakeStore struct {
@@ -55,7 +55,7 @@ func (*fakeStore) ListSourceHealth(context.Context) ([]search.SourceHealth, erro
 
 func TestCreateSearch(t *testing.T) {
 	store := &fakeStore{}
-	api := API{Searches: search.Service{Searches: store, MaxCards: 500, MaxQuantity: 99}, Health: store, Token: "secret"}
+	api := API{Searches: search.Service{Repository: store, MaxCards: 500, MaxQuantity: 99}, Health: store, Token: "secret"}
 	body := `{"game":"magic","cards":[{"name":"Sol Ring","quantity":1}],"options":{"verify_stock":true}}`
 	request := httptest.NewRequest(http.MethodPost, "/v1/searches", strings.NewReader(body))
 	request.Header.Set("Authorization", "Bearer secret")
@@ -91,9 +91,30 @@ func TestDecodeSearchKeepsExplicitGame(t *testing.T) {
 	}
 }
 
+func TestDecodeSearchPromotesHTTPBody(t *testing.T) {
+	request := httptest.NewRequest(http.MethodPost, "/v1/searches", strings.NewReader(`{"game":"magic","cards":[{"name":"Sol Ring","quantity":2}],"options":{"verify_stock":true,"match":"includes","kind":"single"}}`))
+
+	input, err := decodeSearch(request)
+
+	if err != nil || input.Game != search.GameMagic || len(input.Cards) != 1 ||
+		input.Cards[0].Name != "Sol Ring" || input.Cards[0].Quantity != 2 ||
+		!input.Options.VerifyStock || input.Options.Match != offer.MatchIncludes ||
+		input.Options.Kind != offer.KindSingle {
+		t.Fatalf("decoded input=%+v err=%v", input, err)
+	}
+}
+
+func TestDecodeSearchRejectsUnknownHTTPMode(t *testing.T) {
+	request := httptest.NewRequest(http.MethodPost, "/v1/searches", strings.NewReader(`{"cards":[{"name":"Sol Ring","quantity":1}],"options":{"match":"approximate"}}`))
+
+	if _, err := decodeSearch(request); !errors.Is(err, search.ErrInvalid) {
+		t.Fatalf("decodeSearch() error=%v", err)
+	}
+}
+
 func TestRequireHeaders(t *testing.T) {
 	store := &fakeStore{}
-	api := API{Searches: search.Service{Searches: store, MaxCards: 500, MaxQuantity: 99}, Health: store, Token: "secret"}
+	api := API{Searches: search.Service{Repository: store, MaxCards: 500, MaxQuantity: 99}, Health: store, Token: "secret"}
 	request := httptest.NewRequest(http.MethodPost, "/v1/searches", strings.NewReader(`{}`))
 	response := httptest.NewRecorder()
 	api.BuildHandler().ServeHTTP(response, request)
@@ -207,7 +228,7 @@ func TestHideError(t *testing.T) {
 
 func TestListResultPage(t *testing.T) {
 	store := &fakeStore{job: search.Job{ID: "search_one"}}
-	api := API{Searches: search.Service{Searches: store}, Token: "secret"}
+	api := API{Searches: search.Service{Repository: store}, Token: "secret"}
 	request := httptest.NewRequest(http.MethodGet, "/v1/searches/search_one/results?after=12&limit=25", nil)
 	request.Header.Set("Authorization", "Bearer secret")
 	response := httptest.NewRecorder()
@@ -219,7 +240,7 @@ func TestListResultPage(t *testing.T) {
 
 func TestRejectResultPage(t *testing.T) {
 	store := &fakeStore{}
-	api := API{Searches: search.Service{Searches: store}, Token: "secret"}
+	api := API{Searches: search.Service{Repository: store}, Token: "secret"}
 	request := httptest.NewRequest(http.MethodGet, "/v1/searches/search_one/results?after=-1&limit=101", nil)
 	request.Header.Set("Authorization", "Bearer secret")
 	response := httptest.NewRecorder()
@@ -235,7 +256,7 @@ func TestRejectResultPage(t *testing.T) {
 func TestARetiredOptionIsRefused(t *testing.T) {
 	body := `{"game":"magic","cards":[{"name":"Sol Ring","quantity":1}],"options":{"verify_stock":true,"stores_only":true}}`
 	store := &fakeStore{}
-	api := API{Searches: search.Service{Searches: store, MaxCards: 500, MaxQuantity: 99}, Health: store, Token: "secret"}
+	api := API{Searches: search.Service{Repository: store, MaxCards: 500, MaxQuantity: 99}, Health: store, Token: "secret"}
 	request := httptest.NewRequest(http.MethodPost, "/v1/searches", strings.NewReader(body))
 	request.Header.Set("Authorization", "Bearer secret")
 	request.Header.Set("Idempotency-Key", "retired-option")
@@ -270,7 +291,7 @@ func (c *countingStock) CheckStock(_ context.Context, item offer.Offer) (offer.S
 func askStock(t *testing.T, body string) *httptest.ResponseRecorder {
 	t.Helper()
 	store := &stockStore{}
-	api := API{Searches: search.Service{Searches: store, Stocks: &countingStock{}}, Token: "secret"}
+	api := API{Searches: search.Service{Repository: store, Stocks: &countingStock{}}, Token: "secret"}
 	request := httptest.NewRequest(http.MethodPost, "/v1/searches/search_one/stock", strings.NewReader(body))
 	request.Header.Set("Authorization", "Bearer secret")
 	recorder := httptest.NewRecorder()
@@ -332,7 +353,7 @@ func (f fallenSource) SourceName() string { return f.name }
 func TestEverySourceFallingIsAnAnswerNotAFailure(t *testing.T) {
 	store := &fakeStore{}
 	service := search.Service{
-		Searches: store,
+		Repository: store,
 		SourcesByGame: map[search.Game][]search.OfferSource{
 			search.GameMagic: {fallenSource{name: "lacripta.cl"}},
 		},

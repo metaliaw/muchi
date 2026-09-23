@@ -76,10 +76,7 @@ func ProcessSearch(w http.ResponseWriter, r *http.Request) {
 			taskError = err
 			return
 		}
-		taskWorker = search.Worker{
-			Store: runtime.Store, Service: runtime.Service,
-			LeaseDuration: settings.LeaseDuration, StockCheckLimit: settings.StockCheckLimit,
-		}
+		taskWorker = application.BuildSearchWorker(runtime, settings)
 	})
 	if taskError != nil {
 		buildLogger().Error("ProcessSearch Startup Failed", "error", taskError)
