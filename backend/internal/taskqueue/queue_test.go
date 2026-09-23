@@ -12,7 +12,7 @@ var legalName = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 func TestAWakeNameIsLegalForCloudTasks(t *testing.T) {
 	name := buildWakeName("sweep")
 	if !legalName.MatchString(name) {
-		t.Fatalf("Cloud Tasks rechazaría este Nombre: %q", name)
+		t.Fatalf("Cloud Tasks would reject this name: %q", name)
 	}
 }
 
@@ -24,7 +24,7 @@ func TestTwoWakesInTheSameSecondDoNotCollide(t *testing.T) {
 	for range 500 {
 		name := buildWakeName("sweep")
 		if seen[name] {
-			t.Fatalf("dos Despertares comparten Nombre: %q", name)
+			t.Fatalf("two wakes share the same name: %q", name)
 		}
 		seen[name] = true
 	}
