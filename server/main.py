@@ -12,7 +12,8 @@ from typing import Literal
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
+                               PlainTextResponse, Response)
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -37,8 +38,32 @@ VERIFY_STOCK = os.getenv("MUCHI_VERIFY_STOCK", "0").strip() in {"1", "true", "si
 # una Frase no Debería Costar un Deploy de la Interfaz.
 CART_READY = os.getenv("MUCHI_CART_READY", "0").strip() in {"1", "true", "si", "yes"}
 WEB_DIST = ROOT / "web" / "dist"
+# El Identificador de Google en ads.txt: el mismo para toda Publicación, parte
+# del Formato de la Línea y no un Valor de este Despliegue.
 ADSENSE_AUTHORITY = "f08c47fec0942fa0"
-ADSENSE_CLIENT = "ca-pub-6368656861543000"
+
+
+def read_adsense_client() -> str:
+    """Quién Publica. Sin Variable no hay Publicidad, ni acá ni en el Front."""
+    return os.getenv("MUCHI_ADSENSE_CLIENT", "").strip()
+
+
+# El Cliente de AdSense Entra al Servir, no al Compilar: un Despliegue con otra
+# Publicación Cambia su Variable y no Recompila el Front. La Etiqueta va en el
+# HTML crudo porque quien Verifica la Cuenta Lee eso, no lo que Vue Monta.
+ADSENSE_HEAD = (
+    '<meta name="google-adsense-account" content="{client}" />'
+    '<script async crossorigin="anonymous" '
+    'src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js'
+    '?client={client}"></script>'
+)
+
+
+def write_index(page: str, client: str) -> str:
+    """Sin Cliente, la Página Sale tal cual: ni Etiqueta ni Script."""
+    if not client.startswith("ca-pub-"):
+        return page
+    return page.replace("</head>", ADSENSE_HEAD.format(client=client) + "</head>", 1)
 
 app = FastAPI(title="Muchi Front", docs_url="/api/docs", openapi_url="/api/openapi.json")
 
@@ -115,7 +140,7 @@ def read_config() -> dict:
         "sponsor_name": os.getenv("MUCHI_SPONSOR_NAME", ""),
         "sponsor_text": os.getenv("MUCHI_SPONSOR_TEXT", ""),
         "sponsor_url": os.getenv("MUCHI_SPONSOR_URL", ""),
-        "adsense_client": os.getenv("MUCHI_ADSENSE_CLIENT", "") or ADSENSE_CLIENT,
+        "adsense_client": read_adsense_client(),
         "adsense_slot": os.getenv("MUCHI_ADSENSE_SLOT", ""),
         "cart_ready": CART_READY,
         "repository_url": REPOSITORY_URL,
@@ -127,7 +152,7 @@ def read_config() -> dict:
 @app.get("/ads.txt", response_class=PlainTextResponse)
 def read_ads_txt() -> str:
     """Declara a Google como Vendedor autorizado cuando AdSense está activo."""
-    client = os.getenv("MUCHI_ADSENSE_CLIENT", "") or ADSENSE_CLIENT
+    client = read_adsense_client()
     if not client.startswith("ca-pub-"):
         raise HTTPException(404, "AdSense no está configurado.")
     return f"google.com, {client.removeprefix('ca-')}, DIRECT, {ADSENSE_AUTHORITY}\n"
@@ -467,8 +492,9 @@ if WEB_DIST.is_dir():
     app.mount("/assets", StaticFiles(directory=WEB_DIST / "assets"), name="assets")
 
     @app.get("/{path:path}")
-    def read_spa(path: str) -> FileResponse:
+    def read_spa(path: str) -> Response:
         candidate = (WEB_DIST / path).resolve()
         if path and candidate.is_file() and candidate.is_relative_to(WEB_DIST.resolve()):
             return FileResponse(candidate)
-        return FileResponse(WEB_DIST / "index.html")
+        page = (WEB_DIST / "index.html").read_text(encoding="utf-8")
+        return HTMLResponse(write_index(page, read_adsense_client()))

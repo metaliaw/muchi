@@ -16,7 +16,11 @@ set -euo pipefail
 
 # El mismo Identificador que sirve el BFF en /ads.txt. Es publico: viaja en
 # cada Pagina y el Archivo lo declara a Internet entero.
-CLIENT="${MUCHI_ADSENSE_CLIENT:-ca-pub-6368656861543000}"
+CLIENT="${MUCHI_ADSENSE_CLIENT:-}"
+if [ -z "$CLIENT" ]; then
+    echo "Falta MUCHI_ADSENSE_CLIENT (ca-pub-0000000000000000)." >&2
+    exit 1
+fi
 ACCOUNT="${CLIENT#ca-}"
 BASE="https://adsense.googleapis.com/v2"
 
