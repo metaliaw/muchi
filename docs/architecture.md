@@ -1,10 +1,10 @@
-[English](arquitectura-en.md) · [Español](arquitectura.md)
+[English](architecture-en.md) · [Español](architecture.md)
 
 # Arquitectura de Muchi
 
 Muchi separa lo que las Personas ven y pueden discutir de la Lógica que opera
 el Servicio. La Interfaz, sus Criterios de Presentación y el BFF viven en
-[metaliaw/muchi](https://github.com/metaliaw/muchi). La recolección,
+[metaliaw/muchi](https://github.com/metaliaw/muchi/blob/main/README.es.md). La recolección,
 persistencia y procesamiento de las Búsquedas viven en
 [cangrejometralleta/muchi-api](https://github.com/cangrejometralleta/muchi-api),
 y ahí vive también su [Contrato OpenAPI](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml).
@@ -73,7 +73,7 @@ Muchi publica los Criterios que cambian lo que una Persona ve o compra:
   hace la API; el BFF solo decide a quién preguntar y en qué Orden. Entre una
   Oferta barata que la Tienda no Declara y una más cara que sí Confirma, corona
   la que Confirma, y una Carta donde todas Negaron se queda sin Recomendación en
-  vez de recibir una falsa. [Comprobar el Stock](api/pedido-stock.md) describe
+  vez de recibir una falsa. [Comprobar el Stock](api/stock-order.md) describe
   la Conversación y las tres Respuestas posibles.
 - Solo CLP y USD participan en el Carrito. Los Dólares se convierten con el
   [Muchi Dólar](../config/rates.defaults.yaml), cuyo Valor es público.
@@ -368,7 +368,7 @@ Puedes [abrir una Incidencia](https://github.com/metaliaw/muchi/issues/new) para
 reportar un Problema, cuestionar un Criterio, proponer una Mejora o pedir que
 una Decisión quede mejor documentada. También puedes enviar un Pull Request al
 Repositorio público. Las Tiendas que quieran compartir Stock tienen una
-[Guía de Integración](../INTEGRAR-TIENDA.md).
+[Guía de Integración](../share-store-stock.md).
 
 No publiques Llaves, Datos personales ni detalles explotables en una
 Incidencia. Describe el Efecto observable y pide un Canal privado cuando el

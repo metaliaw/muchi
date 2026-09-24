@@ -1,4 +1,4 @@
-[English](pedido-stock-en.md) · [Español](pedido-stock.md)
+[English](stock-order-en.md) · [Español](stock-order.md)
 
 # Comprobar el Stock antes de Coronar
 
@@ -94,7 +94,7 @@ un Navegador con JavaScript, y scry.cl —que la Indexa— no publica su Stock. 
 Oferta queda en `unknown` para siempre, y por eso la Regla de arriba existe: sin
 ella, la Duda más barata se quedaría la Corona sin que nadie la haya Confirmado.
 
-Esto es distinto de [`verify_stock`](../reverificacion-opcional.md), que
+Esto es distinto de [`verify_stock`](../optional-reverification.md), que
 Re-verifica toda Oferta candidata durante la Búsqueda y nace apagada por su
 Carga. Acá se pregunta al Final, de a una, y solo mientras ninguna Confirme.
 Ese mismo Documento Cuenta qué Ofertas Alcanza el Navegador por su cuenta y

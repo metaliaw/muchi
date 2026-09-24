@@ -1,4 +1,4 @@
-[English](migracion-web-en.md) · [Español](migracion-web.md)
+[English](web-migration-en.md) · [Español](web-migration.md)
 
 # The Frontend and Its Boundary
 
