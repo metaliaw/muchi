@@ -34,8 +34,8 @@ flowchart LR
     person --> dns --> hosting
     hosting -->|"/api/*"| bff
     criteria --- bff
-    contract -. .-> bff
-    contract -. .-> api
+    contract -.-> bff
+    contract -.-> api
     bff -->|"Bearer solo entre servidores"| api
     secrets -. "versión vigente" .-> bff
     secrets -. "versión vigente" .-> api
