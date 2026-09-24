@@ -1,375 +1,372 @@
-[English](architecture-en.md) · [Español](architecture.md)
+[English](architecture.md) · [Español](architecture.es.md)
 
-# Arquitectura de Muchi
+# Muchi Architecture
 
-Muchi separa lo que las Personas ven y pueden discutir de la Lógica que opera
-el Servicio. La Interfaz, sus Criterios de Presentación y el BFF viven en
-[metaliaw/muchi](https://github.com/metaliaw/muchi/blob/main/README.es.md). La recolección,
-persistencia y procesamiento de las Búsquedas viven en
+Muchi separates what People see and can discuss from the Logic operating
+the Service. The Interface, its Presentation criteria and the BFF live in
+[metaliaw/muchi](https://github.com/metaliaw/muchi/blob/main/README.md). Search collection,
+persistence and processing live in
 [cangrejometralleta/muchi-api](https://github.com/cangrejometralleta/muchi-api),
-y ahí vive también su [Contrato OpenAPI](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml).
+alongside its [OpenAPI Contract](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml).
 
-Los dos Repositorios son públicos. Este Documento cuenta la Arquitectura del
-Front y su Frontera; la del Backend —Cola, Worker, Persistencia y Caducidad—
-se cuenta en muchi-api. Ningún Diagrama se copia de un lado al otro: una Copia
-envejece sin que nadie lo note.
+Both Repositories are public. This Document describes the Frontend's
+Architecture and Boundary. The Backend — Queue, Worker, Persistence and
+Expiration — is described in muchi-api. Diagrams stay with their owning
+Repository; unnoticed Copies grow stale.
 
-## El Recorrido de una Búsqueda
+## A Search's Journey
 
 ```mermaid
 flowchart LR
-    person([Persona])
-    dns["muchitcg.cl<br/>NIC Chile y Cloud DNS"]
+    person([Person])
+    dns["muchitcg.cl<br/>NIC Chile and Cloud DNS"]
 
-    subgraph public["Este Repositorio · metaliaw/muchi"]
-        hosting["Firebase Hosting<br/>Vue 3 y archivos estáticos"]
-        bff["Cloud Run · BFF FastAPI<br/>valida y presenta"]
-        criteria["Criterios visibles<br/>orden · alertas · carrito"]
+    subgraph public["This Repository · metaliaw/muchi"]
+        hosting["Firebase Hosting<br/>Vue 3 and static files"]
+        bff["Cloud Run · FastAPI BFF<br/>validates and presents"]
+        criteria["Visible criteria<br/>ordering · alerts · cart"]
     end
 
-    api["muchi-api<br/>Búsquedas, Cola, Worker y Resultados"]
-    contract["Contrato OpenAPI<br/>frontera compartida"]
-    secrets["Secret Manager<br/>llave versionada y rotativa"]
+    api["muchi-api<br/>Searches, Queue, Worker and Results"]
+    contract["OpenAPI Contract<br/>shared boundary"]
+    secrets["Secret Manager<br/>versioned, rotating key"]
 
     person --> dns --> hosting
     hosting -->|"/api/*"| bff
     criteria --- bff
     contract -.-> bff
     contract -.-> api
-    bff -->|"Bearer solo entre servidores"| api
-    secrets -. "versión vigente" .-> bff
-    secrets -. "versión vigente" .-> api
+    bff -->|"Bearer only between servers"| api
+    secrets -. "current version" .-> bff
+    secrets -. "current version" .-> api
 ```
 
-Cloud DNS dice dónde encontrar `muchitcg.cl`; no sirve la Aplicación. Firebase
-Hosting entrega los Archivos existentes desde su CDN y deriva las Rutas que no
-resuelve —incluidas `/api/*`— a Cloud Run. El BFF llama a la API y devuelve al
-Navegador solamente el Estado y los Resultados que necesita presentar. Lo que
-pasa dentro de ese Cuadro —Cola, Worker y Persistencia— se dibuja en
+Cloud DNS tells clients where to find `muchitcg.cl`; it does not serve the
+Application. Firebase Hosting delivers existing Files from its CDN and
+forwards unresolved Routes — including `/api/*` — to Cloud Run. The BFF
+calls the API and returns only the State and Results the Browser needs.
+Inside that API box, Queue, Worker and Persistence are diagrammed in
 [muchi-api](https://github.com/cangrejometralleta/muchi-api).
 
-## Una Frontera Deliberada
+## A Deliberate Boundary
 
-| Espacio | Responsabilidad | Por qué vive ahí |
+| Space | Responsibility | Why It Lives There |
 | --- | --- | --- |
-| `metaliaw/muchi` | Interfaz Vue, BFF, Criterios de Presentación, Configuración pública y Documentación del Front | Permite aprender, revisar la Experiencia y proponer Cambios con Contexto. |
-| `cangrejometralleta/muchi-api` | Contrato OpenAPI, consulta de Fuentes, coordinación de Trabajos y persistencia | Tiene otro Ciclo de Cambio y otra Operación; cada Decisión se discute donde vive su Código. |
-| Secret Manager | Llave compartida por BFF, API y Worker | Separa Credenciales del Código, de la Imagen y del Navegador; permite versionarlas y rotarlas. |
+| `metaliaw/muchi` | Vue interface, BFF, Presentation criteria, public Configuration and Frontend documentation | Supports learning, reviewing the Experience and proposing Changes with Context. |
+| `cangrejometralleta/muchi-api` | OpenAPI Contract, Source queries, Job coordination and persistence | Has its own Change cycle and Operations; Decisions are discussed where their Code lives. |
+| Secret Manager | Key shared by BFF, API and Worker | Separates Credentials from Code, Images and the Browser; supports versioning and rotation. |
 
-La separación no convierte al Front en una Cáscara opaca. El Contrato describe
-la Conversación entre ambos lados, y las Reglas que transforman una Respuesta
-en una Recomendación permanecen inspeccionables.
+This separation keeps the Frontend inspectable. The Contract describes the
+Conversation across the Boundary, and Rules transforming a Response into
+a Recommendation remain open to inspection.
 
-## Criterios a la Vista
+## Visible Criteria
 
-Muchi publica los Criterios que cambian lo que una Persona ve o compra:
+Muchi publishes the Criteria affecting what a Person sees or buys:
 
-- Las Ofertas se abren de menor a mayor Precio dentro de cada Moneda. Pesos y
-  Dólares no se comparan como si fueran la misma Unidad.
-- Las Ofertas con Precio sospechoso o Stock agotado quedan fuera del Carrito.
-  Un Stock desconocido se muestra como `No confirmado`, no como disponible.
-- Cerrada la Búsqueda, Muchi vuelve a preguntar por el Stock de la más barata
-  de cada Carta y corona a la primera que sí lo Tiene. La Visita a la Tienda la
-  hace la API; el BFF solo decide a quién preguntar y en qué Orden. Entre una
-  Oferta barata que la Tienda no Declara y una más cara que sí Confirma, corona
-  la que Confirma, y una Carta donde todas Negaron se queda sin Recomendación en
-  vez de recibir una falsa. [Comprobar el Stock](api/stock-order.md) describe
-  la Conversación y las tres Respuestas posibles.
-- Solo CLP y USD participan en el Carrito. Los Dólares se convierten con el
-  [Muchi Dólar](../config/rates.defaults.yaml), cuyo Valor es público.
-- El Carrito considera el Precio de las Cartas y un Envío por Tienda. Utiliza
-  una Heurística rápida, documentada en el Código, que no promete el Óptimo
-  matemático.
+- Offers open in ascending Price order within each Currency. Pesos and
+  Dollars are not treated as the same Unit.
+- Suspicious Prices and sold-out Stock are excluded from the Cart. Unknown
+  Stock is shown as `No confirmado` (unconfirmed), rather than available.
+- After a Search closes, Muchi asks again about Stock for each Card's
+  cheapest Offer and crowns the first confirmed available. The API visits
+  the Store; the BFF decides whom to ask and in what Order. Between a
+  cheap unknown and a more expensive confirmed Offer, Confirmation wins.
+  If every Store says no, the Card gets no Recommendation.
+  [Checking Stock](api/stock-order.md) describes this Conversation
+  and its three possible Answers.
+- Only CLP and USD enter the Cart. Dollars convert using the public
+  [Muchi Dollar](../config/rates.defaults.yaml).
+- The Cart considers Card prices and one Shipping charge per Store.
+  It uses a fast Heuristic documented in Code, without promising a
+  mathematical Optimum.
 
-Estas Decisiones pueden seguirse en
+These Decisions can be traced through
 [`server/presenter.py`](../server/presenter.py),
-[`muchi/mtg/optimizer.py`](../muchi/mtg/optimizer.py) y en el
-[`Contrato OpenAPI`](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml).
-Así una sugerencia puede discutirse como una Regla concreta y no como el
-resultado inexplicable de una Caja negra.
+[`muchi/mtg/optimizer.py`](../muchi/mtg/optimizer.py) and the
+[OpenAPI Contract](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml).
+A Suggestion can therefore be discussed as a concrete Rule.
 
-## Seguridad y Rotación de la Llave
+## Key Security and Rotation
 
-La Llave de la API nunca se compila dentro de Vue ni se envía al Navegador. El
-BFF la recibe desde Secret Manager y la agrega como `Authorization: Bearer`
-solo en la Conexión entre Servidores.
+The API Key is never compiled into Vue or sent to the Browser. The BFF
+receives it from Secret Manager and adds `Authorization: Bearer` only
+on the connection between Servers.
 
-La Llave es un Secreto versionado. `./rotate-secret.sh`, en
-[muchi-api](https://github.com/cangrejometralleta/muchi-api), crea una Versión
-nueva y actualiza los tres Consumidores: BFF, API y Worker. Los Despliegues leen la Versión vigente; ni el Valor ni una copia de
-respaldo deben guardarse en Git, en la Imagen o en la Configuración pública.
+The Key is a versioned Secret. `./rotate-secret.sh` in
+[muchi-api](https://github.com/cangrejometralleta/muchi-api) creates a new
+Version and updates its three Consumers: BFF, API and Worker. Deployments
+read the current Version. Neither the Value nor a backup belongs in Git,
+the Image or public Configuration.
 
-Esta Llave protege la Frontera interna. No reemplaza los Límites de Uso, la
-validación de Entradas, los Registros de Auditoría ni la revisión periódica de
-Permisos de las Cuentas de Servicio.
+This Key protects the internal Boundary. It does not replace Usage limits,
+Input validation, Audit logs or periodic Service account Permission reviews.
 
-## El Patrón Reutilizable
+## The Reusable Pattern
 
-La misma Forma sirve para una Aplicación que recibe un Trabajo lento, consulta
-Proveedores externos y permite volver por el Resultado. Los Productos concretos
-pueden cambiar sin cambiar las Responsabilidades:
+The same Shape fits an Application that receives slow Work, queries
+external Providers and lets the caller return for a Result. Products can
+change while Responsibilities stay the same.
 
-El Recorrido de arriba ya dibuja esa Forma; acá se nombra Pieza por Pieza para
-que cada Responsabilidad pueda cambiar de Proveedor sin cambiar de Lugar:
+The journey above already shows this Shape. Naming each Part lets its
+Responsibility change Provider without moving elsewhere:
 
-| Responsabilidad | Implementación de referencia | Sustitutos posibles |
+| Responsibility | Reference Implementation | Possible Replacements |
 | --- | --- | --- |
-| Resolver el Dominio | Cloud DNS | El DNS del Registrador, Route 53 o Cloudflare DNS. |
-| Servir Archivos y terminar HTTPS | Firebase Hosting | Un CDN con Hosting estático y Certificados administrados. |
-| Proteger Credenciales del Navegador | BFF en Cloud Run | Una Función, un Contenedor o un API Gateway con Transformación. |
-| Aceptar y consultar Trabajos | API en Cloud Run Functions | Un Servicio HTTP que persista Estado antes de responder. |
-| Desacoplar Trabajo lento | Cloud Tasks | Una Cola que entregue al menos una vez y permita Reintentos. |
-| Ejecutar cada Unidad | Función interna | Un Worker, Job o Consumidor autenticado. |
-| Conservar Estado temporal | Firestore con TTL | Una Base transaccional con Índices y política de Caducidad. |
-| Distribuir Credenciales | Secret Manager | Un Gestor de Secretos con Versiones y Auditoría. |
+| Resolve the Domain | Cloud DNS | Registrar DNS, Route 53 or Cloudflare DNS. |
+| Serve Files and terminate HTTPS | Firebase Hosting | A CDN with static Hosting and managed Certificates. |
+| Keep Credentials out of the Browser | BFF on Cloud Run | A Function, Container or API Gateway with Transformation. |
+| Accept and query Jobs | API on Cloud Run Functions | An HTTP service that persists State before replying. |
+| Decouple slow Work | Cloud Tasks | A Queue with at-least-once delivery and Retries. |
+| Execute each Unit | Internal Function | An authenticated Worker, Job or Consumer. |
+| Store temporary State | Firestore with TTL | A transactional Database with Indexes and an Expiration policy. |
+| Distribute Credentials | Secret Manager | A Secret manager with Versions and Auditing. |
 
-La elección importante no es el Proveedor. Es que cada Pieza tenga una sola
-Responsabilidad y que las Fronteras se puedan sustituir sin trasladar
-Credenciales o Reglas de Negocio al Navegador.
+Each Part needs one Responsibility. Boundaries must be replaceable without
+moving Credentials or Business rules into the Browser. That choice matters
+more than the Provider.
 
-## Ciclo de una Operación Lenta
+## A Slow Operation's Lifecycle
 
-El Pedido inicial no espera a que terminen las Fuentes. La API lo registra,
-encola sus Unidades y responde con un Identificador estable. El Navegador usa
-ese Identificador para consultar el Avance y puede cerrar o recargar la Página
-sin perder el Trabajo.
+The initial Request does not wait for Sources to finish. The API records
+it, queues its Units and returns a stable Identifier. The Browser uses
+that Identifier to query Progress and can close or reload without losing
+the Work.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Person as Persona
-    participant Web as Front
+    actor Person
+    participant Web as Frontend
     participant BFF
     participant API
 
-    Person->>Web: Envía una Lista
+    Person->>Web: Submit a List
     Web->>BFF: POST /api/searches + Idempotency-Key
     BFF->>API: POST /v1/searches + Bearer
-    API-->>Web: 202 + Identificador
+    API-->>Web: 202 + Identifier
 
-    loop Hasta un Estado terminal
+    loop Until a terminal State
         Web->>BFF: GET /api/searches/{id}
         BFF->>API: GET /v1/searches/{id} + Bearer
-        API-->>Web: Avance visible
+        API-->>Web: Visible Progress
     end
 ```
 
-Mientras tanto, la API encola una Unidad por Entrada y su Worker consulta las
-Fuentes. Ese Tramo se dibuja en
-[muchi-api](https://github.com/cangrejometralleta/muchi-api); acá importa que
-el Avance aparece antes de que termine.
+Meanwhile, the API queues one Unit per Entry and its Worker queries the
+Sources. That section is diagrammed in
+[muchi-api](https://github.com/cangrejometralleta/muchi-api). What matters
+here is that Progress appears before completion.
 
-La Clave de Idempotencia evita duplicar un Trabajo cuando el Cliente no sabe si
-su primer Envío llegó. La Cola puede entregar una Tarea más de una vez; por eso
-el Worker debe poder repetirla sin duplicar Efectos. Los Estados terminales
-detienen el Sondeo y la Interfaz conserva el último Resultado válido ante un
-Fallo transitorio.
+The Idempotency key prevents duplicate Work when the Client cannot tell
+whether its first Submission arrived. A Queue may deliver a Task more
+than once, so the Worker must repeat it without duplicating Effects.
+Terminal States stop Polling, and the Interface retains the latest valid
+Result after a transient Failure.
 
-## Datos, Caducidad y Consistencia
+## Data, Expiration and Consistency
 
-Tres Clases de Dato recorren la Solución:
+Three kinds of Data travel through the system:
 
-- El Pedido y su Estado permiten reanudar una Operación. Tienen Identidad propia
-  y una Caducidad explícita.
-- Los Resultados parciales crecen mientras trabajan las Unidades. Una Lectura
-  puede observar Progreso sin exigir Consistencia global entre todas ellas.
-- La Caché de Proveedores evita repetir Consultas costosas. Su TTL responde a
-  frescura y costo; no debe confundirse con la Vida del Pedido.
+- The Request and its State allow an Operation to resume. They have their
+  own Identity and explicit Expiration.
+- Partial Results grow while Units work. A Read can observe Progress
+  without requiring global Consistency across all Units.
+- Provider Cache avoids repeating expensive Queries. Its TTL balances
+  Freshness and Cost, independently of the Request's Lifetime.
 
-En Muchi, Firestore conserva Búsquedas, Ítems, Ofertas, Idempotencia y Caché con
-el Campo `expires_at`. La API rechaza un Documento vencido aunque el Proceso TTL
-aún no lo haya eliminado. Esto evita convertir una Limpieza eventual en una
-Regla de Negocio.
+Muchi stores Searches, Items, Offers, Idempotency records and Cache in
+Firestore with an `expires_at` Field. The API rejects an expired Document
+even before the TTL process deletes it. Eventual cleanup therefore does
+not become a Business rule.
 
-Al replicar el Patrón, conviene declarar por cada Colección o Tabla:
+When reproducing the Pattern, specify these decisions for each Collection or Table:
 
-| Decisión | Pregunta que debe responder |
+| Decision | Question to Answer |
 | --- | --- |
-| Identidad | ¿Qué hace único al Pedido y quién puede volver a leerlo? |
-| Idempotencia | ¿Qué Reintento representa el mismo Comando? |
-| Estado terminal | ¿Qué Estados detienen Trabajo y Sondeo? |
-| Caducidad | ¿Desde qué Evento se calcula y quién rechaza lo vencido? |
-| Índices | ¿Qué Consultas deben seguir siendo baratas al crecer el Volumen? |
-| Retención | ¿Qué debe desaparecer por privacidad, costo o frescura? |
+| Identity | What makes a Request unique, and who can read it again? |
+| Idempotency | Which Retry represents the same Command? |
+| Terminal State | Which States stop Work and Polling? |
+| Expiration | Which Event starts the clock, and who rejects expired records? |
+| Indexes | Which Queries must stay cheap as Volume grows? |
+| Retention | What must disappear for Privacy, Cost or Freshness? |
 
-## Red, Dominio y HTTPS
+## Network, Domain and HTTPS
 
-El Camino público se arma en cuatro Capas independientes:
+The public path has four independent Layers:
 
-1. El Registrador delega el Dominio a los Nameservers elegidos.
-2. La Zona DNS publica los Registros que apuntan al Hosting.
-3. El Hosting valida la Propiedad mediante un TXT y emite el Certificado.
-4. El CDN sirve Archivos estáticos y reescribe las Rutas dinámicas al BFF.
+1. The Registrar delegates the Domain to the chosen Nameservers.
+2. The DNS Zone publishes Records pointing to Hosting.
+3. Hosting validates Ownership with a TXT record and issues the Certificate.
+4. The CDN serves static Files and rewrites dynamic Routes to the BFF.
 
-En esta Instalación, el Dominio raíz usa un Registro `A` hacia Firebase Hosting.
-Firebase administra la validación ACME, la emisión y la renovación del
-Certificado; no se instala un Certificado manual en el Contenedor. Los TXT de
-Propiedad y validación deben permanecer publicados mientras el Dominio esté
-asociado.
+Here, the root Domain uses an `A` record pointing to Firebase Hosting.
+Firebase manages ACME validation, Certificate issuance and renewal; no
+manual Certificate is installed in the Container. Ownership and validation
+TXT records must stay published while the Domain remains associated.
 
-DNS no reemplaza al Hosting: solo traduce un Nombre a un Destino. El Hosting no
-reemplaza al BFF: entrega el Front con baja Latencia y deriva lo dinámico. El BFF
-no reemplaza a la API: adapta la Sesión pública a una Frontera interna.
+DNS translates a Name into a Destination. Hosting serves the Frontend at
+low Latency and forwards dynamic traffic. The BFF adapts the public
+Session to the API's internal Boundary. Each has its own role.
 
-## Fronteras de Confianza
+## Trust Boundaries
 
 ```mermaid
 flowchart LR
-    browser["Navegador<br/>no confiable"]
-    bff["BFF público<br/>valida entrada"]
-    api["API pública en red<br/>autenticada por aplicación"]
+    browser["Browser<br/>untrusted"]
+    bff["Public BFF<br/>validates input"]
+    api["API on public network<br/>application-authenticated"]
 
-    browser -->|"sin secretos"| bff
-    bff -->|"Bearer desde Secret Manager"| api
+    browser -->|"no secrets"| bff
+    bff -->|"Bearer from Secret Manager"| api
 ```
 
-- El Front recibe solamente Configuración pública. Un Identificador de AdSense
-  puede publicarse; una Llave Bearer no.
-- El BFF es accesible desde Internet porque sirve la Aplicación, pero conserva
-  el Secreto en su Entorno de ejecución.
-- La API permite tráfico de red público y exige Autenticación de Aplicación en
-  sus Rutas protegidas. Salud puede permanecer sin Credenciales.
-- El Worker rechaza invocaciones anónimas. La Cola lo llama con una Identidad de
-  Servicio y un Token OIDC.
-- Cada Servicio usa una Cuenta distinta y recibe solo los Roles necesarios:
-  leer o escribir Datos, encolar Tareas, invocar el Worker o leer un Secreto.
-- Todo Dato recibido de una Fuente externa vuelve a validarse antes de entrar al
-  Dominio o a la Persistencia.
+- The Frontend receives only public Configuration. An AdSense ID can be
+  public; a Bearer Key cannot.
+- The BFF is Internet-accessible because it serves the Application, but
+  keeps the Secret in its runtime Environment.
+- The API allows public Network traffic and requires Application
+  authentication on protected Routes. Health may remain unauthenticated.
+- The Worker rejects anonymous calls. The Queue invokes it using a
+  Service identity and an OIDC token.
+- Each Service uses a separate Account with only its required Roles:
+  reading or writing Data, queuing Tasks, invoking the Worker or reading
+  a Secret.
+- All Data from external Sources is validated again before entering the
+  Domain or Persistence.
 
-Una Llave compartida es una Solución simple para una Frontera entre Servicios,
-no una Identidad de Usuario. Una réplica con Cuentas personales, permisos por
-Usuario o múltiples Clientes necesita Autenticación y Autorización propias.
+A shared Key is a simple service-boundary Solution, not a User identity.
+A replica with personal Accounts, per-User Permissions or multiple Clients
+needs its own Authentication and Authorization.
 
-## Construcción y Despliegue
+## Build and Deployment
 
-El Front se compila en una Etapa Node y se copia a una Imagen Python mínima que
-ejecuta FastAPI. Cloud Build produce una Imagen identificable, la guarda en
-Artifact Registry y actualiza Cloud Run. Después se compila el mismo Front para
-Firebase Hosting.
+The Frontend is compiled in a Node stage and copied into a minimal Python
+Image running FastAPI. Cloud Build produces an identifiable Image,
+stores it in Artifact Registry and updates Cloud Run. The same Frontend
+is then compiled for Firebase Hosting.
 
-El Orden del Script es deliberado:
+The Script follows a deliberate Order:
 
-1. Verifica Proyecto, Herramientas y existencia del Secreto.
-2. Prepara Artifact Registry y concede los Permisos requeridos.
-3. Construye y publica el BFF en Cloud Run.
-4. Compila el Front desde un `package-lock.json` reproducible.
-5. Publica los Archivos en Firebase Hosting.
+1. Check the Project, Tools and Secret existence.
+2. Prepare Artifact Registry and grant required Permissions.
+3. Build and publish the BFF on Cloud Run.
+4. Compile the Frontend from a reproducible `package-lock.json`.
+5. Publish Files to Firebase Hosting.
 
-Publicar primero el Servicio evita que una Interfaz nueva empiece a llamar una
-Ruta que el BFF anterior todavía no conoce. Para Cambios incompatibles se
-necesita además versionar el Contrato o mantener ambas Formas durante la
-Migración.
+Publishing the Service first prevents a new Interface from calling Routes
+the old BFF does not know. Incompatible Changes also require Contract
+versioning or support for both Shapes during Migration.
 
-El Backend usa otro Despliegue porque tiene otro Ciclo de Cambio, y su Flujo se
-cuenta en [muchi-api](https://github.com/cangrejometralleta/muchi-api).
+The Backend deploys separately because its Change cycle differs. Its
+Flow is described in [muchi-api](https://github.com/cangrejometralleta/muchi-api).
 
-La API y el BFF deben desplegarse de forma compatible con el Contrato OpenAPI.
-Dos Repositorios no eliminan esa Disciplina: quien cambia la Frontera cambia el
-Contrato antes, y de un solo lado.
+The API and BFF must deploy compatibly with the OpenAPI Contract.
+Two Repositories still require that Discipline: whoever changes the
+Boundary changes the Contract first, in its single owning location.
 
-## Cómo Replicar esta Arquitectura
+## How to Reproduce This Architecture
 
-Una Implementación nueva puede seguir esta Secuencia:
+A new Implementation can follow this Sequence:
 
-1. Define primero el Contrato HTTP y los Estados del Trabajo: `queued`,
-   `running`, Estados terminales y Respuestas de Error.
-2. Construye un Worker idempotente que procese una sola Unidad y escriba su
-   Resultado. Pruébalo sin Cola ni HTTP.
-3. Agrega Persistencia con Caducidad y una API que cree, consulte y cancele
-   Trabajos.
-4. Introduce una Cola autenticada. Configura Reintentos, Concurrencia, Ritmo y
-   Deadline según el Proveedor más lento.
-5. Construye un BFF que traduzca el Contrato interno a la Vista pública y
-   conserve las Credenciales fuera del Navegador.
-6. Publica el Front en un Hosting estático con Reescritura al BFF y un solo
-   Origen visible para evitar una Configuración CORS innecesaria.
-7. Crea Cuentas de Servicio separadas y concede cada Rol después de identificar
-   la llamada concreta que lo necesita.
-8. Guarda Credenciales en un Gestor de Secretos, referencia Versiones y ensaya
-   la Rotación antes de Producción.
-9. Delega el Dominio, añade los Registros solicitados por el Hosting y espera la
-   emisión automática de HTTPS antes de anunciar la URL.
-10. Automatiza Build, Pruebas, Despliegue y una Comprobación de Salud. Conserva
-    una URL del Proveedor para recuperar el Servicio si falla el Dominio.
+1. Define the HTTP Contract and Job states first: `queued`, `running`,
+   terminal States and Error responses.
+2. Build an idempotent Worker that processes one Unit and writes its
+   Result. Test it without a Queue or HTTP.
+3. Add Persistence with Expiration and an API for creating, querying
+   and cancelling Jobs.
+4. Introduce an authenticated Queue. Set Retries, Concurrency, Rate and
+   Deadline according to the slowest Provider.
+5. Build a BFF that translates the internal Contract into the public View
+   and keeps Credentials out of the Browser.
+6. Publish the Frontend on static Hosting with rewrites to the BFF,
+   exposing one Origin to avoid unnecessary CORS configuration.
+7. Create separate Service accounts and grant each Role after identifying
+   the specific call that needs it.
+8. Store Credentials in a Secret manager, reference Versions and rehearse
+   Rotation before Production.
+9. Delegate the Domain, add Hosting's requested Records and wait for
+   automatic HTTPS issuance before announcing the URL.
+10. Automate Build, Tests, Deployment and a Health check. Retain a Provider
+    URL to recover access if the Domain fails.
 
-Variables mínimas de una réplica:
+Minimal variables for a replica:
 
 ```dotenv
 APP_ENV=production
 BACKEND_URL=https://api.example.invalid
-BACKEND_TOKEN=<inyectado-desde-el-gestor-de-secretos>
+BACKEND_TOKEN=<injected-from-secret-manager>
 POLL_SECONDS=5
-TASK_REGION=region-elegida
-TASK_QUEUE=trabajos
+TASK_REGION=chosen-region
+TASK_QUEUE=jobs
 TASK_WORKER_URL=https://worker.example.invalid
 TASK_SERVICE_ACCOUNT=queue-invoker@example.invalid
 ```
 
-Los Nombres cambian entre Plataformas; las Categorías no: Entorno, Destinos,
-Tiempos, Topología y Secretos. Los Secretos se inyectan por separado y nunca se
-incluyen en el Archivo de Defaults.
+Names vary between Platforms; Categories remain: Environment, Destinations,
+Timing, Topology and Secrets. Inject Secrets separately and never place
+them in the Defaults file.
 
-## Operación, Costo y Fallos
+## Operations, Cost and Failures
 
-El escalado a cero reduce el Costo cuando no hay Tráfico, a cambio de un Arranque
-frío en la primera Petición. La Cola absorbe Picos y limita la presión sobre las
-Fuentes externas. La Concurrencia baja protege Adaptadores lentos, pero aumenta
-el Tiempo total de una Lista grande.
+Scaling to zero reduces idle Cost at the expense of a Cold start on the
+first Request. The Queue absorbs Peaks and limits pressure on external
+Sources. Low Concurrency protects slow Adapters but increases total Time
+for large Lists.
 
-Una Operación mínima debe observar:
+Minimum operational Monitoring covers:
 
-- Latencia y proporción de Errores del BFF, API y Worker.
-- Profundidad, antigüedad y Reintentos de la Cola.
-- Trabajos detenidos en `queued` o `running` más allá de su Deadline.
-- Tasa de respuestas inválidas, bloqueos y timeouts por Fuente.
-- Uso de Firestore, crecimiento de Índices y eliminación mediante TTL.
-- Fallos de acceso a Secret Manager y revisiones sin Tráfico.
-- Estado del Dominio, Certificado HTTPS y endpoint de Salud.
+- BFF, API and Worker Latency and Error rates.
+- Queue depth, age and Retries.
+- Jobs stuck in `queued` or `running` beyond their Deadline.
+- Invalid responses, blocks and timeouts per Source.
+- Firestore usage, Index growth and TTL deletion.
+- Secret Manager access failures and Revisions receiving no Traffic.
+- Domain, HTTPS Certificate and Health endpoint status.
 
-| Fallo | Comportamiento esperado |
+| Failure | Expected Behavior |
 | --- | --- |
-| El BFF no alcanza la API | Conserva el Resultado visible y permite reintentar la Lectura. |
-| Una Fuente falla | Marca la Unidad con Aviso y permite terminar con Errores parciales. |
-| Una Tarea se repite | El Worker reconoce el mismo Trabajo y no duplica Resultados. |
-| El Worker no está disponible | La Cola reintenta según una Política acotada y observable. |
-| El Documento venció | La API lo rechaza aunque el TTL todavía no lo haya borrado. |
-| Falla el Dominio | La URL administrada de Hosting continúa disponible para diagnóstico. |
-| Se rota la Llave | Las nuevas Instancias leen la Versión vigente y las antiguas se reemplazan. |
+| BFF cannot reach the API | Keeps the visible Result and allows retrying the Read. |
+| A Source fails | Marks the Unit with a Notice and allows completion with partial Errors. |
+| A Task repeats | Worker recognizes the same Job and does not duplicate Results. |
+| Worker is unavailable | Queue retries under a bounded, observable Policy. |
+| Document expired | API rejects it even if TTL has not deleted it yet. |
+| Domain fails | Hosting's managed URL remains available for diagnosis. |
+| Key rotates | New Instances read the current Version; old Instances are replaced. |
 
-## Decisiones y Límites
+## Decisions and Limits
 
-- El Sondeo HTTP es simple, recuperable y suficiente para Avances espaciados.
-  WebSockets o Server-Sent Events añaden Complejidad y solo convienen si la
-  Latencia de actualización lo justifica.
-- Un BFF reduce Exposición y evita entregar Secretos al Front, pero agrega un
-  Salto de red. Ubicarlo en la misma Región que la API reduce ese Costo.
-- Una Base documental encaja con Resultados parciales y TTL. Relaciones fuertes,
-  reportes complejos o Transacciones extensas pueden justificar SQL.
-- El Procesamiento al menos una vez exige Idempotencia. Pretender una Entrega
-  exactamente una vez traslada el mismo Problema a una Capa menos visible.
-- Una Heurística rápida puede ser preferible a un Óptimo costoso si la Interfaz
-  declara esa Limitación y permite revisar el Resultado.
-- Separar el Front de la API en dos Repositorios deja cada Decisión donde vive
-  su Código, pero obliga a un Contrato explícito y a no copiar Documentos de un
-  lado al otro: una Copia envejece en silencio.
+- HTTP Polling is simple, recoverable and sufficient for spaced updates.
+  WebSockets or Server-Sent Events add Complexity and are justified only
+  when update Latency requires them.
+- A BFF reduces Exposure and keeps Secrets out of the Frontend, while
+  adding a Network hop. Placing it in the API's Region reduces that Cost.
+- A document Database fits partial Results and TTL. Strong Relationships,
+  complex reporting or extensive Transactions may justify SQL.
+- At-least-once processing requires Idempotency. Claiming exactly-once
+  delivery moves the same Problem to a less visible Layer.
+- A fast Heuristic may beat a costly Optimum when the Interface declares
+  that Limit and lets the Person review the Result.
+- Separate Frontend and API Repositories keep Decisions with their Code,
+  but require an explicit Contract and links between owning Documents.
+  Copies silently grow stale.
 
-## Aprender y Colaborar
+## Learn and Contribute
 
-Muchi quiere que su parte pública sirva también como una Ruta de Aprendizaje:
+Muchi's public side is also intended as a Learning path:
 
-1. [`web/src/App.vue`](../web/src/App.vue) muestra cómo se compone la Experiencia.
-2. [`web/src/api.js`](../web/src/api.js) muestra el Contrato que consume el Navegador.
-3. [`server/main.py`](../server/main.py) muestra la Frontera del BFF.
-4. [`server/presenter.py`](../server/presenter.py) hace explícitas las Reglas de Presentación.
-5. [`firebase.json`](../firebase.json) y [`deploy.sh`](../deploy.sh) muestran cómo
-   conviven Firebase Hosting, Cloud Run y Secret Manager.
+1. [`web/src/App.vue`](../web/src/App.vue) shows how the Experience is composed.
+2. [`web/src/api.js`](../web/src/api.js) shows the Contract consumed by the Browser.
+3. [`server/main.py`](../server/main.py) shows the BFF Boundary.
+4. [`server/presenter.py`](../server/presenter.py) makes Presentation rules explicit.
+5. [`firebase.json`](../firebase.json) and [`deploy.sh`](../deploy.sh) show
+   how Firebase Hosting, Cloud Run and Secret Manager work together.
 
-Puedes [abrir una Incidencia](https://github.com/metaliaw/muchi/issues/new) para
-reportar un Problema, cuestionar un Criterio, proponer una Mejora o pedir que
-una Decisión quede mejor documentada. También puedes enviar un Pull Request al
-Repositorio público. Las Tiendas que quieran compartir Stock tienen una
-[Guía de Integración](../share-store-stock.md).
+You can [open an Issue](https://github.com/metaliaw/muchi/issues/new) to
+report a Problem, question a Criterion, propose an Improvement or request
+clearer documentation. Pull Requests to the public Repository are welcome.
+Stores wishing to share Stock can use the
+[Integration guide](../share-store-stock.md).
 
-No publiques Llaves, Datos personales ni detalles explotables en una
-Incidencia. Describe el Efecto observable y pide un Canal privado cuando el
-Reporte sea sensible.
+Do not publish Keys, personal Data or exploitable details in an Issue.
+Describe the observable Effect and request a private Channel for sensitive Reports.

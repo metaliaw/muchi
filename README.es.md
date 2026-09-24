@@ -10,7 +10,7 @@ La API de MUCHI realiza las Búsquedas y conserva sus Resultados. Este Front,
 construido con Vue 3, muestra el Avance, las Ofertas y el Carrito.
 
 Quienes quieran mirar detrás de la Pantalla pueden recorrer la
-[Arquitectura de MUCHI](docs/architecture.md), sus Decisiones públicas y las
+[Arquitectura de MUCHI](docs/architecture.es.md), sus Decisiones públicas y las
 formas de colaborar.
 
 > 📚 **Este Repositorio se lee, no sólo se ejecuta.** Cada Decisión de MUCHI
@@ -112,7 +112,7 @@ Puedes proponer la incorporación de tu Inventario mediante:
 - **Tu sitio web:** comparte la dirección del Catálogo o de una API de Stock,
   con los Precios, la disponibilidad y los enlaces de Compra.
 
-Consulta [Cómo compartir el Stock de tu Tienda](share-store-stock.md) para saber
+Consulta [Cómo compartir el Stock de tu Tienda](share-store-stock.es.md) para saber
 qué información preparar y cómo solicitar la integración. La conexión se
 realiza en la API de MUCHI; publicar un enlace no incorpora automáticamente
 la Tienda.
@@ -195,7 +195,7 @@ inventa uno.
 > Si lees esto para aprender del Patrón, ese es el Estado real, y el Valor
 > usado es siempre el que informa la Respuesta de ese Carrito.
 > Parte de esa Duda depende de otra Cosa que aún no pasa:
-> [Cuando MUCHI Compre](docs/when-muchi-buys.md).
+> [Cuando MUCHI Compre](docs/when-muchi-buys.es.md).
 
 ## Estamos trabajando en poder Comprar
 
@@ -214,7 +214,7 @@ compre*; hoy esos Intermediarios son Personas, y son la parte del Costo que un
 Agente podría mover. Si se mueve, falta decidir si el MUCHI Dólar baja o si el
 Costo de comprar sale a la Superficie con su propio Nombre, separado del Cambio.
 
-📄 [Cuando MUCHI Compre](docs/when-muchi-buys.md) lo cuenta entero: qué falta
+📄 [Cuando MUCHI Compre](docs/when-muchi-buys.es.md) lo cuenta entero: qué falta
 resolver —el Costo por Compra, la Compra a medias, los Pagos, las Tiendas—, cómo
 se arma el Total hoy y qué Parte se le agregaría.
 
@@ -274,7 +274,7 @@ Servicio. Un solo Script despliega ambos en ese orden:
 ./deploy.sh
 ```
 
-La [Nota de Migración](docs/web-migration.md) explica la Frontera entre
+La [Nota de Migración](docs/web-migration.es.md) explica la Frontera entre
 `web/` y `server/` y las Rutas del BFF.
 
 ## Configuración y Arquitectura
@@ -343,11 +343,11 @@ los Documentos de `docs/` en español. El Índice equivalente está en
 
 | Documento | Qué aprendes |
 | --- | --- |
-| 🏛️ [Arquitectura de MUCHI](docs/architecture.md) | La Frontera entre este Front y la API, la Seguridad, los Datos, la Operación y una Guía neutral para replicar el Patrón con otros Proveedores. |
-| 🪟 [El Front y su Frontera](docs/web-migration.md) | Qué dibuja el Front, qué decide el BFF, cuáles son sus Rutas y cómo se despliega en Cloud Run. |
-| 🐱 [Cómo Habla MUCHI](docs/how-muchi-speaks.md) | El Catálogo de Frases, quién le gana el turno a la Burbuja, los tres Canales de Aviso, la Hoja de Sprites y qué queda con Movimiento reducido. |
-| 🧩 [Laboratorio de Sprites](docs/muchi-sprite-lab.html) | Vista interactiva de los Estados, las Hojas y los ejemplos de Animación. Abre el HTML en un Navegador. |
-| 📦 [Producto Sellado](docs/sealed-product.md) | Cómo se elige el Catálogo, los Valores por Defecto medidos contra las Tiendas, por qué la Caja no Tiene a quién pedirle su Foto y por qué decir «No hay Ofertas» puede ser Mentira. |
+| 🏛️ [Arquitectura de MUCHI](docs/architecture.es.md) | La Frontera entre este Front y la API, la Seguridad, los Datos, la Operación y una Guía neutral para replicar el Patrón con otros Proveedores. |
+| 🪟 [El Front y su Frontera](docs/web-migration.es.md) | Qué dibuja el Front, qué decide el BFF, cuáles son sus Rutas y cómo se despliega en Cloud Run. |
+| 🐱 [Cómo Habla MUCHI](docs/how-muchi-speaks.es.md) | El Catálogo de Frases, quién le gana el turno a la Burbuja, los tres Canales de Aviso, la Hoja de Sprites y qué queda con Movimiento reducido. |
+| 🧩 [Laboratorio de Sprites](docs/muchi-sprite-lab.es.html) | Vista interactiva de los Estados, las Hojas y los ejemplos de Animación. Abre el HTML en un Navegador. |
+| 📦 [Producto Sellado](docs/sealed-product.es.md) | Cómo se elige el Catálogo, los Valores por Defecto medidos contra las Tiendas, por qué la Caja no Tiene a quién pedirle su Foto y por qué decir «No hay Ofertas» puede ser Mentira. |
 | 📜 [Contrato de MUCHI API](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml) | Todas las Rutas que MUCHI consume, con sus Formas de Entrada y Salida. Vive en muchi-api. |
 
 ### La API vive en su propio Repositorio
@@ -366,7 +366,7 @@ Cada Cosa se lee en un solo lugar, y por eso acá ya no hay Copias:
   separa un Fallo del Front de uno del Servicio.
 - 🏛️ La [Arquitectura del Backend](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/arquitectura.md)
   —Cola, Worker, Persistencia y Caducidad— se cuenta allá.
-  [Acá](docs/architecture.md) se cuenta la del Front y su Frontera.
+  [Acá](docs/architecture.es.md) se cuenta la del Front y su Frontera.
 - ⚖️ El [Castigo y Perdón](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/castigo-y-perdon.md)
   explica cómo la API trata a una Tienda que se cae, que tarda o que pide calma.
   Importa acá porque de esa Política salen los Avisos que MUCHI muestra: una
@@ -378,35 +378,35 @@ Cada Cosa se lee en un solo lugar, y por eso acá ya no hay Copias:
   comercial, publicado— pero cómo se opera no. Se explica ahí mismo, con las
   Preguntas que siguen sin Respuesta, porque un Número que convierte Precios
   ajenos merece contarse incluso a medio decidir.
-- 🛒 [Cuando MUCHI Compre](docs/when-muchi-buys.md): el Plan de automatizar la Compra
+- 🛒 [Cuando MUCHI Compre](docs/when-muchi-buys.es.md): el Plan de automatizar la Compra
   con Agentes, la Implementación y los Costos que seguimos mirando, y cómo eso
   toca el MUCHI Dólar y el Costeo del Carrito. Un Plan en voz alta, sin Fecha.
 
 ### Decisiones contadas en detalle
 
-- 📦 [El Pedido de Stock](docs/api/stock-order.md): cómo se pregunta por Rondas
+- 📦 [El Pedido de Stock](docs/api/stock-order.es.md): cómo se pregunta por Rondas
   —la Candidata más barata de cada Tipo en una sola Consulta— para que el Costo
   crezca con la Duda y no con el Largo de la Lista. El BFF conserva la Ruta y el
   Tope `stock_check_limit` (hoy **3**). El Front la llama al Final, con lo que
   su Navegador ya pudo Confirmar por su cuenta.
-- ⚖️ [Por qué la Re-verificación de Stock es Opcional](docs/optional-reverification.md):
+- ⚖️ [Por qué la Re-verificación de Stock es Opcional](docs/optional-reverification.es.md):
   la Cadena de Carga que aparece cuando cada Oferta barata pide una segunda
   Visita a la Tienda, por qué esa Vuelta no puede ser obligatoria, y cómo el
   Navegador de quien Compra paga una de cada cinco sin que nadie la Note.
-- 🌐 [El Tráfico que no Pagamos](docs/browser-traffic.md): quién paga cada
+- 🌐 [El Tráfico que no Pagamos](docs/browser-traffic.es.md): quién paga cada
   Petición que MUCHI hace, cuándo una se mueve al Navegador de quien Compra, y
   la Raya entre aprovechar una Puerta abierta y usar Visitantes de Flota.
-- 🔍 [Hallazgos en los Buscadores](docs/search-findings.md): los Supuestos
+- 🔍 [Hallazgos en los Buscadores](docs/search-findings.es.md): los Supuestos
   que se cayeron cuando una Búsqueda empezó a traer Cartas distintas y no
   Variantes de una, qué los cerró y qué queda abierto. Los del otro lado de la
   Frontera viven en el Repositorio de la API.
-- 📣 [La Publicidad, de Punta a Punta](docs/advertising.md): los Identificadores,
+- 📣 [La Publicidad, de Punta a Punta](docs/advertising.es.md): los Identificadores,
   el Flujo hasta el primer Anuncio, lo que la Revisión de Google mira y qué
   hacer cuando algo no anda.
 
 ### Para quien quiera aparecer en MUCHI
 
-- 🏪 [Compartir el Stock de una Tienda](share-store-stock.md): qué información
+- 🏪 [Compartir el Stock de una Tienda](share-store-stock.es.md): qué información
   preparar y cómo pedir la integración. Sirve igual si vendes sin Tienda.
 - 🙋 [Aparecer en MUCHI](#aparecer-en-muchi): los tres Caminos —Tienda, Persona
   o un Juego nuevo— y por dónde se piden.

@@ -1,104 +1,103 @@
-[English](web-migration-en.md) · [Español](web-migration.md)
+[English](web-migration.md) · [Español](web-migration.es.md)
 
-# El Front y su Frontera
+# The Frontend and Its Boundary
 
-Muchi tenía una sola Interfaz posible: el Front dibujaba, decidía y guardaba
-el Estado en la misma Corrida. Cambiar un Detalle visual obligaba a repintar
-la Página completa, y cualquier otra Interfaz —una App, un Widget, un Bot—
-habría tenido que reimplementar las Reglas.
+Muchi used to have only one possible Interface: the Frontend rendered,
+decided and stored State in the same Run. Changing a visual Detail meant
+repainting the entire Page, and any other Interface — an App, Widget or Bot —
+would have had to implement the Rules again.
 
-Ahora hay dos Piezas y una Frontera clara:
+Now there are two Parts and a clear Boundary:
 
-```
-Navegador ──► web/  (Vue 3 + Vite)      dibuja, no decide
+```text
+Browser ──► web/  (Vue 3 + Vite)       renders, does not decide
                 │  fetch /api/...
                 ▼
-           server/  (FastAPI, el BFF)   decide y guarda el Token
+           server/  (FastAPI, the BFF) decides and keeps the Token
                 │  Bearer + /v1
                 ▼
-        API de Muchi (Cloud Run)        busca y persiste las Búsquedas
+        Muchi API (Cloud Run)         searches and persists Searches
 ```
 
-## Por qué un BFF y no llamar la API desde el Navegador
+## Why a BFF Instead of Calling the API from the Browser
 
-El Código de Seguridad de la API es un Bearer. Un Front que lo llevara en el
-Navegador lo estaría publicando: cualquiera abre las Herramientas de
-Desarrollo y lo copia. El BFF lo conserva del lado del Servidor y expone solo
-lo que el Front necesita.
+The API Security token is a Bearer token. Carrying it in the Browser would
+publish it: anyone could open Developer tools and copy it. The BFF keeps it
+on the Server and exposes only what the Frontend needs.
 
-De paso, las Reglas del Dominio quedan en un solo Lugar. El Tratamiento, el
-Muchi Dólar, el Orden por Moneda, la Oferta más barata y el Reparto del
-Carrito viven en `server/presenter.py` y reusan `muchi/mtg/`, los mismos
-Módulos que usaba `app.py`. El Front recibe JSON ya presentado: Pastillas con
-su Texto, Precios con su Moneda y la Oferta marcada como la más barata.
+The Domain rules also stay in one place. Treatment, the Muchi Dollar,
+Currency ordering, the cheapest Offer and Cart allocation live in
+`server/presenter.py` and reuse `muchi/mtg/`, the same Modules used by `app.py`.
+The Frontend receives presentation-ready JSON: Badges with their Text,
+Prices with their Currency and the Offer marked as cheapest.
 
-## Qué expone el BFF
+## What the BFF Exposes
 
-| Ruta | Para qué |
+| Route | Purpose |
 | --- | --- |
-| `GET /api/config` | Muchi Dólar, Intervalo de Consulta y Límites. Nunca el Token. |
-| `GET /api/muchi` | Las Frases del Gato: Saludos, Caricias, Ayuda y Luz. |
-| `POST /api/decklist` | Lee la Lista sin gastar una Búsqueda. |
-| `POST /api/searches` | Crea la Búsqueda. Recibe el Texto y la Clave de Idempotencia. |
-| `GET /api/searches/{id}` | Estado y Ofertas presentadas, en una sola Consulta. |
-| `POST /api/searches/{id}/cancel` | Cancela la Búsqueda en curso. |
-| `GET /api/searches/{id}/cart?shipping=` | El Carrito en CLP con el Reparto por Tienda. |
-| `GET /api/sources` | Estado de las Fuentes. |
+| `GET /api/config` | Muchi Dollar, Polling interval and Limits. Never the Token. |
+| `GET /api/muchi` | The Cat's phrases: Greetings, Petting, Help and Light. |
+| `POST /api/decklist` | Parses the List without using a Search. |
+| `POST /api/searches` | Creates a Search. Receives Text and an Idempotency key. |
+| `GET /api/searches/{id}` | State and presented Offers in one Request. |
+| `POST /api/searches/{id}/cancel` | Cancels the active Search. |
+| `GET /api/searches/{id}/cart?shipping=` | The Cart in CLP, allocated by Store. |
+| `GET /api/sources` | Source status. |
 
-Los Errores conservan la Distinción que ya existía en el Dominio: un `502`
-trae `retriable: true` y el Front reintenta conservando lo recibido; un `409`
-trae `retriable: false` y detiene la Consulta automática, porque esa Búsqueda
-ya no existe.
+Errors preserve the existing Domain distinction: a `502` carries
+`retriable: true`, and the Frontend retries while retaining received data;
+a `409` carries `retriable: false` and stops automatic Polling, because that
+Search no longer exists.
 
-El BFF no guarda Estado. Cada Consulta pregunta a la API, así una Instancia
-nueva de Cloud Run atiende igual que la anterior y el Enlace `?search=<id>`
-sigue funcionando entre Sesiones y entre Máquinas.
+The BFF stores no State. Every Request asks the API, so a new Cloud Run
+Instance serves the same way as the previous one, and the `?search=<id>` Link
+continues working across Sessions and Machines.
 
-## Qué hace el Front
+## What the Frontend Does
 
-`web/src/App.vue` orquesta: pide la Configuración, arranca la Consulta cada
-`poll_seconds` mientras la Búsqueda está pendiente y la detiene al recibir un
-Estado terminal. El Historial de Búsquedas y la Elección de Tema viven en
-`localStorage`; antes vivían en la Sesión del Servidor y se perdían al cerrar.
+`web/src/App.vue` orchestrates: it loads Configuration, polls every
+`poll_seconds` while the Search is pending and stops on a terminal State.
+Search history and Theme selection live in `localStorage`; previously they
+lived in the Server session and were lost when it closed.
 
-La Paleta es la misma de `muchi/mtg/style.py`, ahora en `web/src/styles.css`.
-El Modo Oscuro no reescribe Reglas: cambia el Valor de las Variables CSS.
+The Palette is the same one from `muchi/mtg/style.py`, now in
+`web/src/styles.css`. Dark mode changes CSS variable Values without rewriting Rules.
 
-## Desarrollo
+## Development
 
 ```bash
-cp .env.example .env      # completa MUCHI_API_URL y MUCHI_API_TOKEN
-./start-web.sh            # BFF en :8000, Front en http://127.0.0.1:5173
+cp .env.example .env      # fill in MUCHI_API_URL and MUCHI_API_TOKEN
+./start-web.sh            # BFF on :8000, Frontend at http://127.0.0.1:5173
 ```
 
-Vite reenvía `/api` al BFF, así el Navegador ve un solo Origen y no hay CORS
-que configurar, ni en Desarrollo ni en Producción.
+Vite forwards `/api` to the BFF, so the Browser sees a single Origin and no
+CORS configuration is needed in Development or Production.
 
-## Despliegue en GCP
+## Deployment on GCP
 
-Un solo Servicio en Cloud Run sirve el Front compilado y el BFF. El
-`Dockerfile` compila `web/` con Node y copia el `dist` a la Imagen de Python.
+One Cloud Run Service serves the compiled Frontend and the BFF. The
+`Dockerfile` builds `web/` with Node and copies `dist` into the Python Image.
 
 ```bash
 gcloud builds submit --config cloudbuild.yaml \
   --substitutions=_SERVICE=muchi-web,_REGION=southamerica-east1
 ```
 
-El Token se monta desde Secret Manager al desplegar; no queda escrito en la
-Imagen ni en el Repositorio:
+The Token is mounted from Secret Manager during deployment; it is not
+written into the Image or Repository:
 
 ```bash
 gcloud run services add-iam-policy-binding muchi-web --region=southamerica-east1 \
   --member=allUsers --role=roles/run.invoker
 ```
 
-Un Bucket con CDN habría servido el Front más barato, pero entonces el Token
-necesitaría un segundo Servicio de todos modos. Un solo Cloud Run con
-`min-instances=0` cuesta prácticamente nada mientras nadie lo visite, y evita
-tanto el CORS como un segundo Despliegue que mantener sincronizado.
+A Bucket with a CDN could serve the Frontend more cheaply, but the Token
+would still require a second Service. A single Cloud Run service with
+`min-instances=0` costs practically nothing while nobody visits, and avoids
+both CORS and a second Deployment to keep synchronized.
 
-## El Front anterior
+## The Previous Frontend
 
-Ya no está. `app.py`, su Configuración, su Dependencia y las Piezas que armaban
-HTML para él se fueron cuando el Vue lo reemplazó. Su Historia vive en los
-Commits; el Código, en ninguna parte.
+It is gone. `app.py`, its Configuration, its Dependency and the Parts that
+built HTML for it were removed when Vue replaced it. Its History lives in
+the Commits; its Code is no longer in the current tree.

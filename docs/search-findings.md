@@ -1,169 +1,165 @@
-[English](search-findings-en.md) · [Español](search-findings.md)
+[English](search-findings.md) · [Español](search-findings.es.md)
 
-# Hallazgos en los Buscadores
+# Search Findings
 
-Muchi Mostraba una Lista de Ofertas y Coronaba la más barata. Eso Funcionó
-mientras cada Búsqueda Traía **una Carta y sus Impresiones**, que es lo único que
-la API Devolvía.
+Muchi displayed a List of Offers and crowned the cheapest. That worked
+while every Search returned one Card and its Printings, the only thing
+the API provided.
 
-El Día que la API Aprendió `match=includes`, una Búsqueda Empezó a Traer **Cartas
-distintas**: buscar «Kuriboh» Encuentra también Winged Kuriboh, Linkuriboh y
-Token: Kuriboh. Ahí se Cayeron cuatro Supuestos que nadie Había Escrito, porque
-hasta ese Día eran ciertos.
+When the API learned `match=includes`, a Search began returning different
+Cards: "Kuriboh" also finds Winged Kuriboh, Linkuriboh and Token: Kuriboh.
+Four unwritten Assumptions fell apart; until then, they had been true.
 
-El quinto Hallazgo no Viene de ahí. Salió al Pasar por al lado.
+The fifth Finding was discovered along the way.
 
-Los Defectos del otro Lado de la Frontera —los de las Fuentes que Buscan— Viven
-en `docs/search-findings.md` del
-[Repositorio muchi-api](https://github.com/cangrejometralleta/muchi-api).
-Cada Repositorio Guarda los suyos: una Copia del Documento Ajeno Envejecería igual
-que Envejeció la Copia del Contrato, que es justamente F5.
+Defects across the Boundary — in the Sources doing the searching — live in
+`docs/search-findings.es.md` in the
+[muchi-api Repository](https://github.com/cangrejometralleta/muchi-api).
+Each Repository keeps its own Findings: copying the other Document would
+age like the copied Contract did, which is precisely F5.
 
-## Dónde Decide Cada Cosa
+## Where Each Decision Lives
 
-`server/presenter.py` Decide y `web/src/search.js` es su **Gemelo** del otro Lado
-de la Frontera. El BFF Manda una Página por Ciclo y el Front Acumula, así que la
-misma Decisión está Escrita dos veces. Cuatro de estos cinco Hallazgos Tocaron a
-los dos Gemelos.
+`server/presenter.py` decides, and `web/src/search.js` is its Twin across
+the Boundary. The BFF sends one Page per Cycle and the Frontend accumulates
+them, so the same Decision is written twice. Four of these five Findings
+touched both Twins.
 
-```
-La API Responde          card_key · faults · ofertas
+```text
+API response            card_key · faults · offers
         │
         ▼
-server/presenter.py      agrupa por Tipo de Carta, corona, arma el Carrito
-        │  una Página por Ciclo
+server/presenter.py      groups by Card type, crowns, builds the Cart
+        │  one Page per Cycle
         ▼
-web/src/search.js        acumula las Páginas y rehace el Resumen
+web/src/search.js        accumulates Pages and rebuilds the Summary
         │
         ▼
-components/OfferList     dibuja, no decide
+components/OfferList     renders, does not decide
 ```
 
-## Los Hallazgos
+## The Findings
 
-| ID | Hallazgo | Estado |
+| ID | Finding | Status |
 | --- | --- | --- |
-| F1 | Una sola «más barata» para toda la Página | Cerrado `a1bc9d8` |
-| F2 | El Carrito Compraba la Carta equivocada | Cerrado `a1bc9d8` |
-| F3 | Agrupar por Texto Parte una Carta en varias | Cerrado `57e571e` |
-| F4 | Nadie Sabía que Faltaba una Tienda | Cerrado `b972a65` |
-| F5 | La Copia del Contrato Llevaba 130 Líneas de Atraso | Cerrado `03a4d92` |
+| F1 | One "cheapest" for the entire Page | Closed `a1bc9d8` |
+| F2 | The Cart bought the wrong Card | Closed `a1bc9d8` |
+| F3 | Grouping by Text splits one Card into several | Closed `57e571e` |
+| F4 | Nobody knew a Store was missing | Closed `b972a65` |
+| F5 | The copied Contract was 130 lines behind | Closed `03a4d92` |
 
-### F1. Una sola «más barata» para toda la Página
+### F1. One "Cheapest" for the Entire Page
 
-`order_offers` lo Decía en su propia Docstring: *«Abre por Precio, barata primero,
-mezclando todas las Cartas»*. Y `pick_cheapest` Coronaba **una sola** Oferta para
-toda la Respuesta.
+`order_offers` said it in its Docstring: "Opens by Price, cheapest first,
+mixing all Cards." And `pick_cheapest` crowned one Offer for the whole Response.
 
-```
- 100 CLP  Linkuriboh        🐾 el mas barato
+```text
+ 100 CLP  Linkuriboh        🐾 cheapest
  300 CLP  Winged Kuriboh
- 900 CLP  Kuriboh           ← lo que se pidió
+ 900 CLP  Kuriboh           ← what was requested
 ```
 
-Comparar el Precio de un Linkuriboh con el de un Kuriboh no Dice nada: son Cartas
-distintas. Cada Tipo de Carta Corona la suya, y la Vista los Separa con
-Encabezado cuando hay más de uno.
+Comparing Linkuriboh's Price with Kuriboh's says nothing: they are different
+Cards. Each Card type crowns its own Offer, and the View separates types
+with Headings when more than one appears.
 
-**El Tipo de Carta Depende del Modo.** En `exact` el Tipo es la Carta Pedida,
-porque sus Impresiones son la misma Carta y Compiten entre ellas. En `includes`
-cada Título es un Tipo. Es una Regla dicha en Lenguaje de Dominio, no dos Reglas.
+Card type depends on Mode. In `exact`, the type is the requested Card:
+its Printings are the same Card and compete. In `includes`, each Title is
+a type. This is one Rule expressed in Domain language.
 
-### F2. El Carrito Compraba la Carta equivocada
+### F2. The Cart Bought the Wrong Card
 
-`build_cart` Agrupaba por el Nombre Pedido y Dejaba Entrar toda Oferta del Ítem.
-Con Derivados, el Optimizador Compraba el Derivado porque Salía más barato.
+`build_cart` grouped by the requested Name and admitted every Offer for the
+Item. With derivatives present, the Optimizer bought the cheaper derivative.
 
+```text
+before the fix  total 4700   1× Winged Kuriboh LV9   ✗
+after the fix   total 5000   1× Kuriboh              ✓
 ```
-sin el arreglo   total 4700   1× Winged Kuriboh LV9   ✗
-con el arreglo   total 5000   1× Kuriboh              ✓
-```
 
-Los Derivados son para **Mirar**, no para Comprar de a tres. En `includes` el
-Carrito Vuelve a la Carta Pedida, Filtrando con el Gemelo de `offer.MatchesCard`
-que Vive en `names_same_card`.
+Derivatives are for browsing, not buying three copies of. In `includes`,
+the Cart returns to the requested Card by filtering with `names_same_card`,
+the Twin of `offer.MatchesCard`.
 
-⚠️ Ése es un tercer Gemelo, y el único que Cruza la Frontera: Repite una Regla que
-la API ya Aplica del otro Lado. Está ahí porque el Carrito Necesita Angostar lo que
-una Búsqueda ancha ya Trajo.
+That is a third Twin and the only one crossing the API boundary: it repeats
+a Rule the API already applies. It exists because the Cart must narrow
+what a broad Search returned.
 
-### F3. Agrupar por Texto Parte una Carta en varias
+### F3. Grouping by Text Splits One Card into Several
 
-`read_card_type` Bajaba el Título a minúsculas y lo Usaba como Carta. El Front
-Estaba Resolviendo con Texto una Pregunta que sólo la API Puede Responder, porque
-es la que Conoce las Reglas de Calce.
+`read_card_type` lowercased the Title and used it as the Card identity.
+The Frontend used Text to answer a Question only the API could answer,
+because the API knows the Matching rules.
 
-```
+```text
 Winged Kuriboh                                     ┐
-LDS3-EN100 “Winged Kuriboh” Common Effect Monster  ├→ tres Grupos
+LDS3-EN100 “Winged Kuriboh” Common Effect Monster  ├→ three Groups
 Winged Kuriboh (PUR)                               ┘
 ```
 
-Cada Fuente Escribe el Título a su Manera, y agrupar por ese Texto Partía una
-Carta en tantos Grupos como Formas de Escribirla Hubiera. Cada Grupo con su propia
-«más barata», que es como Decir ninguna.
+Each Source writes Titles differently. Grouping by that Text split a Card
+into as many Groups as spellings, each with its own "cheapest" — effectively none.
 
-La API ahora Manda `card_key` y Responde la Pregunta una vez. El Front la Lee y
-**Cae al Título cuando Viene vacía**, que es lo que Responde una Versión anterior
-de la API: Desplegar las dos Puntas al mismo Tiempo no Siempre se Puede.
+The API now sends `card_key` and answers once. The Frontend reads it and
+falls back to the Title when empty, which is what an older API version
+returns: both sides cannot always be deployed together.
 
-### F4. Nadie Sabía que Faltaba una Tienda
+### F4. Nobody Knew a Store Was Missing
 
-La API ya Decía qué Fuente se Había Caído y el Front no lo Leía. Una Búsqueda con
-una Tienda menos Llegaba `found` con sus Ofertas y se Veía completa.
+The API already reported failed Sources, but the Frontend ignored them.
+A Search missing a Store arrived as `found` with its Offers and looked complete.
 
+```text
+⚠ Kuriboh: could not query v3.netdecker.cl; its offers are missing.
 ```
-⚠ Kuriboh: no se pudo consultar v3.netdecker.cl; faltan sus Ofertas.
-```
 
-**La Vista no Cambió.** `notices` ya Existía y ya se Dibujaba con su Estilo de
-Aviso; lo que Faltaba era Llenarlo. Ése es el mejor Resultado posible de un
-Cambio así.
+The View did not change. `notices` already existed and rendered with its
+Notice styling; only its contents were missing. That is the best possible
+outcome for a change like this.
 
-El Front se Queda con el **Nombre** de la Fuente y Tira la **Razón**. La Razón
-Trae el Cuerpo de la Respuesta, y una Tienda en Mantención Contesta una Página de
-HTML. Eso es para el Log; quien Busca sólo Necesita Saber que este Precio se
-Comparó con una Tienda menos. La Prueba Exige que `<!doctype` no Aparezca nunca en
-el Texto visible.
+The Frontend keeps the Source name and discards the Reason. The Reason
+includes the Response body; a Store under maintenance returns an HTML page.
+That belongs in the Log. Searchers only need to know this Price was compared
+against one fewer Store. The Test requires that `<!doctype` never appear
+in visible Text.
 
-### F5. La Copia del Contrato Llevaba 130 Líneas de Atraso
+### F5. The Copied Contract Was 130 Lines Behind
 
-`docs/api/openapi.yaml` Declaraba en su primera Línea que era una Copia y que se
-Sincronizaba desde `muchi-api`. Le Faltaban `/supported-games`, la Paginación de
-Resultados, `match`, `card_key`, `faults` y `SourceFault`, y Seguía Declarando
-`stores_only` como requerida cuando ya no Existía.
+`docs/api/openapi.yaml` stated on its first line that it was a Copy synced
+from `muchi-api`. It lacked `/supported-games`, Results pagination, `match`,
+`card_key`, `faults` and `SourceFault`, and still required `stores_only`
+after that field had disappeared.
 
-Una Copia que Envejece en Silencio es peor que no Tenerla: quien la Lee Cree que
-está Mirando el Contrato. Primero se Copió entera desde la Fuente. Después
-`muchi-api` se Hizo público y la Copia se Borró junto con la de Bruno: ahora se
-Enlaza el Contrato donde Vive, que es la única Sincronización que no se Olvida.
+A Copy aging silently misleads its Reader into believing it is the Contract.
+First, the full source was copied. Then `muchi-api` became public and the
+Copy was deleted along with the Bruno copy. Now the Contract is linked
+where it lives, a synchronization that cannot be forgotten.
 
-Este Documento Existe por la misma Razón, al revés: los Hallazgos de la API no se
-Copian acá.
+This Document exists for the same reason in reverse: API Findings are not
+copied here.
 
-## Lo que Queda Abierto
+## What Remains Open
 
-1. **El Front no Tiene Runner de JS.** `web/src/search.js` es el Gemelo de
-   `server/presenter.py` y sólo el Lado Python está Probado. Nada Impide que los
-   Gemelos Deriven — en la API, tres Copias de la misma Regla de Calce Derivaron
-   exactamente así, y ninguna Prueba lo Notó.
-2. **`deploy.sh` no Corre las Pruebas.** Ni `pytest` ni el Build del Front. Hay
-   que Llamarlos a Mano antes de Desplegar.
-3. **Ninguna Vista se Miró en un Navegador.** El Selector de Modo, los
-   Encabezados de Grupo y el Aviso de Fuente Caída se Verificaron por API contra
-   los dos Servicios Desplegados y por Pruebas, no Mirando la Página.
-4. **El Carrito Repite una Regla de la API** (`names_same_card`). Si la Regla de
-   Calce Cambia allá y no acá, el Carrito Empieza a Comprar distinto sin que nada
-   lo Diga.
+1. The Frontend has no JS test runner. `web/src/search.js` is the Twin of
+   `server/presenter.py`, but only Python is tested. Nothing prevents the
+   Twins from drifting; three Copies of the Matching rule drifted that
+   way in the API without a Test noticing.
+2. `deploy.sh` runs neither `pytest` nor the Frontend build. Both must be
+   invoked manually before deployment.
+3. No View was inspected in a Browser. The Mode selector, Group headings
+   and failed-Source Notice were verified through API requests against
+   both deployed Services and through Tests, without viewing the Page.
+4. The Cart repeats an API rule (`names_same_card`). If Matching changes
+   there but not here, the Cart silently starts buying differently.
 
-## Qué Dejó Esta Ronda como Método
+## What This Round Taught Us about Method
 
-- **Los Gemelos se Cambian juntos o se Separan.** Cada Hallazgo que Tocó
-  `presenter.py` Tocó también `search.js`, en la misma Vuelta.
-- **Probar por Mutación.** Cada Arreglo Tiene un Caso que Falla si se Revierte:
-  sin la Barata por Tipo Gana el Linkuriboh, y sin el Filtro del Carrito se
-  Compra el Linkuriboh.
-- **Desplegar el Consumidor antes que el Contrato.** Al Retirar `stores_only`, el
-  Front Dejó de Mandarla y se Desplegó **primero**: la API Usa
-  `DisallowUnknownFields` y el Orden inverso Habría Devuelto `400` a cada
-  Búsqueda.
+- Change the Twins together or separate them. Every Finding touching
+  `presenter.py` also touched `search.js` in the same round.
+- Test through Mutation. Every Fix has a case that fails if reverted:
+  without the cheapest Offer per type, Linkuriboh wins; without the Cart
+  filter, Linkuriboh is purchased.
+- Deploy the Consumer before the Contract. When removing `stores_only`,
+  the Frontend stopped sending it and was deployed first. The API uses
+  `DisallowUnknownFields`; reversing the order would return `400` for
+  every Search.
