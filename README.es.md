@@ -443,3 +443,10 @@ junto a este Programa. Si no, mira <https://www.gnu.org/licenses/>.
 
 [muchi-api](https://github.com/cangrejometralleta/muchi-api) lleva la misma
 Licencia. Son dos Repositorios, una sola Regla.
+
+## El Harness y el Manifiesto
+
+Ambos Repositorios —el [Front de MUCHI](https://github.com/metaliaw/muchi/blob/main/README.es.md)
+y [muchi-api](https://github.com/cangrejometralleta/muchi-api)— usan
+[OneTwoThree](https://github.com/cangrejometralleta/OneTwoThree), mi Harness
+compartido de Desarrollo y Manifiesto.
