@@ -439,4 +439,5 @@ License. Two Repositories, one Rule.
 Both Repositories—the [MUCHI Front](https://github.com/metaliaw/muchi/blob/main/README.es.md)
 and [muchi-api](https://github.com/cangrejometralleta/muchi-api)—use
 [OneTwoThree](https://github.com/cangrejometralleta/OneTwoThree), my shared
-Development Harness and Manifesto.
+Development Harness and Manifesto, introduced in its
+[English presentation](https://github.com/cangrejometralleta/OneTwoThree/blob/main/docs/presentation.en.md).
