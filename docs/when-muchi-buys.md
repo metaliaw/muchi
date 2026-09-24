@@ -1,99 +1,98 @@
-[English](when-muchi-buys-en.md) · [Español](when-muchi-buys.md)
+[English](when-muchi-buys.md) · [Español](when-muchi-buys.es.md)
 
-# Cuando Muchi Compre
+# When Muchi Buys
 
-Septiembre 2026 · un Plan en Voz alta, no una Fecha
+September 2026 · a Plan spoken aloud, not a date
 
-Hoy Muchi no vende nada. Compara Ofertas, arma un Carrito en Pesos y te deja en
-la puerta de cada Tienda; la Compra la haces tú, una vez por Tienda, con tus
-Datos y tu Tarjeta. Eso funciona y no está roto.
+Today Muchi sells nothing. It compares Offers, builds a Cart in Pesos and leaves
+you at each Store's door; you make the Purchase yourself, once per Store,
+with your Details and your Card. That works, and it is not broken.
 
-Pero es raro que una Búsqueda buena termine así. Muchi acaba de leer doce
-Tiendas por ti y el Premio es una Lista de doce Pestañas. **Queremos que Muchi
-Compre**: que elijas el Carrito una vez, pagues una vez, y las Cartas lleguen
-juntas. Estamos trabajando en eso, y este Documento cuenta hasta dónde llegamos
-—que es menos de lo que suena— y qué falta por resolver.
+But it is a strange ending to a good Search. Muchi has just read twelve Stores
+for you, and the reward is a List of twelve Tabs. **We want Muchi to Buy**:
+choose the Cart once, pay once, and receive the Cards together. We are working
+on it, and this Document explains how far we have got — less far than it
+sounds — and what remains unresolved.
 
-## El Muchi Dólar ya lo Decía
+## The Muchi Dollar Already Said It
 
-El [Muchi Dólar](../README.es.md#el-muchi-dólar) no es el Dólar del Mercado. Es un
-Cambio comercial, y lo que trae adentro está escrito desde el principio en
-[`config/rates.defaults.yaml`](../config/rates.defaults.yaml):
+The [Muchi Dollar](../README.md#the-muchi-dollar) is not the market exchange
+rate. It is a commercial Rate, and its components have been written into
+[`config/rates.defaults.yaml`](../config/rates.defaults.yaml) from the start:
 
-> el Costo de traer la Carta, y el Margen para los Intermediarios que harán la
-> Compra **cuando Muchi compre**.
+> the Cost of bringing in the Card, and the Margin for the Intermediaries who
+> will make the Purchase **when Muchi buys**.
 
-Ese "cuando" no era un Adorno. El Número está dimensionado para un Muchi que
-compra, no para el Muchi que sólo compara. Por eso no se mueve con el Dólar del
-Día: lo que paga no es una Conversión, es una Operación.
+That "when" was not decoration. The Number is sized for a Muchi that buys,
+rather than one that only compares. That is why it does not follow the day's
+Dollar rate: it pays for an Operation, beyond the currency Conversion.
 
-Hoy esos Intermediarios son **Personas**. Alguien entra a la Tienda, llena el
-Formulario, paga, espera y reenvía. Es lo que hace que el Número sea el que es.
+Today those Intermediaries are People. Someone enters the Store, fills out
+the Form, pays, waits and forwards the purchase. That makes the Number what it is.
 
-## El Plan: Agentes
+## The Plan: Agents
 
-La Idea es automatizar esa parte con **Agentes**: Programas que hacen el
-Checkout de cada Tienda —recorren el Formulario, confirman la Variante, pagan y
-recuperan el Comprobante— en vez de una Persona haciéndolo doce veces.
+The idea is to automate that part with Agents: Programs that complete each
+Store's Checkout — navigate the Form, confirm the Variant, pay and retrieve
+the Receipt — instead of a Person doing it twelve times.
 
-No es una Idea exótica; es el mismo Trabajo, hecho por algo que no se cansa a la
-Quinta Tienda. Y es la Parte del Costo que más se podría mover, porque es la
-única que hoy crece con el Número de Tiendas.
+This is not an exotic idea; it is the same Work, done by something that does
+not get tired at the fifth Store. It is also the Cost component with the most
+room to change, because it is the only one that currently grows with the
+Number of Stores.
 
-**Todavía estamos viendo la Implementación y los Costos.** Eso no es una Fórmula
-de Cortesía: es literalmente el Estado. No hay Agente corriendo, no hay una
-Tienda comprada así, y no sabemos aún cuánto sale.
+**We are still examining the Implementation and Costs.** That is literally
+the current state. No Agent is running, no Store purchase has been made this
+way, and we do not yet know how much it costs.
 
-## Lo que Falta Resolver
+## What Remains Unresolved
 
-- **Cuánto cuesta un Agente por Compra.** Un Agente que navega un Checkout no es
-  gratis, y si cuesta más que la Persona a la que reemplaza, no hay nada que
-  automatizar. Ese Número decide el Proyecto entero.
-- **Qué pasa con una Compra a Medias.** Doce Tiendas, once pagan y una falla. Un
-  Comparador que se equivoca te hace perder una Visita; un Comprador que se
-  equivoca te deja con Plata afuera y media Lista. La Respuesta a esto pesa más
-  que la Velocidad.
-- **Los Pagos y las Credenciales.** Comprar exige Medios de Pago y Datos de
-  Envío. Dónde viven, quién los ve y qué se guarda es una Decisión de Seguridad,
-  no de Producto, y no se toma con Apuro.
-- **Las Tiendas.** Comprar por ti no es lo mismo que enlazarte. Una Tienda puede
-  querer lo primero y no lo segundo, o al revés, y corresponde preguntarles.
-- **Dónde entra el Costo.** Si el Agente resulta más barato que la Persona,
-  ¿baja el Muchi Dólar, o el Ahorro paga otra cosa? Y si va aparte, ¿es un Cobro
-  por Servicio visible en el Carrito, separado del Cambio?
+- The Cost of an Agent per Purchase. Navigating a Checkout is not free; if an
+  Agent costs more than the Person it replaces, there is nothing to automate.
+  That Number decides the whole Project.
+- A partially completed Purchase. Twelve Stores, eleven payments succeed and
+  one fails. A mistaken Comparator costs you a Visit; a mistaken Buyer leaves
+  you out of pocket with half a List. This answer matters more than Speed.
+- Payments and Credentials. Buying requires Payment methods and Shipping
+  details. Where they live, who sees them and what is stored are Security
+  decisions, and cannot be rushed.
+- The Stores. Buying for you differs from linking to a Store. A Store may
+  want either one without the other, and we should ask.
+- Where the Cost belongs. If an Agent is cheaper than a Person, does the Muchi
+  Dollar go down, or do the Savings pay for something else? If charged
+  separately, is it a visible Service fee in the Cart, outside the Rate?
 
-Esa última es la que nos importa contar bien, y por eso este Documento existe.
+That last question deserves a clear explanation. It is why this Document exists.
 
-## El Costeo, hoy y después
+## Costing, Now and Later
 
-Hoy el Total del Carrito se arma con tres Cosas, todas visibles:
+Today the Cart Total has three visible components:
 
-| Parte | De dónde sale |
+| Component | Source |
 | --- | --- |
-| Precio de la Carta | Lo que publica la Tienda, en su Moneda. |
-| Envío | Uno por Tienda, no uno por Carta. |
-| Cambio | El Muchi Dólar, cuando la Oferta viene en Dólares sin Cambio propio. |
+| Card Price | What the Store publishes, in its Currency. |
+| Shipping | One charge per Store, not per Card. |
+| Exchange Rate | The Muchi Dollar, when an Offer arrives in Dollars without its own Rate. |
 
-Un Muchi que compra agrega una Parte más: **lo que cuesta hacer la Compra**. La
-Pregunta abierta no es si existe —existe, y hoy está escondida dentro del
-Cambio— sino si se queda ahí o sale a la Superficie con su propio Nombre.
+A Muchi that buys adds another component: **the Cost of making the Purchase**.
+The open question is whether that Cost stays inside the Rate, where it is
+hidden today, or becomes visible under its own Name.
 
-Nos inclinamos por lo segundo. Un Número que cubre dos Cosas distintas es un
-Número que no se puede discutir: si el Muchi Dólar sube, nadie sabe si subió el
-Costo de traer la Carta o el de comprarla. Separarlos hace el Precio más largo
-de leer y mucho más fácil de defender.
+We lean toward the latter. A Number covering two different things is hard to
+discuss: if the Muchi Dollar rises, nobody knows whether bringing the Card or
+buying it became more expensive. Separating them makes the Price longer to
+read and much easier to defend.
 
-Pero eso es una Inclinación, no una Decisión. Cuando esté tomada, se escribe
-acá y se cambia el README.
+That is a preference, not a Decision. Once decided, it will be written here
+and the README will change.
 
-## Lo que no Prometemos
+## What We Do Not Promise
 
-No hay Fecha. No hay Lista de Espera. Ninguna Parte de esto está a medio
-construir esperando un Botón — si mañana decidimos que los Costos no dan, el
-Plan se cae y este Documento cuenta por qué se cayó, que es la otra mitad de
-para qué sirve escribirlo.
+There is no Date or Waiting list. None of this is half built and waiting for
+a Button. If tomorrow we decide the Costs do not work, the Plan falls through,
+and this Document will explain why. That is the other half of its purpose.
 
-Mientras tanto, Muchi compara, y la Compra la sigues haciendo tú. Lo que ves en
-el Carrito es lo que pagas en las Tiendas.
+Meanwhile, Muchi compares and you still make the Purchase. What you see in
+the Cart is what you pay at the Stores.
 
-[Volver al README](../README.es.md).
+[Back to the README](../README.md).
