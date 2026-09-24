@@ -449,4 +449,5 @@ Licencia. Son dos Repositorios, una sola Regla.
 Ambos Repositorios —el [Front de MUCHI](https://github.com/metaliaw/muchi/blob/main/README.es.md)
 y [muchi-api](https://github.com/cangrejometralleta/muchi-api)— usan
 [OneTwoThree](https://github.com/cangrejometralleta/OneTwoThree), mi Harness
-compartido de Desarrollo y Manifiesto.
+compartido de Desarrollo y Manifiesto, presentado en
+[español](https://github.com/cangrejometralleta/OneTwoThree/blob/main/docs/presentation.es.md).
