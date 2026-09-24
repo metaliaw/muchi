@@ -1,84 +1,82 @@
-[English](share-store-stock-en.md) · [Español](share-store-stock.md)
+[English](share-store-stock.md) · [Español](share-store-stock.es.md)
 
-# Cómo compartir el Stock de tu Tienda con Muchi
+# How to Share Your Store's Stock with Muchi
 
-Si tienes una Tienda de Cartas y quieres que sus Ofertas aparezcan en Muchi,
-puedes compartir tu Inventario mediante Listas de Moxfield o desde tu sitio web.
-Esta guía explica qué información preparar para evaluar la integración.
+If you run a Card store and want its Offers to appear on Muchi, you can
+share your Inventory through Moxfield lists or your website. This Guide
+explains what information to prepare so the Integration can be evaluated.
 
-Las Fuentes se incorporan en la **API de Muchi**. El Front muestra sus Resultados;
-no tiene un formulario de alta de Tiendas ni importa Inventarios directamente.
-La disponibilidad de cada integración debe confirmarse con quienes mantienen
-el Servicio.
+Sources are integrated into the Muchi API. The Frontend displays their
+Results; it has no Store registration form and does not import Inventories
+directly. Confirm the availability of each Integration with the Service maintainers.
 
-## Opción 1: Listas de Moxfield
+## Option 1: Moxfield Lists
 
-Prepara los enlaces de las Listas que representan el Inventario que deseas
-publicar. Deben poder consultarse sin iniciar sesión con tu cuenta.
+Prepare Links to the Lists representing the Inventory you want to publish.
+They must be readable without signing into your account.
 
-Incluye esta información:
+Include this information:
 
-- Nombre de la Tienda y enlaces de las Listas.
-- Cantidad disponible de cada Carta y, cuando corresponda, Edición, Idioma,
-  Condición y Acabado.
-- Moneda y criterio de Precio: indica si utilizas un Precio de referencia,
-  una tasa de Conversión u otra regla. Si hay reglas distintas para Cartas
-  normales y foil, descríbelas por separado.
-- Enlace de la Tienda o canal donde una persona puede consultar y comprar.
-- Frecuencia con la que actualizas las Listas y cómo registras los Productos
-  agotados.
+- Store name and List links.
+- Available quantity of each Card and, where relevant, Edition, Language,
+  Condition and Finish.
+- Currency and Pricing method: state whether you use a reference Price,
+  an exchange Rate or another rule. Describe separate rules for regular
+  and foil Cards when applicable.
+- Store link or a channel where someone can inquire and buy.
+- How often you update the Lists and how you record sold-out Products.
 
-Aclara si las Cantidades representan Stock disponible o sólo el contenido de
-una Lista de referencia. Una Lista por sí sola no establece el Precio de venta
-ni garantiza que sus Cartas estén disponibles.
+Clarify whether Quantities represent available Stock or simply the contents
+of a reference List. A List alone neither sets a sale Price nor guarantees
+that its Cards are available.
 
-Comparte esa información al solicitar la integración. El equipo deberá confirmar
-cómo la API leerá las Listas y representará los Precios y enlaces de Compra.
+Share this information when requesting Integration. The team must confirm
+how the API will read the Lists and represent Prices and Purchase links.
 
-## Opción 2: Tu sitio web
+## Option 2: Your Website
 
-Comparte la dirección de tu Tienda y algunos enlaces de Productos que permitan
-identificar sus variantes. Si tienes un Catálogo o una API de Stock, incluye
-su documentación y un ejemplo de Respuesta sin Credenciales.
+Share your Store's address and some Product links that identify their
+variants. If you have a Catalog or Stock API, include its documentation
+and an example Response without Credentials.
 
-La información útil para cada Oferta es:
+Useful information for each Offer:
 
-| Dato | Qué debe representar |
+| Field | What It Should Represent |
 | --- | --- |
-| Carta | Nombre y, si está disponible, un Identificador estable. |
-| Variante | Edición, Acabado, Condición e Idioma. |
-| Precio | Importe de venta y Moneda. |
-| Stock | Cantidad disponible o Estado de disponibilidad de esa variante. |
-| Enlace | Página donde se puede consultar o comprar la Oferta. |
+| Card | Name and, if available, a stable Identifier. |
+| Variant | Edition, Finish, Condition and Language. |
+| Price | Sale amount and Currency. |
+| Stock | Available quantity or availability Status for that variant. |
+| Link | Page where the Offer can be viewed or purchased. |
 
-Si tu sitio expone una API, indica cómo buscar una Carta, recorrer las páginas
-del Catálogo y reconocer un Producto agotado. Incluye los límites de Consulta
-y cualquier requisito de Autenticación.
+If your site exposes an API, explain how to search for a Card, page through
+the Catalog and recognize a sold-out Product. Include Request limits and
+any Authentication requirements.
 
-Si sólo dispones de páginas de Productos, comparte ejemplos con y sin Stock.
-El equipo evaluará si el sitio permite una Consulta fiable y qué Adaptador
-necesita la API. No se presupone compatibilidad con todas las plataformas.
+If you only have Product pages, share examples with and without Stock.
+The team will evaluate whether reliable Queries are possible and which
+Adapter the API needs. Compatibility with every platform is not assumed.
 
-## Solicitar la integración
+## Request Integration
 
-Abre una solicitud en los [Issues del Proyecto](https://github.com/metaliaw/muchi/issues)
-con el Nombre de tu Tienda, la opción elegida y la información anterior.
-Si no tienes acceso al Repositorio, utiliza el canal de contacto por el que
-te compartieron Muchi para coordinar la incorporación.
+Open a request in the [Project Issues](https://github.com/metaliaw/muchi/issues)
+with your Store name, chosen option and the information above. If you
+cannot access the Repository, coordinate through the contact channel where
+Muchi was shared with you.
 
-No incluyas Contraseñas ni Tokens en la solicitud. Si la integración requiere
-una Credencial, coordina su entrega por un canal privado y limita sus permisos
-a la lectura del Inventario que deseas compartir.
+Do not include Passwords or Tokens in the request. If Integration requires
+a Credential, arrange delivery through a private channel and restrict its
+permissions to reading the Inventory you want to share.
 
-Antes de dar la integración por lista, comprueba con el equipo que los Precios,
-las variantes, la disponibilidad y los enlaces correspondan a lo que muestra
-tu Tienda. Acuerda también cómo comunicar cambios en tus Listas o en tu sitio.
+Before considering Integration complete, check with the team that Prices,
+variants, availability and Links match your Store. Agree on how to
+communicate changes to your Lists or website.
 
-## Qué verá quien busque tus Cartas
+## What People Searching for Your Cards Will See
 
-Muchi muestra las Ofertas recibidas de la API, con su Tienda, Precio, Moneda,
-Estado de Stock y enlace. La Compra se completa fuera de Muchi, mediante el
-enlace de la Oferta. Mantener el Inventario actualizado ayuda a evitar que
-aparezcan Cartas agotadas o Precios desactualizados.
+Muchi displays Offers received from the API, including Store, Price,
+Currency, Stock status and Link. Purchases are completed outside Muchi
+through the Offer link. Keeping Inventory current helps prevent sold-out
+Cards and outdated Prices from appearing.
 
-[Volver al README](README.es.md).
+[Back to the README](README.md).

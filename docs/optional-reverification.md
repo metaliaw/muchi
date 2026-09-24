@@ -1,155 +1,148 @@
-[English](optional-reverification-en.md) · [Español](optional-reverification.md)
+[English](optional-reverification.md) · [Español](optional-reverification.es.md)
 
-# Por qué la Re-verificación de Stock es Opcional
+# Why Stock Reverification Is Optional
 
-Septiembre 2026 · Rama `deploy.next`, ampliado el 20 de Septiembre
+September 2026 · `deploy.next` branch, expanded September 20
 
-## La Cadena de Carga
+## The Load Chain
 
-Una Búsqueda de 50 Cartas consulta las Fuentes una vez por Carta. Hasta ahí,
-la Carga crece con la Lista y nadie se sorprende.
+A Search for 50 Cards queries Sources once per Card. Up to that point,
+Load grows with the List as expected.
 
-La Re-verificación (`verify_stock`) agrega una **segunda Vuelta**: por cada
-Oferta barata encontrada, el Servicio visita la Tienda de nuevo para confirmar
-que el Stock sigue en pie. La Cadena queda así:
+Reverification (`verify_stock`) adds a second Pass: for every cheap Offer
+found, the Service visits the Store again to confirm Stock remains
+available. The chain becomes:
 
+```text
+1 Search = N Price queries + M Stock queries
+           (one per Card)    (one per candidate Offer)
 ```
-1 Búsqueda = N Consultas de Precio + M Consultas de Stock
-             (una por Carta)      (una por Oferta candidata)
-```
 
-M no tiene Tope proporcional a N: una Carta común con veinte Tiendas baratas
-genera veinte Visitas extra. El Mazo de Commander —cien Cartas, Tierras
-repetidas— es exactamente el Caso que más Re-verifica.
+M has no Limit proportional to N: a common Card available cheaply at twenty
+Stores generates twenty extra Visits. A Commander deck — a hundred Cards,
+repeated Lands — is exactly the case that rechecks most.
 
-## El Efecto en el Sistema
+## The Effect on the System
 
-- **La Búsqueda tarda más en Cerrar.** El Usuario mira una Barra de Progreso
-  que no avanza mientras el Servicio consulta Stocks que tal vez ya no
-  importan: el Carrito solo toma la más barata por Tienda.
-- **Las Tiendas reciben el Doble de Tráfico.** Somos Invitados en sus
-  Catálogos; duplicar Visitas por cortesía de una Certeza efímera es una
-  Deuda que alguien Notará.
-- **La Certeza caduca al instante.** El Stock confirmado a las 21:00 puede
-  agotarse a las 21:01. La Re-verificación compra minutos de Certeza a precio
-  de minutos de Espera.
+- Searches take longer to finish. The User watches a stalled Progress bar
+  while the Service checks Stock that may no longer matter: the Cart only
+  takes the cheapest per Store.
+- Stores receive twice the Traffic. We are Guests in their Catalogs;
+  doubling Visits for fleeting Certainty creates a Debt someone will notice.
+- Certainty expires immediately. Stock confirmed at 21:00 can sell out at
+  21:01. Reverification buys minutes of Certainty with minutes of Waiting.
 
-## El Incidente que lo Hizo Visible
+## The Incident That Made It Visible
 
-El Front caía en *Reintentar Envío* sin Resultados. La Cadena del Fallo:
+The Frontend fell back to *Retry submission* without Results. The Failure chain:
 
-1. El BFF tardaba de más (la Re-verificación infla cada Ciclo) y cortaba en 5xx.
-2. El Cliente marcaba el Fallo como reintentable y conservaba el Envío.
-3. Sin `searchId`, el Polling nunca arrancaba: solo quedaba el Botón.
+1. The BFF took too long — reverification inflates every Cycle — and ended
+   with a 5xx.
+2. The Client marked the Failure as retriable and retained the Submission.
+3. Without `searchId`, Polling never started; only the Button remained.
 
-El Reintento en sí no es el Villano — es el Termómetro. Cada Reintento reenvía
-la Búsqueda entera, y si la Carga era la Causa, la Carga crece. Un Sistema
-sobrecargado que Reintenta es un Sistema que se Pisa solo.
+Retrying is a symptom. Each Retry resends the whole Search; if Load caused
+the Failure, it adds more Load. An overloaded System that keeps retrying
+gets in its own way.
 
-## La Decisión
+## The Decision
 
-`MUCHI_VERIFY_STOCK` nace **apagada**. El Carrito confía en el Precio visto en
-la primera Pasada, como lo hace cualquier Comparador. Y coherente con eso:
-cuando la Flag está apagada, ninguna Oferta declara Stock — sin Certeza no se
-muestra Badge, ni "En Stock", ni "No confirmado".
+`MUCHI_VERIFY_STOCK` defaults to off. The Cart trusts the Price seen on the
+first Pass, like any Comparator. Consistently, while the Flag is off, no
+Offer declares Stock: without Certainty, it shows no Badge, neither
+"In stock" nor "Unconfirmed".
 
-Encenderla es una línea en el Entorno (`MUCHI_VERIFY_STOCK=1`), sin Deploy.
-Se reserva para el Día en que la Certeza pese más que la Carga — por ejemplo,
-una Venta nocturna masiva donde el Stock se mueve por Minuto.
+Enable it with one Environment line (`MUCHI_VERIFY_STOCK=1`), without a
+Deploy. It is reserved for times when Certainty matters more than Load,
+such as a large overnight Sale where Stock changes every minute.
 
-## La Vuelta que no Pagamos Nosotros
+## The Pass We Do Not Pay For
 
-La Carga era el Argumento, no la Certeza. Nadie Dijo que Confirmar el Stock
-estuviera de más: se Dijo que **nosotros** no podíamos Pagar esa segunda Vuelta
-dentro del Ciclo de la Búsqueda.
+Load was the argument. Nobody said Stock confirmation was unnecessary;
+we said we could not pay for that second Pass within the Search cycle.
 
-Hay un Camino donde no la Pagamos. Una Tienda Shopify Sirve su Catálogo en
-`/products/<handle>.js` con `Access-Control-Allow-Origin: *`. El Navegador de
-quien Compra lo Lee directo: no Sale de nuestra IP, no Entra en el Ciclo de la
-Búsqueda, y Ocurre una sola vez, cuando alguien Aprieta el Botón. Las tres
-Objeciones de arriba —la Espera, el Tráfico duplicado, la Certeza efímera—
-Caen por Caminos distintos, y ninguna por Decreto.
+There is another path. A Shopify Store serves its Catalog at
+`/products/<handle>.js` with `Access-Control-Allow-Origin: *`. The Buyer's
+Browser reads it directly: it does not use our IP, does not enter the Search
+cycle, and happens once when someone presses the Button. Waiting, duplicate
+Traffic and fleeting Certainty are addressed in different ways.
 
-### Hasta dónde Llega
+### How Far It Reaches
 
-Medido contra las Ofertas guardadas en `data/precios.db`, el Navegador Alcanza
-**una de cada cinco**. El Resto sigue Dependiendo del Servicio:
+Measured against Offers saved in `data/precios.db`, the Browser reaches
+one in five. The remainder still depend on the Service:
 
-| Plataforma | Ofertas | Desde el Navegador |
+| Platform | Offers | From the Browser |
 | --- | --- | --- |
-| Shopify | ~1.880 | Sí — JSON público con CORS abierto |
-| WooCommerce | ~2.440 | No — la Store API Contesta, pero sin `Allow-Origin` |
-| scry.cl (Marketplace) | ~2.050 | No — `consultar_stock` Pide Cookie CSRF |
-| Jumpseller | ~580 | No — no Publica JSON de Producto |
-| Propias | ~2.010 | No |
+| Shopify | ~1,880 | Yes — public JSON with open CORS |
+| WooCommerce | ~2,440 | No — Store API responds without `Allow-Origin` |
+| scry.cl (Marketplace) | ~2,050 | No — `consultar_stock` requires a CSRF cookie |
+| Jumpseller | ~580 | No — no public Product JSON |
+| Custom | ~2,010 | No |
 
-WooCommerce es el que más Duele: el Dato Está, Servido y Completo, y lo único
-que Falta es una Cabecera que no Controlamos. Una Tienda conocida que la Agregue
-Mueve más Ofertas que todo lo que Ganamos con Shopify.
+WooCommerce is the most frustrating: the Data is served and complete;
+only a Header outside our control is missing. A known Store adding it
+would unlock more Offers than all the Shopify coverage gained so far.
 
-### La Costura
+### The Boundary
 
-El Front **Averigua**; el Servidor **Corona**.
+The Frontend investigates; the Server awards the Crown.
 
+```text
+Browser → /products/<handle>.js          (reachable Stores)
+        → POST /api/searches/{id}/stock {"checks": [...]}
+Server  → asks the Service               (only for what is missing)
+        → crown_checked_offers          (the Crown, as always)
 ```
-Navegador → /products/<handle>.js        (las que Alcanza)
-          → POST /api/searches/{id}/stock {"checks": [...]}
-Servidor  → pregunta al Servicio          (solo por lo que Falta)
-          → crown_checked_offers          (la Corona, como siempre)
-```
 
-El Navegador Pregunta por **lo que se va a Comprar**: las Ofertas con Copias
-Elegidas, que Nacen puestas donde el Reparto las Recomienda. Sin nada Elegido
-todavía, Pregunta por las más baratas, que es lo que alguien Compraría igual.
-Va de la barata a la cara y **Corta en el primer Sí**: más arriba solo hay
-Ofertas más caras. `browser_check_limit` —hoy **5**— es su Techo por Carta, así
-que una Lista de cien Cartas Hace cien Consultas cuando la barata Tiene, y
-quinientas solo si ninguna Contesta.
+The Browser asks about what will be Bought: Offers with selected Copies,
+initially placed where allocation recommends them. If nothing is selected,
+it asks about the cheapest Offers, the ones someone would buy anyway.
+It proceeds cheapest first and stops at the first yes: everything further
+up costs more. `browser_check_limit` — currently 5 — caps each Card, so a
+hundred-Card List makes a hundred Queries when the cheapest has Stock,
+and five hundred only when none respond.
 
-`answer_stock` Toma lo Sabido y Arranca las Rondas desde ahí: una Oferta que el
-Navegador Confirmó no se le Pregunta a nadie más, y una que el Plan no Nombra se
-Descarta —el Navegador Informa sobre esta Búsqueda, no sobre el Catálogo
-entero—, pero Vale aunque esté fuera del Tope de `stock_check_limit`: ese Tope
-Acota las Visitas que Hacemos nosotros, no quién Compite por la Corona.
-Quién Lleva la Marca de más barata se sigue Decidiendo en `server/presenter.py`,
-con las mismas Reglas de [El Pedido de Stock](api/stock-order.md). Esa Decisión
-no Cruzó la Frontera, y no Debe: el Front no Recomienda.
+`answer_stock` takes known Results and starts Rounds there. An Offer the
+Browser confirmed is not checked elsewhere; an Offer absent from the Plan
+is discarded — the Browser reports on this Search, not the entire Catalog.
+A Confirmation still counts beyond `stock_check_limit`, which limits our
+Visits, rather than eligibility for the Crown. `server/presenter.py` still
+decides who gets the cheapest marker under the same rules as
+[The Stock Request](api/stock-order.md). That Decision stays on the
+Server; the Frontend does not recommend.
 
-`GET` sigue existiendo, y es el mismo Camino sin nada Sabido.
+`GET` still exists and follows the same path without prior Knowledge.
 
-### El Dato se Guarda con su Hora
+### Data Is Saved with Its Timestamp
 
-Lo Confirmado Sobrevive a la Recarga, pero no como un Sí a secas: se Guarda con
-la Hora en que la Tienda lo Dijo, y Vuelve solo mientras esa Hora Aguante
-—`stock_fresh_seconds`, hoy **600** en
-[`config/offers.defaults.yaml`](../config/offers.defaults.yaml)—. Pasado el
-Tope no Vuelve nada y el Botón Reaparece.
+Confirmation survives a Reload with the Time the Store supplied it.
+It returns only while fresh under `stock_fresh_seconds`, currently 600 in
+[`config/offers.defaults.yaml`](../config/offers.defaults.yaml).
+After that Limit, nothing returns and the Button reappears.
 
-Diez Minutos es lo que Dura armar un Carrito y Volver, y Cabe entero en una
-Sesión de Compra: nadie se Lleva a mañana una Certeza de hoy. La Edad que la
-Página Muestra es la de la Confirmación más vieja, no la de la más nueva:
-Decir la más nueva sería Presumir una Frescura que la mitad de las Filas no
-Tiene.
+Ten minutes covers building a Cart and returning within a Shopping session;
+nobody carries today's Certainty into tomorrow. The displayed Age is that
+of the oldest Confirmation. Showing the newest would imply Freshness that
+half the Rows lack.
 
-Es el Revés de lo que se hizo con la última Búsqueda. Esa se Guarda para **no**
-Volver a salir a las Tiendas, porque un Precio de ayer todavía Informa. El Stock
-se Guarda para lo contrario: para Saber cuándo hay que Preguntar de nuevo.
-Guardarlo sin su Hora sería Conservar un "sí hay" que Envejece hasta Volverse
-Mentira.
+The latest Search is saved to avoid visiting Stores again, because
+yesterday's Price still informs. Stock is saved to tell us when to ask
+again. Keeping it without a Timestamp would preserve an "available" that
+ages into a lie.
 
-## Lo que Queda
+## What Remains
 
-- `MUCHI_VERIFY_STOCK` sigue **apagada**, y por las mismas Razones: lo de arriba
-  no Re-verifica durante la Búsqueda, Confirma después y solo si se lo Piden.
-- El Reintento conserva su Clave de Idempotencia: reenviar no duplica
-  Búsquedas. Eso no se toca.
-- El Error de Red ahora dice lo que Es ("La Consulta no llegó al Servicio")
-  en vez de un `TypeError` mudo.
-- El Front siente qué Cambió en cada Ciclo (`stateChanges`): el camino a
-  Deltas parciales queda abierto sin haberle pedido nada nuevo a la Red.
-- Sigue Abierto: medir cada cuánto Cambia de verdad el Stock de una Shopify
-  barata. Los diez Minutos son un Juicio, no una Medición.
-- `cartasmagicsur.cl` Sigue sin Poder Comprobarse por nadie: Vercel le Contesta
-  `429` a todo Cliente que no Sea un Navegador, y tampoco Manda `Allow-Origin`,
-  así que el del Comprador tampoco la Alcanza. Lo único que la Destrona es que
-  otra Tienda Confirme.
+- `MUCHI_VERIFY_STOCK` remains off for the same reasons. This confirms
+  afterward, on request; it does not reverify during the Search.
+- Retry retains its Idempotency key, so resubmission does not duplicate
+  Searches. That behavior stays intact.
+- The Network error now explains what happened ("The request did not reach
+  the service") instead of showing a silent `TypeError`.
+- The Frontend detects changes in each Cycle (`stateChanges`), leaving a
+  path toward partial Deltas without requiring anything new from the Network.
+- Still open: measure how often cheap Shopify Offers actually change Stock.
+  Ten minutes is a Judgment, not a Measurement.
+- `cartasmagicsur.cl` still cannot be checked: Vercel returns `429` to
+  non-Browser Clients and provides no `Allow-Origin`, so the Buyer's Browser
+  cannot reach it either. Only another Store's Confirmation displaces it.

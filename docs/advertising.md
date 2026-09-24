@@ -1,182 +1,180 @@
-[English](advertising-en.md) · [Español](advertising.md)
+[English](advertising.md) · [Español](advertising.es.md)
 
-# La Publicidad, de Punta a Punta
+# Advertising, End to End
 
-Muchi muestra Anuncios de Google AdSense entre las Ofertas. Este Documento
-dice qué hace falta, en qué Orden llega, qué parte se automatiza y qué parte
-la decide Google mirando el Sitio.
+Muchi displays Google AdSense Ads among Offers. This Document explains
+what is required, in what Order, which parts are automated and which parts
+Google decides by reviewing the Site.
 
-## Los tres Identificadores, y cuál es cuál
+## The Three Identifiers
 
-Se confunden seguido, y confundirlos cuesta Días.
+They are often confused, and confusion costs days.
 
-| Qué | Ejemplo | Para qué sirve |
+| Identifier | Example | Purpose |
 | --- | --- | --- |
-| **ID de Editor** (Publisher, Cliente) | `ca-pub-6368656861543000` | Identifica la Cuenta. Uno solo, para siempre. |
-| **ID de Bloque** (Slot) | `1234567890` | Identifica un Espacio. Uno por cada Lugar que quieras llenar. |
-| **ID de Cliente** (Customer) | `3286538783` | Facturación y Soporte. **No entra en Muchi.** |
+| Publisher ID (Client) | `ca-pub-6368656861543000` | Identifies the Account. One permanent ID. |
+| Ad unit ID (Slot) | `1234567890` | Identifies a Space. One for each placement. |
+| Customer ID | `3286538783` | Billing and Support. Not used in Muchi. |
 
-Ninguno es un Secreto. El de Editor viaja en cada Página y el `ads.txt` lo
-declara a Internet entero: esconderlo sería contraproducente. Por eso viajan
-como Variables de Entorno y no por Secret Manager, donde vive una sola Cosa:
-`MUCHI_API_TOKEN`.
+None is a Secret. The Publisher ID travels with every Page, and `ads.txt`
+declares it publicly. They therefore use Environment variables rather than
+Secret Manager, which holds only `MUCHI_API_TOKEN`.
 
-## El Flujo
+## The Flow
 
-Cuatro Pasos, y sólo el último es tuyo del todo.
+Four Steps; only the last is entirely yours.
 
+```text
+1. Account       create the Account and register the Domain  -> interface
+2. Review        Google visits and approves the Site         -> wait
+3. Ad unit       create the unit; Google assigns the Slot    -> interface
+4. Deployment    MUCHI_ADSENSE_SLOT=<slot> ./deploy.sh        -> yours
 ```
-1. La Cuenta         creas la Cuenta y registras el Dominio    -> interfaz
-2. La Revisión       Google visita el Sitio y lo aprueba       -> esperar
-3. El Bloque         creas el Bloque y Google asigna el Slot   -> interfaz
-4. El Despliegue     MUCHI_ADSENSE_SLOT=<slot> ./deploy.sh     -> tuyo
-```
 
-La API de AdSense sólo lee. `sites` y `adunits` tienen `list` y `get`, nada
-más, y `adunits.create` existe pero está reservado a los Publishers de
-*AdSense for Platforms*: a una Cuenta normal le responde que no. No hay Guion
-que salte los Pasos 1 y 3, y fingir lo contrario sólo esconde la Espera.
+The AdSense API is used for reading. `sites` and `adunits` provide `list`
+and `get`; `adunits.create` exists but is reserved for *AdSense for Platforms*
+publishers and rejects ordinary Accounts. No Script skips Steps 1 and 3;
+pretending otherwise only hides the Wait.
 
-Lo que sí se automatiza es la otra Mitad, la que decide el Paso 2.
+The other half, which determines Step 2, can be automated.
 
-## Lo que la Revisión mira
+## What the Review Checks
 
-Google visita el Dominio registrado —no el `.web.app` de Hosting, el Dominio—
-y comprueba cuatro Cosas. Cada una falla en Silencio, y cada Falla cuesta otra
-Ronda de Revisión.
+Google visits the registered Domain, rather than Hosting's `.web.app`
+address, and checks four things. Each can fail silently and cost another
+Review round.
 
-- **La Portada responde 200 por https.** Si la Revisión no entra, no aprueba.
-- **El `ads.txt` en la Raíz del Dominio** declara al Editor. Lo sirve el BFF en
-  [`server/main.py`](../server/main.py); el Dominio tiene que derivar ahí.
-- **La Etiqueta `google-adsense-account`** en el `<head>`, en
+- The Homepage responds with 200 over HTTPS. Review cannot approve a Site
+  it cannot enter.
+- `ads.txt` at the Domain root declares the Publisher. The BFF serves it in
+  [`server/main.py`](../server/main.py); the Domain must route there.
+- The `google-adsense-account` Tag appears in `<head>`, in
   [`web/index.html`](../web/index.html).
-- **El Cargador `adsbygoogle.js`** apuntando al mismo Editor, en el mismo
-  Archivo.
+- The `adsbygoogle.js` Loader points to the same Publisher in that File.
 
-El Identificador aparece en **tres Lugares que no se leen entre sí**: el
-`<head>` compilado, el `/ads.txt` del BFF y el `/api/config` que mira el
-Front. Si se separan, Muchi pide Publicidad a un Editor y la declara a otro.
-Eso no da Error: simplemente no se aprueba, y te enteras Días después.
+The Identifier appears in three places that do not read one another:
+the compiled `<head>`, the BFF's `/ads.txt` and the Frontend's `/api/config`.
+If they diverge, Muchi requests Ads for one Publisher while declaring
+another. It produces no Error; approval simply does not arrive, and you
+learn about it days later.
 
-## Los Guiones
+## The Scripts
 
 ```bash
-./setup-ads.sh    # el Onboarding entero: prepara, comprueba y dice qué falta
-./check-ads.sh    # sólo el Estado, para repetir mientras esperas
+./setup-ads.sh    # full onboarding: prepares, checks and reports what is missing
+./check-ads.sh    # status only; repeat while waiting
 ```
 
-`setup-ads.sh` habilita `adsense.googleapis.com`, consigue el Scope del ADC
-—preguntando antes, porque reescribe las Credenciales por Defecto de la
-Máquina—, le pregunta a AdSense **qué Dominio registraste** y verifica ese, no
-uno escrito a mano. Después comprueba las cuatro Cosas de arriba, contrasta
-los tres Identificadores, lee las Alertas de la Cuenta y cierra diciendo qué
-falta y de quién es. Es idempotente: repetirlo no cambia nada que ya esté bien.
+`setup-ads.sh` enables `adsense.googleapis.com`, obtains the ADC Scope —
+asking first, because it rewrites the Machine's default Credentials —
+and asks AdSense which Domain you registered, then verifies that Domain.
+It checks the four requirements, compares the three Identifiers, reads
+Account alerts and reports what is missing and who owns the next action.
+It is idempotent: rerunning changes nothing already correct.
 
-En Windows, `setup-ads.cmd` y `check-ads.cmd` hacen lo mismo.
+On Windows, `setup-ads.cmd` and `check-ads.cmd` do the same.
 
-### Dos Fricciones de la API
+### Two API Frictions
 
-Ninguna se diagnostica sola, y las dos ya están resueltas en los Guiones.
+Neither diagnoses itself; both are already handled by the Scripts.
 
-**El Scope.** El ADC por Defecto no lleva el de AdSense. Sin él, un `403` que
-habla de Scopes y no de cómo arreglarlo:
+The Scope. Default ADC does not include AdSense. Without it, a `403`
+mentions Scopes without explaining the fix:
 
 ```bash
 gcloud auth application-default login \
   --scopes=https://www.googleapis.com/auth/adsense,https://www.googleapis.com/auth/cloud-platform
 ```
 
-**El Proyecto de Cuota.** AdSense no es Cloud, pero su API se factura a un
-Proyecto de Cloud igual que cualquier otra. Sin la Cabecera, la Consulta se
-cobra al Proyecto genérico de gcloud y el `403` culpa a un Proyecto que no es
-el tuyo:
+The Quota project. AdSense is not Cloud, but its API is charged to a Cloud
+Project. Without the Header, the Request is attributed to gcloud's generic
+Project, and the `403` blames a Project that is not yours:
 
+```text
+-H "x-goog-user-project: YOUR-PROJECT"
 ```
--H "x-goog-user-project: TU-PROYECTO"
-```
 
-## Los Estados, y qué significan
+## States and Their Meaning
 
-`setup-ads.sh` y `check-ads.sh` muestran el `state` de la Cuenta, el Cliente y
-el Sitio. La Espera avanza de a uno:
+`setup-ads.sh` and `check-ads.sh` display the Account, Client and Site `state`.
+Progress happens one step at a time:
 
-- **`GETTING_READY`** — Google está revisando. No hay nada que hacer salvo
-  esperar, y suele tardar Días.
-- **`READY`** — habilita el Paso siguiente. Con el Cliente y el Sitio en
-  `READY`, la Interfaz deja crear el Bloque.
-- **`Bloques: ninguno`** — todavía no hay Slot que desplegar.
+- `GETTING_READY`: Google is reviewing. Wait; it usually takes days.
+- `READY`: unlocks the next Step. Once Client and Site are both `READY`,
+  the Interface allows creating an Ad unit.
+- `Bloques: ninguno` (no Ad units): there is no Slot to deploy yet.
 
-Un Bloqueo de Política no aparece en ningún `state`: vive en las Alertas, que
-los Guiones leen aparte. Sin mirarlas, la Espera parece Trámite cuando en
-realidad hay algo que arreglar.
+A Policy block does not appear in `state`; it lives in Alerts, which the
+Scripts read separately. Ignoring them makes a fixable problem look like
+routine Waiting.
 
-## Cómo crear el Bloque
+## Creating the Ad Unit
 
-Cuando el Sitio esté en `READY`:
+Once the Site is `READY`, choose:
 
-**Anuncios → Por bloque de anuncios → Display → Adaptable.**
+**Ads → By ad unit → Display → Responsive.**
 
-El Código que Google muestra trae `data-ad-slot="1234567890"`. Esos diez
-Dígitos son el Valor. No copies el `<script>` ni el `<ins>`: los arma
+Google's Code contains `data-ad-slot="1234567890"`. Those ten Digits are
+the Value. Do not copy the `<script>` or `<ins>`: those are built by
 [`GoogleAd.vue`](../web/src/components/GoogleAd.vue).
 
-El mismo Número se puede leer por API, y es el `reportingDimensionId` del
-Bloque. `check-ads.sh` lo imprime y cierra con la Línea lista para copiar.
+The same Number is available through the API as the unit's
+`reportingDimensionId`. `check-ads.sh` prints it and ends with a ready-to-copy Command.
 
-## Cómo decide el Front qué dibujar
+## How the Frontend Chooses What to Render
 
-Tres Condiciones, en [`App.vue`](../web/src/App.vue) y
+Three conditions live in [`App.vue`](../web/src/App.vue) and
 [`AdSpot.vue`](../web/src/components/AdSpot.vue):
 
-1. **`environment === 'production'`.** Fuera de Producción el Algoritmo decide
-   igual, pero se dibuja un Placeholder: así se prueba la Elección sin
-   ensuciar las Métricas de Google.
-2. **Cliente y Slot presentes.** Si falta alguno, Muchi cae a la Promoción
-   interna en vez de pedir un Anuncio que no puede pedir.
-3. **El Reparto.** Con Patrocinador configurado, una de cada cuatro Búsquedas
-   lo muestra a él y tres muestran AdSense. La Elección depende del Hash del
-   Identificador de la Búsqueda, así que no cambia entre las Consultas
-   automáticas de una misma Búsqueda.
+1. `environment === 'production'`. Outside Production, the same Algorithm
+   chooses a placement but renders a Placeholder, letting you test the
+   Selection without affecting Google's Metrics.
+2. Client and Slot are present. If either is missing, Muchi falls back to
+   an internal Promotion instead of requesting an unavailable Ad.
+3. Allocation. With a Sponsor configured, one in four Searches shows the
+   Sponsor and three show AdSense. Selection depends on the Search ID's
+   Hash and stays stable across Polls of the same Search.
 
-Si el Script de Google no carga —un Bloqueador, una Red caída— `GoogleAd.vue`
-no deja un Hueco: dice que Muchi sigue buscando Ofertas.
+If Google's Script fails to load because of an Ad blocker or Network
+failure, `GoogleAd.vue` leaves no Hole: it says Muchi is still looking for Offers.
 
-## Las Variables
+## The Variables
 
-Todas viajan como Variables de Entorno, vacías por Defecto. Lo que no
-exportes, el Front lo omite.
+All are supplied as Environment variables, empty by default. Unexported
+settings are omitted by the Frontend.
 
-| Variable | Qué hace si falta |
+| Variable | Behavior When Missing |
 | --- | --- |
-| `MUCHI_ADSENSE_CLIENT` | Cae al Editor fijo de `server/main.py`. |
-| `MUCHI_ADSENSE_SLOT` | La Publicidad queda apagada; se muestra la Promoción interna. |
-| `MUCHI_SPONSOR_NAME` / `_TEXT` / `_URL` | No hay Patrocinador: AdSense se queda con las cuatro de cada cuatro. |
+| `MUCHI_ADSENSE_CLIENT` | Falls back to the fixed Publisher in `server/main.py`. |
+| `MUCHI_ADSENSE_SLOT` | Ads stay off; the internal Promotion appears. |
+| `MUCHI_SPONSOR_NAME` / `_TEXT` / `_URL` | No Sponsor: AdSense gets all four Searches. |
 
 ```bash
 MUCHI_ADSENSE_SLOT=1234567890 ./deploy.sh
 ```
 
-Un `.env` entero se exporta con `set -a; . ./.env; set +a` antes de llamar.
+Export a whole `.env` with `set -a; . ./.env; set +a` before invoking it.
 
-`deploy.sh` lo Avisa antes de Subir nada, y nunca Detiene el Despliegue:
+`deploy.sh` warns before uploading anything, and never stops Deployment:
 
 ```text
 ~nya?~ Este Deploy va sin Anuncios: MUCHI_ADSENSE_SLOT esta vacio
        ./check-ads.sh dice si Google ya Asigno un Bloque
 ```
 
-Es un Aviso y no un Error a Propósito: mientras Google Revisa la Cuenta no hay
-Slot que Poner, y Bloquear el Despliegue por esa Espera dejaría a Muchi sin
-Publicar por algo que no Depende de nadie acá.
+This says the Deployment has no Ads because the Slot is empty and points
+to `check-ads.sh` to see whether Google has assigned one. It is deliberately
+a Notice: while Google reviews the Account, no Slot exists. Blocking
+Deployment would leave Muchi unpublished over something outside our control.
 
-## Cuando algo no anda
+## When Something Goes Wrong
 
-| Síntoma | Causa probable |
+| Symptom | Likely Cause |
 | --- | --- |
-| `403` con `ACCESS_TOKEN_SCOPE_INSUFFICIENT` | Falta el Scope en el ADC. |
-| `403` nombrando un Proyecto que no es el tuyo | Falta `x-goog-user-project`. |
-| `403 The caller does not have permission` | El ID de Editor no es el tuyo. |
-| `404` en el `ads.txt` | El BFF sólo lo sirve si hay un Cliente `ca-pub-`. |
-| El Sitio lleva Semanas en `GETTING_READY` | Revisa las Alertas y las cuatro Cosas de la Revisión. |
-| Hay Slot, pero no aparece el Anuncio | El Servicio no dice `production`, o el Slot no llegó al Despliegue: mira `/api/config`. |
-| Hay Slot y `production`, y el Espacio sale vacío | Normal las primeras Horas de un Bloque nuevo, y con un Bloqueador puesto. |
+| `403` with `ACCESS_TOKEN_SCOPE_INSUFFICIENT` | ADC lacks the Scope. |
+| `403` naming someone else's Project | Missing `x-goog-user-project`. |
+| `403 The caller does not have permission` | The Publisher ID is not yours. |
+| `404` for `ads.txt` | The BFF serves it only with a `ca-pub-` Client. |
+| Site stays `GETTING_READY` for weeks | Check Alerts and the four Review requirements. |
+| Slot exists but no Ad appears | Service is not `production`, or the Slot never reached Deployment; inspect `/api/config`. |
+| Slot and `production` are set, but the Space is empty | Normal during a new unit's first hours, and with an Ad blocker enabled. |

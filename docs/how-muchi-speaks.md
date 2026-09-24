@@ -1,49 +1,48 @@
-[English](how-muchi-speaks-en.md) · [Español](how-muchi-speaks.md)
+[English](how-muchi-speaks.md) · [Español](how-muchi-speaks.es.md)
 
-# Cómo Habla Muchi
+# How Muchi Speaks
 
-Muchi es un Gato que comenta lo que está pasando. Dice «ya salí a buscar»,
-se queja cuando una Tienda no tiene Stock, se despierta si la acaricias y
-cambia de Cara mientras lo dice. Este Documento cuenta las tres Piezas que
-hacen eso y por qué están separadas.
+Muchi is a Cat commenting on what happens. She says she has gone searching,
+complains when a Store has no Stock, wakes when petted and changes her Face
+while speaking. This Document explains the three Parts behind that behavior
+and why they are separate.
 
-| Pieza | Responde | Dónde vive |
+| Part | Question It Answers | Location |
 | --- | --- | --- |
-| El Catálogo | Qué puede decir Muchi | [`constants/phrases.yaml`](../constants/phrases.yaml) en el Servidor |
-| La Burbuja | Qué dice ahora, y quién le ganó el turno | [`MuchiPanel.vue`](../web/src/components/MuchiPanel.vue) |
-| La Hoja | Cómo se ve mientras lo dice | [`MuchiSprite.vue`](../web/src/components/MuchiSprite.vue) |
+| Catalog | What Muchi can say | [`constants/phrases.yaml`](../constants/phrases.yaml) on the Server |
+| Bubble | What she says now, and who took the turn | [`MuchiPanel.vue`](../web/src/components/MuchiPanel.vue) |
+| Sheet | What she looks like while saying it | [`MuchiSprite.vue`](../web/src/components/MuchiSprite.vue) |
 
-Las tres se hablan con un solo Vocabulario: cinco Estados. Un Texto no dice
-«ponte contenta», dice `happy`, y la Hoja ya sabe qué Fila es esa.
+All three share one Vocabulary: five States. Text says `happy`, and the
+Sheet already knows which Row that means.
 
-## Los cinco Estados
+## The Five States
 
-El Estado es el Protocolo visual. Lo declara el Servidor en
-[`muchi/mtg/phrases.py`](../muchi/mtg/phrases.py) como
-`STATES = frozenset({"idle", "talk", "happy", "alert", "angry"})`, y lo dibuja
-la Hoja de Sprites con una Fila por cada uno.
+State is the visual Protocol. The Server declares it in
+[`muchi/mtg/phrases.py`](../muchi/mtg/phrases.py) as
+`STATES = frozenset({"idle", "talk", "happy", "alert", "angry"})`;
+the Sprite sheet draws one Row per State.
 
-| Estado | Cuándo aparece | Fila | Cuadros | Ritmo | Vuelve sola |
+| State | When It Appears | Row | Frames | Timing | Returns Automatically |
 | --- | --- | --- | --- | --- | --- |
-| `idle` | Reposo, y Muchi cancelando una Búsqueda | 0 | 16 | 130 ms | Cicla |
-| `talk` | Saludos y Sugerencias de Nombre | 1 | 6 | 90 ms | Cicla |
-| `happy` | Búsqueda enviada, Caricia, Modo Oscuro | 2 | 8 | 80 ms | Termina y avisa |
-| `alert` | Nervios del Catálogo, Modo Claro | 3 | 6 | 100 ms | Termina y avisa |
-| `angry` | Cualquier Fallo que Muchi cuenta | 4 | 6 | 90 ms | Termina y avisa |
+| `idle` | Rest, and Muchi cancelling a Search | 0 | 16 | 130 ms | Loops |
+| `talk` | Greetings and Name suggestions | 1 | 6 | 90 ms | Loops |
+| `happy` | Search submitted, Petting, Dark mode | 2 | 8 | 80 ms | Ends and signals |
+| `alert` | Catalog nerves, Light mode | 3 | 6 | 100 ms | Ends and signals |
+| `angry` | Any Failure Muchi reports | 4 | 6 | 90 ms | Ends and signals |
 
-Los Números viven en [`web/src/assets/muchi-sheets.json`](../web/src/assets/muchi-sheets.json),
-no en el Código. Cambiar el Ritmo de `talk` es editar un `ms`, y
-[`docs/muchi-sprite-lab.html`](muchi-sprite-lab.html) permite mirarlos cuadro a
-cuadro antes de tocar la Hoja.
+Numbers live in [`web/src/assets/muchi-sheets.json`](../web/src/assets/muchi-sheets.json).
+Changing `talk` timing means editing an `ms` value. The
+[Sprite lab](muchi-sprite-lab.html) lets you inspect Frames before editing the Sheet.
 
-Un Estado que la Hoja no dibuja cae en `idle` antes de pedir una Fila que no
-existe. Sin ese Resguardo el Film se iría fuera de la Hoja y Muchi quedaría en
-blanco: un Texto mal escrito apagaría al Gato en vez de sonar raro.
+A State the Sheet does not draw falls back to `idle` before requesting a
+nonexistent Row. Without that guard, the Film would move beyond the Sheet
+and leave Muchi blank: malformed Text would switch off the Cat.
 
-## El Catálogo vive en el Servidor
+## The Catalog Lives on the Server
 
-Todo lo que Muchi puede decir está en un solo Archivo, y el Front no trae ni
-una Frase compilada adentro:
+Everything Muchi can say lives in one File. No Phrase is compiled into
+the Frontend:
 
 ```yaml
 every: 10
@@ -56,219 +55,210 @@ greetings:
     state: talk
 ```
 
-`GET /api/muchi` lo entrega entero: `every`, `phrases`, `greetings`, `dark`,
-`light`, `nerd`, `libre` y `help`. El Front lo pide una vez al montar, junto con
-`/api/config`, y lo guarda en el `book`.
+These are the original Spanish phrases: a complaint about Stock and a greeting.
+`GET /api/muchi` returns the complete Catalog: `every`, `phrases`,
+`greetings`, `dark`, `light`, `nerd`, `libre` and `help`. The Frontend requests
+it once on mount alongside `/api/config` and stores it in `book`.
 
-La Separación tiene un Motivo concreto: una Frase nueva no debería exigir un
-Build del Front ni un Despliegue de Hosting. El Texto es Contenido, no Código.
+A new Phrase should not require a Frontend build or Hosting deployment.
+Text is Content.
 
-El Servidor no es tolerante con ese Contenido. `build_phrase_book` exige las
-ocho Claves exactas, rechaza un Grupo vacío, un `every` que no sea Entero
-positivo y —sobre todo— un Estado fuera de los cinco. La Validación ocurre al
-leer, no al dibujar: un `state: contenta` revienta en el Servidor con un Error
-claro, en vez de llegar al Navegador y dejar a Muchi en blanco.
+The Server validates that Content strictly. `build_phrase_book` requires
+exactly eight Keys, rejects empty Groups, requires a positive Integer for
+`every` and rejects States outside the five. Validation happens on read:
+`state: contenta` fails on the Server with a clear Error, before reaching
+the Browser and leaving Muchi blank.
 
-Un Archivo ausente no es un Fallo: devuelve un Catálogo vacío y Muchi
-simplemente se queda callada. Los Mensajes son un Adorno del Producto, no su
-Función.
+A missing File is not a Failure: it returns an empty Catalog and Muchi
+stays quiet. Messages decorate the Product; they are not its Function.
 
-Hay un Grupo con Doble Uso. La Frase `rayozz no la encontré` la dice Muchi al
-acariciarla, y también la usa el Servidor como Detalle del `404` cuando una
-Carta no existe: [`server/main.py`](../server/main.py) la busca por su Texto
-para que el Fracaso tenga la Voz del Gato y no la del Framework.
+One Group has two uses. Muchi says `rayozz no la encontré` when petted;
+the Server also uses it as the `404` detail when a Card does not exist.
+[`server/main.py`](../server/main.py) finds it by Text so the Failure
+sounds like the Cat instead of the Framework.
 
-## Quién Habla y Cuándo
+## Who Speaks and When
 
-La Burbuja tiene tres Fuentes y una Precedencia estricta:
+The Bubble has three Sources with strict Precedence:
 
 ```mermaid
 flowchart TD
-    message["message · lo que pasó en la App"]
-    said["said · lo que Muchi dijo sola"]
-    greeting["greeting · el Saludo de la Sesión"]
-    bubble["La Burbuja"]
+    message["message · what happened in the App"]
+    said["said · what Muchi said on her own"]
+    greeting["greeting · the Session greeting"]
+    bubble["The Bubble"]
 
-    message -->|"gana siempre"| bubble
-    said -->|"si no hay message"| bubble
-    greeting -->|"si no hay ninguno"| bubble
-    message -.->|"lo borra al llegar"| said
+    message -->|"always wins"| bubble
+    said -->|"when message is absent"| bubble
+    greeting -->|"when both are absent"| bubble
+    message -.->|"clears it on arrival"| said
 ```
 
-`message` baja desde [`App.vue`](../web/src/App.vue), que lo escribe con
-`say(text, mood)`. `said` nace dentro del Panel, de una Caricia o del
-Interruptor de la Luz. El Saludo se elige una sola vez por Sesión y se
-memoriza: si se sorteara en cada Pintado, Muchi cambiaría de Saludo cada vez
-que Vue vuelve a dibujar el Panel.
+`message` comes from [`App.vue`](../web/src/App.vue), set by
+`say(text, mood)`. `said` starts inside the Panel after Petting or toggling
+the Light. The Greeting is chosen once per Session and remembered;
+choosing on every Render would change it whenever Vue repaints the Panel.
 
-Cuando llega un `message`, un `watch` limpia `said`. Sin esa Limpieza, un
-Comentario viejo sobre la Luz volvería a aparecer al terminar la Búsqueda,
-como si Muchi retomara una Conversación que nadie estaba teniendo.
+A `watch` clears `said` when a `message` arrives. Otherwise, an old Light
+comment would reappear after a Search, as though Muchi were resuming a
+Conversation nobody was having.
 
-Estos son todos los Disparadores:
+These are all the Triggers. Quoted speech below translates the Spanish UI:
 
-| Qué pasó | Qué dice | Estado |
+| Event | What She Says | State |
 | --- | --- | --- |
-| La Búsqueda se creó | «¡Miau! Ya salí a buscar» | `happy` |
-| La Búsqueda se canceló | «Ya paré de buscar» | `idle` |
-| El Envío falló | El Mensaje del Fallo, tal cual | `angry` |
-| El Buscador no encontró la Carta | El Mensaje del Fallo | `angry` |
-| El Buscador vio Nombres parecidos | «¿Buscabas «…»?» | `talk` |
-| Alguien abrió las Estadísticas | Una Frase del Grupo `nerd` | `happy` |
-| Alguien tocó o rozó el Aviso del Código Abierto | Una Frase del Grupo `libre` | La del Grupo |
-| Caricia número `every` (10) | Una Frase al azar de `phrases` | La del Grupo |
-| Se encendió el Modo Oscuro | Una de `dark` | `happy` |
-| Se apagó el Modo Oscuro | Una de `light` | `alert` |
+| Search created | "Meow! I'm off to search" | `happy` |
+| Search cancelled | "I've stopped searching" | `idle` |
+| Submission failed | The Failure message as received | `angry` |
+| Search found no Card | The Failure message | `angry` |
+| Search found similar Names | "Were you looking for ‘…’?" | `talk` |
+| Someone opened Statistics | A Phrase from `nerd` | `happy` |
+| Someone touched or hovered over the Open source notice | A Phrase from `libre` | The Group's State |
+| Petting count reaches `every` (10) | A random Phrase from `phrases` | The Group's State |
+| Dark mode enabled | One from `dark` | `happy` |
+| Dark mode disabled | One from `light` | `alert` |
 
-Las Caricias no hablan de a una. Muchi salta en cada Toque, pero solo dice algo
-cada diez, y el Contador se muestra desde el tercero. Un Gato que comenta cada
-Clic deja de ser gracioso al cuarto.
+Muchi jumps on every Tap but speaks only every tenth one. The Counter
+appears from the third. A Cat commenting on every Click stops being funny
+by the fourth.
 
-## Tres Canales, no uno
+## Three Channels
 
-Es fácil confundir «Muchi dijo» con «la Página avisó». Son cosas distintas y
-se dibujan en Lugares distintos, a propósito:
+Muchi speaking and the Page issuing a Notice are different things,
+shown deliberately in different Places:
 
-| Canal | Qué lleva | Dónde aparece |
+| Channel | Content | Location |
 | --- | --- | --- |
-| La Burbuja | La Voz de Muchi: opinión, Saludo, comentario | Dentro del Panel del Gato |
-| El Aviso | El Fallo de la Operación, textual y accionable | `.mu-aviso.error`, bajo el Formulario |
-| Las Notas | Lo que la API reporta de la Búsqueda | Sobre la Lista de Ofertas |
+| Bubble | Muchi's Voice: opinion, Greeting, comment | Inside the Cat panel |
+| Error notice | The Operation failure, literal and actionable | `.mu-aviso.error`, below the Form |
+| Notes | What the API reports about the Search | Above the Offer list |
 
-Un Fallo de Envío recorre dos de ellos a la vez: `error.value` recibe el Texto
-crudo para quien necesita el Detalle, y `say(..., 'angry')` lo repite con Cara
-de Gato. Quien busca la Causa la lee donde siempre está; quien solo mira la
-Pantalla igual se entera.
+Submission failures use two Channels at once. `error.value` gets the raw
+Text for anyone needing Details, and `say(..., 'angry')` repeats it with
+the Cat's Face. Someone looking for the Cause finds it in its usual place;
+someone just watching the Screen still notices.
 
-Las Notas de la API llegan con un `level`, y solo `warning` se dibuja como
-Aviso; el resto baja a Nota al pie. Eso mantiene el Amarillo escaso, que es lo
-único que lo hace significar algo.
+API Notes carry a `level`. Only `warning` renders as a Notice; others become
+Footnotes. Keeping Yellow scarce preserves its meaning.
 
-## La Alerta que Abre el Muelle
+## The Alert That Opens the Dock
 
-En Móvil, Muchi vive en un Muelle: un Botón redondo en la Esquina que se
-despliega al tocarlo. Nace cerrado, porque quien busca quiere ver Ofertas.
+On Mobile, Muchi lives in a Dock: a round corner Button that expands on Tap.
+It starts closed because searchers want to see Offers.
 
-Hay una sola Excepción escrita:
+There is one explicit exception:
 
 ```js
 watch(message, (said) => { if (said?.state === 'angry') dockOpen.value = true })
 ```
 
-Solo un `angry` abre el Muelle solo. Mirar una Carta no lo abre —Muchi taparía
-justo lo que pediste ver— y un `happy` tampoco: cabe entero en la Barra. Algo
-que salió mal es lo único que justifica robarle la Pantalla a alguien.
+Only `angry` opens the Dock automatically. Viewing a Card does not open it
+— Muchi would cover what you asked to see — and neither does `happy`, which
+fits in the Bar. A Failure is the only reason to take over that Screen space.
 
-Lo demás se anuncia sin desplegarse. Cerrado y con algo dicho, el Botón lleva
-un Punto en la Esquina (`.mu-muelle:not(.abierto).dijo`): Muchi avisa que habló
-sin decidir por ti que lo leas ahora.
+Other speech is announced without expanding. When closed with something
+said, the Button has a corner Dot (`.mu-muelle:not(.abierto).dijo`): Muchi
+signals she spoke and lets you decide when to read it.
 
-## Cómo se Anima
+## How Animation Works
 
-### El Film y la Ventana
+### The Film and the Window
 
-La Hoja `muchi-sofi-sheet.png` tiene ocho Columnas por cinco Filas,
-inspiradas en el Gato naranja de la referencia de Sofi. Cada Estado tiene
-ocho Cuadros. El Componente conserva una Ventana lógica de 24×24 a Escala 4
-y desliza la Hoja entera por debajo.
+`muchi-sofi-sheet.png` has eight Columns and five Rows, inspired by the
+orange Cat in Sofi's reference. Each State has eight Frames. The Component
+keeps a logical 24×24 Window at scale 4 and slides the whole Sheet beneath it.
 
-- La **Fila** se elige moviendo el Film en Y.
-- Los **Cuadros** se recorren animándolo en X con `steps()`, para que el
-  Navegador salte de Cuadro en Cuadro en vez de interpolar. Sin `steps()` no
-  hay Animación de Sprites: hay un Dibujo arrastrándose.
-- Se mueve con `transform`, **no** con `background-position`. Mover el Fondo
-  re-muestrea la Hoja en cada Cuadro, y en Pantallas con DPI fraccional deja
-  ver una línea de la Fila de arriba. El `transform` desliza la Capa ya
-  rasterizada y la Ventana la recorta limpia.
-- La Hoja se ajusta a la Grilla lógica con `background-size: 100% 100%`;
-  `image-rendering: pixelated` conserva los bordes al cambiar de Escala.
+- The Row is selected by moving the Film along Y.
+- Frames advance along X with `steps()`, so the Browser jumps between
+  Frames instead of interpolating. Without it, the Drawing simply slides.
+- Movement uses `transform`. Moving `background-position` resamples the
+  Sheet on each Frame and can reveal a line from the Row above on screens
+  with fractional DPI. `transform` slides the already rasterized Layer,
+  and the Window clips it cleanly.
+- `background-size: 100% 100%` fits the Sheet to the logical Grid;
+  `image-rendering: pixelated` preserves edges when scaling.
 
-### Las que Terminan
+### Animations That End
 
-Tres Estados no ciclan: `happy`, `alert` y `angry` tienen principio y final.
-Eso trae dos Detalles que se ven feos si faltan:
+Three States do not loop: `happy`, `alert` and `angry` have a beginning and
+an end. Two Details matter visually.
 
-Una Animación con final corre **un Cuadro menos**. En bucle, el salto del
-último al primero se lee como un Corte; recortando el último, el Ciclo cierra
-donde empezó.
+A finite Animation runs one fewer Frame. In a Loop, jumping from last to
+first reads as a cut; trimming the last lets the Cycle close where it began.
 
-Y una Animación que terminó se queda congelada para siempre, así que avisa:
+A completed Animation would freeze forever, so it signals completion:
 
 ```mermaid
 sequenceDiagram
     participant Panel as MuchiPanel
     participant Sprite as MuchiSprite
     Panel->>Sprite: state = happy
-    Sprite->>Sprite: corre 7 Cuadros
+    Sprite->>Sprite: run 7 Frames
     Sprite-->>Panel: @animationend → rested
     Panel->>Panel: petted = false
-    Panel->>Sprite: state vuelve a lo que diga la Burbuja
+    Panel->>Sprite: state returns to the Bubble's State
 ```
 
-Repetir el mismo Estado también debe volver a animarlo. Vue reusa el Elemento
-si su Clave no cambia, y una Animación ya terminada no se reinicia sola: por
-eso un `tick` sube en cada Cambio de Estado y fuerza un Elemento nuevo. Sin él,
-la segunda Caricia seguida no haría nada.
+Repeating the same State must animate again. Vue reuses an Element if its
+Key stays unchanged, and a finished Animation does not restart itself.
+A `tick` increases on every State change to force a new Element; without
+it, the second consecutive Pet would do nothing.
 
-### Las otras cuatro Animaciones
+### The Other Four Animations
 
-| Animación | Qué la dispara | Cómo funciona |
+| Animation | Trigger | Implementation |
 | --- | --- | --- |
-| El Salto (`mu-salta`) | Cada Caricia | 400 ms de `translateY`, soltado por un `setTimeout` |
-| Los Corazones (`mu-sube`) | «Muchi, ayudame!» | Seis Emojis con Desvío, Giro y Demora al azar |
-| La Barra de Avance | Cada Sondeo | `transition: width .3s` sobre el Porcentaje |
-| Los Botones | Hover | `translateY(-1px)` en 150 ms |
+| Jump (`mu-salta`) | Every Pet | 400 ms of `translateY`, released by `setTimeout` |
+| Hearts (`mu-sube`) | "Muchi, ayudame!" (Muchi, help me!) | Six Emojis with random Drift, Rotation and Delay |
+| Progress bar | Every Poll | `transition: width .3s` on the Percentage |
+| Buttons | Hover | `translateY(-1px)` over 150 ms |
 
-Los Corazones salen de a seis, cada uno con su `--desvio`, su `--giro` y su
-`animationDelay`, para que no suban en Fila como una Lista. Viven en una Capa
-con `pointer-events: none`, así nunca tapan el Botón del que salieron, y cada
-uno se borra de la Lista al terminar: sin eso el Arreglo crece sin fin mientras
-alguien insista con el Botón.
+Hearts appear six at a time, each with its own `--desvio`, `--giro` and
+`animationDelay`, so they do not rise in a straight List. Their Layer uses
+`pointer-events: none`, preventing them from covering the originating
+Button. Each is removed on completion, keeping the Array from growing
+forever while someone keeps pressing.
 
-## Quien Pidió menos Movimiento
+## For People Who Requested Less Motion
 
-`prefers-reduced-motion: reduce` no apaga la Información, apaga el Movimiento.
-Cada Animación tiene una Respuesta pensada, no un `animation: none` global:
+`prefers-reduced-motion: reduce` preserves Information while reducing
+Movement. Each Animation has a specific response:
 
-| Animación | Con Movimiento reducido |
+| Animation | With Reduced Motion |
 | --- | --- |
-| La Hoja de Muchi | Se queda en el primer Cuadro, que ya es una Pose de reposo completa |
-| Los Corazones | No aparecen; el Botón igual cambia a «Gracias Muchi 💝» |
-| Los Botones | Sin `transition`; el Estado se ve igual |
+| Muchi's Sheet | Stays on the first Frame, already a complete resting Pose |
+| Hearts | Hidden; the Button still changes to "Gracias Muchi 💝" (Thanks Muchi) |
+| Buttons | No `transition`; the State remains visible |
 
-Muchi sigue diciendo lo mismo, sigue cambiando de Cara según el Estado, y
-sigue abriendo el Muelle cuando algo falla. Lo único que se pierde es el
-Movimiento, que es exactamente lo que se pidió.
+Muchi still speaks, changes Face with State and opens the Dock on Failure.
+Only Movement is lost, exactly as requested.
 
-Que la Hoja no necesite un Dibujo aparte para el reposo es una Decisión de la
-Hoja, no del CSS: el Cuadro 0 de cada Fila se dibujó para poder quedarse
-quieto.
+Needing no separate resting Drawing is a Sheet decision: Frame 0 in every
+Row was drawn to work while still.
 
-## Decisiones y Límites
+## Decisions and Limits
 
-- **Los Textos no son Traducibles todavía.** El Catálogo tiene un solo Idioma.
-  Una segunda Lengua necesita otra Clave en el YAML y una Elección en
-  `/api/muchi`, no un Archivo paralelo.
-- **La Burbuja no tiene Historial.** Muestra una Cosa a la vez y la reemplaza.
-  Un Registro de lo que Muchi dijo sería otro Componente y otra Decisión.
-- **El Mensaje no caduca.** Se queda hasta que otro lo reemplace. Un Temporizador
-  haría desaparecer un Fallo que alguien todavía estaba leyendo.
-- **El Catálogo se lee una vez por Proceso** (`lru_cache`). Editar
-  `phrases.yaml` en Producción exige reiniciar el Servicio; a cambio, ninguna
-  Petición paga la Lectura del Disco.
-- **Cinco Estados son pocos a propósito.** Cada Estado nuevo es una Fila nueva
-  que alguien tiene que dibujar, en cinco Poses coherentes. El Límite no es
-  técnico: es de Ilustración.
+- App phrases are not multilingual yet. The Catalog has one Language.
+  A second requires another YAML key and selection in `/api/muchi`,
+  rather than a parallel File.
+- The Bubble has no History. It shows one thing and replaces it. A speech
+  Log would require another Component and Decision.
+- Messages do not expire. They stay until replaced. A Timer could remove
+  a Failure someone is still reading.
+- The Catalog is read once per Process (`lru_cache`). Editing
+  `phrases.yaml` in Production requires restarting the Service; in return,
+  Requests do not pay for Disk reads.
+- Five States are deliberately few. Each new State requires someone to
+  draw another Row in five coherent Poses. The Limit is Illustration.
 
-## Dónde Mirar
+## Where to Look
 
-1. [`constants/phrases.yaml`](../constants/phrases.yaml) — todo lo que Muchi
-   puede decir.
-2. [`muchi/mtg/phrases.py`](../muchi/mtg/phrases.py) — la Validación, y qué
-   pasa si el Catálogo está mal.
-3. [`web/src/components/MuchiPanel.vue`](../web/src/components/MuchiPanel.vue) —
-   la Precedencia de la Burbuja, las Caricias y los Corazones.
-4. [`web/src/components/MuchiSprite.vue`](../web/src/components/MuchiSprite.vue) —
-   el Film, los `steps()` y el Aviso de reposo.
-5. [`web/src/App.vue`](../web/src/App.vue) — quién llama a `say`, y la única
-   Línea que abre el Muelle.
+1. [`constants/phrases.yaml`](../constants/phrases.yaml): everything Muchi can say.
+2. [`muchi/mtg/phrases.py`](../muchi/mtg/phrases.py): Validation and invalid
+   Catalog behavior.
+3. [`web/src/components/MuchiPanel.vue`](../web/src/components/MuchiPanel.vue):
+   Bubble precedence, Petting and Hearts.
+4. [`web/src/components/MuchiSprite.vue`](../web/src/components/MuchiSprite.vue):
+   Film, `steps()` and the rest Signal.
+5. [`web/src/App.vue`](../web/src/App.vue): callers of `say` and the one
+   line that opens the Dock.
