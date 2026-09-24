@@ -343,8 +343,9 @@ los Documentos de `docs/` en español. El Índice equivalente está en
 
 | Documento | Qué aprendes |
 | --- | --- |
-| 🏛️ [Arquitectura de MUCHI](docs/architecture.es.md) | La Frontera entre este Front y la API, la Seguridad, los Datos, la Operación y una Guía neutral para replicar el Patrón con otros Proveedores. |
-| 🪟 [El Front y su Frontera](docs/web-migration.es.md) | Qué dibuja el Front, qué decide el BFF, cuáles son sus Rutas y cómo se despliega en Cloud Run. |
+| 🏛️ [Arquitectura del BFF de MUCHI](docs/architecture.es.md) | Frontera del Front, recorrido de peticiones, seguridad, reglas de presentación y despliegue. |
+| 🪟 [Entrypoints del BFF](docs/bff/README.es.md) | Una explicación y razón de ser para cada ruta pública del BFF. |
+| 🪟 [El Front y su Frontera](docs/web-migration.es.md) | Qué dibuja el Front y cómo se despliega junto al BFF. |
 | 🐱 [Cómo Habla MUCHI](docs/how-muchi-speaks.es.md) | El Catálogo de Frases, quién le gana el turno a la Burbuja, los tres Canales de Aviso, la Hoja de Sprites y qué queda con Movimiento reducido. |
 | 🧩 [Laboratorio de Sprites](docs/muchi-sprite-lab.es.html) | Vista interactiva de los Estados, las Hojas y los ejemplos de Animación. Abre el HTML en un Navegador. |
 | 📦 [Producto Sellado](docs/sealed-product.es.md) | Cómo se elige el Catálogo, los Valores por Defecto medidos contra las Tiendas, por qué la Caja no Tiene a quién pedirle su Foto y por qué decir «No hay Ofertas» puede ser Mentira. |
@@ -364,7 +365,7 @@ Cada Cosa se lee en un solo lugar, y por eso acá ya no hay Copias:
 - 🧪 Las [Colecciones de Bruno](https://github.com/cangrejometralleta/muchi-api/tree/main/bruno)
   viven allá. Sirven para pegarle a la API sin pasar por el BFF, que es como se
   separa un Fallo del Front de uno del Servicio.
-- 🏛️ La [Arquitectura del Backend](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/arquitectura.md)
+- 🏛️ La [Arquitectura del Backend](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/architecture.es.md)
   —Cola, Worker, Persistencia y Caducidad— se cuenta allá.
   [Acá](docs/architecture.es.md) se cuenta la del Front y su Frontera.
 - ⚖️ El [Castigo y Perdón](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/castigo-y-perdon.md)

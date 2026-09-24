@@ -334,8 +334,9 @@ index, see [Diarios de desarrollo](README.es.md#diarios-de-desarrollo).
 
 | Document | What You Learn |
 | --- | --- |
-| [MUCHI Architecture](docs/architecture.md) | Frontend/API boundaries, Security, Data, Operations and a Provider-neutral guide to reproducing the Pattern. |
-| [The Frontend and Its Boundary](docs/web-migration.md) | What the Frontend renders, what the BFF decides, its Routes and Cloud Run deployment. |
+| [MUCHI BFF Architecture](docs/architecture.md) | The Frontend/BFF boundary, request flow, security, presentation rules and deployment. |
+| [BFF Entry Points](docs/bff/README.md) | One explanation and reason for every public BFF route. |
+| [The Frontend and Its Boundary](docs/web-migration.md) | What the Frontend renders and how it is deployed with the BFF. |
 | [How Muchi Speaks](docs/how-muchi-speaks.md) | Phrase Catalog, Bubble precedence, three Notice channels, Sprite sheet and reduced Motion. |
 | [Sprite Lab](docs/muchi-sprite-lab.html) | Interactive Sprite previews, States, Sheets and animation examples. Open the HTML in a Browser. |
 | [Sealed Products](docs/sealed-product.md) | Catalog selection, measured Defaults, Box photos and misleading empty Results. |
