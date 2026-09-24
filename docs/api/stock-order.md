@@ -1,29 +1,29 @@
-[English](stock-order-en.md) · [Español](stock-order.md)
+[English](stock-order.md) · [Español](stock-order.es.md)
 
-# Comprobar el Stock antes de Coronar
+# Check Stock before Awarding the Crown
 
-Septiembre 2026 · la Conversación entre el BFF y la API
+September 2026 · the Conversation between the BFF and the API
 
-## Por qué se Pregunta
+## Why We Ask
 
-El Front corona la Oferta más barata de cada Carta. Un Precio barato sobre una
-Carta agotada no es una Recomendación: es una Visita perdida a la Tienda. Antes
-de coronar, Muchi vuelve a preguntar —de la barata a la cara— hasta que una
-Tienda Confirme que sí la Tiene.
+The Frontend crowns the cheapest Offer for each Card. A low Price for a
+sold-out Card sends someone on a wasted Visit to the Store. Before awarding
+the crown, Muchi asks again — from cheapest to most expensive — until a
+Store Confirms that it has the Card.
 
-La Consulta a la Tienda vive del lado de la API: el Worker ya sabe hablarle a cada
-Proveedor, con su Adaptador y su Tope de Tiempo. Repetir esa Lógica en el BFF la
-publicaría dos veces y duplicaría el Tráfico que las Tiendas reciben de nosotros.
-Por eso el BFF no visita nada: Decide a quién preguntar y en qué Orden.
+Store requests belong on the API side: the Worker already knows how to talk
+to each Provider, with its Adapter and Timeout. Repeating that Logic in the
+BFF would publish it twice and duplicate the Traffic Stores receive from us.
+The BFF therefore visits nothing: it Decides whom to ask and in what Order.
 
-## El Contrato
+## The Contract
 
-```
+```text
 POST /v1/searches/{search_id}/stock
 {"offers": ["offer-1", "offer-2"]}
 ```
 
-```
+```text
 200
 {"offers": [
   {"id": "offer-1", "stock_status": "unavailable", "stock_quantity": 0},
@@ -31,71 +31,69 @@ POST /v1/searches/{search_id}/stock
 ]}
 ```
 
-- `id` es el mismo `id` que la Oferta ya trae en `/searches/{id}/results`. Una
-  URL elegida por quien llama se Rechaza con 404: esto no es un Proxy.
-- `stock_quantity` es opcional. **Ausente** significa "la Tienda no lo Declara",
-  y **cero** significa "se Preguntó y no hay". Son Estados distintos y Muchi los
-  muestra distinto. Shopify dice si una Variante se Vende, no cuántas Quedan;
-  Jumpseller sí Cuenta.
-- Una Tienda que no Contesta responde `unknown`, no un Error: quien Pregunta
-  pasa a la siguiente Oferta en vez de perder la Búsqueda entera.
+- `id` is the same `id` the Offer carries in `/searches/{id}/results`. A
+  caller-selected URL is Rejected with 404: this is not a Proxy.
+- `stock_quantity` is optional. Missing means the Store does not disclose it;
+  zero means we asked and none remain. Muchi displays these States
+  differently. Shopify says whether a Variant is sold, not how many remain;
+  Jumpseller does Count.
+- A Store that does not Respond returns `unknown`, rather than an Error: the
+  caller moves to the next Offer instead of losing the entire Search.
 
-## Las tres Respuestas y la Corona
+## The Three Answers and the Crown
 
-| La Tienda Dice | Muchi Entiende | La Corona |
+| The Store Says | Muchi Understands | The Crown |
 | --- | --- | --- |
-| `available` | Sí la Tiene | Se la Queda, y la Ronda Termina |
-| `unavailable` o cero Unidades | No la Tiene | Pasa a la siguiente |
-| `unknown` | No lo Declara | Queda de Reserva; se sigue preguntando |
+| `available` | It has the Card | Keeps it, and the Round ends |
+| `unavailable` or zero Units | It does not have the Card | Goes to the next Offer |
+| `unknown` | It does not disclose availability | Remains a fallback; asking continues |
 
-Una Duda no Cierra la Ronda. Entre una Duda barata y un Sí caro, la Corona es
-del Sí: la Recomendación existe para que alguien Compre, y una Carta que no
-Llega no es una Compra barata. La Duda solo Corona cuando nadie Confirmó, y una
-Carta donde todas Negaron se queda **sin** Corona.
+Uncertainty does not close the Round. Between a cheap unknown and an
+expensive yes, the yes wins: the Recommendation exists so someone can Buy.
+A Card that never arrives is not a cheap Purchase. An unknown wins only
+when nobody Confirms; a Card whose Stores all said no receives no Crown.
 
-## El Tope
+## The Limit
 
-`/api/searches/{id}/stock` pregunta **por Rondas**: la primera Candidata de
-cada Tipo de Carta viaja en una sola Consulta, y solo los Tipos que no
-Confirmaron pasan a la siguiente Ronda. El Costo crece con la Duda, no con el
-Largo de la Lista, y `stock_check_limit` —hoy 3, en
-[`config/offers.defaults.yaml`](../../config/offers.defaults.yaml)— le pone
-Techo.
+`/api/searches/{id}/stock` asks in Rounds: the first Candidate for each Card
+type travels in one Request, and only types without Confirmation proceed to
+the next Round. Cost grows with Uncertainty, rather than List length.
+`stock_check_limit` — currently 3, in
+[`config/offers.defaults.yaml`](../../config/offers.defaults.yaml) — caps it.
 
-No se pregunta por una Oferta ya Agotada, ni por una sin Cambio a Pesos —no
-compite por la Corona—, ni por una que la API no Nombró con un `id`. Ni por una
-que el Navegador ya Confirmó: el `POST` de la misma Ruta Recibe
-`{"checks": [{"offer_id": "...", "available": true}]}` y Arranca las Rondas
-desde ahí. Una Tienda que le Contestó al Comprador no Necesita Contestarnos
-también a nosotros. El `GET` es ese mismo Camino sin nada Sabido.
+We do not ask about an already sold-out Offer, one without conversion to
+Pesos — it cannot compete for the Crown — or one the API did not give an
+`id`. Nor do we ask about one the Browser already Confirmed: `POST` on the
+same Route accepts `{"checks": [{"offer_id": "...", "available": true}]}`
+and starts the Rounds there. A Store that answered the Buyer need not answer
+us too. `GET` follows the same path with no prior Knowledge.
 
-**Un Toque Pregunta por una Oferta sola.** Elegir una Oferta en la Lista
-Confirma esa Tienda y nada más. Cuando el Navegador la Alcanza —Shopify, con
-CORS abierto— la Pregunta ni siquiera Llega acá: viaja como `checks` con
-`ask=false`. Cuando no la Alcanza —una Tienda leída de Listas de Moxfield, un
-Catálogo que no Sirve JSON— el mismo `POST` Recibe
-`{"checks": [], "asking": ["<offer_id>"]}` y Preguntamos nosotros, con el `plan`
-Recortado a esa Oferta. Sin ese Recorte el Toque Quedaba sin Respuesta, o
-Costaba la Ronda entera.
+A Tap checks one Offer only. Selecting an Offer in the List confirms that
+Store alone. When the Browser can reach it — Shopify, with open CORS — the
+Question never reaches us: it travels as `checks` with `ask=false`. When it
+cannot — a Store read from Moxfield lists, a Catalog that serves no JSON —
+the same `POST` accepts `{"checks": [], "asking": ["<offer_id>"]}` and we
+ask, with `plan` narrowed to that Offer. Without that restriction, the Tap
+received no answer or cost an entire Round.
 
-**El Tope es de la Pregunta, no de la Corona.** Son dos Listas: `ranking` —todas
-las Ofertas en pie de cada Carta, de la barata a la cara— Decide quién Compite,
-y `plan` —sus primeras `stock_check_limit`— Decide a quién Visitamos nosotros.
-Una Oferta que el Navegador Confirmó Compite aunque esté en el Puesto nueve,
-porque Confirmarla no nos Costó una Visita. Confundir las dos Listas Deja la
-Corona en la Duda más barata teniendo un Sí más arriba, que es exactamente lo
-que Pasaba con `cartasmagicsur.cl`.
+The Limit governs the Question, not the Crown. There are two Lists:
+`ranking` — all viable Offers for each Card, cheapest first — decides who
+competes, and `plan` — its first `stock_check_limit` entries — decides whom
+we visit. A Browser-confirmed Offer competes even in ninth place, because
+confirming it cost us no Visit. Confusing those Lists awards the Crown to
+the cheapest unknown despite a confirmed yes further down, exactly what
+happened with `cartasmagicsur.cl`.
 
-## Lo que Queda Fuera de Alcance
+## What Remains beyond Reach
 
-Una Tienda detrás de un Desafío de Bot no se puede Comprobar. `cartasmagicsur.cl`
-responde `429` con `x-vercel-mitigated: challenge` a cualquier Cliente que no sea
-un Navegador con JavaScript, y scry.cl —que la Indexa— no publica su Stock. Esa
-Oferta queda en `unknown` para siempre, y por eso la Regla de arriba existe: sin
-ella, la Duda más barata se quedaría la Corona sin que nadie la haya Confirmado.
+A Store behind a Bot challenge cannot be checked. `cartasmagicsur.cl`
+returns `429` with `x-vercel-mitigated: challenge` to any Client other than
+a JavaScript-enabled Browser, and scry.cl — which indexes it — publishes no
+Stock. That Offer remains `unknown`, which is why the rule above exists:
+otherwise the cheapest unknown would keep the Crown without Confirmation.
 
-Esto es distinto de [`verify_stock`](../optional-reverification.md), que
-Re-verifica toda Oferta candidata durante la Búsqueda y nace apagada por su
-Carga. Acá se pregunta al Final, de a una, y solo mientras ninguna Confirme.
-Ese mismo Documento Cuenta qué Ofertas Alcanza el Navegador por su cuenta y
-cuánto Dura lo que Confirmó.
+This differs from [`verify_stock`](../optional-reverification.md), which
+rechecks every candidate Offer during a Search and defaults to off because
+of its Load. Here we ask at the end, one at a time, only while no Offer has
+Confirmed. That Document also explains which Offers the Browser can reach
+itself and how long its Confirmations last.

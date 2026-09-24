@@ -1,173 +1,169 @@
-[English](sealed-product-en.md) · [Español](sealed-product.md)
+[English](sealed-product.md) · [Español](sealed-product.es.md)
 
-# Producto Sellado
+# Sealed Products
 
-Muchi Buscaba Cartas sueltas. Una Caja de Sobres Parecía lo mismo con otro
-Precio, y no lo es: se Nombra distinto, se Agrupa distinto, y su Foto Viene de
-otro Lado.
+Muchi searched for single Cards. A Booster box seemed like the same thing
+at another Price, but its Naming, Grouping and Image source are different.
 
-La API Aprendió `kind=sealed`. Este Documento Cuenta qué Cambió de este Lado de
-la Frontera, y sobre todo **qué se Rompió al Probarlo** — porque casi nada de lo
-que se Rompió era del Sellado. Estaba ahí antes, tapado por el Hecho de que una
-Carta suelta Tiene un Catálogo al que Preguntarle y una Caja no.
+The API learned `kind=sealed`. This Document explains what changed on this
+side of the Boundary and, especially, what broke during Testing. Almost
+none of those Failures belonged to sealed Products. They already existed,
+hidden by the fact that a single Card has a Catalog to query and a Box does not.
 
-Los Defectos del otro Lado —los del Contrato y las Fuentes— Viven en
-`docs/sealed-product.md` del
-[Repositorio muchi-api](https://github.com/cangrejometralleta/muchi-api). Cada
-Repositorio Guarda los suyos, por la misma Razón que en los
-[Hallazgos en los Buscadores](search-findings.md): una Copia del Documento
-Ajeno Envejece mal.
+Defects across the Boundary — in the Contract and Sources — live in
+`docs/sealed-product.es.md` in the
+[muchi-api Repository](https://github.com/cangrejometralleta/muchi-api).
+Each Repository keeps its own Findings for the same reason described in
+[Search Findings](search-findings.md): copied Documents age poorly.
 
-## El Catálogo se Elige, no se Deduce
+## The Catalog Is Chosen
 
-El Formulario Lleva un `fieldset` «Qué Buscar» con dos Opciones, hermano del que
-ya Existía para la Coincidencia:
+The Form has a "What to search" `fieldset` with two Options, alongside
+the existing Match selector:
 
-```
-Juego:  [ Magic ▾ ]
-Qué Buscar:  ( • Cartas sueltas )  ( ○ Producto sellado )
+```text
+Game:  [ Magic ▾ ]
+What to search:  ( • Singles )  ( ○ Sealed products )
 ```
 
-Una Búsqueda es **entera** de Cartas o **entera** de Cajas. Mezclarlas Obligaría
-a Decidir Línea por Línea qué es cada Cosa, y «Caja de Sobres» contra «Sol Ring»
-no se Distingue por el Texto.
+A Search contains only Cards or only Boxes. Mixing them would require
+deciding what each line means; Text alone does not distinguish "Booster box"
+from "Sol Ring".
 
-El `kind` Viaja en la URL junto al `match` —una Búsqueda de Cajas Retomada por su
-Enlace no Vuelve como una de Cartas— y se Recuerda en `localStorage` junto al
-Juego.
+`kind` travels in the URL with `match`, so resuming a Box search does not
+turn it into a Card search. It is also remembered in `localStorage` with
+the Game.
 
-### Sellado no Fuerza `includes`
+### Sealed Does Not Force `includes`
 
-Parecía obvio que sí: ninguna Tienda Titula una Caja igual que la otra, así que
-la Coincidencia ancha es la única que Sirve.
+It seemed obvious it should: no two Stores name a Box the same way, so
+broad Matching seemed the only useful option.
 
-Pero el `wide` de este Formulario no solo Ensancha: **Recorta la Lista a su
-primera Línea**, porque Mirar una Familia de Cartas es de a una. Una Lista de
-Cajas con Cantidades es tan legítima como una de Cartas, y forzarlo habría tirado
-la Línea 2 en adelante.
+But this Form's `wide` mode also trims the List to its first Line, because
+browsing a Card family happens one at a time. A quantity-based Box list is
+as valid as a Card list; forcing that mode would discard line 2 onward.
 
-Además es innecesario. La API ya Ensancha sola toda Pregunta sellada, y la Agrupa
-por su Llave sin Mirar el Modo. Así que en Sellado el `fieldset` de Coincidencia
-**se Esconde**: Habla de Impresiones y Derivados, dos Cosas que una Caja sin Abrir
-no Tiene.
+It is also unnecessary. The API already broadens every sealed Query and
+groups it by its Key regardless of Mode. The Match `fieldset` is therefore
+hidden for sealed Products: it describes Printings and derivatives,
+neither of which an unopened Box has.
 
-## El Campo Llega Escrito
+## The Field Arrives Filled In
 
-Cada Combinación de Juego y Catálogo Trae un Valor por Defecto, y los seis están
-**medidos contra las Tiendas**, no Inventados:
+Every Game and Catalog combination has a Default. All six were measured
+against Stores:
 
-| | Cartas | Sellado | Ofertas medidas |
+| | Cards | Sealed | Measured Offers |
 | --- | --- | --- | --- |
 | Magic | `Sol Ring` | `Play Booster` | 32 |
 | Pokémon | `Pikachu` | `Prismatic Evolutions Booster Bundle` | 3 |
 | Yu-Gi-Oh | `Dark Magician` | `Booster Box` | 6 |
 
-La Lección que Dejaron las Mediciones: **el Nombre corto Encuentra más que el
-largo.** `Maze of Millennia Booster Box` se Pasa del Tiempo de Espera; `Booster
-Box` Trae seis. Las Tiendas chilenas Escriben el Set adelante y a su manera, así
-que el Título que Viene impreso en la Caja de Fábrica no Encuentra nada.
+The Measurements taught us that short Names find more than long ones.
+`Maze of Millennia Booster Box` times out; `Booster Box` returns six Offers.
+Chilean Stores put the Set first and spell it their own way, so the Title
+printed on the factory Box finds nothing.
 
-El Ejemplo Sigue al Juego y al Catálogo **mientras nadie Haya escrito lo suyo**.
-Un Texto propio Manda: cambiar de Juego no le Borra la Lista a nadie.
+The Example follows the Game and Catalog until someone writes their own
+Text. Their Text takes precedence: changing Games does not erase their List.
 
-## Los Números Sobreviven
+## Numbers Survive
 
-El Parser de Listas Recorta el Número suelto del final, porque en una Carta es su
-Número de Colección: `1 Sol Ring (LTC) 344 *F*` Pide un Sol Ring.
+The List parser trims a trailing standalone Number because a Card uses it
+as a Collector number: `1 Sol Ring (LTC) 344 *F*` requests one Sol Ring.
 
-En una Caja ese Número es parte del Nombre.
+For a Box, that Number is part of its Name.
 
+```text
+before:  'Set de Batalla 2024'  →  Order(1, 'Set de Batalla')
 ```
-antes:  'Set de Batalla 2024'  →  Order(1, 'Set de Batalla')
-```
 
-`strip_decorations` Ahora Parte sus Patrones en dos. Las **Marcas** —foil,
-`#!Commander`, Corchetes— se Sacan siempre. La **Impresión** —la Edición entre
-Paréntesis y el Número— solo en Cartas sueltas.
+`strip_decorations` now splits its Patterns into two groups. Markers — foil,
+`#!Commander`, brackets — are always removed. Printing information — the
+Edition in parentheses and the Number — is removed only for single Cards.
 
-## La Caja no Tiene Catálogo
+## A Box Has No Card Catalog
 
-`CardArt` le Pide la Imagen al Catálogo del Juego. Para una Caja no Hay a quién
-Preguntarle: `/cards/metadata` Conoce Cartas.
+`CardArt` requests Images from the Game's Catalog. For a Box, there is
+nobody to ask: `/cards/metadata` knows Cards.
 
-En Sellado el Panel **no Consulta nada** y Usa la Foto que Publicó la Tienda.
-Preguntar igual Habría Dejado el Panel en «Buscando la Imagen…» para siempre.
+For sealed Products the Panel makes no Query and uses the Store's Photo.
+Querying anyway would leave it at "Looking for the image…" forever.
 
-Por la misma Razón el Buscador Asistido se Esconde: `/cards/autocomplete` tampoco
-Toma `kind`, y un Buscador que nunca Encuentra es peor que ninguno.
+Assisted Search is hidden for the same reason: `/cards/autocomplete` does
+not accept `kind`, and a Search that never finds anything is worse than none.
 
-## La Imagen se Perdía en Cuatro Capas
+## The Image Was Lost across Four Layers
 
-Este es el Hallazgo que más Costó Encontrar, y el que más Enseña.
+This Finding was the hardest to locate and the most instructive.
 
-La API **sí** Manda la Foto de cada Oferta. Medido: 31 de 32 en Magic, 3 de 3 en
-Pokémon. Pero no Llegaba al Navegador, y se Perdía cuatro veces seguidas:
+The API does send each Offer's Photo. Measured: 31 of 32 in Magic, 3 of 3
+in Pokémon. Yet it never reached the Browser, getting lost four times:
 
-| Capa | Qué pasaba |
+| Layer | What Happened |
 | --- | --- |
-| `muchi/api/client.py` | `build_offer` Leía veinte Campos del JSON y `image` no era ninguno |
-| `muchi/mtg/search.py` | `SearchOffer` no Tenía dónde Guardarla |
-| `server/presenter.py` | La Fila que Viaja al Navegador tampoco la Llevaba |
-| `web/src/components/OfferList.vue` | Y el Front la Buscaba en `offer.metadata.image` — un Lugar donde la API nunca la Pone |
+| `muchi/api/client.py` | `build_offer` read twenty JSON fields, excluding `image` |
+| `muchi/mtg/search.py` | `SearchOffer` had nowhere to store it |
+| `server/presenter.py` | The Row sent to the Browser did not carry it either |
+| `web/src/components/OfferList.vue` | The Frontend looked in `offer.metadata.image`, where the API never puts it |
 
-Ninguna de las cuatro se Había notado, y la Razón es la misma que Vuelve
-interesante al Sellado entero: **para una Carta suelta nadie Necesita ese Campo.**
-`CardArt` le Pide la Imagen al Catálogo por su Cuenta. El Hueco Existía desde
-siempre y solo se Vio cuando Apareció algo que no Tiene Catálogo.
+None had been noticed because single Cards did not need that Field:
+`CardArt` fetched their Images independently from the Catalog. The Gap
+had always existed and appeared only when something had no Catalog.
 
-`image` Quedó como último Campo de `SearchOffer` a propósito: hay Pruebas que
-Arman Ofertas por Posición.
+`image` deliberately became the last Field in `SearchOffer`: some Tests
+construct Offers by Position.
 
-## Decir «No Hay» es Afirmar lo que no se Sabe
+## Saying "There Are None" Claims Knowledge We Lack
 
-Una Pantalla Mostraba esto, junto:
+A Screen showed these together:
 
-```
-Bloomburrow Play Booster: no se pudo consultar lacripta.cl; faltan sus Ofertas.
-No hay Ofertas para mostrar.
-```
-
-La primera Línea es un Fallo. La segunda es una Ausencia. Y una Ausencia
-calculada sobre Fuentes que no Contestaron no es una Ausencia: es un Hueco.
-
-El Contrato ya lo Decía —una Lista de `faults` no vacía Significa Respuesta
-incompleta— y la Interfaz lo Mostraba al lado de su Contradicción.
-
-Hoy, cuando Hay Avisos de Nivel `warning`, el Texto Cambia:
-
-> Ninguna Oferta llegó, y algunas Fuentes no contestaron. Lo que falta puede
-> existir igual: reintenta en un rato.
-
-Sale de los `notices` que ya Llegaban, sin Tocar el Contrato ni el Proxy.
-
-## El Campo que Desaparecía
-
-El Polling Devolvía **502** en cada Ciclo, con «La Respuesta no cumple el Contrato
-de la API» y ninguna Pista de cuál Campo.
-
-Eran dos Campos que la API Declara obligatorios y Manda ausentes: `sequence`, que
-Lleva `omitempty` y Desaparece cuando Vale cero, y `offers`, que Llega `null` en
-vez de Lista vacía cuando un Item no Encontró nada. Los dos son Estados normales
-de un Item que Corre o que no se Halló.
-
-`build_results` Ahora los Lee con Tolerancia. Y `parse_reply` **Nombra el Campo**:
-
-```
-La Respuesta no cumple el Contrato de la API: falta el Campo «sequence».
+```text
+Bloomburrow Play Booster: could not query lacripta.cl; its offers are missing.
+No offers to display.
 ```
 
-Eso era lo único que Servía para Arreglarlo, y el Mensaje se lo Callaba.
+The first line reports Failure; the second reports Absence. With unanswered
+Sources, that Absence is actually missing Information.
 
-> El `omitempty` se Corrigió también del lado que Mentía. Está contado en el
-> Documento gemelo de muchi-api.
+The Contract already said a nonempty `faults` list means an incomplete
+Response. The Interface displayed that alongside its contradiction.
 
-## Qué Queda Abierto
+Now, when Notices of level `warning` exist, the Text changes:
 
-- **Ninguna Búsqueda sellada Real desde la Interfaz.** Todo lo de acá se Verificó
-  consultando la API directo. Falta Abrir la UI, Lanzar una Lista de Cajas y Ver
-  la Foto en el Panel lateral.
-- **Tres de seis Ofertas de Yu-Gi-Oh Llegan sin Foto.** Esas Tiendas no la
-  Publican, y no Hay de dónde Sacarla sin Inventarla. El Panel ya Maneja el Caso:
-  sin `image`, no Dibuja nada.
-- **El Carrito nunca se Probó con Cajas.** Debería Funcionar igual —las
-  Cantidades son Cantidades— pero es un Supuesto, no una Medición.
+> No offers arrived, and some sources did not respond. Missing offers may
+> still exist: try again in a while.
+
+It uses the existing `notices`, without changing the Contract or Proxy.
+
+## The Disappearing Field
+
+Polling returned `502` every Cycle with "The response does not satisfy the
+API contract" and no hint about which Field failed.
+
+Two Fields declared required by the API were absent: `sequence` had
+`omitempty`, disappearing at zero, and `offers` arrived as `null` instead
+of an empty List when an Item found nothing. Both are normal States for
+an Item still running or not found.
+
+`build_results` now reads them tolerantly, and `parse_reply` names the Field:
+
+```text
+The response does not satisfy the API contract: missing field “sequence”.
+```
+
+That was the information needed to fix it, and the Message had hidden it.
+
+> `omitempty` was also fixed on the side violating the Contract. That change
+> is described in muchi-api's counterpart Document.
+
+## What Remains Open
+
+- No real sealed Search has been run from the Interface. Everything here
+  was verified by calling the API directly. We still need to open the UI,
+  submit a Box list and see the Photo in the side Panel.
+- Three of six Yu-Gi-Oh Offers arrive without Photos. Those Stores do not
+  publish them, so none can be supplied without inventing one. The Panel
+  already handles it: without `image`, it renders nothing.
+- The Cart has never been tested with Boxes. It should work the same way —
+  Quantities are Quantities — but that remains an Assumption, not a Measurement.

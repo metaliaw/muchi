@@ -2,7 +2,7 @@
  *
  * El Servicio ya sabe preguntar Stock, pero Cuesta: cada Pregunta es una
  * segunda Visita a la Tienda, hecha por nosotros, con nuestra IP y dentro del
- * Ciclo de la Búsqueda — por eso `docs/optional-reverification.md` la Dejó
+ * Ciclo de la Búsqueda — por eso `docs/optional-reverification.es.md` la Dejó
  * apagada. Una Tienda Shopify Sirve el mismo Dato como JSON estático, con CORS
  * abierto: el Navegador de quien Compra lo Pide directo, sin pasar por acá.
  *
