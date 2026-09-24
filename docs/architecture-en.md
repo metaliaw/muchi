@@ -1,10 +1,10 @@
-[English](arquitectura-en.md) · [Español](arquitectura.md)
+[English](architecture-en.md) · [Español](architecture.md)
 
 # Muchi Architecture
 
 Muchi separates what People see and can discuss from the Logic operating
 the Service. The Interface, its Presentation criteria and the BFF live in
-[metaliaw/muchi](https://github.com/metaliaw/muchi). Search collection,
+[metaliaw/muchi](https://github.com/metaliaw/muchi/blob/main/README.md). Search collection,
 persistence and processing live in
 [cangrejometralleta/muchi-api](https://github.com/cangrejometralleta/muchi-api),
 alongside its [OpenAPI Contract](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml).
@@ -34,8 +34,8 @@ flowchart LR
     person --> dns --> hosting
     hosting -->|"/api/*"| bff
     criteria --- bff
-    contract -. .-> bff
-    contract -. .-> api
+    contract -.-> bff
+    contract -.-> api
     bff -->|"Bearer only between servers"| api
     secrets -. "current version" .-> bff
     secrets -. "current version" .-> api
@@ -73,7 +73,7 @@ Muchi publishes the Criteria affecting what a Person sees or buys:
   the Store; the BFF decides whom to ask and in what Order. Between a
   cheap unknown and a more expensive confirmed Offer, Confirmation wins.
   If every Store says no, the Card gets no Recommendation.
-  [Checking Stock](api/pedido-stock-en.md) describes this Conversation
+  [Checking Stock](api/stock-order-en.md) describes this Conversation
   and its three possible Answers.
 - Only CLP and USD enter the Cart. Dollars convert using the public
   [Muchi Dollar](../config/rates.defaults.yaml).
@@ -366,7 +366,7 @@ You can [open an Issue](https://github.com/metaliaw/muchi/issues/new) to
 report a Problem, question a Criterion, propose an Improvement or request
 clearer documentation. Pull Requests to the public Repository are welcome.
 Stores wishing to share Stock can use the
-[Integration guide](../INTEGRAR-TIENDA-en.md).
+[Integration guide](../share-store-stock-en.md).
 
 Do not publish Keys, personal Data or exploitable details in an Issue.
 Describe the observable Effect and request a private Channel for sensitive Reports.

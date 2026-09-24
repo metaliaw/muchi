@@ -1,4 +1,4 @@
-[English](producto-sellado-en.md) · [Español](producto-sellado.md)
+[English](sealed-product-en.md) · [Español](sealed-product.md)
 
 # Sealed Products
 
@@ -11,10 +11,10 @@ none of those Failures belonged to sealed Products. They already existed,
 hidden by the fact that a single Card has a Catalog to query and a Box does not.
 
 Defects across the Boundary — in the Contract and Sources — live in
-`docs/producto-sellado.md` in the
+`docs/sealed-product.md` in the
 [muchi-api Repository](https://github.com/cangrejometralleta/muchi-api).
 Each Repository keeps its own Findings for the same reason described in
-[Search Findings](hallazgos-buscadores-en.md): copied Documents age poorly.
+[Search Findings](search-findings-en.md): copied Documents age poorly.
 
 ## The Catalog Is Chosen
 

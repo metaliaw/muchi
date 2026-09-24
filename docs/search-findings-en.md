@@ -1,4 +1,4 @@
-[English](hallazgos-buscadores-en.md) · [Español](hallazgos-buscadores.md)
+[English](search-findings-en.md) · [Español](search-findings.md)
 
 # Search Findings
 
@@ -13,7 +13,7 @@ Four unwritten Assumptions fell apart; until then, they had been true.
 The fifth Finding was discovered along the way.
 
 Defects across the Boundary — in the Sources doing the searching — live in
-`docs/hallazgos-buscadores.md` in the
+`docs/search-findings.md` in the
 [muchi-api Repository](https://github.com/cangrejometralleta/muchi-api).
 Each Repository keeps its own Findings: copying the other Document would
 age like the copied Contract did, which is precisely F5.

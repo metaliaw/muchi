@@ -1,4 +1,4 @@
-[English](reverificacion-opcional-en.md) · [Español](reverificacion-opcional.md)
+[English](optional-reverification-en.md) · [Español](optional-reverification.md)
 
 # Why Stock Reverification Is Optional
 
@@ -109,7 +109,7 @@ is discarded — the Browser reports on this Search, not the entire Catalog.
 A Confirmation still counts beyond `stock_check_limit`, which limits our
 Visits, rather than eligibility for the Crown. `server/presenter.py` still
 decides who gets the cheapest marker under the same rules as
-[The Stock Request](api/pedido-stock-en.md). That Decision stays on the
+[The Stock Request](api/stock-order-en.md). That Decision stays on the
 Server; the Frontend does not recommend.
 
 `GET` still exists and follows the same path without prior Knowledge.

@@ -1,4 +1,4 @@
-[English](INTEGRAR-TIENDA-en.md) · [Español](INTEGRAR-TIENDA.md)
+[English](share-store-stock-en.md) · [Español](share-store-stock.md)
 
 # How to Share Your Store's Stock with Muchi
 

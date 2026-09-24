@@ -10,13 +10,13 @@ The MUCHI API performs Searches and retains their Results. This Vue 3
 Frontend displays Progress, Offers and the Cart.
 
 To look behind the Screen, explore
-[MUCHI's Architecture](docs/arquitectura-en.md), its public Decisions and
+[MUCHI's Architecture](docs/architecture-en.md), its public Decisions and
 ways to contribute.
 
 > 📚 **This Repository is meant to be read as well as run.** Every MUCHI
 > Decision has a Document explaining its Reasons, including Decisions that
 > went wrong. If you came to learn, start with the
-> [Documentation](#documentation-in-english) and return to the Code afterward.
+> [Development Diaries](#development-diaries) and return to the Code afterward.
 
 ## Search for Cards
 
@@ -109,7 +109,7 @@ You can propose adding Inventory through:
 - Your website: share a Catalog or Stock API address, including Prices,
   availability and Purchase links.
 
-See [How to Share Your Store's Stock](INTEGRAR-TIENDA-en.md) for what to
+See [How to Share Your Store's Stock](share-store-stock-en.md) for what to
 prepare and how to request Integration. Connection happens in the MUCHI
 API; publishing a Link does not automatically add a Store.
 
@@ -184,7 +184,7 @@ Cart: without a declared Rate, MUCHI invents none.
 > this Pattern, that is its actual State. The Value used is always the
 > one the Cart's response reports for that Cart.
 > Part of this uncertainty depends on something that has yet to happen:
-> [When MUCHI Buys](docs/la-compra-en.md).
+> [When MUCHI Buys](docs/when-muchi-buys-en.md).
 
 ## We Are Working toward Purchasing
 
@@ -203,7 +203,7 @@ Today they are People, and their part of the Cost could change with an
 Agent. If it changes, we must decide whether the MUCHI Dollar falls or
 the purchasing Cost becomes its own visible charge, separate from the Rate.
 
-[When MUCHI Buys](docs/la-compra-en.md) explains the unresolved Cost per
+[When MUCHI Buys](docs/when-muchi-buys-en.md) explains the unresolved Cost per
 Purchase, partial Purchases, Payments and Store relationships, how today's
 Total is built and which component would be added.
 
@@ -263,7 +263,7 @@ the same Service. One Script deploys both in that Order:
 ./deploy.sh
 ```
 
-The [Migration note](docs/migracion-web-en.md) explains the Boundary
+The [Migration note](docs/web-migration-en.md) explains the Boundary
 between `web/` and `server/` and the BFF Routes.
 
 ## Configuration and Architecture
@@ -323,22 +323,22 @@ MUCHI_API_INTEGRATION=1 MUCHI_API_SEARCH_INTEGRATION=1 python -m pytest -q tests
 
 Add `MUCHI_API_SEARCH_ID` to verify an existing Search.
 
-## Documentation in English
+## Development Diaries
 
 MUCHI is written for others to read. Every Document explains a Decision,
 its Reasons and, where relevant, the Assumption that failed. The following
 index links every Document in `docs/` in English. For the matching Spanish
-index, see [Documentación en español](README.es.md#documentación-en-español).
+index, see [Diarios de desarrollo](README.es.md#diarios-de-desarrollo).
 
 ### Start Here
 
 | Document | What You Learn |
 | --- | --- |
-| [MUCHI Architecture](docs/arquitectura-en.md) | Frontend/API boundaries, Security, Data, Operations and a Provider-neutral guide to reproducing the Pattern. |
-| [The Frontend and Its Boundary](docs/migracion-web-en.md) | What the Frontend renders, what the BFF decides, its Routes and Cloud Run deployment. |
-| [How Muchi Speaks](docs/muchi-habla-en.md) | Phrase Catalog, Bubble precedence, three Notice channels, Sprite sheet and reduced Motion. |
+| [MUCHI Architecture](docs/architecture-en.md) | Frontend/API boundaries, Security, Data, Operations and a Provider-neutral guide to reproducing the Pattern. |
+| [The Frontend and Its Boundary](docs/web-migration-en.md) | What the Frontend renders, what the BFF decides, its Routes and Cloud Run deployment. |
+| [How Muchi Speaks](docs/how-muchi-speaks-en.md) | Phrase Catalog, Bubble precedence, three Notice channels, Sprite sheet and reduced Motion. |
 | [Sprite Lab](docs/muchi-sprite-lab-en.html) | Interactive Sprite previews, States, Sheets and animation examples. Open the HTML in a Browser. |
-| [Sealed Products](docs/producto-sellado-en.md) | Catalog selection, measured Defaults, Box photos and misleading empty Results. |
+| [Sealed Products](docs/sealed-product-en.md) | Catalog selection, measured Defaults, Box photos and misleading empty Results. |
 | [MUCHI API Contract](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml) | Consumed Routes and their Input/Output shapes. Owned by muchi-api. |
 
 ### The API Has Its Own Repository
@@ -354,10 +354,10 @@ Each subject is documented in its owning location:
 - The [Bruno collections](https://github.com/cangrejometralleta/muchi-api/tree/main/bruno)
   live there. They call the API without the BFF, helping distinguish
   Frontend failures from Service failures.
-- [Backend Architecture](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/arquitectura.md)
+- [Backend Architecture](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/architecture.md)
   covers Queue, Worker, Persistence and Expiration there. The Frontend
-  and its Boundary are described [here](docs/arquitectura-en.md).
-- [Punishment and Forgiveness](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/castigo-y-perdon.md)
+  and its Boundary are described [here](docs/architecture-en.md).
+- [Source Pacing](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/source-pacing.md)
   explains how the API treats Stores that fail, run slowly or request
   a pause. That Policy informs MUCHI's Notices: a Source that did not
   answer must never be mistaken for a nonexistent Card.
@@ -371,32 +371,32 @@ Repository's translations cover the Documents maintained here.
   definition is settled but whose operation remains open. A Number
   converting other people's Prices deserves an explanation even while
   Decisions are unfinished.
-- [When MUCHI Buys](docs/la-compra-en.md): the Plan for automated Agent
+- [When MUCHI Buys](docs/when-muchi-buys-en.md): the Plan for automated Agent
   purchases, Implementation and Costs under consideration, and their
   relationship to the MUCHI Dollar and Cart costing. A Plan without a Date.
 
 ### Decisions in Detail
 
-- [The Stock Request](docs/api/pedido-stock-en.md): rounds containing each
+- [The Stock Request](docs/api/stock-order-en.md): rounds containing each
   Card type's cheapest Candidate in one Request, so Cost grows with
   Uncertainty rather than List length. The BFF retains the Route and
   `stock_check_limit` (currently 3). The Frontend calls it at the end,
   including what the Browser has already Confirmed.
-- [Why Stock Reverification Is Optional](docs/reverificacion-opcional-en.md):
+- [Why Stock Reverification Is Optional](docs/optional-reverification-en.md):
   the Load of revisiting Stores for every cheap Offer, why that Pass
   cannot be mandatory, and how the Buyer's Browser covers one in five.
-- [The Traffic We Do Not Pay For](docs/trafico-del-navegador-en.md): who
+- [The Traffic We Do Not Pay For](docs/browser-traffic-en.md): who
   pays for each Request, when it moves to the Browser, and the Boundary
   between using open access and treating Visitors as a scraping fleet.
-- [Search Findings](docs/hallazgos-buscadores-en.md): Assumptions broken
+- [Search Findings](docs/search-findings-en.md): Assumptions broken
   when Searches returned different Cards rather than Printings, their
   Fixes and remaining Questions. API-side Findings live in its Repository.
-- [Advertising, End to End](docs/publicidad-en.md): Identifiers, the path
+- [Advertising, End to End](docs/advertising-en.md): Identifiers, the path
   to the first Ad, Google's Review requirements and troubleshooting.
 
 ### Getting Your Offers onto MUCHI
 
-- [Share a Store's Stock](INTEGRAR-TIENDA-en.md): what to prepare and how
+- [Share a Store's Stock](share-store-stock-en.md): what to prepare and how
   to request Integration, including sellers without a Store.
 - [Getting Listed on MUCHI](#getting-listed-on-muchi): Stores, individual
   sellers and new Games, and where to request each.

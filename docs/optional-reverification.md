@@ -1,4 +1,4 @@
-[English](reverificacion-opcional-en.md) · [Español](reverificacion-opcional.md)
+[English](optional-reverification-en.md) · [Español](optional-reverification.md)
 
 # Por qué la Re-verificación de Stock es Opcional
 
@@ -112,7 +112,7 @@ Descarta —el Navegador Informa sobre esta Búsqueda, no sobre el Catálogo
 entero—, pero Vale aunque esté fuera del Tope de `stock_check_limit`: ese Tope
 Acota las Visitas que Hacemos nosotros, no quién Compite por la Corona.
 Quién Lleva la Marca de más barata se sigue Decidiendo en `server/presenter.py`,
-con las mismas Reglas de [El Pedido de Stock](api/pedido-stock.md). Esa Decisión
+con las mismas Reglas de [El Pedido de Stock](api/stock-order.md). Esa Decisión
 no Cruzó la Frontera, y no Debe: el Front no Recomienda.
 
 `GET` sigue existiendo, y es el mismo Camino sin nada Sabido.

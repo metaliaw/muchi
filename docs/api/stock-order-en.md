@@ -1,4 +1,4 @@
-[English](pedido-stock-en.md) · [Español](pedido-stock.md)
+[English](stock-order-en.md) · [Español](stock-order.md)
 
 # Check Stock before Awarding the Crown
 
@@ -92,7 +92,7 @@ a JavaScript-enabled Browser, and scry.cl — which indexes it — publishes no
 Stock. That Offer remains `unknown`, which is why the rule above exists:
 otherwise the cheapest unknown would keep the Crown without Confirmation.
 
-This differs from [`verify_stock`](../reverificacion-opcional-en.md), which
+This differs from [`verify_stock`](../optional-reverification-en.md), which
 rechecks every candidate Offer during a Search and defaults to off because
 of its Load. Here we ask at the end, one at a time, only while no Offer has
 Confirmed. That Document also explains which Offers the Browser can reach
