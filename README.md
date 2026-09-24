@@ -433,3 +433,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 [muchi-api](https://github.com/cangrejometralleta/muchi-api) uses the same
 License. Two Repositories, one Rule.
+
+## The Harness and Manifesto
+
+Both Repositories—the [MUCHI Front](https://github.com/metaliaw/muchi/blob/main/README.es.md)
+and [muchi-api](https://github.com/cangrejometralleta/muchi-api)—use
+[OneTwoThree](https://github.com/cangrejometralleta/OneTwoThree), my shared
+Development Harness and Manifesto.
