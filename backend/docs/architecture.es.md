@@ -8,12 +8,18 @@ persistencia y procesamiento de las búsquedas viven acá, en
 junto al [contrato OpenAPI](../openapi.yaml). La interfaz, sus criterios de
 presentación y el BFF que consume ese contrato viven en
 [metaliaw/muchi](https://github.com/metaliaw/muchi), y su
-[arquitectura](https://github.com/metaliaw/muchi/blob/main/docs/arquitectura.md)
+[arquitectura](https://github.com/metaliaw/muchi/blob/main/docs/architecture.es.md)
 se cuenta allá.
 
 Este documento cuenta el lado de la API: entrada HTTP, cola, worker,
 persistencia y caducidad. Ningún diagrama se copia de un lado al otro: una copia
 envejece sin que nadie lo note.
+
+Las tres puertas ejecutables están explicadas por separado en la
+[guía de entrypoints](entrypoints.es.md): `ServeAPI`, `ProcessSearch` y
+`SweepQueue`. La [guía del barredor](sweeper.es.md) cuenta por qué se pueden
+gastar despertares, cómo los repone la reconciliación acotada y qué cosas no le
+corresponde hacer.
 
 ## Vista General
 
@@ -21,7 +27,8 @@ Muchi API separa la recepción de búsquedas del trabajo lento de consultar
 fuentes. La API persiste cada pedido y responde sin esperar sus resultados;
 Cloud Tasks despierta workers privados que reclaman una carta a la vez. Un
 barredor periódico repone oportunidades de ejecución cuando se pierde la
-correspondencia entre trabajo pendiente y despertares.
+correspondencia entre trabajo pendiente y despertares. Cuenta trabajo listo y
+agrega despertares; no procesa ítems ni borra datos vencidos.
 
 ```mermaid
 flowchart TB

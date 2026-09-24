@@ -16,6 +16,8 @@ and development decisions.
 ## Development Documentation
 
 - [Architecture](docs/architecture.md)
+- [API Entry Points](docs/entrypoints.md)
+- [Queue Sweeper](docs/sweeper.md)
 - [Game Search, Aggregators, and Stores](docs/game-search-providers.md)
 - [Source Pacing](docs/source-pacing.md)
 - [Orphaned Queue Items](docs/orphaned-queue-items.md)

@@ -18,6 +18,8 @@ documentan la API y las decisiones de desarrollo.
 ## Documentación de desarrollo
 
 - [Arquitectura](docs/architecture.es.md)
+- [Entrypoints de la API](docs/entrypoints.es.md)
+- [Barredor de la Cola](docs/sweeper.es.md)
 - [Búsqueda por juego, agregadores y tiendas](docs/game-search-providers.es.md)
 - [Castigo y perdón](docs/source-pacing.es.md)
 - [Cola de ítems huérfanos](docs/orphaned-queue-items.es.md)

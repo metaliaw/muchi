@@ -15,13 +15,20 @@ This document covers the API side: HTTP entry points, queue, worker, persistence
 and expiration. Diagrams are not copied between the repositories; a copy grows
 stale without anyone noticing.
 
+The three executable doors are documented separately in the
+[entry-point guide](entrypoints.md): `ServeAPI`, `ProcessSearch`, and
+`SweepQueue`. The [sweeper guide](sweeper.md) explains why task wake-ups can be
+spent, how bounded reconciliation restores them, and what the sweeper does not
+own.
+
 ## Overview
 
 Muchi API separates receiving searches from the slower work of querying sources.
 The API persists each request and responds without waiting for results. Cloud
 Tasks wakes private workers that claim one card at a time. A periodic sweeper
 restores execution opportunities when pending work and task wakeups fall out of
-sync.
+sync. It counts ready work and adds wake-ups; it does not process items or
+delete expired data.
 
 ```mermaid
 flowchart TB
