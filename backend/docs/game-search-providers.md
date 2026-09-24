@@ -1,6 +1,6 @@
 # Game Search, Aggregators, and Stores
 
-[English](game-search-providers.md) | [Español](busqueda-proveedores.md)
+[English](game-search-providers.md) | [Español](game-search-providers.es.md)
 
 Each game combines two kinds of sources declared in `config/stores.yaml`:
 

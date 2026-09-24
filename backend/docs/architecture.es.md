@@ -128,7 +128,7 @@ flowchart TB
 La tarea transporta una señal, no el identificador del ítem. Esta decisión
 permite consumidores competidores y recuperación de leases, pero exige que el
 reclamo retire trabajo muerto para conservar el progreso FIFO. El
-[incidente de ítems huérfanos](cola-items-huerfanos.md) explica ese invariante.
+[incidente de ítems huérfanos](orphaned-queue-items.es.md) explica ese invariante.
 
 ## Capas del Código
 
@@ -177,8 +177,8 @@ subpaquetes `jumpseller`, `shopify`, `prestashop`, `woocommerce` y `moxfield`
 contienen los clientes de cada plataforma. Los agregadores de ofertas viven
 aparte en `internal/aggregators`.
 
-El [flujo de búsqueda por juego](busqueda-proveedores.md) detalla esa composición.
-La [identidad de cartas](identidad-cartas-juegos-ediciones.md) separa búsqueda,
+El [flujo de búsqueda por juego](game-search-providers.es.md) detalla esa composición.
+La [identidad de cartas](card-identity-games-sets.es.md) separa búsqueda,
 impresión y variante comercial.
 
 ### La Frontera del Almacén
@@ -205,7 +205,7 @@ delega al proveedor**. Firestore aplica TTL sobre `expires_at` según
 es eventual. Un almacén sin TTL nativo debe barrer por su cuenta; esa es la
 pieza más cara de portar, no las consultas.
 
-El [plan de almacén agnóstico](plan-almacen-agnostico.md) describe cómo se
+El [plan de almacén agnóstico](provider-agnostic-store-plan.es.md) describe cómo se
 probaría esa frontera con un segundo adaptador.
 
 ## Disponibilidad y Recuperación

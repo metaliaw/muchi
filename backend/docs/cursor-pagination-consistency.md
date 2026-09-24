@@ -1,6 +1,6 @@
 # Cursor Pagination and Consistency
 
-[English](cursor-pagination-consistency.md) | [Español](paginacion-cursor-consistencia.md)
+[English](cursor-pagination-consistency.md) | [Español](cursor-pagination-consistency.es.md)
 
 ## Summary
 

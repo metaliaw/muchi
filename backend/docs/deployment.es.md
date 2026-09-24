@@ -84,7 +84,7 @@ Los tres primeros sólo los necesita `deploy-infra.sh`. Quien despliegue
 diario no puede reescribir los permisos del proyecto por accidente.
 
 Las cuentas de servicio que crea `deploy-infra.sh` son otra cosa: gobiernan la
-ejecución en GCP, no el despliegue. El [diagrama de arquitectura](arquitectura.md)
+ejecución en GCP, no el despliegue. El [diagrama de arquitectura](architecture.es.md)
 muestra dónde vive cada identidad.
 
 Esta lista se dedujo de lo que hacen los scripts, no de una sesión real con
@@ -123,7 +123,7 @@ línea final. El token no se imprime ni se pasa como valor en argumentos. Los
 scripts no cargan `.env`.
 
 Rotar el secreto no basta por sí solo: el
-[incidente de despliegue, revisiones y secretos](despliegue-revisiones-secretos.md)
+[incidente de despliegue, revisiones y secretos](deployment-revisions-secrets.es.md)
 explica por qué una rotación correcta también debe mover tráfico y actualizar a
 todos los consumidores.
 

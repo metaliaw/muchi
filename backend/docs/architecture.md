@@ -1,6 +1,6 @@
 # Muchi API Architecture
 
-[English](architecture.md) | [Español](arquitectura.md)
+[English](architecture.md) | [Español](architecture.es.md)
 
 Muchi is free software across two repositories. Search collection, persistence,
 and processing live here in
@@ -8,7 +8,7 @@ and processing live here in
 alongside the [OpenAPI contract](../openapi.yaml). The interface, its
 presentation rules, and the BFF that consumes that contract live in
 [metaliaw/muchi](https://github.com/metaliaw/muchi); its
-[architecture](https://github.com/metaliaw/muchi/blob/main/docs/arquitectura.md)
+[architecture](https://github.com/metaliaw/muchi/blob/main/docs/architecture.es.md)
 is documented there.
 
 This document covers the API side: HTTP entry points, queue, worker, persistence,
@@ -127,7 +127,7 @@ flowchart TB
 
 The task carries a signal, not an item ID. This lets competing consumers and
 lease recovery make progress, but requires the claim to remove dead work so FIFO
-progress is preserved. The [orphaned items incident](cola-items-huerfanos.md)
+progress is preserved. The [orphaned items incident](orphaned-queue-items.es.md)
 explains this invariant.
 
 ## Code Layers
@@ -176,8 +176,8 @@ Store configuration and stock checking live in `internal/stores`. Its
 contain the platform-specific clients. Offer aggregators live separately in
 `internal/aggregators`.
 
-The [game provider flow](busqueda-proveedores.md) details this composition. The
-[card identity guide](identidad-cartas-juegos-ediciones.md) separates searches,
+The [game provider flow](game-search-providers.es.md) details this composition. The
+[card identity guide](card-identity-games-sets.es.md) separates searches,
 printings, and commercial variants.
 
 ### The Store Boundary
@@ -204,7 +204,7 @@ to `firestore.indexes.json`; the code rejects expired records because deletion
 is eventual. A store without native TTL must sweep records itself. That is the
 costliest piece to port, not the queries.
 
-The [provider-agnostic storage plan](plan-almacen-agnostico.md) describes how to
+The [provider-agnostic storage plan](provider-agnostic-store-plan.es.md) describes how to
 test this boundary with a second adapter.
 
 ## Availability and Recovery

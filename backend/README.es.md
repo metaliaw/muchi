@@ -12,9 +12,27 @@ Hacemos público este repositorio para Compartir cómo funciona Muchi
 y construirlo con quienes lo usan.
 
 Puedes Empezar por el entorno local, consultar el contrato [OpenAPI](openapi.yaml)
-o probar las peticiones de [Bruno](collections/README.md). La
-[documentación del proyecto](docs/README.md) enumera los documentos disponibles
-en ambos idiomas.
+o probar las peticiones de [Bruno](collections/README.md). Las guías siguientes
+documentan la API y las decisiones de desarrollo.
+
+## Documentación de desarrollo
+
+- [Arquitectura](docs/architecture.es.md)
+- [Búsqueda por juego, agregadores y tiendas](docs/game-search-providers.es.md)
+- [Castigo y perdón](docs/source-pacing.es.md)
+- [Cola de ítems huérfanos](docs/orphaned-queue-items.es.md)
+- [Créditos de Google Cloud para startups](docs/google-cloud-startup-credits.es.md)
+- [Despliegue, revisiones y rotación de secretos](docs/deployment-revisions-secrets.es.md)
+- [Despliegue con gatos](docs/deployment.es.md)
+- [Hallazgos en los buscadores](docs/search-findings.es.md)
+- [Identidad de cartas entre juegos y ediciones](docs/card-identity-games-sets.es.md)
+- [Paginación por cursor y consistencia](docs/cursor-pagination-consistency.es.md)
+- [Plan de almacén agnóstico](docs/provider-agnostic-store-plan.es.md)
+- [Producto sellado](docs/sealed-products.es.md)
+- [Propuesta de compras con agentes web](docs/web-agent-purchases-proposal.es.md)
+- [Protocolos de comercio agéntico](docs/agentic-commerce-protocols.es.md)
+- [Tiendas candidatas desde Sol Ring](docs/candidate-stores-sol-ring.es.md)
+- [Una tienda caída ocho días](docs/store-down-eight-days.es.md)
 
 ## Desarrollo local
 
@@ -73,23 +91,23 @@ La verificación de stock consulta las tiendas configuradas; un precio publicado
 La URL, Activación y Comunidad de scry.cl se Configuran en `search_providers` dentro de `config/stores.yaml`.
 El lector depende del HTML público de scry.cl y no fuerza una actualización de su caché.
 
-El [flujo de búsqueda por juego](docs/busqueda-proveedores.md) explica cómo se
+El [flujo de búsqueda por juego](docs/game-search-providers.es.md) explica cómo se
 combinan agregadores y tiendas desde el YAML, cómo se elige cada adaptador y cómo
 se tratan tiempos y duplicados.
-La [identidad de cartas entre juegos y ediciones](docs/identidad-cartas-juegos-ediciones.md)
+La [identidad de cartas entre juegos y ediciones](docs/card-identity-games-sets.es.md)
 describe qué identifica una búsqueda, una impresión y una variante comercial.
-Los [hallazgos en los buscadores](docs/hallazgos-buscadores.md) registran los
+Los [hallazgos en los buscadores](docs/search-findings.es.md) registran los
 defectos encontrados en la costura entre el título que publica una tienda y la
 carta que el código deduce de él, con lo que queda abierto.
-El [producto sellado](docs/producto-sellado.md) explica qué identifica una caja,
+El [producto sellado](docs/sealed-products.es.md) explica qué identifica una caja,
 qué fuente sirve para buscarla, la propiedad `sealed` de agregadores y tiendas, y
 por qué un 429 no cuenta como caída.
-La [tienda caída ocho días](docs/tienda-caida-netdecker.md) cuenta el caso de
+La [tienda caída ocho días](docs/store-down-eight-days.es.md) cuenta el caso de
 `v3.netdecker.cl`, por qué un circuito de un minuto fijo no alcanzaba y qué
 queda abierto —`www.deckscards.cl` no está caída, es lenta, y eso es otro
 problema.
 
-El [castigo y perdón](docs/castigo-y-perdon.md) reúne la política completa hacia
+El [castigo y perdón](docs/source-pacing.es.md) reúne la política completa hacia
 las fuentes: qué se castiga, cuánto dura, qué respuestas honestas nunca cuentan
 como falla y por qué la duda beneficia a quien pregunta.
 
@@ -133,21 +151,21 @@ Firestore conserva búsquedas y resultados durante 24 horas. La caché de oferta
 mantiene sus TTL positivos y negativos independientes. Cloud Tasks ejecuta una
 función privada por cada carta, sin un worker residente.
 
-El [incidente de ítems huérfanos](docs/cola-items-huerfanos.md) documenta cómo
+El [incidente de ítems huérfanos](docs/orphaned-queue-items.es.md) documenta cómo
 una cola activa dejó de avanzar, el patrón de reclamo que lo resolvió y las
 invariantes necesarias para reproducir esta arquitectura con seguridad.
-La [paginación por cursor](docs/paginacion-cursor-consistencia.md) explica cómo
+La [paginación por cursor](docs/cursor-pagination-consistency.es.md) explica cómo
 los clientes consumen resultados incrementales mientras varios workers terminan
 cartas fuera del orden de entrada.
 
 ## Google Cloud
 
-El [diagrama de arquitectura](docs/arquitectura.md) muestra los límites entre
+El [diagrama de arquitectura](docs/architecture.es.md) muestra los límites entre
 entrada HTTP, cola, workers, persistencia, fuentes, identidades y secretos.
-El [incidente de despliegue, revisiones y secretos](docs/despliegue-revisiones-secretos.md)
+El [incidente de despliegue, revisiones y secretos](docs/deployment-revisions-secrets.es.md)
 explica por qué una rotación correcta también debe mover tráfico y actualizar a
 todos los consumidores.
-El [plan de almacén agnóstico](docs/plan-almacen-agnostico.md) describe el
+El [plan de almacén agnóstico](docs/provider-agnostic-store-plan.es.md) describe el
 trabajo pendiente para que el proyecto corra sin nube y para que cambiar de
 proveedor siga siendo una decisión.
 
@@ -164,7 +182,7 @@ rechaza documentos vencidos aunque Firestore aún no los haya eliminado.
 
 ## Despliegue
 
-El [despliegue con gatos](docs/despliegue.md) explica cómo `deploy.sh` orquesta
+El [despliegue con gatos](docs/deployment.es.md) explica cómo `deploy.sh` orquesta
 los cuatro componentes, qué hace cada script, los permisos que necesita quien
 despliega, las opciones compartidas de `config/deploy.env` y el manejo del token.
 

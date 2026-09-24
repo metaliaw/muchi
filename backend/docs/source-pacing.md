@@ -1,6 +1,6 @@
 # Source Pacing
 
-[English](source-pacing.md) | [Español](castigo-y-perdon.md)
+[English](source-pacing.md) | [Español](source-pacing.es.md)
 
 ## Summary
 

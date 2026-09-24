@@ -16,16 +16,16 @@ entre sí.
 
 Este documento cubre la API. Los hallazgos del front viven en su propio
 repositorio, porque allá está el código que los explica y allá envejecerían mal
-si se copiaran acá: `docs/hallazgos-buscadores.md` de
+si se copiaran acá: `docs/search-findings.es.md` de
 [metaliaw/muchi](https://github.com/metaliaw/muchi). Los cinco nacen de un cambio
 de esta API —`match=includes` trae cartas distintas, no variantes de una— y esa
 sección los enumera.
 
 Este documento registra qué se encontró, qué lo cerró y qué queda abierto. El
 modelo de identidad que lo sustenta está en
-[identidad de cartas entre juegos y ediciones](identidad-cartas-juegos-ediciones.md);
+[identidad de cartas entre juegos y ediciones](card-identity-games-sets.es.md);
 el reparto de fuentes por juego, en
-[búsqueda por juego, agregadores y tiendas](busqueda-proveedores.md).
+[búsqueda por juego, agregadores y tiendas](game-search-providers.es.md).
 
 ## Dónde Ocurre Cada Defecto
 
@@ -275,5 +275,5 @@ Ordenado por lo que destraba a lo demás.
 ## Ver También
 
 Los hallazgos del front —cómo se ordenan, coronan y compran las ofertas que esta
-API devuelve— están en `docs/hallazgos-buscadores.md` de
+API devuelve— están en `docs/search-findings.es.md` de
 [metaliaw/muchi](https://github.com/metaliaw/muchi).

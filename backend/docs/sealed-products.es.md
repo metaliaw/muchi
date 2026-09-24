@@ -11,13 +11,13 @@ aparecieron cinco defectos que no eran del sellado: estaban ahí antes, y el
 sellado solo los puso bajo una luz donde se veían.
 
 Todos viven en la misma costura que los [hallazgos en los
-buscadores](hallazgos-buscadores.md): **lo que el código supone de una fuente
+buscadores](search-findings.es.md): **lo que el código supone de una fuente
 contra lo que la fuente realmente hace**. Un agregador que indexa singles, una
 tienda que limita por frecuencia, un catálogo de impresiones que no conoce cajas.
 Cada supuesto equivocado produjo un defecto distinto.
 
 Este documento cubre la API. Los defectos del front viven en
-`docs/producto-sellado.md` de [metaliaw/muchi](https://github.com/metaliaw/muchi),
+`docs/sealed-products.es.md` de [metaliaw/muchi](https://github.com/metaliaw/muchi),
 porque allá está el código que los explica.
 
 ## Qué Identifica una Caja

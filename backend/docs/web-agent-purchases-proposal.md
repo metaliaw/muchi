@@ -1,6 +1,6 @@
 # Web Agent Purchases 🐈
 
-[English](web-agent-purchases-proposal.md) | [Español](propuesta-compras-agentes-web.md)
+[English](web-agent-purchases-proposal.md) | [Español](web-agent-purchases-proposal.es.md)
 
 Proposal for discussion · September 20, 2026 · Amounts in USD
 

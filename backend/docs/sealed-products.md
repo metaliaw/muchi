@@ -1,6 +1,6 @@
 # Sealed Products
 
-[English](sealed-products.md) | [Español](producto-sellado.md)
+[English](sealed-products.md) | [Español](sealed-products.es.md)
 
 ## Summary
 
@@ -15,7 +15,7 @@ code assumes about a source versus what the source actually does**. An aggregato
 that indexes singles, a store that rate-limits, a printing catalog that knows
 nothing about boxes. Each wrong assumption produced a different defect.
 
-This document covers the API. Front defects live in `docs/producto-sellado.md` in
+This document covers the API. Front defects live in `docs/sealed-products.es.md` in
 [metaliaw/muchi](https://github.com/metaliaw/muchi), where the code they explain
 lives.
 

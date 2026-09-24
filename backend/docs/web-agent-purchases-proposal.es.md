@@ -133,7 +133,7 @@ una parte, y abre una conversación con un proveedor chileno que ya construyó l
 mitad del camino.
 
 Los cuatro protocolos, su estado y qué alcanza a cada plataforma están en
-[Protocolos de comercio agéntico](protocolos-comercio-agentico.md).
+[Protocolos de comercio agéntico](agentic-commerce-protocols.es.md).
 
 ## Lo que costaría, en órdenes de magnitud 🐾
 
@@ -315,7 +315,7 @@ Muchos gatos. Ninguna compra a ciegas. 🐈
 - [Ley 21.719 sobre protección de datos personales](https://www.bcn.cl/leychile/navegar?idNorma=1209272).
 - [AP2: documentación del protocolo](https://ap2-protocol.org/).
 - [Jumpseller: Storefront MCP](https://jumpseller.com/support/storefront-mcp/).
-- [Protocolos de comercio agéntico](protocolos-comercio-agentico.md), material de apoyo de esta propuesta.
+- [Protocolos de comercio agéntico](agentic-commerce-protocols.es.md), material de apoyo de esta propuesta.
 
 Precios tomados de la revisión realizada para esta propuesta el 20 de
 septiembre de 2026; deben verificarse antes de contratar o fijar una tarifa

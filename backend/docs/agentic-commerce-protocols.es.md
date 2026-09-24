@@ -5,7 +5,7 @@
 Este documento Ordena los estándares que aparecieron entre 2025 y 2026 para que
 un agente compre en nombre de una persona, y Dice cuáles alcanzan a las tiendas
 chilenas que Muchi consulta hoy. Es material de apoyo para la
-[propuesta de compras con agentes web](propuesta-compras-agentes-web.md).
+[propuesta de compras con agentes web](web-agent-purchases-proposal.es.md).
 Revisión del 20 de septiembre de 2026.
 
 ## El problema que todos resuelven
