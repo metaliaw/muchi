@@ -1,4 +1,4 @@
-[English](muchi-habla-en.md) · [Español](muchi-habla.md)
+[English](how-muchi-speaks-en.md) · [Español](how-muchi-speaks.md)
 
 # Cómo Habla Muchi
 

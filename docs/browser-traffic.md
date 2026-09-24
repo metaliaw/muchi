@@ -1,4 +1,4 @@
-[English](trafico-del-navegador-en.md) · [Español](trafico-del-navegador.md)
+[English](browser-traffic-en.md) · [Español](browser-traffic.md)
 
 # El Tráfico que no Pagamos
 
@@ -58,7 +58,7 @@ No es una Idea nueva en este Repositorio; ya Estaba Pasando sin Nombre:
 - **La Confirmación de Stock.** La más reciente y la única que Elegimos a
   Propósito: el Navegador Lee `/products/<handle>.js` de las Tiendas Shopify y
   nos Manda solo la Respuesta. Está Contada entera en
-  [Por qué la Re-verificación de Stock es Opcional](reverificacion-opcional.md).
+  [Por qué la Re-verificación de Stock es Opcional](optional-reverification.md).
 
 ## La Regla
 

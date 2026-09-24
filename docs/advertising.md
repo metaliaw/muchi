@@ -1,4 +1,4 @@
-[English](publicidad-en.md) · [Español](publicidad.md)
+[English](advertising-en.md) · [Español](advertising.md)
 
 # La Publicidad, de Punta a Punta
 

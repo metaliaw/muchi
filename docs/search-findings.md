@@ -1,4 +1,4 @@
-[English](hallazgos-buscadores-en.md) · [Español](hallazgos-buscadores.md)
+[English](search-findings-en.md) · [Español](search-findings.md)
 
 # Hallazgos en los Buscadores
 
@@ -14,7 +14,7 @@ hasta ese Día eran ciertos.
 El quinto Hallazgo no Viene de ahí. Salió al Pasar por al lado.
 
 Los Defectos del otro Lado de la Frontera —los de las Fuentes que Buscan— Viven
-en `docs/hallazgos-buscadores.md` del
+en `docs/search-findings.md` del
 [Repositorio muchi-api](https://github.com/cangrejometralleta/muchi-api).
 Cada Repositorio Guarda los suyos: una Copia del Documento Ajeno Envejecería igual
 que Envejeció la Copia del Contrato, que es justamente F5.

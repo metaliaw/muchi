@@ -1,4 +1,4 @@
-[English](producto-sellado-en.md) · [Español](producto-sellado.md)
+[English](sealed-product-en.md) · [Español](sealed-product.md)
 
 # Producto Sellado
 
@@ -12,10 +12,10 @@ que se Rompió era del Sellado. Estaba ahí antes, tapado por el Hecho de que un
 Carta suelta Tiene un Catálogo al que Preguntarle y una Caja no.
 
 Los Defectos del otro Lado —los del Contrato y las Fuentes— Viven en
-`docs/producto-sellado.md` del
+`docs/sealed-product.md` del
 [Repositorio muchi-api](https://github.com/cangrejometralleta/muchi-api). Cada
 Repositorio Guarda los suyos, por la misma Razón que en los
-[Hallazgos en los Buscadores](hallazgos-buscadores.md): una Copia del Documento
+[Hallazgos en los Buscadores](search-findings.md): una Copia del Documento
 Ajeno Envejece mal.
 
 ## El Catálogo se Elige, no se Deduce
