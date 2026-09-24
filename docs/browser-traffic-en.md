@@ -1,4 +1,4 @@
-[English](trafico-del-navegador-en.md) · [Español](trafico-del-navegador.md)
+[English](browser-traffic-en.md) · [Español](browser-traffic.md)
 
 # The Traffic We Do Not Pay For
 
@@ -56,7 +56,7 @@ This Pattern was already present in the Repository before it had a Name:
 - Stock confirmation. The latest addition, and the only one deliberately
   chosen for this reason: the Browser reads Shopify Stores'
   `/products/<handle>.js` and sends us only the Answer. The full explanation
-  is in [Why Stock Reverification Is Optional](reverificacion-opcional-en.md).
+  is in [Why Stock Reverification Is Optional](optional-reverification-en.md).
 
 ## The Rule
 

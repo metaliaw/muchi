@@ -1,4 +1,4 @@
-[English](la-compra-en.md) · [Español](la-compra.md)
+[English](when-muchi-buys-en.md) · [Español](when-muchi-buys.md)
 
 # Cuando Muchi Compre
 
