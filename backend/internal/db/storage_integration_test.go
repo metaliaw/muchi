@@ -1,4 +1,6 @@
-package firestore
+package db
+
+import "github.com/cangrejometralleta/muchi-api/internal/model"
 
 import (
 	"context"
@@ -11,24 +13,15 @@ import (
 	"time"
 
 	"github.com/cangrejometralleta/muchi-api/internal/search"
-	"github.com/cangrejometralleta/muchi-api/internal/search/repositorytest"
 )
 
 const testSearchTTL = 24 * time.Hour
-
-func TestSearchItemRepositoryContract(t *testing.T) {
-	repositorytest.RunItemLeaseContract(t, func(t *testing.T) search.SearchItemRepository {
-		store := openTestStore(t)
-		createTestSearch(t, store, "item-contract")
-		return store
-	})
-}
 
 func TestRecoverClaims(t *testing.T) {
 	store := openTestStore(t)
 	job := createTestSearch(t, store, "claim")
 	ctx := context.Background()
-	var first, second search.Item
+	var first, second model.Item
 	var firstErr, secondErr error
 	var group sync.WaitGroup
 	group.Add(2)
@@ -55,11 +48,11 @@ func TestCancelIdempotency(t *testing.T) {
 	store := openTestStore(t)
 	job := createTestSearch(t, store, "cancel")
 	first, err := store.CancelSearch(context.Background(), job.ID, "cancel-key", "same-hash")
-	if err != nil || first.Status != search.JobCancelled {
+	if err != nil || first.Status != model.JobCancelled {
 		t.Fatalf("first cancel=%#v err=%v", first, err)
 	}
 	second, err := store.CancelSearch(context.Background(), job.ID, "cancel-key", "same-hash")
-	if err != nil || second.Status != search.JobCancelled {
+	if err != nil || second.Status != model.JobCancelled {
 		t.Fatalf("second cancel=%#v err=%v", second, err)
 	}
 	_, err = store.CancelSearch(context.Background(), job.ID, "cancel-key", "other-hash")
@@ -92,7 +85,7 @@ func TestCompleteItem(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	item.Status = search.ItemFound
+	item.Status = model.ItemFound
 	if err := store.CompleteSearchItem(context.Background(), item, nil); err != nil {
 		t.Fatal(err)
 	}
@@ -111,17 +104,17 @@ func TestListResultPages(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		item.Status = search.ItemFound
+		item.Status = model.ItemFound
 		if err := store.CompleteSearchItem(ctx, item, nil); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	first, err := store.ListResults(ctx, job.ID, search.ResultPage{Limit: 1})
+	first, err := store.ListResults(ctx, job.ID, model.ResultPage{Limit: 1})
 	if err != nil || len(first.Items) != 1 || first.Cursor != 1 || !first.HasMore {
 		t.Fatalf("first result page=%#v err=%v", first, err)
 	}
-	second, err := store.ListResults(ctx, job.ID, search.ResultPage{After: first.Cursor, Limit: 1})
+	second, err := store.ListResults(ctx, job.ID, model.ResultPage{After: first.Cursor, Limit: 1})
 	if err != nil || len(second.Items) != 1 || second.Cursor != 2 || second.HasMore {
 		t.Fatalf("second result page=%#v err=%v", second, err)
 	}
@@ -141,14 +134,14 @@ func openTestStore(t *testing.T) *Store {
 	return store
 }
 
-func createTestSearch(t *testing.T, store *Store, suffix string) search.Job {
+func createTestSearch(t *testing.T, store *Store, suffix string) model.Job {
 	t.Helper()
-	input := search.CreateInput{
-		Cards: []search.CardInput{
+	input := model.CreateInput{
+		Cards: []model.CardInput{
 			{Name: "Sol Ring", Quantity: 1},
 			{Name: "Anger", Quantity: 1},
 		},
-		Options: search.Options{VerifyStock: true},
+		Options: model.Options{VerifyStock: true},
 	}
 	job, err := store.CreateSearch(context.Background(), "create-"+suffix, search.HashPayload(input), input)
 	if err != nil {
@@ -186,7 +179,7 @@ func TestPoisonItemDoesNotBlockTheQueue(t *testing.T) {
 	// The Poison: expired, and available before every healthy Item, so the
 	// Query hands it over first on every single Turn.
 	poison := itemRecord{
-		Payload:     mustJSON(search.Item{ID: "item_poison", SearchID: job.ID, Status: search.ItemPending}),
+		Payload:     mustJSON(model.Item{ID: "item_poison", SearchID: job.ID, Status: model.ItemPending}),
 		SearchID:    job.ID,
 		AvailableAt: time.Now().UTC().Add(-time.Hour),
 		ExpiresAt:   time.Now().UTC().Add(-time.Hour),
@@ -214,8 +207,8 @@ func TestOrphanItemsLeaveTheQueue(t *testing.T) {
 	for position := range maxClaimDiscards {
 		id := fmt.Sprintf("item_orphan_%02d", position)
 		record := itemRecord{
-			Payload: mustJSON(search.Item{
-				ID: id, SearchID: "search_expired", Status: search.ItemPending,
+			Payload: mustJSON(model.Item{
+				ID: id, SearchID: "search_expired", Status: model.ItemPending,
 			}),
 			SearchID: "search_expired", Position: position,
 			AvailableAt: time.Now().UTC().Add(-time.Hour),
@@ -243,7 +236,7 @@ func TestFinishedItemLeavesTheQueue(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	item.Status = search.ItemFound
+	item.Status = model.ItemFound
 	if err := store.CompleteSearchItem(ctx, item, nil); err != nil {
 		t.Fatal(err)
 	}
@@ -275,7 +268,7 @@ func TestCountWaitingItemsIgnoresDeadDocuments(t *testing.T) {
 	}
 
 	dead := itemRecord{
-		Payload:     mustJSON(search.Item{ID: "item_dead", SearchID: job.ID, Status: search.ItemPending}),
+		Payload:     mustJSON(model.Item{ID: "item_dead", SearchID: job.ID, Status: model.ItemPending}),
 		SearchID:    job.ID,
 		AvailableAt: time.Now().UTC().Add(-time.Hour),
 		ExpiresAt:   time.Now().UTC().Add(-time.Hour),

@@ -69,7 +69,7 @@ func circuitWait(failures int) time.Duration {
 }
 ```
 
-Vive en `internal/firestore/storage.go`, junto a `updateSource`, que es donde ya
+Vive en `internal/db/storage.go`, junto a `updateSource`, que es donde ya
 vivía la decisión de abrir el circuito.
 
 **El perdón no cambió.** Una sola respuesta buena sigue borrando el contador

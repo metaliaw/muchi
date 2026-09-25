@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
 type SourceFetcher interface {
@@ -38,9 +38,9 @@ type productReply struct {
 	} `json:"prices"`
 }
 
-func (c Client) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer.Offer, error) {
+func (c Client) FindOffers(ctx context.Context, query model.CardQuery) ([]model.Offer, error) {
 	name := query.Name
-	items := make([]offer.Offer, 0)
+	items := make([]model.Offer, 0)
 	for page := 1; ; page++ {
 		target := fmt.Sprintf("https://%s/wp-json/wc/store/v1/products?search=%s&per_page=100&page=%d", c.Domain, url.QueryEscape(name), page)
 		data, err := c.Fetcher.FetchSource(ctx, c.Domain, target)
@@ -67,10 +67,10 @@ func (c Client) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer.
 	}
 }
 
-func (c Client) buildOffer(product productReply) (offer.Offer, error) {
+func (c Client) buildOffer(product productReply) (model.Offer, error) {
 	price, err := formatPrice(product.Prices.Price, product.Prices.MinorUnit)
 	if err != nil {
-		return offer.Offer{}, err
+		return model.Offer{}, err
 	}
 	store := c.Name
 	if store == "" {
@@ -80,7 +80,7 @@ func (c Client) buildOffer(product productReply) (offer.Offer, error) {
 	if product.InStock {
 		status = "available"
 	}
-	item := offer.Offer{
+	item := model.Offer{
 		ID: fmt.Sprintf("%s:%d", c.Domain, product.ID), CardName: html.UnescapeString(product.Name),
 		Store: store, PriceAmount: price, PriceCurrency: product.Prices.Currency,
 		URL: product.URL, Source: c.Domain, StockStatus: status,
@@ -90,8 +90,8 @@ func (c Client) buildOffer(product productReply) (offer.Offer, error) {
 	if product.Type == "simple" {
 		item.VariantID = strconv.Itoa(product.ID)
 	}
-	if item.PriceCurrency == "" || offer.ValidateOffer(item) != nil {
-		return offer.Offer{}, fmt.Errorf("invalid store offer from %s", c.Domain)
+	if item.PriceCurrency == "" || model.ValidateOffer(item) != nil {
+		return model.Offer{}, fmt.Errorf("invalid store offer from %s", c.Domain)
 	}
 	return item, nil
 }

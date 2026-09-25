@@ -9,7 +9,9 @@ import (
 	"github.com/cangrejometralleta/muchi-api/internal/catalog"
 	"github.com/cangrejometralleta/muchi-api/internal/config"
 	"github.com/cangrejometralleta/muchi-api/internal/constants"
-	firestorestore "github.com/cangrejometralleta/muchi-api/internal/firestore"
+	"github.com/cangrejometralleta/muchi-api/internal/db"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
+	"github.com/cangrejometralleta/muchi-api/internal/repositories"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 	"github.com/cangrejometralleta/muchi-api/internal/source"
 	"github.com/cangrejometralleta/muchi-api/internal/stores"
@@ -23,8 +25,7 @@ import (
 // Paces the Traffic toward each Source.
 //
 // The Roles are Listed apart because they are Independent: the Composition Root
-// Happens to Satisfy all five with one Firestore Store, and nothing above it
-// Depends on that. Only this Package Names a Vendor.
+// The Repository Satisfies all five roles, while the Runtime Exposes only Ports.
 type Vault interface {
 	search.SearchRepository
 	search.SearchItemRepository
@@ -51,18 +52,19 @@ type Runtime struct {
 	Service               search.Service
 	Store                 Vault
 	Queue                 Dispatcher
-	CardMetadataProviders map[search.Game]cardmetadata.Provider
-	AutocompleteProviders map[search.Game]cardmetadata.AutocompleteProvider
+	CardMetadataProviders map[model.Game]cardmetadata.Provider
+	AutocompleteProviders map[model.Game]cardmetadata.AutocompleteProvider
 	SupportedGames        []stores.GameSupport
 	Inventories           moxfield.Shelf
 }
 
 // BuildRuntime Casts the Search Providers for one Function Instance.
 func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger, dispatch bool) (Runtime, error) {
-	store, err := firestorestore.OpenStore(ctx, config.ProjectID, config.SearchTTL)
+	database, err := db.OpenStore(ctx, config.ProjectID, config.SearchTTL)
 	if err != nil {
 		return Runtime{}, err
 	}
+	store := repositories.New(database)
 	// The Store Warns when a Claim steps over dead Items; silent, that Warning
 	// is the one that took two Hours to notice.
 	if teller, told := any(store).(Teller); told {
@@ -73,29 +75,29 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		return Runtime{}, err
 	}
 	fetcher := buildSourceClient(config, store, logger)
-	tcgmatchMetadata := catalog.BuildTCGMatch(fetcher, storeConfig, string(search.GamePokemon))
-	tcgmatchYuGiOh := catalog.BuildTCGMatch(fetcher, storeConfig, string(search.GameYuGiOh))
-	tcgmatchOnePiece := catalog.BuildTCGMatch(fetcher, storeConfig, string(search.GameOnePiece))
-	tcgmatchDigimon := catalog.BuildTCGMatch(fetcher, storeConfig, string(search.GameDigimon))
-	tcgmatchRiftbound := catalog.BuildTCGMatch(fetcher, storeConfig, string(search.GameRiftbound))
-	tcgmatchMitos := catalog.BuildTCGMatch(fetcher, storeConfig, string(search.GameMitos))
-	cardMetadataProviders := map[search.Game]cardmetadata.Provider{
-		search.GameMagic:     cardmetadata.Scryfall{Fetcher: fetcher},
-		search.GamePokemon:   tcgmatchMetadata,
-		search.GameYuGiOh:    tcgmatchYuGiOh,
-		search.GameOnePiece:  tcgmatchOnePiece,
-		search.GameDigimon:   tcgmatchDigimon,
-		search.GameRiftbound: tcgmatchRiftbound,
-		search.GameMitos:     tcgmatchMitos,
+	tcgmatchMetadata := catalog.BuildTCGMatch(fetcher, storeConfig, string(model.GamePokemon))
+	tcgmatchYuGiOh := catalog.BuildTCGMatch(fetcher, storeConfig, string(model.GameYuGiOh))
+	tcgmatchOnePiece := catalog.BuildTCGMatch(fetcher, storeConfig, string(model.GameOnePiece))
+	tcgmatchDigimon := catalog.BuildTCGMatch(fetcher, storeConfig, string(model.GameDigimon))
+	tcgmatchRiftbound := catalog.BuildTCGMatch(fetcher, storeConfig, string(model.GameRiftbound))
+	tcgmatchMitos := catalog.BuildTCGMatch(fetcher, storeConfig, string(model.GameMitos))
+	cardMetadataProviders := map[model.Game]cardmetadata.Provider{
+		model.GameMagic:     cardmetadata.Scryfall{Fetcher: fetcher},
+		model.GamePokemon:   tcgmatchMetadata,
+		model.GameYuGiOh:    tcgmatchYuGiOh,
+		model.GameOnePiece:  tcgmatchOnePiece,
+		model.GameDigimon:   tcgmatchDigimon,
+		model.GameRiftbound: tcgmatchRiftbound,
+		model.GameMitos:     tcgmatchMitos,
 	}
-	autocompleteProviders := map[search.Game]cardmetadata.AutocompleteProvider{
-		search.GameMagic:     cardmetadata.Scryfall{Fetcher: fetcher},
-		search.GamePokemon:   tcgmatchMetadata,
-		search.GameYuGiOh:    tcgmatchYuGiOh,
-		search.GameOnePiece:  tcgmatchOnePiece,
-		search.GameDigimon:   tcgmatchDigimon,
-		search.GameRiftbound: tcgmatchRiftbound,
-		search.GameMitos:     tcgmatchMitos,
+	autocompleteProviders := map[model.Game]cardmetadata.AutocompleteProvider{
+		model.GameMagic:     cardmetadata.Scryfall{Fetcher: fetcher},
+		model.GamePokemon:   tcgmatchMetadata,
+		model.GameYuGiOh:    tcgmatchYuGiOh,
+		model.GameOnePiece:  tcgmatchOnePiece,
+		model.GameDigimon:   tcgmatchDigimon,
+		model.GameRiftbound: tcgmatchRiftbound,
+		model.GameMitos:     tcgmatchMitos,
 	}
 	supportedGames := stores.SupportedGames(storeConfig)
 	sourcesByGame := catalog.BuildSourcesByGame(fetcher, storeConfig, store, config.InventoryCacheTTL, logger)

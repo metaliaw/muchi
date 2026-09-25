@@ -1,5 +1,7 @@
 package taskqueue
 
+import "github.com/cangrejometralleta/muchi-api/internal/model"
+
 import (
 	"context"
 	"fmt"
@@ -9,7 +11,7 @@ import (
 
 	cloudtasks "cloud.google.com/go/cloudtasks/apiv2"
 	"cloud.google.com/go/cloudtasks/apiv2/cloudtaskspb"
-	"github.com/cangrejometralleta/muchi-api/internal/search"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -50,7 +52,7 @@ func OpenQueue(ctx context.Context, project, region, name, target, account strin
 	return &Queue{client: client, parent: parent, targetURL: target, serviceAccount: account, dispatchDeadline: deadline}, nil
 }
 
-func (q *Queue) DispatchSearch(ctx context.Context, job search.Job) error {
+func (q *Queue) DispatchSearch(ctx context.Context, job model.Job) error {
 	ctx, cancel := boundContext(ctx)
 	defer cancel()
 	errors := make(chan error, job.Total)

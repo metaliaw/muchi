@@ -145,8 +145,11 @@ flowchart LR
     transport[internal/httpapi<br/>Handlers and HTTP DTOs]
     application[internal/application<br/>Composition]
     catalog[internal/catalog<br/>Source Construction]
-    domain[internal/search and offer<br/>Search Service]
+    domain[internal/search and model<br/>Search Service]
     repository[SearchRepository<br/>Persistence Interface]
+    repositories[internal/repositories<br/>Repository Implementations]
+    datasources[internal/datasources<br/>Generic Database Contract]
+    database[internal/db<br/>Firebase Adapter]
     worker[search.Worker<br/>Background Work]
     config[config/stores.yaml<br/>Games, Origins, and Stores]
     adapters[Adapters<br/>Firestore, Tasks, and Sources]
@@ -156,7 +159,11 @@ flowchart LR
     transport --> domain
     worker --> domain
     domain --> repository
-    repository --> adapters
+    repository --> repositories
+    repositories --> datasources
+    datasources --> database
+    application --> database
+    application --> repositories
     config --> catalog
     catalog --> application
     application --> domain
@@ -166,8 +173,17 @@ flowchart LR
 
 The HTTP handlers decode request DTOs and pass business inputs to the search
 service. The worker calls the same service without HTTP. The service reaches
-persistence through `SearchRepository`, which Firestore implements and tests can
-replace with an in-memory implementation.
+persistence through `SearchRepository`, implemented by `internal/repositories`.
+Repositories use the provider-neutral `datasources.Database` contract; the
+Firebase-backed `internal/db` package supplies its current implementation.
+
+`internal/model` groups the domain types for offers, carts, searches, and source
+health. These types carry no JSON or Firestore tags. `internal/httpapi` owns
+request and response DTOs; `internal/db` owns database records and stored
+JSON payloads. `internal/application` selects the Firebase-backed adapter and
+passes it to repositories through `datasources.Database`. The Firebase SDK
+stays inside `internal/db`. Explicit mappings at each boundary preserve the API and persisted
+field names independently. Search idempotency uses its own stable fingerprint.
 
 The domain also declares needs such as `TaskQueue`, `Provider`,
 `OfferSource`, `StockChecker`, and `OfferCache`. `internal/catalog` builds the
@@ -189,15 +205,19 @@ printings, and commercial variants.
 
 ### The Store Boundary
 
-`internal/application` is the only package that names a storage provider. No
-package outside it imports `internal/firestore` or `internal/taskqueue`; the
-`Runtime` provides ports, not concrete types.
+`internal/application` is the composition root that selects the database
+provider. Production packages outside it depend on repository ports and do not
+import `internal/db` or `internal/taskqueue`; the `Runtime` exposes ports, not
+concrete types.
 
-- `Vault` gathers the five roles currently served by one store: saving searches,
+- `datasources.Database` is the provider-neutral contract implemented by the
+  Firebase adapter. `internal/repositories` implements search and worker ports
+  through that contract.
+- `Vault` gathers the five roles currently served by one repository: saving searches,
   caching offers, reporting its health, counting waiting work, and pacing
   traffic to each source. They are listed separately because they are
-  independent; Firestore satisfying all five is a composition coincidence, not a
-  domain assumption.
+  independent; one repository satisfying all five is a composition coincidence,
+  not a domain assumption.
 - `Dispatcher` gathers work dispatch and the wakeup that restores the sweeper.
 - `Teller` is optional: a store with something to say receives a logger, while
   one that stays quiet simply does not implement it.

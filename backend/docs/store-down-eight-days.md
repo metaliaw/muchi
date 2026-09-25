@@ -69,7 +69,7 @@ func circuitWait(failures int) time.Duration {
 }
 ```
 
-It lives in `internal/firestore/storage.go` next to `updateSource`, where the
+It lives in `internal/db/storage.go` next to `updateSource`, where the
 decision to open the circuit already lived.
 
 **Forgiveness did not change.** One successful response still clears the whole

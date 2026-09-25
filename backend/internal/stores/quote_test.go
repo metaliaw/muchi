@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 	"github.com/cangrejometralleta/muchi-api/internal/source"
 )
 
@@ -31,18 +31,18 @@ func TestQuoterSendsEachPlatformItsRegionCode(t *testing.T) {
 		"shop.test": {Platform: "shopify", Enabled: true},
 		"js.test":   {Platform: "jumpseller", Enabled: true},
 	}}}
-	address := offer.ShippingAddress{Country: "Chile", Region: "Región Metropolitana"}
-	woo := offer.Offer{Source: "woo.test", VariantID: "7"}
-	_, _ = quoter.QuoteCart(context.Background(), "woo.test", []offer.CartLine{{Offer: woo, Quantity: 1}}, address)
+	address := model.ShippingAddress{Country: "Chile", Region: "Región Metropolitana"}
+	woo := model.Offer{Source: "woo.test", VariantID: "7"}
+	_, _ = quoter.QuoteCart(context.Background(), "woo.test", []model.CartLine{{Offer: woo, Quantity: 1}}, address)
 	if last := string(sessions.calls[len(sessions.calls)-1].Body); !strings.Contains(last, `"state":"CL-RM"`) || !strings.Contains(last, `"country":"CL"`) {
 		t.Fatalf("woocommerce address = %s", last)
 	}
-	shop := offer.Offer{Source: "shop.test", VariantID: "11"}
-	_, _ = quoter.QuoteCart(context.Background(), "shop.test", []offer.CartLine{{Offer: shop, Quantity: 1}}, address)
+	shop := model.Offer{Source: "shop.test", VariantID: "11"}
+	_, _ = quoter.QuoteCart(context.Background(), "shop.test", []model.CartLine{{Offer: shop, Quantity: 1}}, address)
 	if last := sessions.calls[len(sessions.calls)-1].Target; !strings.Contains(last, "province%5D=RM&") {
 		t.Fatalf("shopify rates target = %s", last)
 	}
-	if _, err := quoter.QuoteCart(context.Background(), "js.test", nil, address); err != offer.ErrNoQuote {
+	if _, err := quoter.QuoteCart(context.Background(), "js.test", nil, address); err != model.ErrNoQuote {
 		t.Fatalf("jumpseller err = %v", err)
 	}
 }

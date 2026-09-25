@@ -1,4 +1,4 @@
-package offer
+package model
 
 import (
 	"regexp"

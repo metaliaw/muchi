@@ -1,4 +1,4 @@
-package offer
+package model
 
 import (
 	"errors"
@@ -14,40 +14,40 @@ import (
 var ErrInvalidOffer = errors.New("invalid offer")
 
 type Offer struct {
-	ID            string `json:"id"`
-	CardName      string `json:"card_name"`
-	Store         string `json:"store"`
-	PriceAmount   string `json:"price_amount"`
-	PriceCurrency string `json:"price_currency"`
-	URL           string `json:"url"`
-	Image         string `json:"image,omitempty"`
-	VariantID     string `json:"variant_id,omitempty"`
-	Language      string `json:"language,omitempty"`
-	Condition     string `json:"condition,omitempty"`
-	Finish        string `json:"finish,omitempty"`
-	Edition       string `json:"edition,omitempty"`
+	ID            string
+	CardName      string
+	Store         string
+	PriceAmount   string
+	PriceCurrency string
+	URL           string
+	Image         string
+	VariantID     string
+	Language      string
+	Condition     string
+	Finish        string
+	Edition       string
 	// Kind Says whether the Offer is a Single Card or a Sealed Product. A Pack
 	// and a Display Share a Set and a Name, and only this Tells them apart from
 	// the Card inside them.
-	Kind      ProductKind `json:"kind,omitempty"`
-	Locations []string    `json:"locations,omitempty"`
+	Kind      ProductKind
+	Locations []string
 	// CardKey Names the Card the Offer is for, with the Printing Dropped.
 	// The Caller Groups by it; the Title Stays for Reading.
-	CardKey     string `json:"card_key,omitempty"`
-	Source      string `json:"source"`
-	StockStatus string `json:"stock_status"`
+	CardKey     string
+	Source      string
+	StockStatus string
 	// StockQuantity Counts the Units the Store Declares. Absent Means the Store
 	// Never Said; Zero Means it Said None. A Reader Tells them Apart.
-	StockQuantity    *int              `json:"stock_quantity,omitempty"`
-	Suspicious       bool              `json:"suspicious"`
-	SuspiciousReason string            `json:"suspicious_reason,omitempty"`
-	Metadata         map[string]string `json:"metadata,omitempty"`
+	StockQuantity    *int
+	Suspicious       bool
+	SuspiciousReason string
+	Metadata         map[string]string
 }
 
 // StockReading Carries what one Store Answered about one Offer.
 type StockReading struct {
-	Status   string `json:"stock_status"`
-	Quantity *int   `json:"stock_quantity,omitempty"`
+	Status   string
+	Quantity *int
 }
 
 // ReadStock Names a Status no Store Counted.

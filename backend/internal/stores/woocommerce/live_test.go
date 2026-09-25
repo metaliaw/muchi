@@ -10,7 +10,7 @@ import (
 	"github.com/cangrejometralleta/muchi-api/internal/source"
 	"github.com/cangrejometralleta/muchi-api/internal/stores/woocommerce"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
 // TestKonohaLiveProbe Reads the real Store the Way Production Reads it.
@@ -28,7 +28,7 @@ func TestKonohaLiveProbe(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	for _, card := range []string{"Kuriboh", "Dark Magician", "Ash Blossom & Joyous Spring", "Pot of Desires"} {
-		items, err := client.FindOffers(ctx, offer.CardQuery{Name: card})
+		items, err := client.FindOffers(ctx, model.CardQuery{Name: card})
 		if err != nil {
 			t.Errorf("card=%q err=%v", card, err)
 			continue

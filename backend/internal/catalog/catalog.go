@@ -4,6 +4,8 @@
 // from those Parts.
 package catalog
 
+import "github.com/cangrejometralleta/muchi-api/internal/model"
+
 import (
 	"log/slog"
 	"net/url"
@@ -64,8 +66,8 @@ func removeEmpty(values []string) []string {
 }
 
 // BuildSourcesByGame Groups the Enabled Stores under each Game they Sell.
-func BuildSourcesByGame(fetcher stores.SourceFetcher, config stores.Config, cache moxfield.InventoryCache, ttl time.Duration, logger *slog.Logger) map[search.Game][]search.OfferSource {
-	result := make(map[search.Game][]search.OfferSource)
+func BuildSourcesByGame(fetcher stores.SourceFetcher, config stores.Config, cache moxfield.InventoryCache, ttl time.Duration, logger *slog.Logger) map[model.Game][]search.OfferSource {
+	result := make(map[model.Game][]search.OfferSource)
 	for key, game := range config.Games {
 		if !game.Enabled {
 			continue
@@ -78,7 +80,7 @@ func BuildSourcesByGame(fetcher stores.SourceFetcher, config stores.Config, cach
 			if !store.Enabled || !store.IsSearched() || !slices.Contains(store.Games, key) {
 				continue
 			}
-			result[search.Game(key)] = appendConfiguredSources(result[search.Game(key)], fetcher, domain, store, allowed, cache, ttl, logger)
+			result[model.Game(key)] = appendConfiguredSources(result[model.Game(key)], fetcher, domain, store, allowed, cache, ttl, logger)
 		}
 	}
 	return result
@@ -112,7 +114,7 @@ func appendConfiguredSources(sources []search.OfferSource, fetcher stores.Source
 }
 
 // CollectInventories Shelves each Moxfield List once, however many Games Play it.
-func CollectInventories(sourcesByGame map[search.Game][]search.OfferSource) moxfield.Shelf {
+func CollectInventories(sourcesByGame map[model.Game][]search.OfferSource) moxfield.Shelf {
 	shelf := moxfield.Shelf{}
 	seen := make(map[*moxfield.Client]bool)
 	for _, sources := range sourcesByGame {
@@ -130,26 +132,26 @@ func CollectInventories(sourcesByGame map[search.Game][]search.OfferSource) moxf
 
 // BuildPrintLibraries Lends Printings to the Games that Have a Catalog of them.
 // Scryfall Knows Magic; the other Games Keep the Image their Source Sends.
-func BuildPrintLibraries(fetcher stores.SourceFetcher, config stores.Config) map[search.Game]search.PrintLibrary {
-	libraries := make(map[search.Game]search.PrintLibrary)
-	if game, found := config.Games[string(search.GameMagic)]; found && game.Enabled {
-		libraries[search.GameMagic] = cardmetadata.Scryfall{Fetcher: fetcher}
+func BuildPrintLibraries(fetcher stores.SourceFetcher, config stores.Config) map[model.Game]search.PrintLibrary {
+	libraries := make(map[model.Game]search.PrintLibrary)
+	if game, found := config.Games[string(model.GameMagic)]; found && game.Enabled {
+		libraries[model.GameMagic] = cardmetadata.Scryfall{Fetcher: fetcher}
 	}
 	return libraries
 }
 
 // BuildSetLibraries Lends every Enabled Game its Sets from TCGMatch.
-func BuildSetLibraries(fetcher stores.SourceFetcher, config stores.Config) map[search.Game]search.SetLibrary {
+func BuildSetLibraries(fetcher stores.SourceFetcher, config stores.Config) map[model.Game]search.SetLibrary {
 	provider, found := config.SearchProviders["tcgmatch"]
 	if !found || !provider.Enabled {
 		return nil
 	}
-	libraries := make(map[search.Game]search.SetLibrary, len(config.Games))
+	libraries := make(map[model.Game]search.SetLibrary, len(config.Games))
 	for name, game := range config.Games {
 		if !game.Enabled {
 			continue
 		}
-		libraries[search.Game(name)] = &tcgmatch.SetCatalog{Fetcher: fetcher, BaseURL: provider.URL, Game: name, TTL: setCatalogTTL}
+		libraries[model.Game(name)] = &tcgmatch.SetCatalog{Fetcher: fetcher, BaseURL: provider.URL, Game: name, TTL: setCatalogTTL}
 	}
 	return libraries
 }
@@ -193,8 +195,8 @@ func readHost(raw string) string {
 }
 
 // BuildProviders Casts each Enabled Search Provider under the Games it Serves.
-func BuildProviders(fetcher stores.SourceFetcher, config stores.Config) map[search.Game]search.Provider {
-	providers := make(map[search.Game]search.Provider, len(config.Games))
+func BuildProviders(fetcher stores.SourceFetcher, config stores.Config) map[model.Game]search.Provider {
+	providers := make(map[model.Game]search.Provider, len(config.Games))
 	for _, provider := range config.SearchProviders {
 		if !provider.Enabled {
 			continue
@@ -205,9 +207,9 @@ func BuildProviders(fetcher stores.SourceFetcher, config stores.Config) map[sear
 			}
 			switch provider.Type {
 			case "scrycl":
-				providers[search.Game(game)] = scrycl.Client{Fetcher: fetcher, BaseURL: provider.URL, ExcludeCommunity: !provider.Community}
+				providers[model.Game(game)] = scrycl.Client{Fetcher: fetcher, BaseURL: provider.URL, ExcludeCommunity: !provider.Community}
 			case "tcgmatch":
-				providers[search.Game(game)] = BuildTCGMatch(fetcher, config, game)
+				providers[model.Game(game)] = BuildTCGMatch(fetcher, config, game)
 			}
 		}
 	}
@@ -217,7 +219,7 @@ func BuildProviders(fetcher stores.SourceFetcher, config stores.Config) map[sear
 // BuildTCGMatch Casts the TCGMatch Client for one Game.
 func BuildTCGMatch(fetcher stores.SourceFetcher, config stores.Config, game string) tcgmatch.Client {
 	client := tcgmatch.Client{Fetcher: fetcher, BaseURL: config.SearchProviders["tcgmatch"].URL, Game: game}
-	if game == string(search.GamePokemon) {
+	if game == string(model.GamePokemon) {
 		client.PokemonCatalogURL = config.SearchProviders["tcgdex"].URL
 	}
 	return client

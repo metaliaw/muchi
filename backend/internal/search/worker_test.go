@@ -6,24 +6,24 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
 type oneItemStore struct {
-	item      Item
+	item      model.Item
 	claimed   atomic.Bool
-	completed Item
-	offers    []offer.Offer
+	completed model.Item
+	offers    []model.Offer
 }
 
-func (s *oneItemStore) ClaimSearchItem(context.Context, string, time.Duration) (Item, error) {
+func (s *oneItemStore) ClaimSearchItem(context.Context, string, time.Duration) (model.Item, error) {
 	if s.claimed.Swap(true) {
-		return Item{}, ErrNotFound
+		return model.Item{}, ErrNotFound
 	}
 	return s.item, nil
 }
 
-func (s *oneItemStore) CompleteSearchItem(_ context.Context, item Item, items []offer.Offer) error {
+func (s *oneItemStore) CompleteSearchItem(_ context.Context, item model.Item, items []model.Offer) error {
 	s.completed, s.offers = item, items
 	return nil
 }
@@ -31,31 +31,31 @@ func (s *oneItemStore) CompleteSearchItem(_ context.Context, item Item, items []
 func (s *oneItemStore) RenewItemLease(context.Context, string, string, time.Duration) error {
 	return nil
 }
-func (s *oneItemStore) CreateSearch(context.Context, string, string, CreateInput) (Job, error) {
-	return Job{}, nil
+func (s *oneItemStore) CreateSearch(context.Context, string, string, model.CreateInput) (model.Job, error) {
+	return model.Job{}, nil
 }
-func (s *oneItemStore) GetSearch(context.Context, string) (Job, error) { return Job{}, nil }
-func (s *oneItemStore) CancelSearch(context.Context, string, string, string) (Job, error) {
-	return Job{}, nil
+func (s *oneItemStore) GetSearch(context.Context, string) (model.Job, error) { return model.Job{}, nil }
+func (s *oneItemStore) CancelSearch(context.Context, string, string, string) (model.Job, error) {
+	return model.Job{}, nil
 }
-func (s *oneItemStore) ListResults(context.Context, string, ResultPage) (Result, error) {
-	return Result{}, nil
+func (s *oneItemStore) ListResults(context.Context, string, model.ResultPage) (model.Result, error) {
+	return model.Result{}, nil
 }
 
 type countingChecker struct{ calls atomic.Int32 }
 
-func (c *countingChecker) CheckStock(context.Context, offer.Offer) (offer.StockReading, error) {
+func (c *countingChecker) CheckStock(context.Context, model.Offer) (model.StockReading, error) {
 	c.calls.Add(1)
-	return offer.CountStock("unavailable", 0), nil
+	return model.CountStock("unavailable", 0), nil
 }
 
-func workerFor(item Item, checker StockChecker) (Worker, *oneItemStore) {
+func workerFor(item model.Item, checker StockChecker) (Worker, *oneItemStore) {
 	store := &oneItemStore{item: item}
 	return Worker{
 		Store: store, Owner: "probe", LeaseDuration: time.Minute, StockCheckLimit: 5,
 		Service: Service{
 			Stocks: checker,
-			SourcesByGame: map[Game][]OfferSource{GameMagic: {stubSource{name: "store.cl", items: []offer.Offer{
+			SourcesByGame: map[model.Game][]OfferSource{model.GameMagic: {stubSource{name: "store.cl", items: []model.Offer{
 				{ID: "one", CardName: "Sol Ring", Store: "store", URL: "https://store.test/one",
 					PriceAmount: "2800", PriceCurrency: "CLP", StockStatus: "available"},
 			}}}},
@@ -67,9 +67,9 @@ func workerFor(item Item, checker StockChecker) (Worker, *oneItemStore) {
 // Option Survives the Round Trip, and the Worker Acts on what it Read.
 func TestTheWorkerObeysVerifyStock(t *testing.T) {
 	checker := &countingChecker{}
-	worker, store := workerFor(Item{
-		ID: "item-1", Game: GameMagic, NormalizedName: "sol ring",
-		Status: ItemPending, VerifyStock: true,
+	worker, store := workerFor(model.Item{
+		ID: "item-1", Game: model.GameMagic, NormalizedName: "sol ring",
+		Status: model.ItemPending, VerifyStock: true,
 	}, checker)
 	if err := worker.ProcessNext(context.Background()); err != nil {
 		t.Fatal(err)
@@ -85,8 +85,8 @@ func TestTheWorkerObeysVerifyStock(t *testing.T) {
 // TestTheWorkerSkipsTheCheckWhenNobodyAsked Keeps the Calls off by Default.
 func TestTheWorkerSkipsTheCheckWhenNobodyAsked(t *testing.T) {
 	checker := &countingChecker{}
-	worker, _ := workerFor(Item{
-		ID: "item-1", Game: GameMagic, NormalizedName: "sol ring", Status: ItemPending,
+	worker, _ := workerFor(model.Item{
+		ID: "item-1", Game: model.GameMagic, NormalizedName: "sol ring", Status: model.ItemPending,
 	}, checker)
 	if err := worker.ProcessNext(context.Background()); err != nil {
 		t.Fatal(err)

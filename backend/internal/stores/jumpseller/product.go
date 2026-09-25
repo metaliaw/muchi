@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
 type stockReply struct {
@@ -49,12 +49,12 @@ type variantReply struct {
 	} `json:"values"`
 }
 
-func (c Client) parseProduct(data []byte, path string) ([]offer.Offer, error) {
+func (c Client) parseProduct(data []byte, path string) ([]model.Offer, error) {
 	form, currency, variants, err := readProduct(data, path, c.Domain)
 	if err != nil {
 		return nil, err
 	}
-	base := offer.Offer{CardName: form.Info.Product.Name, Store: c.Name, Source: c.Domain, PriceCurrency: currency, URL: "https://" + c.Domain + path, Metadata: map[string]string{"title": form.Info.Product.Name}}
+	base := model.Offer{CardName: form.Info.Product.Name, Store: c.Name, Source: c.Domain, PriceCurrency: currency, URL: "https://" + c.Domain + path, Metadata: map[string]string{"title": form.Info.Product.Name}}
 	if base.Store == "" {
 		base.Store = c.Domain
 	}
@@ -69,13 +69,13 @@ func (c Client) parseProduct(data []byte, path string) ([]offer.Offer, error) {
 		}
 		base.StockStatus = stockStatus(form.Info.Product.stockReply)
 		base.StockQuantity = countStock(form.Info.Product.stockReply)
-		return []offer.Offer{base}, nil
+		return []model.Offer{base}, nil
 	}
 	return buildVariants(base, form, variants)
 }
 
-func buildVariants(base offer.Offer, form formReply, variants []variantReply) ([]offer.Offer, error) {
-	items := make([]offer.Offer, 0, len(variants))
+func buildVariants(base model.Offer, form formReply, variants []variantReply) ([]model.Offer, error) {
+	items := make([]model.Offer, 0, len(variants))
 	for _, variant := range variants {
 		if variant.Variant.ID <= 0 || variant.Variant.ProductID != form.Info.Product.ID {
 			return nil, errors.New("invalid Jumpseller variant ID")
@@ -103,7 +103,7 @@ func buildVariants(base offer.Offer, form formReply, variants []variantReply) ([
 	return items, nil
 }
 
-func applyOptions(item *offer.Offer, form formReply, variant variantReply) {
+func applyOptions(item *model.Offer, form formReply, variant variantReply) {
 	for _, option := range form.Info.Product.Options {
 		for _, entry := range variant.Values {
 			if entry.Value.Option != option.ID {

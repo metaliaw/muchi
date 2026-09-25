@@ -11,16 +11,16 @@ import (
 	"time"
 
 	"github.com/cangrejometralleta/muchi-api/internal/cardmetadata"
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
 const maxConcurrentSources = 4
 
 type Service struct {
 	Repository        SearchRepository
-	Providers         map[Game]Provider
+	Providers         map[model.Game]Provider
 	Sources           []OfferSource
-	SourcesByGame     map[Game][]OfferSource
+	SourcesByGame     map[model.Game][]OfferSource
 	Stocks            StockChecker
 	Checkouts         CheckoutLinker
 	Quotes            CartQuoter
@@ -35,10 +35,10 @@ type Service struct {
 	StoreLocations    map[string][]string
 	// SetsByGame Lends a Game its Sets, so a Sealed Answer can Tell whether a
 	// Box Belongs to the Game that was Asked about.
-	SetsByGame map[Game]SetLibrary
+	SetsByGame map[model.Game]SetLibrary
 	// PrintsByGame Lends a Card its Printings. Only a Game with a Catalog of
 	// Images Appears here; the rest Keep whatever Image their Source Sent.
-	PrintsByGame map[Game]PrintLibrary
+	PrintsByGame map[model.Game]PrintLibrary
 	// SinglesOnly Names the Sources that Sell no Unopened Product, as their
 	// Configuration Declares it. A Sealed Question Skips them: asking a Singles
 	// Index for a Booster Box Spends a Request, Waits out its Timeout and
@@ -53,9 +53,9 @@ type Service struct {
 	SealedOnly map[string]bool
 }
 
-func (s Service) CreateSearch(ctx context.Context, key string, input CreateInput) (Job, error) {
+func (s Service) CreateSearch(ctx context.Context, key string, input model.CreateInput) (model.Job, error) {
 	if err := ValidateCreate(input, s.MaxCards, s.MaxQuantity); err != nil {
-		return Job{}, err
+		return model.Job{}, err
 	}
 	hash := HashPayload(input)
 	job, err := s.Repository.CreateSearch(ctx, key, hash, input)
@@ -65,20 +65,20 @@ func (s Service) CreateSearch(ctx context.Context, key string, input CreateInput
 	return job, s.Tasks.DispatchSearch(ctx, job)
 }
 
-func (s Service) GetSearch(ctx context.Context, id string) (Job, error) {
+func (s Service) GetSearch(ctx context.Context, id string) (model.Job, error) {
 	return s.Repository.GetSearch(ctx, id)
 }
 
-func (s Service) ListResults(ctx context.Context, id string, page ResultPage) (Result, error) {
+func (s Service) ListResults(ctx context.Context, id string, page model.ResultPage) (model.Result, error) {
 	return s.Repository.ListResults(ctx, id, page)
 }
 
-func (s Service) CancelSearch(ctx context.Context, id, key string) (Job, error) {
+func (s Service) CancelSearch(ctx context.Context, id, key string) (model.Job, error) {
 	hash := HashPayload(map[string]string{"search_id": id, "action": "cancel"})
 	return s.Repository.CancelSearch(ctx, id, key, hash)
 }
 
-func (s Service) FindCardOffers(ctx context.Context, game Game, query offer.CardQuery) ([]offer.Offer, []SourceFault, error) {
+func (s Service) FindCardOffers(ctx context.Context, game model.Game, query model.CardQuery) ([]model.Offer, []model.SourceFault, error) {
 	query.Name = strings.TrimSpace(query.Name)
 	if query.Name == "" || !validGame(game) {
 		return nil, nil, ErrInvalid
@@ -89,9 +89,9 @@ func (s Service) FindCardOffers(ctx context.Context, game Game, query offer.Card
 // collectOffers Keys the Cache by Match Mode and Product Kind too: a wide
 // Answer must never Serve a narrow Question, and a Booster Box must never
 // Answer the Question about the Card Printed inside it.
-func (s Service) collectOffers(ctx context.Context, game Game, query offer.CardQuery) ([]offer.Offer, []SourceFault, error) {
+func (s Service) collectOffers(ctx context.Context, game model.Game, query model.CardQuery) ([]model.Offer, []model.SourceFault, error) {
 	query = settleQuery(query)
-	key := s.CacheNamespace + string(game) + ":" + string(query.Kind) + ":" + string(query.Match) + ":" + offer.NormalizeCard(query.Name)
+	key := s.CacheNamespace + string(game) + ":" + string(query.Kind) + ":" + string(query.Match) + ":" + model.NormalizeCard(query.Name)
 	if items, found := s.loadOfferCache(ctx, key); found {
 		return items, nil, nil
 	}
@@ -114,11 +114,11 @@ func (s Service) collectOffers(ctx context.Context, game Game, query offer.CardQ
 	if err != nil && len(items) == 0 {
 		return nil, faults, err
 	}
-	items = offer.NameCards(nameKinds(offer.DeduplicateOffers(items), query.Kind))
+	items = model.NameCards(nameKinds(model.DeduplicateOffers(items), query.Kind))
 	items = s.keepGameSealed(ctx, game, query, items)
 	items = s.applyStoreLocations(items)
 	items = s.applyPrintImages(ctx, game, query, items)
-	items = offer.MarkSuspicious(items, s.SuspiciousPercent, query)
+	items = model.MarkSuspicious(items, s.SuspiciousPercent, query)
 	if err == nil {
 		s.saveOfferCache(ctx, key, items)
 	}
@@ -131,21 +131,21 @@ func (s Service) collectOffers(ctx context.Context, game Game, query offer.CardQ
 // Means the same as `single` — but not to a Cache Key, which Compares Strings
 // and would Keep two Namespaces for one Question. The Zero Value is the right
 // Answer; it just has to be Spelled.
-func settleQuery(query offer.CardQuery) offer.CardQuery {
+func settleQuery(query model.CardQuery) model.CardQuery {
 	if query.Kind == "" {
-		query.Kind = offer.KindSingle
+		query.Kind = model.KindSingle
 	}
 	if query.Match == "" {
-		query.Match = offer.MatchExact
+		query.Match = model.MatchExact
 	}
 	return query
 }
 
 // nameKinds Tells every Offer what the Question was for. A Store Title alone
 // cannot Say whether it Sells the Card or the Box: the Question can.
-func nameKinds(items []offer.Offer, kind offer.ProductKind) []offer.Offer {
+func nameKinds(items []model.Offer, kind model.ProductKind) []model.Offer {
 	if kind == "" {
-		kind = offer.KindSingle
+		kind = model.KindSingle
 	}
 	for position := range items {
 		items[position].Kind = kind
@@ -181,7 +181,7 @@ func (s Service) keepSources(sources []OfferSource, excluded map[string]bool) []
 // It Fails open. A Game without a Set List, or a List that would not Load,
 // Answers what the Sources Sent: fewer Offers Hurt a Caller more than a
 // Stranger among them.
-func (s Service) keepGameSealed(ctx context.Context, game Game, query offer.CardQuery, items []offer.Offer) []offer.Offer {
+func (s Service) keepGameSealed(ctx context.Context, game model.Game, query model.CardQuery, items []model.Offer) []model.Offer {
 	library, found := s.SetsByGame[game]
 	if !query.Sealed() || !found || library == nil || len(items) == 0 {
 		return items
@@ -190,9 +190,9 @@ func (s Service) keepGameSealed(ctx context.Context, game Game, query offer.Card
 	if err != nil || len(sets) == 0 {
 		return items
 	}
-	kept := make([]offer.Offer, 0, len(items))
+	kept := make([]model.Offer, 0, len(items))
 	for _, item := range items {
-		if offer.NamesSet(item.CardName, sets) || offer.NamesSet(item.Edition, sets) {
+		if model.NamesSet(item.CardName, sets) || model.NamesSet(item.Edition, sets) {
 			kept = append(kept, item)
 		}
 	}
@@ -200,7 +200,7 @@ func (s Service) keepGameSealed(ctx context.Context, game Game, query offer.Card
 }
 
 // applyStoreLocations Adds only Locations verified in Store Configuration.
-func (s Service) applyStoreLocations(items []offer.Offer) []offer.Offer {
+func (s Service) applyStoreLocations(items []model.Offer) []model.Offer {
 	for position := range items {
 		locations := s.StoreLocations[items[position].Source]
 		if len(locations) == 0 {
@@ -220,7 +220,7 @@ func (s Service) applyStoreLocations(items []offer.Offer) []offer.Offer {
 // `Bloomburrow` Names both a Set and the Cards in it: filling a Booster Box with
 // the Picture of a Card Printed inside it Looks like an Answer and is a Lie.
 // A Box Wears the Photo its Store Published, or none.
-func (s Service) applyPrintImages(ctx context.Context, game Game, query offer.CardQuery, items []offer.Offer) []offer.Offer {
+func (s Service) applyPrintImages(ctx context.Context, game model.Game, query model.CardQuery, items []model.Offer) []model.Offer {
 	library, found := s.PrintsByGame[game]
 	if query.Sealed() || !found || library == nil || !anyImageMissing(items) {
 		return items
@@ -243,14 +243,14 @@ func (s Service) applyPrintImages(ctx context.Context, game Game, query offer.Ca
 
 // readOfferTitle Prefers the Title the Store Published, because the Edition
 // Lives there and not always in the Card Name.
-func readOfferTitle(item offer.Offer) string {
+func readOfferTitle(item model.Offer) string {
 	if title := item.Metadata["title"]; title != "" {
 		return title
 	}
 	return item.CardName
 }
 
-func anyImageMissing(items []offer.Offer) bool {
+func anyImageMissing(items []model.Offer) bool {
 	for _, item := range items {
 		if item.Image == "" {
 			return true
@@ -259,15 +259,15 @@ func anyImageMissing(items []offer.Offer) bool {
 	return false
 }
 
-func queryGameSources(ctx context.Context, provider Provider, hasProvider bool, sources []OfferSource, query offer.CardQuery) ([]offer.Offer, []SourceFault, error) {
-	var items []offer.Offer
-	var faults []SourceFault
+func queryGameSources(ctx context.Context, provider Provider, hasProvider bool, sources []OfferSource, query model.CardQuery) ([]model.Offer, []model.SourceFault, error) {
+	var items []model.Offer
+	var faults []model.SourceFault
 	var lastErr error
 	if hasProvider {
 		found, err := provider.Search(ctx, query)
 		items = append(items, found...)
 		if err != nil {
-			faults = append(faults, SourceFault{provider.SourceName(), err.Error()})
+			faults = append(faults, model.SourceFault{provider.SourceName(), err.Error()})
 			lastErr = err
 		}
 	}
@@ -284,7 +284,7 @@ func queryGameSources(ctx context.Context, provider Provider, hasProvider bool, 
 }
 
 // preferDirectOffers Drops Aggregated Offers when their Store Answered Directly.
-func preferDirectOffers(items []offer.Offer, direct map[string]bool) []offer.Offer {
+func preferDirectOffers(items []model.Offer, direct map[string]bool) []model.Offer {
 	kept := items[:0]
 	for _, item := range items {
 		if direct[readOfferHost(item)] {
@@ -295,7 +295,7 @@ func preferDirectOffers(items []offer.Offer, direct map[string]bool) []offer.Off
 	return kept
 }
 
-func readOfferHost(item offer.Offer) string {
+func readOfferHost(item model.Offer) string {
 	link, err := url.Parse(item.URL)
 	if err != nil {
 		return ""
@@ -303,7 +303,7 @@ func readOfferHost(item offer.Offer) string {
 	return strings.TrimPrefix(strings.ToLower(link.Hostname()), "www.")
 }
 
-func (s Service) loadOfferCache(ctx context.Context, key string) ([]offer.Offer, bool) {
+func (s Service) loadOfferCache(ctx context.Context, key string) ([]model.Offer, bool) {
 	if s.Cache == nil {
 		return nil, false
 	}
@@ -311,7 +311,7 @@ func (s Service) loadOfferCache(ctx context.Context, key string) ([]offer.Offer,
 	return items, err == nil && found
 }
 
-func (s Service) saveOfferCache(ctx context.Context, key string, items []offer.Offer) {
+func (s Service) saveOfferCache(ctx context.Context, key string, items []model.Offer) {
 	if s.Cache == nil {
 		return
 	}
@@ -323,14 +323,14 @@ func (s Service) saveOfferCache(ctx context.Context, key string, items []offer.O
 }
 
 // ValidateCreate Bounds one Search Request by the configured Card and Quantity Limits.
-func ValidateCreate(input CreateInput, maxCards, maxQuantity int) error {
+func ValidateCreate(input model.CreateInput, maxCards, maxQuantity int) error {
 	if !validGame(input.Game) || len(input.Cards) == 0 || len(input.Cards) > maxCards {
 		return ErrInvalid
 	}
-	if _, err := offer.ReadMatchMode(string(input.Options.Match)); err != nil {
+	if _, err := model.ReadMatchMode(string(input.Options.Match)); err != nil {
 		return ErrInvalid
 	}
-	if _, err := offer.ReadProductKind(string(input.Options.Kind)); err != nil {
+	if _, err := model.ReadProductKind(string(input.Options.Kind)); err != nil {
 		return ErrInvalid
 	}
 	for _, card := range input.Cards {
@@ -341,20 +341,23 @@ func ValidateCreate(input CreateInput, maxCards, maxQuantity int) error {
 	return nil
 }
 
-func validGame(game Game) bool {
-	return game == GameMagic || game == GamePokemon || game == GameYuGiOh ||
-		game == GameOnePiece || game == GameDigimon || game == GameRiftbound ||
-		game == GameMitos
+func validGame(game model.Game) bool {
+	return game == model.GameMagic || game == model.GamePokemon || game == model.GameYuGiOh ||
+		game == model.GameOnePiece || game == model.GameDigimon || game == model.GameRiftbound ||
+		game == model.GameMitos
 }
 
 func HashPayload(value any) string {
+	if input, ok := value.(model.CreateInput); ok {
+		value = renderFingerprint(input)
+	}
 	data, _ := json.Marshal(value)
 	sum := sha256.Sum256(data)
 	return hex.EncodeToString(sum[:])
 }
 
-func querySources(ctx context.Context, sources []OfferSource, query offer.CardQuery) ([]offer.Offer, []SourceFault, map[string]bool, error) {
-	results := make([][]offer.Offer, len(sources))
+func querySources(ctx context.Context, sources []OfferSource, query model.CardQuery) ([]model.Offer, []model.SourceFault, map[string]bool, error) {
+	results := make([][]model.Offer, len(sources))
 	errors := make([]error, len(sources))
 	turns := make(chan struct{}, maxConcurrentSources)
 	var group sync.WaitGroup
@@ -378,7 +381,7 @@ func readDirectHosts(sources []OfferSource, errors []error) map[string]bool {
 	return result
 }
 
-func querySource(ctx context.Context, group *sync.WaitGroup, turns chan struct{}, source OfferSource, query offer.CardQuery, items *[]offer.Offer, sourceErr *error) {
+func querySource(ctx context.Context, group *sync.WaitGroup, turns chan struct{}, source OfferSource, query model.CardQuery, items *[]model.Offer, sourceErr *error) {
 	defer group.Done()
 	select {
 	case turns <- struct{}{}:
@@ -392,13 +395,13 @@ func querySource(ctx context.Context, group *sync.WaitGroup, turns chan struct{}
 
 // combineSources Keeps every Failure by Name. A Source that Fell while others
 // Answered used to Vanish, and a partial Answer Looked exactly like a full one.
-func combineSources(sources []OfferSource, results [][]offer.Offer, errors []error) ([]offer.Offer, []SourceFault, error) {
-	var result []offer.Offer
-	var faults []SourceFault
+func combineSources(sources []OfferSource, results [][]model.Offer, errors []error) ([]model.Offer, []model.SourceFault, error) {
+	var result []model.Offer
+	var faults []model.SourceFault
 	var lastErr error
 	for index, items := range results {
 		if errors[index] != nil {
-			faults = append(faults, SourceFault{sources[index].SourceName(), errors[index].Error()})
+			faults = append(faults, model.SourceFault{sources[index].SourceName(), errors[index].Error()})
 			lastErr = errors[index]
 		}
 		result = append(result, items...)

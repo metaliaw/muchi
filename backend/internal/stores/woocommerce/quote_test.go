@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 	"github.com/cangrejometralleta/muchi-api/internal/source"
 )
 
@@ -28,9 +28,9 @@ func (c *cartSessions) SendSession(_ context.Context, _ string, request source.S
 func TestQuoteCartReadsTotalsShippingAndTrimmedLines(t *testing.T) {
 	sessions := &cartSessions{}
 	client := Client{Domain: "woo.test", Sessions: sessions}
-	ring := offer.Offer{ID: "ring", Source: "woo.test", VariantID: "7"}
-	bolt := offer.Offer{ID: "bolt", Source: "woo.test", VariantID: "8"}
-	quote, err := client.QuoteCart(context.Background(), []offer.CartLine{{Offer: ring, Quantity: 2}, {Offer: bolt, Quantity: 3}}, offer.ShippingAddress{Country: "CL", Region: "CL-RM"})
+	ring := model.Offer{ID: "ring", Source: "woo.test", VariantID: "7"}
+	bolt := model.Offer{ID: "bolt", Source: "woo.test", VariantID: "8"}
+	quote, err := client.QuoteCart(context.Background(), []model.CartLine{{Offer: ring, Quantity: 2}, {Offer: bolt, Quantity: 3}}, model.ShippingAddress{Country: "CL", Region: "CL-RM"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,8 +62,8 @@ func TestQuoteCartReadsTotalsShippingAndTrimmedLines(t *testing.T) {
 func TestQuoteCartRefusesOffersItCannotName(t *testing.T) {
 	sessions := &cartSessions{}
 	client := Client{Domain: "woo.test", Sessions: sessions}
-	for _, item := range []offer.Offer{{Source: "scry.cl", VariantID: "7"}, {Source: "woo.test"}} {
-		if _, err := client.QuoteCart(context.Background(), []offer.CartLine{{Offer: item, Quantity: 1}}, offer.ShippingAddress{Country: "CL"}); err != offer.ErrNoQuote {
+	for _, item := range []model.Offer{{Source: "scry.cl", VariantID: "7"}, {Source: "woo.test"}} {
+		if _, err := client.QuoteCart(context.Background(), []model.CartLine{{Offer: item, Quantity: 1}}, model.ShippingAddress{Country: "CL"}); err != model.ErrNoQuote {
 			t.Fatalf("offer %+v err = %v", item, err)
 		}
 	}

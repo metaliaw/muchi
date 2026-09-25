@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 	"github.com/cangrejometralleta/muchi-api/internal/stores/shopify"
 )
 
@@ -14,7 +14,7 @@ import (
 // Product Pages instead of Sending the Buyer to a Cart Missing a Card.
 //
 // Only Shopify Qualifies today: https://help.shopify.com/en/manual/products/details/cart-permalink
-func (c Config) CheckoutLink(domain string, lines []offer.CartLine) (string, bool) {
+func (c Config) CheckoutLink(domain string, lines []model.CartLine) (string, bool) {
 	config, found := c.Stores[domain]
 	if !found || !config.Enabled || config.Platform != "shopify" || len(lines) == 0 {
 		return "", false

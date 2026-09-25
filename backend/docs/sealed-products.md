@@ -25,7 +25,7 @@ Loose cards are grouped by their name after removing printing details: `Winged
 Kuriboh`, `LDS3-EN100 "Winged Kuriboh" Common`, and `Winged Kuriboh (PUR)` are
 the same card sold by three stores.
 
-A box is different. `ReadSealedKey` in `internal/offer/offer.go` preserves the
+A box is different. `ReadSealedKey` in `internal/model/offer.go` preserves the
 **entire title** and prefixes the set:
 
 ```

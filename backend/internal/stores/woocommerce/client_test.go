@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
 type catalogFetcher struct{ target string }
@@ -16,7 +16,7 @@ func (f *catalogFetcher) FetchSource(_ context.Context, _, target string) ([]byt
 }
 func TestCatalogOffers(t *testing.T) {
 	fetcher := &catalogFetcher{}
-	items, err := (Client{Fetcher: fetcher, Domain: "lacripta.cl"}).FindOffers(context.Background(), offer.CardQuery{Name: "Sol Ring"})
+	items, err := (Client{Fetcher: fetcher, Domain: "lacripta.cl"}).FindOffers(context.Background(), model.CardQuery{Name: "Sol Ring"})
 	if err != nil || len(items) != 1 {
 		t.Fatalf("items=%v err=%v", items, err)
 	}
@@ -48,7 +48,7 @@ func (quotedFetcher) FetchSource(_ context.Context, _, _ string) ([]byte, error)
 
 // TestCatalogReadsQuotedTitle Covers a Store that Leads with its Set Code.
 func TestCatalogReadsQuotedTitle(t *testing.T) {
-	items, err := (Client{Fetcher: quotedFetcher{}, Domain: "konohastore.cl", Name: "Konoha Store"}).FindOffers(context.Background(), offer.CardQuery{Name: "Kuriboh"})
+	items, err := (Client{Fetcher: quotedFetcher{}, Domain: "konohastore.cl", Name: "Konoha Store"}).FindOffers(context.Background(), model.CardQuery{Name: "Kuriboh"})
 	if err != nil || len(items) != 1 {
 		t.Fatalf("items=%v err=%v", items, err)
 	}

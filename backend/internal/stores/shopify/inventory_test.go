@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
 // The Theme Prints the same Number that Caps the Quantity Box a Buyer Sees.
@@ -31,7 +31,7 @@ func TestThePageCountsWhatTheAjaxProductWillNot(t *testing.T) {
 	})}
 
 	reading, err := client.CheckStock(context.Background(),
-		offer.Offer{URL: "https://cards.test/products/ring?variant=10"})
+		model.Offer{URL: "https://cards.test/products/ring?variant=10"})
 
 	if err != nil || reading.Status != "available" || reading.Quantity == nil || *reading.Quantity != 4 {
 		t.Fatalf("reading=%+v err=%v", reading, err)

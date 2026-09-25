@@ -7,7 +7,7 @@ import (
 
 	"github.com/cangrejometralleta/muchi-api/internal/source"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
 type pageFetcher struct {
@@ -26,7 +26,7 @@ const offerPage = `<div id="results"><a data-track-type="store_offer_click" data
 func TestFindOffers(t *testing.T) {
 	fetcher := &pageFetcher{data: []byte(offerPage)}
 	client := Client{Fetcher: fetcher, BaseURL: "https://scry.cl/"}
-	items, err := client.FindOffers(context.Background(), offer.CardQuery{Name: "Sol Ring"})
+	items, err := client.FindOffers(context.Background(), model.CardQuery{Name: "Sol Ring"})
 	if err != nil || len(items) != 1 {
 		t.Fatalf("offers: %v, %v", items, err)
 	}
@@ -56,12 +56,12 @@ func TestPageFailures(t *testing.T) {
 		})
 	}
 	fetcher := &pageFetcher{err: source.StatusError{Code: 404}}
-	items, err := (Client{Fetcher: fetcher, BaseURL: "https://scry.cl"}).FindOffers(context.Background(), offer.CardQuery{Name: "Missing"})
+	items, err := (Client{Fetcher: fetcher, BaseURL: "https://scry.cl"}).FindOffers(context.Background(), model.CardQuery{Name: "Missing"})
 	if err != nil || len(items) != 0 {
 		t.Fatalf("missing card: %v, %v", items, err)
 	}
 	fetcher.err = source.StatusError{Code: 503}
-	if _, err := (Client{Fetcher: fetcher, BaseURL: "https://scry.cl"}).FindOffers(context.Background(), offer.CardQuery{Name: "Sol Ring"}); err == nil {
+	if _, err := (Client{Fetcher: fetcher, BaseURL: "https://scry.cl"}).FindOffers(context.Background(), model.CardQuery{Name: "Sol Ring"}); err == nil {
 		t.Fatal("expected upstream error")
 	}
 }

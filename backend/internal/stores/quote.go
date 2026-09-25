@@ -3,7 +3,7 @@ package stores
 import (
 	"context"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 	"github.com/cangrejometralleta/muchi-api/internal/stores/shopify"
 	"github.com/cangrejometralleta/muchi-api/internal/stores/woocommerce"
 )
@@ -17,10 +17,10 @@ type Quoter struct {
 // QuoteCart Answers offer.ErrNoQuote for a Store whose Platform has no Cart to Ask.
 // The Address Arrives in Names and Leaves in each Platform's Codes: WooCommerce
 // Reads "CL-RM", Shopify Reads "RM".
-func (q Quoter) QuoteCart(ctx context.Context, domain string, lines []offer.CartLine, address offer.ShippingAddress) (offer.CartQuote, error) {
+func (q Quoter) QuoteCart(ctx context.Context, domain string, lines []model.CartLine, address model.ShippingAddress) (model.CartQuote, error) {
 	config, found := q.Config.Stores[domain]
 	if !found || !config.Enabled || q.Sessions == nil {
-		return offer.CartQuote{}, offer.ErrNoQuote
+		return model.CartQuote{}, model.ErrNoQuote
 	}
 	address = resolveAddress(address)
 	switch config.Platform {
@@ -32,6 +32,6 @@ func (q Quoter) QuoteCart(ctx context.Context, domain string, lines []offer.Cart
 	case "shopify":
 		return shopify.Client{Domain: domain, Name: config.Name, Sessions: q.Sessions}.QuoteCart(ctx, lines, address)
 	default:
-		return offer.CartQuote{}, offer.ErrNoQuote
+		return model.CartQuote{}, model.ErrNoQuote
 	}
 }

@@ -168,7 +168,7 @@ also tested. Run the focused check with:
 
 ```sh
 FIRESTORE_EMULATOR_HOST=127.0.0.1:8085 \
-  go test ./internal/firestore -run TestOrphanItemsLeaveTheQueue -count=1
+  go test ./internal/db -run TestOrphanItemsLeaveTheQueue -count=1
 go test ./...
 ```
 

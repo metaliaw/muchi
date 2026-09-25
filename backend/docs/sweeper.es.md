@@ -69,4 +69,4 @@ permiso para crear Cloud Tasks y el token de API configurado al iniciar.
 
 La implementación vive en [`function.go`](../function.go),
 [`internal/sweep/sweeper.go`](../internal/sweep/sweeper.go) y
-[`internal/firestore/storage.go`](../internal/firestore/storage.go).
+[`internal/db/storage.go`](../internal/db/storage.go).

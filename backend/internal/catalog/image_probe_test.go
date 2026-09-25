@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 	"github.com/cangrejometralleta/muchi-api/internal/stores"
 )
@@ -29,7 +29,7 @@ func TestImageCoverageProbe(t *testing.T) {
 	}
 	for _, card := range []string{"Sol Ring", "Lightning Bolt"} {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-		items, faults, err := service.FindCardOffers(ctx, search.GameMagic, offer.CardQuery{Name: card})
+		items, faults, err := service.FindCardOffers(ctx, model.GameMagic, model.CardQuery{Name: card})
 		cancel()
 		if err != nil {
 			t.Fatalf("card=%q err=%v", card, err)
@@ -38,7 +38,7 @@ func TestImageCoverageProbe(t *testing.T) {
 	}
 }
 
-func reportImages(t *testing.T, card string, items []offer.Offer, faults []search.SourceFault) {
+func reportImages(t *testing.T, card string, items []model.Offer, faults []model.SourceFault) {
 	type tally struct{ offers, images int }
 	bySource := map[string]*tally{}
 	total := tally{}

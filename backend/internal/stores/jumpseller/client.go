@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
 // SourceFetcher Reads Storefront Pages described by https://jumpseller.com/support/liquid/.
@@ -19,7 +19,7 @@ type Client struct {
 	Domain, Name string
 }
 
-func (c Client) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer.Offer, error) {
+func (c Client) FindOffers(ctx context.Context, query model.CardQuery) ([]model.Offer, error) {
 	name := query.Name
 	if strings.TrimSpace(name) == "" {
 		return nil, errors.New("empty card name")
@@ -28,7 +28,7 @@ func (c Client) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer.
 	if err != nil {
 		return nil, err
 	}
-	items := make([]offer.Offer, 0)
+	items := make([]model.Offer, 0)
 	for _, path := range paths {
 		products, err := c.readOffers(ctx, path)
 		if err != nil {
@@ -40,10 +40,10 @@ func (c Client) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer.
 			}
 		}
 	}
-	return offer.DeduplicateOffers(items), nil
+	return model.DeduplicateOffers(items), nil
 }
 
-func (c Client) readOffers(ctx context.Context, path string) ([]offer.Offer, error) {
+func (c Client) readOffers(ctx context.Context, path string) ([]model.Offer, error) {
 	data, err := c.fetchPage(ctx, path)
 	if err != nil {
 		return nil, err
@@ -51,17 +51,17 @@ func (c Client) readOffers(ctx context.Context, path string) ([]offer.Offer, err
 	return c.parseProduct(data, path)
 }
 
-func (c Client) CheckStock(ctx context.Context, item offer.Offer) (offer.StockReading, error) {
+func (c Client) CheckStock(ctx context.Context, item model.Offer) (model.StockReading, error) {
 	link, err := url.Parse(item.URL)
 	if err != nil {
-		return offer.ReadStock("unknown"), err
+		return model.ReadStock("unknown"), err
 	}
 	if !sameStore(link, c.Domain) || link.Path == "" {
-		return offer.ReadStock("unknown"), errors.New("invalid Jumpseller product URL")
+		return model.ReadStock("unknown"), errors.New("invalid Jumpseller product URL")
 	}
 	items, err := c.readOffers(ctx, link.EscapedPath())
 	if err != nil {
-		return offer.ReadStock("unknown"), err
+		return model.ReadStock("unknown"), err
 	}
 	variant := link.Query().Get("variant_id")
 	if variant == "" {
@@ -72,12 +72,12 @@ func (c Client) CheckStock(ctx context.Context, item offer.Offer) (offer.StockRe
 			return readStock(candidate), nil
 		}
 	}
-	return offer.ReadStock("unknown"), nil
+	return model.ReadStock("unknown"), nil
 }
 
 // readStock Repeats what the Product Page already Said about this Variant.
-func readStock(item offer.Offer) offer.StockReading {
-	return offer.StockReading{Status: item.StockStatus, Quantity: item.StockQuantity}
+func readStock(item model.Offer) model.StockReading {
+	return model.StockReading{Status: item.StockStatus, Quantity: item.StockQuantity}
 }
 
 // requestGate Serializes Jumpseller Reads within one Process.

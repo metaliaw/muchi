@@ -67,4 +67,4 @@ Cloud Tasks, and the configured API token at startup.
 
 The implementation is in [`function.go`](../function.go),
 [`internal/sweep/sweeper.go`](../internal/sweep/sweeper.go), and
-[`internal/firestore/storage.go`](../internal/firestore/storage.go).
+[`internal/db/storage.go`](../internal/db/storage.go).

@@ -3,12 +3,12 @@ package stores
 import (
 	"errors"
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"log/slog"
 	"net/url"
 	"os"
 
 	"github.com/cangrejometralleta/muchi-api/internal/stores/moxfield"
-	"gopkg.in/yaml.v3"
 )
 
 type Config struct {

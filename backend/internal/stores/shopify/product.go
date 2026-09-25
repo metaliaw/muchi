@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
 type variantReply struct {
@@ -30,8 +30,8 @@ type productReply struct {
 	} `json:"options"`
 }
 
-func (c Client) buildOffers(product productReply, path, currency string) ([]offer.Offer, error) {
-	items := make([]offer.Offer, 0, len(product.Variants))
+func (c Client) buildOffers(product productReply, path, currency string) ([]model.Offer, error) {
+	items := make([]model.Offer, 0, len(product.Variants))
 	for _, variant := range product.Variants {
 		if !variant.Available {
 			continue
@@ -44,7 +44,7 @@ func (c Client) buildOffers(product productReply, path, currency string) ([]offe
 		if store == "" {
 			store = c.Domain
 		}
-		item := offer.Offer{
+		item := model.Offer{
 			ID: c.Domain + ":" + id, VariantID: id, CardName: product.Title, Store: store,
 			PriceAmount: formatPrice(*variant.Price), PriceCurrency: currency,
 			URL: "https://" + c.Domain + path + "?variant=" + id, Image: readImageURL(product.FeaturedImage),
@@ -72,7 +72,7 @@ func formatPrice(price int64) string {
 	return fmt.Sprintf("%d.%02d", price/100, price%100)
 }
 
-func applyOptions(item *offer.Offer, product productReply, variant variantReply) {
+func applyOptions(item *model.Offer, product productReply, variant variantReply) {
 	for _, option := range product.Options {
 		index := option.Position - 1
 		if index < 0 || index >= len(variant.Options) {

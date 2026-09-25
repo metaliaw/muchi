@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 	"golang.org/x/net/html"
 )
 
@@ -29,7 +29,7 @@ type Client struct {
 	MaxPages   int
 }
 
-func (c Client) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer.Offer, error) {
+func (c Client) FindOffers(ctx context.Context, query model.CardQuery) ([]model.Offer, error) {
 	name := query.Name
 	if c.Fetcher == nil || c.Domain == "" || strings.TrimSpace(name) == "" {
 		return nil, errors.New("invalid PrestaShop client")
@@ -38,7 +38,7 @@ func (c Client) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer.
 	if maxPages < 1 {
 		maxPages = defaultMaxPages
 	}
-	items := make([]offer.Offer, 0)
+	items := make([]model.Offer, 0)
 	for page := 1; page <= maxPages; page++ {
 		data, err := c.Fetcher.FetchSource(ctx, c.Domain, c.searchURL(name, page))
 		if err != nil {
@@ -50,7 +50,7 @@ func (c Client) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer.
 		}
 		items = append(items, pageItems...)
 		if !hasNext {
-			return offer.DeduplicateOffers(items), nil
+			return model.DeduplicateOffers(items), nil
 		}
 	}
 	return nil, fmt.Errorf("PrestaShop search exceeded %d pages", maxPages)
@@ -68,8 +68,8 @@ func (c Client) searchURL(name string, page int) string {
 	return "https://" + c.Domain + path + "?" + query.Encode()
 }
 
-func (c Client) parsePage(data []byte, wanted string) ([]offer.Offer, bool, error) {
-	items := make([]offer.Offer, 0)
+func (c Client) parsePage(data []byte, wanted string) ([]model.Offer, bool, error) {
+	items := make([]model.Offer, 0)
 	remaining := data
 	for {
 		start := bytes.Index(remaining, []byte(`<article class="product-miniature`))
@@ -98,19 +98,19 @@ func (c Client) parsePage(data []byte, wanted string) ([]offer.Offer, bool, erro
 	return items, hasNext, nil
 }
 
-func (c Client) parseProduct(node *html.Node, wanted string) (offer.Offer, bool) {
+func (c Client) parseProduct(node *html.Node, wanted string) (model.Offer, bool) {
 	id := attribute(node, "data-id-product")
 	titleNode := descendantWithClass(node, "product-title")
 	priceNode := descendantWithClass(node, "price")
 	linkNode := firstElement(titleNode, "a")
 	title := nodeText(linkNode)
-	if id == "" || !offer.MatchesCard(title, wanted) || priceNode == nil || linkNode == nil {
-		return offer.Offer{}, false
+	if id == "" || !model.MatchesCard(title, wanted) || priceNode == nil || linkNode == nil {
+		return model.Offer{}, false
 	}
 	amount := digits(nodeText(priceNode))
 	link := attribute(linkNode, "href")
 	if amount == "" || link == "" {
-		return offer.Offer{}, false
+		return model.Offer{}, false
 	}
 	store := c.Name
 	if store == "" {
@@ -125,8 +125,8 @@ func (c Client) parseProduct(node *html.Node, wanted string) (offer.Offer, bool)
 	if descendantWithClass(node, "out_of_stock") != nil || strings.Contains(text, "en stock: 0") {
 		status = "unavailable"
 	}
-	item := offer.Offer{ID: c.Domain + ":" + id, CardName: title, Store: store, PriceAmount: amount, PriceCurrency: currency, URL: link, Source: c.Domain, StockStatus: status}
-	return item, offer.ValidateOffer(item) == nil
+	item := model.Offer{ID: c.Domain + ":" + id, CardName: title, Store: store, PriceAmount: amount, PriceCurrency: currency, URL: link, Source: c.Domain, StockStatus: status}
+	return item, model.ValidateOffer(item) == nil
 }
 
 func hasNextPage(document *html.Node) bool {

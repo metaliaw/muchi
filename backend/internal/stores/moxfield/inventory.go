@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
 type cardReply struct {
@@ -36,7 +36,7 @@ type deckReply struct {
 	} `json:"boards"`
 }
 
-func (c *Client) readInventory(data []byte, id string) ([]offer.Offer, int, error) {
+func (c *Client) readInventory(data []byte, id string) ([]model.Offer, int, error) {
 	var deck deckReply
 	if err := json.Unmarshal(data, &deck); err != nil {
 		return nil, 0, fmt.Errorf("decode inventory: %w", err)
@@ -44,7 +44,7 @@ func (c *Client) readInventory(data []byte, id string) ([]offer.Offer, int, erro
 	if deck.Boards == nil || c.Rate < 1 {
 		return nil, 0, errors.New("invalid Moxfield inventory or conversion rate")
 	}
-	items := make([]offer.Offer, 0)
+	items := make([]model.Offer, 0)
 	missing := 0
 	for board, content := range deck.Boards {
 		for key, entry := range content.Cards {
@@ -85,11 +85,11 @@ func expandPrintings(entry entryReply) []entryReply {
 	return entry.Printings
 }
 
-func (c *Client) buildOffer(entry entryReply, id, key string) (offer.Offer, bool) {
+func (c *Client) buildOffer(entry entryReply, id, key string) (model.Offer, bool) {
 	finish, priceKey := selectFinish(entry)
 	price, ok := convertPrice(entry.Card.Prices[priceKey], c.Rate)
 	if !ok || entry.Card.Name == "" || entry.Card.ID == "" {
-		return offer.Offer{}, false
+		return model.Offer{}, false
 	}
 	variant := strings.Join([]string{id, key, entry.Card.ID, finish}, ":")
 	store := c.Store
@@ -100,7 +100,7 @@ func (c *Client) buildOffer(entry entryReply, id, key string) (offer.Offer, bool
 	// Start: a Buyer Choosing four Copies Deserves to Know the List Holds two
 	// before Asking anyone. It is the same Number the Check Reads again later.
 	units := entry.Quantity
-	return offer.Offer{
+	return model.Offer{
 		ID: "moxfield:" + c.StoreID + ":" + variant, VariantID: variant,
 		CardName: entry.Card.Name, Store: store, PriceAmount: price, PriceCurrency: "CLP",
 		URL: "https://moxfield.com/decks/" + id, Source: "moxfield", Finish: finish,

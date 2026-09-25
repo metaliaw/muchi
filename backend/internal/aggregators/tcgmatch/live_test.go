@@ -11,7 +11,7 @@ import (
 	"github.com/cangrejometralleta/muchi-api/internal/aggregators/tcgmatch"
 	"github.com/cangrejometralleta/muchi-api/internal/source"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
 func TestLiveDarkMagician(t *testing.T) {
@@ -26,7 +26,7 @@ func TestLiveDarkMagician(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 	started := time.Now()
-	items, err := client.Search(ctx, offer.CardQuery{Name: "Dark Magician"})
+	items, err := client.Search(ctx, model.CardQuery{Name: "Dark Magician"})
 	if err != nil {
 		t.Fatalf("requests=%d bytes=%d duration=%s err=%v", fetcher.calls, fetcher.bytes, time.Since(started), err)
 	}

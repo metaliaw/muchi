@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 	"github.com/cangrejometralleta/muchi-api/internal/source"
 )
 
@@ -43,9 +43,9 @@ type ratesReply struct {
 // Cheapest Rate, since a Storefront Cart has no Rate Selected yet.
 //
 // https://shopify.dev/docs/api/ajax/reference/cart
-func (c Client) QuoteCart(ctx context.Context, lines []offer.CartLine, address offer.ShippingAddress) (offer.CartQuote, error) {
+func (c Client) QuoteCart(ctx context.Context, lines []model.CartLine, address model.ShippingAddress) (model.CartQuote, error) {
 	if c.Sessions == nil || len(lines) == 0 {
-		return offer.CartQuote{}, offer.ErrNoQuote
+		return model.CartQuote{}, model.ErrNoQuote
 	}
 	type item struct {
 		ID       int64 `json:"id"`
@@ -56,7 +56,7 @@ func (c Client) QuoteCart(ctx context.Context, lines []offer.CartLine, address o
 	for index, line := range lines {
 		id, err := strconv.ParseInt(VariantID(c.Domain, line.Offer), 10, 64)
 		if err != nil {
-			return offer.CartQuote{}, offer.ErrNoQuote
+			return model.CartQuote{}, model.ErrNoQuote
 		}
 		items[index], variants[index] = item{ID: id, Quantity: line.Quantity}, id
 	}
@@ -64,16 +64,16 @@ func (c Client) QuoteCart(ctx context.Context, lines []offer.CartLine, address o
 	body, _ := json.Marshal(map[string]any{"items": items})
 	_, header, err := c.Sessions.SendSession(ctx, c.Domain, source.SessionRequest{Method: http.MethodPost, Target: base + "/cart/add.js", Body: body})
 	if err != nil {
-		return offer.CartQuote{}, err
+		return model.CartQuote{}, err
 	}
 	session := http.Header{"Cookie": {readCookies(header)}}
 	data, _, err := c.Sessions.SendSession(ctx, c.Domain, source.SessionRequest{Method: http.MethodGet, Target: base + "/cart.js", Header: session})
 	if err != nil {
-		return offer.CartQuote{}, err
+		return model.CartQuote{}, err
 	}
 	var cart cartReply
 	if err := json.Unmarshal(data, &cart); err != nil {
-		return offer.CartQuote{}, fmt.Errorf("decode cart %s: %w", c.Domain, err)
+		return model.CartQuote{}, fmt.Errorf("decode cart %s: %w", c.Domain, err)
 	}
 	query := url.Values{
 		"shipping_address[country]":  {address.Country},
@@ -82,17 +82,17 @@ func (c Client) QuoteCart(ctx context.Context, lines []offer.CartLine, address o
 	}
 	data, _, err = c.Sessions.SendSession(ctx, c.Domain, source.SessionRequest{Method: http.MethodGet, Target: base + "/cart/shipping_rates.json?" + query.Encode(), Header: session})
 	if err != nil {
-		return offer.CartQuote{}, err
+		return model.CartQuote{}, err
 	}
 	var rates ratesReply
 	if err := json.Unmarshal(data, &rates); err != nil {
-		return offer.CartQuote{}, fmt.Errorf("decode shipping rates %s: %w", c.Domain, err)
+		return model.CartQuote{}, fmt.Errorf("decode shipping rates %s: %w", c.Domain, err)
 	}
 	return readQuote(cart, rates, lines, variants), nil
 }
 
-func readQuote(cart cartReply, rates ratesReply, lines []offer.CartLine, variants []int64) offer.CartQuote {
-	quote := offer.CartQuote{Currency: cart.Currency, Items: formatPrice(cart.Total), PaymentMethods: []string{}}
+func readQuote(cart cartReply, rates ratesReply, lines []model.CartLine, variants []int64) model.CartQuote {
+	quote := model.CartQuote{Currency: cart.Currency, Items: formatPrice(cart.Total), PaymentMethods: []string{}}
 	wanted, held := map[int64]int{}, map[int64]int{}
 	for index, line := range lines {
 		wanted[variants[index]] += line.Quantity
@@ -101,7 +101,7 @@ func readQuote(cart cartReply, rates ratesReply, lines []offer.CartLine, variant
 		held[entry.ID] += entry.Quantity
 	}
 	for index, line := range lines {
-		echo := offer.QuoteLine{OfferID: line.Offer.ID, Quantity: line.Quantity}
+		echo := model.QuoteLine{OfferID: line.Offer.ID, Quantity: line.Quantity}
 		for _, entry := range cart.Items {
 			if entry.ID == variants[index] {
 				echo.UnitPrice = formatPrice(entry.Price)
@@ -123,7 +123,7 @@ func readQuote(cart cartReply, rates ratesReply, lines []offer.CartLine, variant
 			continue
 		}
 		cents := int64(math.Round(amount * 100))
-		quote.ShippingRates = append(quote.ShippingRates, offer.ShippingRate{ID: rate.Code, Name: rate.Name, Price: formatPrice(cents)})
+		quote.ShippingRates = append(quote.ShippingRates, model.ShippingRate{ID: rate.Code, Name: rate.Name, Price: formatPrice(cents)})
 		if cheapest < 0 || cents < cheapest {
 			cheapest = cents
 		}
@@ -150,7 +150,7 @@ func readCookies(header http.Header) string {
 // VariantID Trusts the Variant the Product URL Carries, and the Offer's own
 // Variant only when the Store Itself Sent it: an Aggregator's Key Names its
 // own Record, not a Shopify Variant. It Answers "" when Neither Qualifies.
-func VariantID(domain string, item offer.Offer) string {
+func VariantID(domain string, item model.Offer) string {
 	variant := ""
 	if link, err := url.Parse(item.URL); err == nil && link.Host == domain {
 		variant = link.Query().Get("variant")

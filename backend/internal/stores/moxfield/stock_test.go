@@ -4,13 +4,13 @@ import (
 	"context"
 	"testing"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
 // findOffer Takes one Offer of the Fixture the same Way a Search would.
-func findOffer(t *testing.T, client *Client, name string) offer.Offer {
+func findOffer(t *testing.T, client *Client, name string) model.Offer {
 	t.Helper()
-	items, err := client.FindOffers(context.Background(), offer.CardQuery{Name: name})
+	items, err := client.FindOffers(context.Background(), model.CardQuery{Name: name})
 	if err != nil || len(items) == 0 {
 		t.Fatalf("offers=%v err=%v", items, err)
 	}
@@ -38,7 +38,7 @@ func TestAnEntryGoneFromTheListIsSold(t *testing.T) {
 	client, _, _ := newTestClient(t)
 	shelf := Shelf{Lists: []*Client{client}}
 
-	reading, err := shelf.CheckStock(context.Background(), offer.Offer{
+	reading, err := shelf.CheckStock(context.Background(), model.Offer{
 		ID: "moxfield:wombat:yqdRPdoUlEiFz21qKYHGMA:ido", Source: "moxfield",
 	})
 
@@ -51,7 +51,7 @@ func TestAnOfferOfAnotherShelfStaysUnknown(t *testing.T) {
 	client, _, _ := newTestClient(t)
 
 	reading, err := (Shelf{Lists: []*Client{client}}).CheckStock(
-		context.Background(), offer.Offer{ID: "moxfield:otra:lista:x", Source: "moxfield"})
+		context.Background(), model.Offer{ID: "moxfield:otra:lista:x", Source: "moxfield"})
 
 	if err != ErrNoList || reading.Status != "unknown" {
 		t.Fatalf("reading=%+v err=%v", reading, err)

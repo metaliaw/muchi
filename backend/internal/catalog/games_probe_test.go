@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 	"github.com/cangrejometralleta/muchi-api/internal/stores"
 )
@@ -29,22 +29,22 @@ func TestEveryGameProbe(t *testing.T) {
 		SourcesByGame: BuildSourcesByGame(fetcher, config, nil, time.Hour, nil),
 	}
 	for _, probe := range []struct {
-		game search.Game
+		game model.Game
 		card string
 	}{
-		{search.GameMagic, "Sol Ring"},
-		{search.GamePokemon, "Pikachu"},
-		{search.GameYuGiOh, "Dark Magician"},
-		{search.GameOnePiece, "Monkey D. Luffy"},
-		{search.GameDigimon, "Agumon"},
-		{search.GameRiftbound, "Jinx"},
-		{search.GameMitos, "Dragón de Magma"},
+		{model.GameMagic, "Sol Ring"},
+		{model.GamePokemon, "Pikachu"},
+		{model.GameYuGiOh, "Dark Magician"},
+		{model.GameOnePiece, "Monkey D. Luffy"},
+		{model.GameDigimon, "Agumon"},
+		{model.GameRiftbound, "Jinx"},
+		{model.GameMitos, "Dragón de Magma"},
 	} {
 		t.Run(string(probe.game), func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 			defer cancel()
 			started := time.Now()
-			items, faults, err := service.FindCardOffers(ctx, probe.game, offer.CardQuery{Name: probe.card})
+			items, faults, err := service.FindCardOffers(ctx, probe.game, model.CardQuery{Name: probe.card})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -99,9 +99,9 @@ func sortedKeys(counts map[string]int) []string {
 
 // sameOffer Names the Offer a Reader would Call the same one, whichever Source
 // Brought it. Dos Fuentes que Traen la misma Carta al mismo Precio Cuentan una.
-func sameOffer(item offer.Offer) string {
+func sameOffer(item model.Offer) string {
 	return strings.Join([]string{
-		offer.NormalizeCard(item.CardName), strings.ToLower(item.Store),
+		model.NormalizeCard(item.CardName), strings.ToLower(item.Store),
 		item.PriceAmount, item.PriceCurrency, strings.ToLower(item.Language),
 	}, "|")
 }

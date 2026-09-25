@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 	"github.com/cangrejometralleta/muchi-api/internal/source"
 )
 
@@ -18,7 +18,7 @@ type SessionSender interface {
 }
 
 // ErrNotQuotable Answers a Line whose Product the Cart cannot Name.
-var ErrNotQuotable = offer.ErrNoQuote
+var ErrNotQuotable = model.ErrNoQuote
 
 type cartReply struct {
 	Items []struct {
@@ -55,15 +55,15 @@ type cartReply struct {
 // Order is Created and no Stock is Held. The Cart is Left to Expire.
 //
 // https://github.com/woocommerce/woocommerce/blob/trunk/plugins/woocommerce/src/StoreApi/docs/cart.md
-func (c Client) QuoteCart(ctx context.Context, lines []offer.CartLine, address offer.ShippingAddress) (offer.CartQuote, error) {
+func (c Client) QuoteCart(ctx context.Context, lines []model.CartLine, address model.ShippingAddress) (model.CartQuote, error) {
 	if c.Sessions == nil || len(lines) == 0 {
-		return offer.CartQuote{}, ErrNotQuotable
+		return model.CartQuote{}, ErrNotQuotable
 	}
 	products := make([]int, len(lines))
 	for index, line := range lines {
 		id, err := ProductID(c.Domain, line.Offer)
 		if err != nil {
-			return offer.CartQuote{}, err
+			return model.CartQuote{}, err
 		}
 		products[index] = id
 	}
@@ -71,17 +71,17 @@ func (c Client) QuoteCart(ctx context.Context, lines []offer.CartLine, address o
 	// The Cart-Token Names the Cart and Spares the Nonce a Browser would Carry.
 	_, header, err := c.Sessions.SendSession(ctx, c.Domain, source.SessionRequest{Method: http.MethodGet, Target: base})
 	if err != nil {
-		return offer.CartQuote{}, err
+		return model.CartQuote{}, err
 	}
 	token := header.Get("Cart-Token")
 	if token == "" {
-		return offer.CartQuote{}, fmt.Errorf("%s answered no Cart-Token", c.Domain)
+		return model.CartQuote{}, fmt.Errorf("%s answered no Cart-Token", c.Domain)
 	}
 	session := http.Header{"Cart-Token": {token}}
 	for index, line := range lines {
 		body, _ := json.Marshal(map[string]int{"id": products[index], "quantity": line.Quantity})
 		if _, _, err := c.Sessions.SendSession(ctx, c.Domain, source.SessionRequest{Method: http.MethodPost, Target: base + "/add-item", Body: body, Header: session}); err != nil {
-			return offer.CartQuote{}, fmt.Errorf("add %s: %w", line.Offer.ID, err)
+			return model.CartQuote{}, fmt.Errorf("add %s: %w", line.Offer.ID, err)
 		}
 	}
 	body, _ := json.Marshal(map[string]any{"shipping_address": map[string]string{
@@ -89,27 +89,27 @@ func (c Client) QuoteCart(ctx context.Context, lines []offer.CartLine, address o
 	}})
 	data, _, err := c.Sessions.SendSession(ctx, c.Domain, source.SessionRequest{Method: http.MethodPost, Target: base + "/update-customer", Body: body, Header: session})
 	if err != nil {
-		return offer.CartQuote{}, err
+		return model.CartQuote{}, err
 	}
 	var cart cartReply
 	if err := json.Unmarshal(data, &cart); err != nil {
-		return offer.CartQuote{}, fmt.Errorf("decode cart %s: %w", c.Domain, err)
+		return model.CartQuote{}, fmt.Errorf("decode cart %s: %w", c.Domain, err)
 	}
 	return readQuote(cart, lines, products)
 }
 
-func readQuote(cart cartReply, lines []offer.CartLine, products []int) (offer.CartQuote, error) {
+func readQuote(cart cartReply, lines []model.CartLine, products []int) (model.CartQuote, error) {
 	minor := cart.Totals.MinorUnit
-	quote := offer.CartQuote{Currency: cart.Totals.Currency, PaymentMethods: cart.PaymentMethods}
+	quote := model.CartQuote{Currency: cart.Totals.Currency, PaymentMethods: cart.PaymentMethods}
 	var err error
 	if quote.Items, err = formatAmount(cart.Totals.Items, minor); err != nil {
-		return offer.CartQuote{}, err
+		return model.CartQuote{}, err
 	}
 	if quote.Shipping, err = formatAmount(cart.Totals.Shipping, minor); err != nil {
-		return offer.CartQuote{}, err
+		return model.CartQuote{}, err
 	}
 	if quote.Total, err = formatAmount(cart.Totals.Total, minor); err != nil {
-		return offer.CartQuote{}, err
+		return model.CartQuote{}, err
 	}
 	wanted := map[int]int{}
 	for index, line := range lines {
@@ -117,7 +117,7 @@ func readQuote(cart cartReply, lines []offer.CartLine, products []int) (offer.Ca
 	}
 	held := map[int]int{}
 	for index, line := range lines {
-		echo := offer.QuoteLine{OfferID: line.Offer.ID, Quantity: line.Quantity}
+		echo := model.QuoteLine{OfferID: line.Offer.ID, Quantity: line.Quantity}
 		for _, item := range cart.Items {
 			if item.ID == products[index] {
 				held[item.ID] = item.Quantity
@@ -137,7 +137,7 @@ func readQuote(cart cartReply, lines []offer.CartLine, products []int) (offer.Ca
 	for _, pack := range cart.Packages {
 		for _, rate := range pack.Rates {
 			price, _ := formatAmount(rate.Price, minor)
-			quote.ShippingRates = append(quote.ShippingRates, offer.ShippingRate{ID: rate.ID, Name: html.UnescapeString(rate.Name), Price: price, Selected: rate.Selected})
+			quote.ShippingRates = append(quote.ShippingRates, model.ShippingRate{ID: rate.ID, Name: html.UnescapeString(rate.Name), Price: price, Selected: rate.Selected})
 		}
 	}
 	for _, notice := range cart.Errors {
@@ -157,7 +157,7 @@ func formatAmount(value string, minor int) (string, error) {
 // ProductID Reads the Product a Store's own Offer Names. An Aggregator's Offer
 // Names its own Record, and a Variable Product Needs a Variation this Catalog
 // does not Keep, so both are Refused.
-func ProductID(domain string, item offer.Offer) (int, error) {
+func ProductID(domain string, item model.Offer) (int, error) {
 	if item.Source != domain || item.VariantID == "" {
 		return 0, ErrNotQuotable
 	}

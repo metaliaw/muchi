@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
 // SourceFetcher Reads Storefront Pages and https://shopify.dev/docs/api/ajax/reference/product Responses.
@@ -26,7 +26,7 @@ type Client struct {
 	Sessions SessionSender
 }
 
-func (c Client) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer.Offer, error) {
+func (c Client) FindOffers(ctx context.Context, query model.CardQuery) ([]model.Offer, error) {
 	name := query.Name
 	if strings.TrimSpace(name) == "" {
 		return nil, errors.New("empty card name")
@@ -35,7 +35,7 @@ func (c Client) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer.
 	if err != nil {
 		return nil, err
 	}
-	items := make([]offer.Offer, 0)
+	items := make([]model.Offer, 0)
 	if len(links) == 0 {
 		return items, nil
 	}
@@ -57,7 +57,7 @@ func (c Client) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer.
 		}
 		items = append(items, offers...)
 	}
-	return offer.DeduplicateOffers(items), nil
+	return model.DeduplicateOffers(items), nil
 }
 
 func (c Client) fetchPage(ctx context.Context, path string) ([]byte, error) {
@@ -97,41 +97,41 @@ func (c Client) readProduct(ctx context.Context, path string) (productReply, err
 }
 
 // CheckStock Reads the Requested Variant, including Variants that Sold Out.
-func (c Client) CheckStock(ctx context.Context, item offer.Offer) (offer.StockReading, error) {
+func (c Client) CheckStock(ctx context.Context, item model.Offer) (model.StockReading, error) {
 	link, err := url.Parse(item.URL)
 	if err != nil {
-		return offer.ReadStock("unknown"), err
+		return model.ReadStock("unknown"), err
 	}
 	path := productPath(link, c.Domain)
 	if path == "" {
-		return offer.ReadStock("unknown"), errors.New("invalid Shopify product URL")
+		return model.ReadStock("unknown"), errors.New("invalid Shopify product URL")
 	}
 	variant := link.Query().Get("variant")
 	if variant == "" {
 		variant = item.VariantID
 	}
 	if variant == "" {
-		return offer.ReadStock("unknown"), nil
+		return model.ReadStock("unknown"), nil
 	}
 	product, err := c.readProduct(ctx, path)
 	if err != nil {
-		return offer.ReadStock("unknown"), err
+		return model.ReadStock("unknown"), err
 	}
 	for _, candidate := range product.Variants {
 		if strconv.FormatInt(candidate.ID, 10) != variant {
 			continue
 		}
 		if !candidate.Available {
-			return offer.CountStock("unavailable", 0), nil
+			return model.CountStock("unavailable", 0), nil
 		}
 		// The Ajax Product Answers yes or no; the Page Counts. A Buyer Adding
 		// Copies Needs the Number, so the Page is Read once the Answer is yes.
 		if units := c.countUnits(ctx, path, variant); units != nil && *units > 0 {
-			return offer.CountStock("available", *units), nil
+			return model.CountStock("available", *units), nil
 		}
-		return offer.ReadStock("available"), nil
+		return model.ReadStock("available"), nil
 	}
-	return offer.ReadStock("unknown"), nil
+	return model.ReadStock("unknown"), nil
 }
 
 // countUnits Reads the Storefront Page for the Count the Theme Prints. A Page

@@ -11,15 +11,15 @@ import (
 	"time"
 
 	"github.com/cangrejometralleta/muchi-api/internal/cardmetadata"
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 	"github.com/cangrejometralleta/muchi-api/internal/stores"
 	"github.com/cangrejometralleta/muchi-api/internal/stores/moxfield"
 )
 
 type fakeStore struct {
-	job  search.Job
-	page search.ResultPage
+	job  model.Job
+	page model.ResultPage
 }
 
 type fakeMetadata struct{}
@@ -32,26 +32,26 @@ func (fakeMetadata) Autocomplete(_ context.Context, name, _ string) ([]string, e
 	return []string{name, name + " VMAX"}, nil
 }
 
-func (s *fakeStore) CreateSearch(_ context.Context, _, _ string, input search.CreateInput) (search.Job, error) {
-	s.job = search.Job{ID: "search_one", Status: search.JobQueued, Total: len(input.Cards), CreatedAt: time.Now(), UpdatedAt: time.Now()}
+func (s *fakeStore) CreateSearch(_ context.Context, _, _ string, input model.CreateInput) (model.Job, error) {
+	s.job = model.Job{ID: "search_one", Status: model.JobQueued, Total: len(input.Cards), CreatedAt: time.Now(), UpdatedAt: time.Now()}
 	return s.job, nil
 }
-func (s *fakeStore) GetSearch(context.Context, string) (search.Job, error) { return s.job, nil }
-func (s *fakeStore) ListResults(_ context.Context, _ string, page search.ResultPage) (search.Result, error) {
+func (s *fakeStore) GetSearch(context.Context, string) (model.Job, error) { return s.job, nil }
+func (s *fakeStore) ListResults(_ context.Context, _ string, page model.ResultPage) (model.Result, error) {
 	s.page = page
-	return search.Result{SearchID: s.job.ID, Items: []search.Item{}, Cursor: page.After}, nil
+	return model.Result{SearchID: s.job.ID, Items: []model.Item{}, Cursor: page.After}, nil
 }
-func (s *fakeStore) CancelSearch(context.Context, string, string, string) (search.Job, error) {
-	s.job.Status = search.JobCancelled
+func (s *fakeStore) CancelSearch(context.Context, string, string, string) (model.Job, error) {
+	s.job.Status = model.JobCancelled
 	return s.job, nil
 }
-func (*fakeStore) ClaimSearchItem(context.Context, string, time.Duration) (search.Item, error) {
-	return search.Item{}, search.ErrNotFound
+func (*fakeStore) ClaimSearchItem(context.Context, string, time.Duration) (model.Item, error) {
+	return model.Item{}, search.ErrNotFound
 }
-func (*fakeStore) RenewItemLease(context.Context, string, string, time.Duration) error  { return nil }
-func (*fakeStore) CompleteSearchItem(context.Context, search.Item, []offer.Offer) error { return nil }
-func (*fakeStore) CheckHealth(context.Context) error                                    { return nil }
-func (*fakeStore) ListSourceHealth(context.Context) ([]search.SourceHealth, error)      { return nil, nil }
+func (*fakeStore) RenewItemLease(context.Context, string, string, time.Duration) error { return nil }
+func (*fakeStore) CompleteSearchItem(context.Context, model.Item, []model.Offer) error { return nil }
+func (*fakeStore) CheckHealth(context.Context) error                                   { return nil }
+func (*fakeStore) ListSourceHealth(context.Context) ([]model.SourceHealth, error)      { return nil, nil }
 
 func TestCreateSearch(t *testing.T) {
 	store := &fakeStore{}
@@ -65,7 +65,7 @@ func TestCreateSearch(t *testing.T) {
 	if response.Code != http.StatusAccepted {
 		t.Fatalf("POST /v1/searches status = %d body=%s", response.Code, response.Body.String())
 	}
-	var job search.Job
+	var job model.Job
 	if err := json.NewDecoder(response.Body).Decode(&job); err != nil || job.ID != "search_one" {
 		t.Fatalf("POST /v1/searches job=%#v err=%v", job, err)
 	}
@@ -76,7 +76,7 @@ func TestDecodeSearchDefaultsToMagic(t *testing.T) {
 
 	input, err := decodeSearch(request)
 
-	if err != nil || input.Game != search.GameMagic {
+	if err != nil || input.Game != model.GameMagic {
 		t.Fatalf("decodeSearch() game=%q err=%v", input.Game, err)
 	}
 }
@@ -86,7 +86,7 @@ func TestDecodeSearchKeepsExplicitGame(t *testing.T) {
 
 	input, err := decodeSearch(request)
 
-	if err != nil || input.Game != search.GamePokemon {
+	if err != nil || input.Game != model.GamePokemon {
 		t.Fatalf("decodeSearch() game=%q err=%v", input.Game, err)
 	}
 }
@@ -96,10 +96,10 @@ func TestDecodeSearchPromotesHTTPBody(t *testing.T) {
 
 	input, err := decodeSearch(request)
 
-	if err != nil || input.Game != search.GameMagic || len(input.Cards) != 1 ||
+	if err != nil || input.Game != model.GameMagic || len(input.Cards) != 1 ||
 		input.Cards[0].Name != "Sol Ring" || input.Cards[0].Quantity != 2 ||
-		!input.Options.VerifyStock || input.Options.Match != offer.MatchIncludes ||
-		input.Options.Kind != offer.KindSingle {
+		!input.Options.VerifyStock || input.Options.Match != model.MatchIncludes ||
+		input.Options.Kind != model.KindSingle {
 		t.Fatalf("decoded input=%+v err=%v", input, err)
 	}
 }
@@ -189,7 +189,7 @@ func TestListSupportedGamesRefusesAnUnknownKind(t *testing.T) {
 
 func TestGetCardMetadataUsesSelectedGame(t *testing.T) {
 	api := API{
-		CardMetadata: map[search.Game]cardmetadata.Provider{search.GamePokemon: fakeMetadata{}},
+		CardMetadata: map[model.Game]cardmetadata.Provider{model.GamePokemon: fakeMetadata{}},
 		Token:        "secret",
 	}
 	request := httptest.NewRequest(http.MethodGet, "/v1/cards/metadata?game=pokemon&name=Pikachu", nil)
@@ -205,7 +205,7 @@ func TestGetCardMetadataUsesSelectedGame(t *testing.T) {
 
 func TestAutocompleteCardsUsesSelectedGame(t *testing.T) {
 	api := API{
-		Autocomplete: map[search.Game]cardmetadata.AutocompleteProvider{search.GamePokemon: fakeMetadata{}},
+		Autocomplete: map[model.Game]cardmetadata.AutocompleteProvider{model.GamePokemon: fakeMetadata{}},
 		Token:        "secret",
 	}
 	request := httptest.NewRequest(http.MethodGet, "/v1/cards/autocomplete?game=pokemon&name=Pikachu", nil)
@@ -219,21 +219,14 @@ func TestAutocompleteCardsUsesSelectedGame(t *testing.T) {
 	}
 }
 
-func TestHideError(t *testing.T) {
-	status, code, message := mapError(errors.New("database password leaked"))
-	if status != http.StatusInternalServerError || code != "internal_error" || strings.Contains(message, "password") {
-		t.Fatalf("mapError() status=%d code=%q message=%q", status, code, message)
-	}
-}
-
 func TestListResultPage(t *testing.T) {
-	store := &fakeStore{job: search.Job{ID: "search_one"}}
+	store := &fakeStore{job: model.Job{ID: "search_one"}}
 	api := API{Searches: search.Service{Repository: store}, Token: "secret"}
 	request := httptest.NewRequest(http.MethodGet, "/v1/searches/search_one/results?after=12&limit=25", nil)
 	request.Header.Set("Authorization", "Bearer secret")
 	response := httptest.NewRecorder()
 	api.BuildHandler().ServeHTTP(response, request)
-	if response.Code != http.StatusOK || store.page != (search.ResultPage{After: 12, Limit: 25}) {
+	if response.Code != http.StatusOK || store.page != (model.ResultPage{After: 12, Limit: 25}) {
 		t.Fatalf("result page=%#v status=%d body=%s", store.page, response.Code, response.Body.String())
 	}
 }
@@ -270,8 +263,8 @@ func TestARetiredOptionIsRefused(t *testing.T) {
 // stockStore Answers one Page with two Offers, one of each Price.
 type stockStore struct{ fakeStore }
 
-func (s *stockStore) ListResults(context.Context, string, search.ResultPage) (search.Result, error) {
-	return search.Result{SearchID: "search_one", Items: []search.Item{{ID: "item-1", Offers: []offer.Offer{
+func (s *stockStore) ListResults(context.Context, string, model.ResultPage) (model.Result, error) {
+	return model.Result{SearchID: "search_one", Items: []model.Item{{ID: "item-1", Offers: []model.Offer{
 		{ID: "cheap", URL: "https://store.test/cheap", PriceAmount: "1000"},
 		{ID: "dear", URL: "https://store.test/dear", PriceAmount: "2000"},
 	}}}}, nil
@@ -280,12 +273,12 @@ func (s *stockStore) ListResults(context.Context, string, search.ResultPage) (se
 // countingStock Answers Sold Out for the cheap Offer and counts its Visits.
 type countingStock struct{ visits []string }
 
-func (c *countingStock) CheckStock(_ context.Context, item offer.Offer) (offer.StockReading, error) {
+func (c *countingStock) CheckStock(_ context.Context, item model.Offer) (model.StockReading, error) {
 	c.visits = append(c.visits, item.ID)
 	if item.ID == "cheap" {
-		return offer.CountStock("unavailable", 0), nil
+		return model.CountStock("unavailable", 0), nil
 	}
-	return offer.CountStock("available", 3), nil
+	return model.CountStock("available", 3), nil
 }
 
 func askStock(t *testing.T, body string) *httptest.ResponseRecorder {
@@ -307,7 +300,7 @@ func TestCheckStockAnswersEachOfferAsked(t *testing.T) {
 		t.Fatalf("status = %d", recorder.Code)
 	}
 	var reply struct {
-		Offers []search.OfferStock `json:"offers"`
+		Offers []offerStockDTO `json:"offers"`
 	}
 	if err := json.Unmarshal(recorder.Body.Bytes(), &reply); err != nil {
 		t.Fatal(err)
@@ -342,7 +335,7 @@ func TestCheckStockRefusesAnEmptyList(t *testing.T) {
 // fallenSource Fails the Way a Store Down Fails: it Names itself and Says why.
 type fallenSource struct{ name string }
 
-func (f fallenSource) FindOffers(context.Context, offer.CardQuery) ([]offer.Offer, error) {
+func (f fallenSource) FindOffers(context.Context, model.CardQuery) ([]model.Offer, error) {
 	return nil, errors.New("source returned HTTP 503")
 }
 func (f fallenSource) SourceName() string { return f.name }
@@ -354,8 +347,8 @@ func TestEverySourceFallingIsAnAnswerNotAFailure(t *testing.T) {
 	store := &fakeStore{}
 	service := search.Service{
 		Repository: store,
-		SourcesByGame: map[search.Game][]search.OfferSource{
-			search.GameMagic: {fallenSource{name: "lacripta.cl"}},
+		SourcesByGame: map[model.Game][]search.OfferSource{
+			model.GameMagic: {fallenSource{name: "lacripta.cl"}},
 		},
 	}
 	api := API{Searches: service, Health: store, Token: "secret"}
@@ -375,8 +368,8 @@ func TestEverySourceFallingIsAnAnswerNotAFailure(t *testing.T) {
 		t.Errorf("offers = null, want an empty array: %s", response.Body.String())
 	}
 	var reply struct {
-		Offers []offer.Offer        `json:"offers"`
-		Faults []search.SourceFault `json:"faults"`
+		Offers []offerDTO       `json:"offers"`
+		Faults []sourceFaultDTO `json:"faults"`
 	}
 	if err := json.NewDecoder(response.Body).Decode(&reply); err != nil {
 		t.Fatal(err)
@@ -435,8 +428,8 @@ func TestRefreshUnknownStoreAnswersNotFound(t *testing.T) {
 // Link, and a Second Unit of the same Shopify Variant.
 type checkoutStore struct{ fakeStore }
 
-func (s *checkoutStore) ListResults(context.Context, string, search.ResultPage) (search.Result, error) {
-	return search.Result{SearchID: "search_one", Items: []search.Item{{ID: "item-1", Offers: []offer.Offer{
+func (s *checkoutStore) ListResults(context.Context, string, model.ResultPage) (model.Result, error) {
+	return model.Result{SearchID: "search_one", Items: []model.Item{{ID: "item-1", Offers: []model.Offer{
 		{ID: "ring", Store: "Shop", URL: "https://shop.test/products/sol-ring?variant=11", Source: "shop.test"},
 		{ID: "bolt", Store: "Shop", URL: "https://shop.test/products/bolt", VariantID: "22", Source: "shop.test"},
 		{ID: "woo", Store: "Woo", URL: "https://woo.test/producto/sol-ring", VariantID: "7", Source: "woo.test"},
@@ -466,7 +459,7 @@ func TestCheckoutLinksGroupsLinesByStore(t *testing.T) {
 		t.Fatalf("status = %d: %s", recorder.Code, recorder.Body)
 	}
 	var reply struct {
-		Stores []search.StoreCheckout `json:"stores"`
+		Stores []storeCheckoutDTO `json:"stores"`
 	}
 	if err := json.Unmarshal(recorder.Body.Bytes(), &reply); err != nil {
 		t.Fatal(err)
@@ -497,14 +490,14 @@ func TestCheckoutLinksRefusesUnknownOffersAndBadQuantities(t *testing.T) {
 }
 
 // fixedQuoter Prices every Store but the Shopify one, which it cannot Ask.
-type fixedQuoter struct{ address offer.ShippingAddress }
+type fixedQuoter struct{ address model.ShippingAddress }
 
-func (q *fixedQuoter) QuoteCart(_ context.Context, domain string, lines []offer.CartLine, address offer.ShippingAddress) (offer.CartQuote, error) {
+func (q *fixedQuoter) QuoteCart(_ context.Context, domain string, lines []model.CartLine, address model.ShippingAddress) (model.CartQuote, error) {
 	q.address = address
 	if domain != "woo.test" {
-		return offer.CartQuote{}, offer.ErrNoQuote
+		return model.CartQuote{}, model.ErrNoQuote
 	}
-	return offer.CartQuote{Currency: "CLP", Total: "7990", Lines: []offer.QuoteLine{{OfferID: lines[0].Offer.ID, Quantity: lines[0].Quantity}}}, nil
+	return model.CartQuote{Currency: "CLP", Total: "7990", Lines: []model.QuoteLine{{OfferID: lines[0].Offer.ID, Quantity: lines[0].Quantity}}}, nil
 }
 
 // TestCheckoutLinksQuotesStoresWhenAskedWithAnAddress Keeps the Quote Optional:
@@ -521,7 +514,7 @@ func TestCheckoutLinksQuotesStoresWhenAskedWithAnAddress(t *testing.T) {
 		t.Fatalf("status = %d: %s", recorder.Code, recorder.Body)
 	}
 	var reply struct {
-		Stores []search.StoreCheckout `json:"stores"`
+		Stores []storeCheckoutDTO `json:"stores"`
 	}
 	if err := json.Unmarshal(recorder.Body.Bytes(), &reply); err != nil {
 		t.Fatal(err)

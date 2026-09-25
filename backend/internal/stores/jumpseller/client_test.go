@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
 type fixtureFetcher func(string) ([]byte, error)
@@ -69,7 +69,7 @@ func TestPaginatedSearch(t *testing.T) {
 		}
 
 	})}
-	items, err := client.FindOffers(context.Background(), offer.CardQuery{Name: "Sol Ring"})
+	items, err := client.FindOffers(context.Background(), model.CardQuery{Name: "Sol Ring"})
 	if err != nil || len(items) != 1 || calls != 1 {
 		t.Fatalf("items=%v calls=%d err=%v", items, calls, err)
 	}
@@ -86,18 +86,18 @@ func TestVariantStock(t *testing.T) {
 		t.Fatal(err)
 	}
 	client := Client{Domain: "www.magic4ever.cl", Fetcher: fixtureFetcher(func(string) ([]byte, error) { return data, nil })}
-	reading, err := client.CheckStock(context.Background(), offer.Offer{URL: "https://www.magic4ever.cl/sol-ring-25?variant_id=120640277"})
+	reading, err := client.CheckStock(context.Background(), model.Offer{URL: "https://www.magic4ever.cl/sol-ring-25?variant_id=120640277"})
 	if err != nil || reading.Status != "unavailable" {
 		t.Fatalf("status=%s err=%v", reading.Status, err)
 	}
 	if reading.Quantity == nil || *reading.Quantity != 0 {
 		t.Fatalf("a sold out Jumpseller variant counts zero units, got %v", reading.Quantity)
 	}
-	reading, err = client.CheckStock(context.Background(), offer.Offer{URL: "https://www.magic4ever.cl/sol-ring-25?variant_id=99"})
+	reading, err = client.CheckStock(context.Background(), model.Offer{URL: "https://www.magic4ever.cl/sol-ring-25?variant_id=99"})
 	if err != nil || reading.Status != "unknown" || reading.Quantity != nil {
 		t.Fatalf("status=%s quantity=%v err=%v", reading.Status, reading.Quantity, err)
 	}
-	if _, err = client.CheckStock(context.Background(), offer.Offer{URL: "https://evil.test/sol-ring"}); err == nil {
+	if _, err = client.CheckStock(context.Background(), model.Offer{URL: "https://evil.test/sol-ring"}); err == nil {
 		t.Fatal("foreign URL accepted")
 	}
 }
@@ -114,13 +114,13 @@ func TestInvalidData(t *testing.T) {
 	}
 	failure := errors.New("HTTP 429")
 	client := Client{Fetcher: fixtureFetcher(func(string) ([]byte, error) { return nil, failure })}
-	if _, err := client.FindOffers(context.Background(), offer.CardQuery{Name: "Sol Ring"}); !errors.Is(err, failure) {
+	if _, err := client.FindOffers(context.Background(), model.CardQuery{Name: "Sol Ring"}); !errors.Is(err, failure) {
 		t.Fatalf("err=%v", err)
 	}
 	client.Fetcher = fixtureFetcher(func(string) ([]byte, error) {
 		return []byte(`{"products":[{"id":1,"name":"Other","permalink":"other"}]}`), nil
 	})
-	if _, err := client.FindOffers(context.Background(), offer.CardQuery{Name: "Sol Ring"}); err == nil {
+	if _, err := client.FindOffers(context.Background(), model.CardQuery{Name: "Sol Ring"}); err == nil {
 		t.Fatal("repeated page accepted")
 	}
 	for _, pair := range [][3]string{{"1000", "100", "900"}, {"12.50", "0.25", "12.25"}} {
@@ -147,7 +147,7 @@ func TestMixedVariants(t *testing.T) {
 	available.Price = "2400.50"
 	available.Discount = "100.25"
 	variants = append(variants, available)
-	items, err := buildVariants(offer.Offer{URL: "https://www.magic4ever.cl/sol-ring-25", Source: "www.magic4ever.cl", PriceCurrency: currency}, form, variants)
+	items, err := buildVariants(model.Offer{URL: "https://www.magic4ever.cl/sol-ring-25", Source: "www.magic4ever.cl", PriceCurrency: currency}, form, variants)
 	if err != nil || len(items) != 2 {
 		t.Fatalf("items=%v err=%v", items, err)
 	}
@@ -155,7 +155,7 @@ func TestMixedVariants(t *testing.T) {
 		t.Fatalf("items=%+v", items)
 	}
 	available.Status = "disabled"
-	items, err = buildVariants(offer.Offer{}, form, []variantReply{available})
+	items, err = buildVariants(model.Offer{}, form, []variantReply{available})
 	if err != nil || items[0].StockStatus != "unavailable" {
 		t.Fatalf("items=%v err=%v", items, err)
 	}
@@ -165,7 +165,7 @@ func TestCancelledSearch(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	client := Client{Fetcher: fixtureFetcher(func(string) ([]byte, error) { t.Fatal("request after cancellation"); return nil, nil })}
-	if _, err := client.FindOffers(ctx, offer.CardQuery{Name: "Sol Ring"}); !errors.Is(err, context.Canceled) {
+	if _, err := client.FindOffers(ctx, model.CardQuery{Name: "Sol Ring"}); !errors.Is(err, context.Canceled) {
 		t.Fatalf("err=%v", err)
 	}
 }

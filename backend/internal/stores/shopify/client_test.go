@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
 type fixtureFetcher func(string) ([]byte, error)
@@ -40,7 +40,7 @@ func TestFindOffers(t *testing.T) {
 		}
 		return nil, errors.New("unexpected request: " + target)
 	})}
-	items, err := client.FindOffers(context.Background(), offer.CardQuery{Name: "Sol Ring"})
+	items, err := client.FindOffers(context.Background(), model.CardQuery{Name: "Sol Ring"})
 	if err != nil || len(items) != 2 {
 		t.Fatalf("items=%+v err=%v", items, err)
 	}
@@ -53,7 +53,7 @@ func TestFindOffers(t *testing.T) {
 		id, status string
 		units      int
 	}{{"10", "available", -1}, {"11", "unavailable", 0}, {"99", "unknown", -1}, {"", "unknown", -1}} {
-		reading, err := client.CheckStock(context.Background(), offer.Offer{URL: "https://cards.test/products/ring?variant=" + test.id})
+		reading, err := client.CheckStock(context.Background(), model.Offer{URL: "https://cards.test/products/ring?variant=" + test.id})
 		counted := -1
 		if reading.Quantity != nil {
 			counted = *reading.Quantity
@@ -84,26 +84,26 @@ func TestInvalidResponses(t *testing.T) {
 					return []byte(test.product), nil
 				}
 			})}
-			if _, err := client.FindOffers(context.Background(), offer.CardQuery{Name: "Sol Ring"}); err == nil {
+			if _, err := client.FindOffers(context.Background(), model.CardQuery{Name: "Sol Ring"}); err == nil {
 				t.Fatal("expected error")
 			}
 		})
 	}
 	failure := errors.New("HTTP 429")
 	client := Client{Domain: "cards.test", Fetcher: fixtureFetcher(func(string) ([]byte, error) { return nil, failure })}
-	if _, err := client.FindOffers(context.Background(), offer.CardQuery{Name: "Sol Ring"}); !errors.Is(err, failure) {
+	if _, err := client.FindOffers(context.Background(), model.CardQuery{Name: "Sol Ring"}); !errors.Is(err, failure) {
 		t.Fatalf("err=%v", err)
 	}
 }
 
 func TestMatchCard(t *testing.T) {
 	for _, title := range []string{"Sol Ring", "Sol Ring (2683) [Secret Lair Drop Series]", "Sol Ring - 212 - uncommon", "Sol Ring (0356) [FIC-356]"} {
-		if !offer.MatchesCard(title, "Sol Ring") {
+		if !model.MatchesCard(title, "Sol Ring") {
 			t.Errorf("rejected %s", title)
 		}
 	}
 	for _, title := range []string{"Sol Ring Token", "Sol Ringlet", "Other Sol Ring"} {
-		if offer.MatchesCard(title, "Sol Ring") {
+		if model.MatchesCard(title, "Sol Ring") {
 			t.Errorf("accepted %s", title)
 		}
 	}
@@ -128,7 +128,7 @@ func TestOfferKeepsTheStoreTitle(t *testing.T) {
 		}
 		return nil, errors.New("unexpected request: " + target)
 	})}
-	items, err := client.FindOffers(context.Background(), offer.CardQuery{Name: "Sol Ring"})
+	items, err := client.FindOffers(context.Background(), model.CardQuery{Name: "Sol Ring"})
 	if err != nil || len(items) == 0 {
 		t.Fatalf("items=%d err=%v", len(items), err)
 	}

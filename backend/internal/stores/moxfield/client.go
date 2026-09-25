@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
 // SourceFetcher Reads Published Inventory through the Shared Traffic Gate.
@@ -20,8 +20,8 @@ type SourceFetcher interface {
 }
 
 type InventoryCache interface {
-	LoadOffers(context.Context, string) ([]offer.Offer, bool, error)
-	SaveOffers(context.Context, string, []offer.Offer, time.Duration) error
+	LoadOffers(context.Context, string) ([]model.Offer, bool, error)
+	SaveOffers(context.Context, string, []model.Offer, time.Duration) error
 	DropOffers(context.Context, string) error
 }
 
@@ -54,7 +54,7 @@ func ExtractListID(value string) (string, error) {
 	return parts[1], nil
 }
 
-func (c *Client) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer.Offer, error) {
+func (c *Client) FindOffers(ctx context.Context, query model.CardQuery) ([]model.Offer, error) {
 	id, err := ExtractListID(c.ListURL)
 	if err != nil {
 		return nil, err
@@ -63,7 +63,7 @@ func (c *Client) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer
 	if err != nil {
 		return nil, fmt.Errorf("Moxfield list %s (%s): %w", c.Label, id, err)
 	}
-	result := make([]offer.Offer, 0)
+	result := make([]model.Offer, 0)
 	for _, item := range items {
 		if query.AcceptsTitle(item.CardName) {
 			result = append(result, item)
@@ -72,7 +72,7 @@ func (c *Client) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer
 	return result, nil
 }
 
-func (c *Client) loadInventory(ctx context.Context, id string) ([]offer.Offer, error) {
+func (c *Client) loadInventory(ctx context.Context, id string) ([]model.Offer, error) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	if err := ctx.Err(); err != nil {
@@ -96,7 +96,7 @@ func (c *Client) loadInventory(ctx context.Context, id string) ([]offer.Offer, e
 	return items, nil
 }
 
-func (c *Client) fetchInventory(ctx context.Context, id string) ([]offer.Offer, error) {
+func (c *Client) fetchInventory(ctx context.Context, id string) ([]model.Offer, error) {
 	data, err := c.Fetcher.FetchSource(ctx, "api2.moxfield.com", "https://api2.moxfield.com/v3/decks/all/"+id)
 	if err != nil {
 		return nil, err

@@ -11,7 +11,7 @@ import (
 	"github.com/cangrejometralleta/muchi-api/internal/stores"
 	"github.com/cangrejometralleta/muchi-api/internal/stores/shopify"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
 func TestLiveSolRing(t *testing.T) {
@@ -28,7 +28,7 @@ func TestLiveSolRing(t *testing.T) {
 				ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 				defer cancel()
 				client := shopify.Client{Domain: domain, Name: store.Name, Fetcher: source.Client{HTTP: &http.Client{Timeout: 15 * time.Second}, MaxAttempts: 2, BaseDelay: time.Second, UserAgent: "muchi-api/1.0"}}
-				items, err := client.FindOffers(ctx, offer.CardQuery{Name: "Sol Ring"})
+				items, err := client.FindOffers(ctx, model.CardQuery{Name: "Sol Ring"})
 				if err != nil || len(items) == 0 {
 					t.Fatalf("offers=%d err=%v", len(items), err)
 				}
@@ -60,7 +60,7 @@ func TestLiveOasisGames(t *testing.T) {
 	}
 	for _, name := range []string{"Sol Ring", "Pikachu ex"} {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
-		items, err := client.FindOffers(ctx, offer.CardQuery{Name: name})
+		items, err := client.FindOffers(ctx, model.CardQuery{Name: name})
 		cancel()
 		if err != nil || len(items) == 0 {
 			t.Fatalf("card=%q offers=%d err=%v", name, len(items), err)

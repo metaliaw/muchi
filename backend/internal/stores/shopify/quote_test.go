@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 	"github.com/cangrejometralleta/muchi-api/internal/source"
 )
 
@@ -28,9 +28,9 @@ func (c *cartSessions) SendSession(_ context.Context, _ string, request source.S
 func TestQuoteCartReadsCartAndCheapestRate(t *testing.T) {
 	sessions := &cartSessions{}
 	client := Client{Domain: "shop.test", Sessions: sessions}
-	ring := offer.Offer{ID: "ring", URL: "https://shop.test/products/sol-ring?variant=11"}
-	bolt := offer.Offer{ID: "bolt", Source: "shop.test", VariantID: "22"}
-	quote, err := client.QuoteCart(context.Background(), []offer.CartLine{{Offer: ring, Quantity: 1}, {Offer: ring, Quantity: 1}, {Offer: bolt, Quantity: 3}}, offer.ShippingAddress{Country: "CL", Region: "RM"})
+	ring := model.Offer{ID: "ring", URL: "https://shop.test/products/sol-ring?variant=11"}
+	bolt := model.Offer{ID: "bolt", Source: "shop.test", VariantID: "22"}
+	quote, err := client.QuoteCart(context.Background(), []model.CartLine{{Offer: ring, Quantity: 1}, {Offer: ring, Quantity: 1}, {Offer: bolt, Quantity: 3}}, model.ShippingAddress{Country: "CL", Region: "RM"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,8 +50,8 @@ func TestQuoteCartReadsCartAndCheapestRate(t *testing.T) {
 
 func TestQuoteCartRefusesAggregatorKeys(t *testing.T) {
 	sessions := &cartSessions{}
-	item := offer.Offer{URL: "https://shop.test/products/bolt", VariantID: "99", Source: "scry.cl"}
-	if _, err := (Client{Domain: "shop.test", Sessions: sessions}).QuoteCart(context.Background(), []offer.CartLine{{Offer: item, Quantity: 1}}, offer.ShippingAddress{Country: "CL"}); err != offer.ErrNoQuote || len(sessions.calls) != 0 {
+	item := model.Offer{URL: "https://shop.test/products/bolt", VariantID: "99", Source: "scry.cl"}
+	if _, err := (Client{Domain: "shop.test", Sessions: sessions}).QuoteCart(context.Background(), []model.CartLine{{Offer: item, Quantity: 1}}, model.ShippingAddress{Country: "CL"}); err != model.ErrNoQuote || len(sessions.calls) != 0 {
 		t.Fatalf("err = %v calls = %d", err, len(sessions.calls))
 	}
 }

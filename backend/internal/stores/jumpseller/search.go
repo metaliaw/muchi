@@ -8,11 +8,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
 // findProducts Tracks Product IDs because Different Products May Share Permalinks.
-func (c Client) findProducts(ctx context.Context, query offer.CardQuery) ([]string, error) {
+func (c Client) findProducts(ctx context.Context, query model.CardQuery) ([]string, error) {
 	name := query.Name
 	seen := map[int64]bool{}
 	paths := make([]string, 0)

@@ -3,7 +3,7 @@ package httpapi
 import (
 	"net/http"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 )
 
@@ -25,31 +25,31 @@ type searchOptionsBody struct {
 	Kind        string `json:"kind"`
 }
 
-func decodeSearch(r *http.Request) (search.CreateInput, error) {
+func decodeSearch(r *http.Request) (model.CreateInput, error) {
 	var body createSearchBody
 	if err := decodeJSON(r, &body); err != nil {
-		return search.CreateInput{}, err
+		return model.CreateInput{}, err
 	}
-	if _, err := offer.ReadMatchMode(body.Options.Match); err != nil {
-		return search.CreateInput{}, search.ErrInvalid
+	if _, err := model.ReadMatchMode(body.Options.Match); err != nil {
+		return model.CreateInput{}, search.ErrInvalid
 	}
-	if _, err := offer.ReadProductKind(body.Options.Kind); err != nil {
-		return search.CreateInput{}, search.ErrInvalid
+	if _, err := model.ReadProductKind(body.Options.Kind); err != nil {
+		return model.CreateInput{}, search.ErrInvalid
 	}
-	input := search.CreateInput{
-		Game: search.Game(body.Game),
-		Options: search.Options{
+	input := model.CreateInput{
+		Game: model.Game(body.Game),
+		Options: model.Options{
 			VerifyStock: body.Options.VerifyStock,
-			Match:       offer.MatchMode(body.Options.Match),
-			Kind:        offer.ProductKind(body.Options.Kind),
+			Match:       model.MatchMode(body.Options.Match),
+			Kind:        model.ProductKind(body.Options.Kind),
 		},
-		Cards: make([]search.CardInput, 0, len(body.Cards)),
+		Cards: make([]model.CardInput, 0, len(body.Cards)),
 	}
 	if input.Game == "" {
-		input.Game = search.GameMagic
+		input.Game = model.GameMagic
 	}
 	for _, card := range body.Cards {
-		input.Cards = append(input.Cards, search.CardInput{Name: card.Name, Quantity: card.Quantity})
+		input.Cards = append(input.Cards, model.CardInput{Name: card.Name, Quantity: card.Quantity})
 	}
 	return input, nil
 }
@@ -62,23 +62,23 @@ type offerQuery struct {
 	Kind  string
 }
 
-func decodeOfferQuery(r *http.Request) (search.Game, offer.CardQuery, error) {
+func decodeOfferQuery(r *http.Request) (model.Game, model.CardQuery, error) {
 	values := r.URL.Query()
 	query := offerQuery{
 		Game: values.Get("game"), Name: values.Get("name"),
 		Match: values.Get("match"), Kind: values.Get("kind"),
 	}
-	game := search.Game(query.Game)
+	game := model.Game(query.Game)
 	if game == "" {
-		game = search.GameMagic
+		game = model.GameMagic
 	}
-	match, err := offer.ReadMatchMode(query.Match)
+	match, err := model.ReadMatchMode(query.Match)
 	if err != nil {
-		return "", offer.CardQuery{}, search.ErrInvalid
+		return "", model.CardQuery{}, search.ErrInvalid
 	}
-	kind, err := offer.ReadProductKind(query.Kind)
+	kind, err := model.ReadProductKind(query.Kind)
 	if err != nil {
-		return "", offer.CardQuery{}, search.ErrInvalid
+		return "", model.CardQuery{}, search.ErrInvalid
 	}
-	return game, offer.CardQuery{Name: query.Name, Match: match, Kind: kind}, nil
+	return game, model.CardQuery{Name: query.Name, Match: match, Kind: kind}, nil
 }

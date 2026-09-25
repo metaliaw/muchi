@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/cangrejometralleta/muchi-api/internal/cardmetadata"
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
 const catalogLimit = 24
@@ -67,7 +67,7 @@ type listing struct {
 	} `json:"user"`
 }
 
-func (c Client) Search(ctx context.Context, query offer.CardQuery) ([]offer.Offer, error) {
+func (c Client) Search(ctx context.Context, query model.CardQuery) ([]model.Offer, error) {
 	name := query.Name
 	base, err := url.Parse(c.BaseURL)
 	if err != nil || base.Host == "" || (base.Scheme != "https" && base.Scheme != "http") {
@@ -83,7 +83,7 @@ func (c Client) Search(ctx context.Context, query offer.CardQuery) ([]offer.Offe
 	if c.Game == "pokemon" && !query.Sealed() {
 		c.namePokemonFunctions(ctx, products)
 	}
-	items := make([]offer.Offer, 0)
+	items := make([]model.Offer, 0)
 	for _, product := range products {
 		if product.TCG != c.Game || product.Type != catalogType(query.Kind) || !query.AcceptsTitle(product.Name) {
 			continue
@@ -98,7 +98,7 @@ func (c Client) Search(ctx context.Context, query offer.CardQuery) ([]offer.Offe
 			}
 		}
 	}
-	return offer.DeduplicateOffers(items), nil
+	return model.DeduplicateOffers(items), nil
 }
 
 func (c Client) CardMetadata(ctx context.Context, request cardmetadata.Request) (cardmetadata.Metadata, error) {
@@ -176,8 +176,8 @@ func (c Client) matches(product catalogProduct, language string) bool {
 // catalogType Names the Catalog Type TCGMatch Files this Kind under. The Filter
 // Never Leaves: an Accessory Answers `tcg` as a List, and this Reader Wants a
 // String — Asking for everything Would Break the Decode.
-func catalogType(kind offer.ProductKind) string {
-	if kind == offer.KindSealed {
+func catalogType(kind model.ProductKind) string {
+	if kind == model.KindSealed {
 		return "sealed"
 	}
 	return "card"
@@ -213,9 +213,9 @@ func (c Client) readListings(ctx context.Context, base *url.URL, catalogID int64
 	return reply.Data, nil
 }
 
-func buildOffer(entry listing, product catalogProduct, game string, kind offer.ProductKind) (offer.Offer, bool) {
+func buildOffer(entry listing, product catalogProduct, game string, kind model.ProductKind) (model.Offer, bool) {
 	if !entry.IsActive || entry.Quantity < 1 || entry.Price < 1 || entry.ID == "" || entry.User.Name == "" || entry.TCG != game {
-		return offer.Offer{}, false
+		return model.Offer{}, false
 	}
 	finish := "nonfoil"
 	if entry.IsHoloReverse {
@@ -223,7 +223,7 @@ func buildOffer(entry listing, product catalogProduct, game string, kind offer.P
 	} else if entry.IsHolo {
 		finish = "holo"
 	}
-	return offer.Offer{
+	return model.Offer{
 		ID: "tcgmatch:" + entry.ID, VariantID: entry.ID, CardName: product.Name,
 		Store: entry.User.Name, PriceAmount: strconv.FormatInt(entry.Price, 10), PriceCurrency: "CLP",
 		URL: "https://tcgmatch.cl/producto/" + entry.ID, Image: product.Image, Source: "tcgmatch.cl", StockStatus: "available",

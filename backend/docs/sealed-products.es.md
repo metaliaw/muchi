@@ -26,7 +26,7 @@ Una carta suelta se agrupa por su nombre con la impresión soltada: `Winged
 Kuriboh`, `LDS3-EN100 "Winged Kuriboh" Common` y `Winged Kuriboh (PUR)` son la
 misma carta vendida por tres tiendas.
 
-Una caja no. `ReadSealedKey` en `internal/offer/offer.go` conserva **el título
+Una caja no. `ReadSealedKey` en `internal/model/offer.go` conserva **el título
 entero** y le antepone la edición:
 
 ```

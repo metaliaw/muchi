@@ -3,7 +3,7 @@ package moxfield_test
 import (
 	"context"
 	"encoding/json"
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 	"net/http"
 	"os"
 	"testing"
@@ -16,10 +16,10 @@ import (
 
 type measuredCache struct{ count, size int }
 
-func (c *measuredCache) LoadOffers(context.Context, string) ([]offer.Offer, bool, error) {
+func (c *measuredCache) LoadOffers(context.Context, string) ([]model.Offer, bool, error) {
 	return nil, false, nil
 }
-func (c *measuredCache) SaveOffers(_ context.Context, _ string, items []offer.Offer, _ time.Duration) error {
+func (c *measuredCache) SaveOffers(_ context.Context, _ string, items []model.Offer, _ time.Duration) error {
 	data, err := json.Marshal(items)
 	c.count, c.size = len(items), len(data)
 	return err
@@ -45,7 +45,7 @@ func TestPublicLists(t *testing.T) {
 			t.Run(list.Label, func(t *testing.T) {
 				cache := &measuredCache{}
 				client := moxfield.Client{Cache: cache, TTL: time.Minute, Fetcher: fetcher, StoreID: storeID, Store: store.Name, Label: list.Label, ListURL: list.URL, Rate: list.CLPPerCKUSD}
-				items, err := client.FindOffers(context.Background(), offer.CardQuery{Name: "Sol Ring"})
+				items, err := client.FindOffers(context.Background(), model.CardQuery{Name: "Sol Ring"})
 				if err != nil {
 					t.Fatal(err)
 				}

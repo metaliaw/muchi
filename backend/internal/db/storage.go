@@ -1,4 +1,5 @@
-package firestore
+// Package db Implements persistence operations with Firebase Firestore.
+package db
 
 import (
 	"context"
@@ -13,7 +14,7 @@ import (
 	"time"
 
 	firestorelib "cloud.google.com/go/firestore"
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 	"github.com/cangrejometralleta/muchi-api/internal/source"
 	"google.golang.org/api/iterator"
@@ -148,10 +149,10 @@ func OpenStore(ctx context.Context, projectID string, searchTTL time.Duration) (
 	return &Store{client: client, searchTTL: searchTTL}, nil
 }
 
-func (s *Store) CreateSearch(ctx context.Context, key, hash string, input search.CreateInput) (search.Job, error) {
+func (s *Store) CreateSearch(ctx context.Context, key, hash string, input model.CreateInput) (model.Job, error) {
 	ctx, cancel := boundContext(ctx)
 	defer cancel()
-	var job search.Job
+	var job model.Job
 	var created bool
 	err := s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
 		stored, found, err := s.readRequest(ctx, tx, "create", key)
@@ -175,39 +176,39 @@ func (s *Store) CreateSearch(ctx context.Context, key, hash string, input search
 	return job, s.createItems(ctx, job, input)
 }
 
-func (s *Store) GetSearch(ctx context.Context, id string) (search.Job, error) {
+func (s *Store) GetSearch(ctx context.Context, id string) (model.Job, error) {
 	ctx, cancel := boundContext(ctx)
 	defer cancel()
 	document, err := s.client.Collection("searches").Doc(id).Get(ctx)
 	if err != nil {
-		return search.Job{}, mapStoreError(err)
+		return model.Job{}, mapStoreError(err)
 	}
 	return decodeSearch(document)
 }
 
-func (s *Store) ListResults(ctx context.Context, id string, page search.ResultPage) (search.Result, error) {
+func (s *Store) ListResults(ctx context.Context, id string, page model.ResultPage) (model.Result, error) {
 	ctx, cancel := boundContext(ctx)
 	defer cancel()
 	document, err := s.client.Collection("searches").Doc(id).Get(ctx)
 	if err != nil {
-		return search.Result{}, mapStoreError(err)
+		return model.Result{}, mapStoreError(err)
 	}
 	var record searchRecord
 	if err := document.DataTo(&record); err != nil || record.ExpiresAt.Before(time.Now()) {
-		return search.Result{}, search.ErrNotFound
+		return model.Result{}, search.ErrNotFound
 	}
 	items, hasMore, err := s.loadResultPage(ctx, id, page)
 	cursor := page.After
 	if len(items) > 0 {
 		cursor = items[len(items)-1].Sequence
 	}
-	return search.Result{SearchID: id, Items: items, Cursor: cursor, HasMore: hasMore}, err
+	return model.Result{SearchID: id, Items: items, Cursor: cursor, HasMore: hasMore}, err
 }
 
-func (s *Store) CancelSearch(ctx context.Context, id, key, hash string) (search.Job, error) {
+func (s *Store) CancelSearch(ctx context.Context, id, key, hash string) (model.Job, error) {
 	ctx, cancel := boundContext(ctx)
 	defer cancel()
-	var job search.Job
+	var job model.Job
 	err := s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
 		stored, found, err := s.readRequest(ctx, tx, "cancel", key)
 		if err != nil {
@@ -229,7 +230,7 @@ func (s *Store) CancelSearch(ctx context.Context, id, key, hash string) (search.
 	return job, mapStoreError(err)
 }
 
-func (s *Store) ClaimSearchItem(ctx context.Context, owner string, lease time.Duration) (search.Item, error) {
+func (s *Store) ClaimSearchItem(ctx context.Context, owner string, lease time.Duration) (model.Item, error) {
 	ctx, cancel := boundContext(ctx)
 	defer cancel()
 	for attempt := 0; attempt <= maxClaimDiscards; attempt++ {
@@ -239,11 +240,11 @@ func (s *Store) ClaimSearchItem(ctx context.Context, owner string, lease time.Du
 		}
 		s.say().Warn("Claim Discarded Dead Item", "item", discarded)
 	}
-	return search.Item{}, search.ErrNotFound
+	return model.Item{}, search.ErrNotFound
 }
 
-func (s *Store) claimSearchItem(ctx context.Context, owner string, lease time.Duration) (search.Item, string, error) {
-	var claimed search.Item
+func (s *Store) claimSearchItem(ctx context.Context, owner string, lease time.Duration) (model.Item, string, error) {
+	var claimed model.Item
 	var discarded string
 	err := s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
 		query := s.client.Collection("items").
@@ -318,18 +319,18 @@ func (s *Store) RenewItemLease(ctx context.Context, id, owner string, lease time
 			return mapStoreError(err)
 		}
 		item, record, err := decodeItem(document)
-		if err != nil || item.LeaseOwner != owner || item.Status != search.ItemRunning {
+		if err != nil || item.LeaseOwner != owner || item.Status != model.ItemRunning {
 			return search.ErrNotFound
 		}
 		expires := time.Now().UTC().Add(lease)
 		item.LeaseUntil, record.AvailableAt = &expires, expires
 		record.LeaseUntil = &expires
-		record.Payload, _ = json.Marshal(item)
+		record.Payload, _ = json.Marshal(renderItem(item))
 		return tx.Set(reference, record)
 	})
 }
 
-func (s *Store) CompleteSearchItem(ctx context.Context, item search.Item, offers []offer.Offer) error {
+func (s *Store) CompleteSearchItem(ctx context.Context, item model.Item, offers []model.Offer) error {
 	ctx, cancel := boundContext(ctx)
 	defer cancel()
 	return s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
@@ -339,14 +340,14 @@ func (s *Store) CompleteSearchItem(ctx context.Context, item search.Item, offers
 			return mapStoreError(err)
 		}
 		current, record, err := decodeItem(document)
-		if err != nil || current.LeaseOwner != item.LeaseOwner || current.Status != search.ItemRunning {
+		if err != nil || current.LeaseOwner != item.LeaseOwner || current.Status != model.ItemRunning {
 			return search.ErrNotFound
 		}
 		return s.completeItem(ctx, tx, itemReference, record, item, offers)
 	})
 }
 
-func (s *Store) LoadOffers(ctx context.Context, key string) ([]offer.Offer, bool, error) {
+func (s *Store) LoadOffers(ctx context.Context, key string) ([]model.Offer, bool, error) {
 	ctx, cancel := boundContext(ctx)
 	defer cancel()
 	document, err := s.client.Collection("offer_cache").Doc(hashKey(key)).Get(ctx)
@@ -363,15 +364,15 @@ func (s *Store) LoadOffers(ctx context.Context, key string) ([]offer.Offer, bool
 	if record.ExpiresAt.Before(time.Now().UTC()) {
 		return nil, false, nil
 	}
-	var items []offer.Offer
+	var items []offerPayload
 	err = json.Unmarshal(record.Payload, &items)
-	return items, err == nil, err
+	return buildOfferList(items), err == nil, err
 }
 
-func (s *Store) SaveOffers(ctx context.Context, key string, items []offer.Offer, ttl time.Duration) error {
+func (s *Store) SaveOffers(ctx context.Context, key string, items []model.Offer, ttl time.Duration) error {
 	ctx, cancel := boundContext(ctx)
 	defer cancel()
-	data, err := json.Marshal(items)
+	data, err := json.Marshal(renderOfferList(items))
 	if err != nil {
 		return err
 	}
@@ -445,12 +446,12 @@ func (s *Store) CheckHealth(ctx context.Context) error {
 	return err
 }
 
-func (s *Store) ListSourceHealth(ctx context.Context) ([]search.SourceHealth, error) {
+func (s *Store) ListSourceHealth(ctx context.Context) ([]model.SourceHealth, error) {
 	ctx, cancel := boundContext(ctx)
 	defer cancel()
 	documents := s.client.Collection("source_health").Documents(ctx)
 	defer documents.Stop()
-	result := make([]search.SourceHealth, 0)
+	result := make([]model.SourceHealth, 0)
 	for {
 		document, err := documents.Next()
 		if errors.Is(err, iterator.Done) {
@@ -473,13 +474,13 @@ func (s *Store) CloseStore() error {
 	return s.client.Close()
 }
 
-func (s *Store) createSearch(ctx context.Context, tx *firestorelib.Transaction, key, hash string, job search.Job) error {
+func (s *Store) createSearch(ctx context.Context, tx *firestorelib.Transaction, key, hash string, job model.Job) error {
 	itemIDs := make([]string, job.Total)
 	for index := range itemIDs {
 		itemIDs[index] = buildID("item")
 	}
 	expires := time.Now().UTC().Add(s.searchTTL)
-	data, _ := json.Marshal(job)
+	data, _ := json.Marshal(renderJob(job))
 	if err := tx.Create(s.client.Collection("searches").Doc(job.ID), searchRecord{Payload: data, ItemIDs: itemIDs, ExpiresAt: expires}); err != nil {
 		return err
 	}
@@ -487,7 +488,7 @@ func (s *Store) createSearch(ctx context.Context, tx *firestorelib.Transaction, 
 	return tx.Set(s.client.Collection("idempotency").Doc(hashKey("create:"+key)), record)
 }
 
-func (s *Store) createItems(ctx context.Context, job search.Job, input search.CreateInput) error {
+func (s *Store) createItems(ctx context.Context, job model.Job, input model.CreateInput) error {
 	document, err := s.client.Collection("searches").Doc(job.ID).Get(ctx)
 	if err != nil {
 		return err
@@ -498,14 +499,14 @@ func (s *Store) createItems(ctx context.Context, job search.Job, input search.Cr
 	}
 	batch := s.client.Batch()
 	for index, card := range input.Cards {
-		item := search.Item{
+		item := model.Item{
 			ID: stored.ItemIDs[index], SearchID: job.ID, Game: input.Game, Position: index,
-			OriginalName: card.Name, NormalizedName: offer.NormalizeCard(card.Name),
-			Quantity: card.Quantity, Status: search.ItemPending, Offers: []offer.Offer{},
+			OriginalName: card.Name, NormalizedName: model.NormalizeCard(card.Name),
+			Quantity: card.Quantity, Status: model.ItemPending, Offers: []model.Offer{},
 			VerifyStock: input.Options.VerifyStock, Match: input.Options.Match,
 			Kind: input.Options.Kind,
 		}
-		data, _ := json.Marshal(item)
+		data, _ := json.Marshal(renderItem(item))
 		record := itemRecord{Payload: data, SearchID: job.ID, Position: index, AvailableAt: job.CreatedAt, ExpiresAt: stored.ExpiresAt}
 		batch.Set(s.client.Collection("items").Doc(item.ID), record)
 	}
@@ -528,21 +529,21 @@ func (s *Store) readRequest(ctx context.Context, tx *firestorelib.Transaction, a
 	return record, !record.ExpiresAt.Before(time.Now().UTC()), nil
 }
 
-func (s *Store) readSearch(ctx context.Context, tx *firestorelib.Transaction, id string) (search.Job, error) {
+func (s *Store) readSearch(ctx context.Context, tx *firestorelib.Transaction, id string) (model.Job, error) {
 	document, err := tx.Get(s.client.Collection("searches").Doc(id))
 	if err != nil {
-		return search.Job{}, mapStoreError(err)
+		return model.Job{}, mapStoreError(err)
 	}
 	return decodeSearch(document)
 }
 
-func (s *Store) cancelSearch(ctx context.Context, tx *firestorelib.Transaction, key, hash string, job *search.Job) error {
-	if job.Status != search.JobQueued && job.Status != search.JobRunning {
+func (s *Store) cancelSearch(ctx context.Context, tx *firestorelib.Transaction, key, hash string, job *model.Job) error {
+	if job.Status != model.JobQueued && job.Status != model.JobRunning {
 		return search.ErrNotRunning
 	}
 	now := time.Now().UTC()
-	job.Status, job.FinishedAt, job.UpdatedAt = search.JobCancelled, &now, now
-	data, _ := json.Marshal(job)
+	job.Status, job.FinishedAt, job.UpdatedAt = model.JobCancelled, &now, now
+	data, _ := json.Marshal(renderJob(*job))
 	reference := s.client.Collection("searches").Doc(job.ID)
 	if err := tx.Update(reference, []firestorelib.Update{{Path: "payload", Value: data}}); err != nil {
 		return err
@@ -551,13 +552,13 @@ func (s *Store) cancelSearch(ctx context.Context, tx *firestorelib.Transaction, 
 	return tx.Set(s.client.Collection("idempotency").Doc(hashKey("cancel:"+key)), record)
 }
 
-func (s *Store) claimItem(ctx context.Context, tx *firestorelib.Transaction, document *firestorelib.DocumentSnapshot, owner string, lease time.Duration, claimed *search.Item) error {
+func (s *Store) claimItem(ctx context.Context, tx *firestorelib.Transaction, document *firestorelib.DocumentSnapshot, owner string, lease time.Duration, claimed *model.Item) error {
 	item, record, err := decodeItem(document)
 	if err != nil || record.ExpiresAt.Before(time.Now().UTC()) {
 		return search.ErrNotFound
 	}
 	job, err := s.readSearch(ctx, tx, item.SearchID)
-	if status.Code(err) == codes.NotFound || errors.Is(err, search.ErrNotFound) || job.Status == search.JobCancelled {
+	if status.Code(err) == codes.NotFound || errors.Is(err, search.ErrNotFound) || job.Status == model.JobCancelled {
 		return search.ErrNotFound
 	}
 	if err != nil {
@@ -565,45 +566,45 @@ func (s *Store) claimItem(ctx context.Context, tx *firestorelib.Transaction, doc
 	}
 	now := time.Now().UTC()
 	expires := now.Add(lease)
-	item.Status, item.Attempts, item.LeaseOwner, item.LeaseUntil = search.ItemRunning, item.Attempts+1, owner, &expires
-	record.Payload, record.AvailableAt = mustJSON(item), expires
+	item.Status, item.Attempts, item.LeaseOwner, item.LeaseUntil = model.ItemRunning, item.Attempts+1, owner, &expires
+	record.Payload, record.AvailableAt = mustJSON(renderItem(item)), expires
 	record.LeaseOwner, record.LeaseUntil = owner, &expires
-	job.Status, job.CurrentCard, job.UpdatedAt = search.JobRunning, item.OriginalName, now
+	job.Status, job.CurrentCard, job.UpdatedAt = model.JobRunning, item.OriginalName, now
 	if job.StartedAt == nil {
 		job.StartedAt = &now
 	}
 	if err := tx.Set(document.Ref, record); err != nil {
 		return err
 	}
-	if err := tx.Update(s.client.Collection("searches").Doc(job.ID), []firestorelib.Update{{Path: "payload", Value: mustJSON(job)}}); err != nil {
+	if err := tx.Update(s.client.Collection("searches").Doc(job.ID), []firestorelib.Update{{Path: "payload", Value: mustJSON(renderJob(job))}}); err != nil {
 		return err
 	}
 	*claimed = item
 	return nil
 }
 
-func (s *Store) completeItem(ctx context.Context, tx *firestorelib.Transaction, reference *firestorelib.DocumentRef, record itemRecord, item search.Item, offers []offer.Offer) error {
+func (s *Store) completeItem(ctx context.Context, tx *firestorelib.Transaction, reference *firestorelib.DocumentRef, record itemRecord, item model.Item, offers []model.Offer) error {
 	job, err := s.readSearch(ctx, tx, item.SearchID)
 	if err != nil {
 		return err
 	}
 	item.Sequence = job.Processed + 1
 	item.LeaseOwner, item.LeaseUntil = "", nil
-	record.Payload, record.AvailableAt = mustJSON(item), record.ExpiresAt.Add(doneParking)
+	record.Payload, record.AvailableAt = mustJSON(renderItem(item)), record.ExpiresAt.Add(doneParking)
 	record.Sequence = item.Sequence
 	record.LeaseOwner, record.LeaseUntil = "", nil
 	if err := tx.Set(reference, record); err != nil {
 		return err
 	}
-	offerRecord := valueRecord{Payload: mustJSON(offers), ExpiresAt: record.ExpiresAt}
+	offerRecord := valueRecord{Payload: mustJSON(renderOfferList(offers)), ExpiresAt: record.ExpiresAt}
 	if err := tx.Set(s.client.Collection("item_offers").Doc(item.ID), offerRecord); err != nil {
 		return err
 	}
 	updateSearch(&job, item)
-	return tx.Update(s.client.Collection("searches").Doc(job.ID), []firestorelib.Update{{Path: "payload", Value: mustJSON(job)}})
+	return tx.Update(s.client.Collection("searches").Doc(job.ID), []firestorelib.Update{{Path: "payload", Value: mustJSON(renderJob(job))}})
 }
 
-func (s *Store) loadResultPage(ctx context.Context, id string, page search.ResultPage) ([]search.Item, bool, error) {
+func (s *Store) loadResultPage(ctx context.Context, id string, page model.ResultPage) ([]model.Item, bool, error) {
 	documents := s.client.Collection("items").
 		Where("search_id", "==", id).
 		Where("completion_sequence", ">", page.After).
@@ -611,7 +612,7 @@ func (s *Store) loadResultPage(ctx context.Context, id string, page search.Resul
 		Limit(page.Limit + 1).
 		Documents(ctx)
 	defer documents.Stop()
-	items := make([]search.Item, 0, page.Limit)
+	items := make([]model.Item, 0, page.Limit)
 	for len(items) <= page.Limit {
 		document, err := documents.Next()
 		if errors.Is(err, iterator.Done) {
@@ -627,11 +628,13 @@ func (s *Store) loadResultPage(ctx context.Context, id string, page search.Resul
 		if len(items) == page.Limit {
 			return items, true, nil
 		}
-		item.Offers = []offer.Offer{}
+		item.Offers = []model.Offer{}
 		if offers, err := s.client.Collection("item_offers").Doc(item.ID).Get(ctx); err == nil {
 			var record valueRecord
 			_ = offers.DataTo(&record)
-			_ = json.Unmarshal(record.Payload, &item.Offers)
+			var stored []offerPayload
+			_ = json.Unmarshal(record.Payload, &stored)
+			item.Offers = buildOfferList(stored)
 		}
 		items = append(items, item)
 	}
@@ -680,42 +683,43 @@ func (s *Store) reserveTraffic(ctx context.Context, domain string) (time.Time, e
 	return allowed, err
 }
 
-func decodeSearch(document *firestorelib.DocumentSnapshot) (search.Job, error) {
+func decodeSearch(document *firestorelib.DocumentSnapshot) (model.Job, error) {
 	var record searchRecord
 	if err := document.DataTo(&record); err != nil || record.ExpiresAt.Before(time.Now().UTC()) {
-		return search.Job{}, search.ErrNotFound
+		return model.Job{}, search.ErrNotFound
 	}
-	var job search.Job
+	var job jobPayload
 	err := json.Unmarshal(record.Payload, &job)
-	return job, err
+	return buildJob(job), err
 }
 
-func decodeItem(document *firestorelib.DocumentSnapshot) (search.Item, itemRecord, error) {
+func decodeItem(document *firestorelib.DocumentSnapshot) (model.Item, itemRecord, error) {
 	var record itemRecord
 	if err := document.DataTo(&record); err != nil {
-		return search.Item{}, record, err
+		return model.Item{}, record, err
 	}
-	var item search.Item
-	err := json.Unmarshal(record.Payload, &item)
+	var stored itemPayload
+	err := json.Unmarshal(record.Payload, &stored)
+	item := buildItem(stored)
 	item.LeaseOwner, item.LeaseUntil = record.LeaseOwner, record.LeaseUntil
 	return item, record, err
 }
 
-func updateSearch(job *search.Job, item search.Item) {
+func updateSearch(job *model.Job, item model.Item) {
 	job.Processed++
 	switch item.Status {
-	case search.ItemFound:
+	case model.ItemFound:
 		job.Found++
-	case search.ItemNotFound:
+	case model.ItemNotFound:
 		job.NotFound++
-	case search.ItemSourceError:
+	case model.ItemSourceError:
 		job.Errors++
 	}
-	if job.Processed == job.Total && job.Status != search.JobCancelled {
+	if job.Processed == job.Total && job.Status != model.JobCancelled {
 		now := time.Now().UTC()
-		job.Status, job.CurrentCard, job.FinishedAt = search.JobCompleted, "", &now
+		job.Status, job.CurrentCard, job.FinishedAt = model.JobCompleted, "", &now
 		if job.Errors > 0 {
-			job.Status = search.JobCompletedWithErrors
+			job.Status = model.JobCompletedWithErrors
 		}
 	}
 	job.UpdatedAt = time.Now().UTC()
@@ -758,8 +762,8 @@ func circuitWait(failures int) time.Duration {
 	return min(wait, circuitCeiling)
 }
 
-func mapSourceHealth(record sourceRecord) search.SourceHealth {
-	return search.SourceHealth{
+func mapSourceHealth(record sourceRecord) model.SourceHealth {
+	return model.SourceHealth{
 		Source: record.Source, LastSuccess: record.LastSuccess, LastFailure: record.LastFailure,
 		ConsecutiveFailures: record.ConsecutiveFailures,
 		LatencyMilliseconds: record.LatencyMilliseconds,
@@ -789,9 +793,9 @@ func mapStoreError(err error) error {
 	return err
 }
 
-func buildSearch(input search.CreateInput) search.Job {
+func buildSearch(input model.CreateInput) model.Job {
 	now := time.Now().UTC()
-	return search.Job{ID: buildID("search"), Game: input.Game, Status: search.JobQueued, Total: len(input.Cards), CreatedAt: now, UpdatedAt: now}
+	return model.Job{ID: buildID("search"), Game: input.Game, Status: model.JobQueued, Total: len(input.Cards), CreatedAt: now, UpdatedAt: now}
 }
 
 func mustJSON(value any) []byte {

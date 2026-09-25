@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
 // A Shopify Catalog Publishes whether a Variant Sells, never how Many Remain:
@@ -32,7 +32,7 @@ func readVariantUnits(data []byte, variant string) *int {
 	// A Theme that Writes no Map may still Write the Sentence: "quedan solo 4
 	// unidades en stock". The Page was Asked for this Variant, so the Sentence
 	// on it is about this Variant, the same one the Buyer Reads.
-	return offer.CountDeclaredUnits(data)
+	return model.CountDeclaredUnits(data)
 }
 
 func readCountedVariant(data []byte, variant string) *int {

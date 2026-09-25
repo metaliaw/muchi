@@ -11,7 +11,7 @@ import (
 	"github.com/cangrejometralleta/muchi-api/internal/stores"
 	"github.com/cangrejometralleta/muchi-api/internal/stores/jumpseller"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
 func TestLiveSolRing(t *testing.T) {
@@ -28,7 +28,7 @@ func TestLiveSolRing(t *testing.T) {
 				ctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
 				defer cancel()
 				client := jumpseller.Client{Domain: domain, Name: store.Name, Fetcher: &loggedFetcher{test: t, client: source.Client{HTTP: &http.Client{Timeout: 15 * time.Second}, MaxAttempts: 2, BaseDelay: time.Second, UserAgent: "muchi-api/1.0"}}}
-				items, err := client.FindOffers(ctx, offer.CardQuery{Name: "Sol Ring"})
+				items, err := client.FindOffers(ctx, model.CardQuery{Name: "Sol Ring"})
 				if err != nil || len(items) == 0 {
 					t.Fatalf("offers=%d err=%v", len(items), err)
 				}
@@ -59,7 +59,7 @@ func TestLiveDecksCardsDarkMagician(t *testing.T) {
 	}}
 	client := jumpseller.Client{Domain: "www.deckscards.cl", Name: "Decks Cards", Fetcher: fetcher}
 	started := time.Now()
-	items, err := client.FindOffers(ctx, offer.CardQuery{Name: "Dark Magician"})
+	items, err := client.FindOffers(ctx, model.CardQuery{Name: "Dark Magician"})
 	if err != nil || len(items) == 0 {
 		t.Fatalf("requests=%d offers=%d duration=%s err=%v", fetcher.calls, len(items), time.Since(started), err)
 	}

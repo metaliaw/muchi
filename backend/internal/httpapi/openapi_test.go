@@ -1,10 +1,9 @@
 package httpapi
 
 import (
+	"gopkg.in/yaml.v3"
 	"os"
 	"testing"
-
-	"gopkg.in/yaml.v3"
 )
 
 func TestValidateOpenAPI(t *testing.T) {

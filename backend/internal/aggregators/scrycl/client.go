@@ -14,7 +14,7 @@ import (
 	"golang.org/x/net/html"
 	"golang.org/x/text/unicode/norm"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 	"github.com/cangrejometralleta/muchi-api/internal/source"
 )
 
@@ -30,14 +30,14 @@ type Client struct {
 	ExcludeCommunity bool
 }
 
-func (c Client) Search(ctx context.Context, query offer.CardQuery) ([]offer.Offer, error) {
+func (c Client) Search(ctx context.Context, query model.CardQuery) ([]model.Offer, error) {
 	return c.FindOffers(ctx, query)
 }
 
 var slugSeparators = regexp.MustCompile(`[^a-z0-9]+`)
 
 // FindOffers Reads the Saved Offers Published on a Scry.cl Card Page.
-func (c Client) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer.Offer, error) {
+func (c Client) FindOffers(ctx context.Context, query model.CardQuery) ([]model.Offer, error) {
 	name := query.Name
 	base, err := url.Parse(c.BaseURL)
 	if err != nil || base.Host == "" || (base.Scheme != "https" && base.Scheme != "http") {
@@ -52,7 +52,7 @@ func (c Client) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer.
 	if err != nil {
 		var status source.StatusError
 		if errors.As(err, &status) && status.Code == 404 {
-			return []offer.Offer{}, nil
+			return []model.Offer{}, nil
 		}
 		return nil, err
 	}
@@ -77,12 +77,12 @@ func buildCardSlug(name string) string {
 	return strings.Trim(slugSeparators.ReplaceAllString(strings.ToLower(plain), "-"), "-")
 }
 
-func readOffers(data []byte) ([]offer.Offer, error) {
+func readOffers(data []byte) ([]model.Offer, error) {
 	document, err := html.Parse(bytes.NewReader(data))
 	if err != nil {
 		return nil, fmt.Errorf("decode Scry.cl page: %w", err)
 	}
-	items := make([]offer.Offer, 0)
+	items := make([]model.Offer, 0)
 	found := false
 	for node := range document.Descendants() {
 		attrs := readAttributes(node)
@@ -101,7 +101,7 @@ func readOffers(data []byte) ([]offer.Offer, error) {
 	if !found {
 		return nil, errors.New("Scry.cl page missing results container")
 	}
-	return offer.DeduplicateOffers(items), nil
+	return model.DeduplicateOffers(items), nil
 }
 
 func readAttributes(node *html.Node) map[string]string {
@@ -115,7 +115,7 @@ func readAttributes(node *html.Node) map[string]string {
 // withoutCommunityOffers Keeps the Offers that link out to a Storefront. A
 // Community Offer points back under the Scry.cl Domain —marketplace.scry.cl—
 // because the Seller has no Site of its own to link to.
-func withoutCommunityOffers(items []offer.Offer, host string) []offer.Offer {
+func withoutCommunityOffers(items []model.Offer, host string) []model.Offer {
 	kept := items[:0]
 	for _, item := range items {
 		link, err := url.Parse(item.URL)
@@ -127,8 +127,8 @@ func withoutCommunityOffers(items []offer.Offer, host string) []offer.Offer {
 	return kept
 }
 
-func buildOffer(attrs map[string]string) (offer.Offer, error) {
-	item := offer.Offer{
+func buildOffer(attrs map[string]string) (model.Offer, error) {
+	item := model.Offer{
 		CardName: attrs["data-card-name"], Store: attrs["data-store-name"],
 		PriceAmount: attrs["data-price-clp"], PriceCurrency: "CLP",
 		URL: attrs["data-product-url"], VariantID: attrs["data-variant-key"],
@@ -136,8 +136,8 @@ func buildOffer(attrs map[string]string) (offer.Offer, error) {
 		Metadata: map[string]string{"title": attrs["data-offer-title"]},
 	}
 	price, err := strconv.ParseInt(item.PriceAmount, 10, 64)
-	if err != nil || price <= 0 || item.CardName == "" || offer.ValidateOffer(item) != nil {
-		return offer.Offer{}, errors.New("invalid Scry.cl offer")
+	if err != nil || price <= 0 || item.CardName == "" || model.ValidateOffer(item) != nil {
+		return model.Offer{}, errors.New("invalid Scry.cl offer")
 	}
 	identity := strings.Join([]string{item.Store, item.URL, item.VariantID}, "|")
 	item.ID = fmt.Sprintf("scry:%x", sha256.Sum256([]byte(identity)))

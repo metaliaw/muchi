@@ -1,5 +1,7 @@
 package repositorytest
 
+import "github.com/cangrejometralleta/muchi-api/internal/model"
+
 import (
 	"context"
 	"errors"
@@ -17,7 +19,7 @@ func RunItemLeaseContract(t *testing.T, prepare func(*testing.T) search.SearchIt
 	ctx := context.Background()
 
 	first, err := repository.ClaimSearchItem(ctx, "worker-one", time.Second)
-	if err != nil || first.ID == "" || first.Status != search.ItemRunning {
+	if err != nil || first.ID == "" || first.Status != model.ItemRunning {
 		t.Fatalf("first claim=%+v err=%v", first, err)
 	}
 	if err := repository.RenewItemLease(ctx, first.ID, "worker-two", 3*time.Second); !errors.Is(err, search.ErrNotFound) {
@@ -36,11 +38,11 @@ func RunItemLeaseContract(t *testing.T, prepare func(*testing.T) search.SearchIt
 		t.Fatalf("renewed item was claimed again: %v", err)
 	}
 
-	first.Status = search.ItemFound
+	first.Status = model.ItemFound
 	if err := repository.CompleteSearchItem(ctx, first, nil); err != nil {
 		t.Fatalf("owner could not complete the first item: %v", err)
 	}
-	second.Status = search.ItemFound
+	second.Status = model.ItemFound
 	if err := repository.CompleteSearchItem(ctx, second, nil); err != nil {
 		t.Fatalf("owner could not complete the second item: %v", err)
 	}

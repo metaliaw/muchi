@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 	"github.com/cangrejometralleta/muchi-api/internal/stores"
 )
@@ -29,18 +29,18 @@ func TestSealedProbe(t *testing.T) {
 		SetsByGame:    BuildSetLibraries(fetcher, config),
 	}
 	probes := []struct {
-		game search.Game
+		game model.Game
 		name string
 	}{
-		{search.GamePokemon, "Elite Trainer Box"},
-		{search.GameYuGiOh, "Booster Box"},
-		{search.GameMagic, "Collector Booster"},
-		{search.GameYuGiOh, "Chaos Origins Booster Box"},
+		{model.GamePokemon, "Elite Trainer Box"},
+		{model.GameYuGiOh, "Booster Box"},
+		{model.GameMagic, "Collector Booster"},
+		{model.GameYuGiOh, "Chaos Origins Booster Box"},
 	}
 	for _, probe := range probes {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 		items, faults, err := service.FindCardOffers(ctx, probe.game,
-			offer.CardQuery{Name: probe.name, Kind: offer.KindSealed})
+			model.CardQuery{Name: probe.name, Kind: model.KindSealed})
 		cancel()
 		if err != nil {
 			t.Logf("game=%s name=%q err=%v", probe.game, probe.name, err)

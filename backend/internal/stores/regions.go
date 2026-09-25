@@ -3,7 +3,7 @@ package stores
 import (
 	"strings"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
 // chileRegions Names each Region by its https://www.iso.org/obp/ui/#iso:code:3166:CL
@@ -26,12 +26,12 @@ var chileCountry = map[string]bool{"cl": true, "chile": true}
 // Reads: Country "CL" and Region the bare Subdivision, such as "RM". A Code the
 // Buyer already Sent Passes through; an Unknown Name Passes as Written, and the
 // Store Decides.
-func resolveAddress(address offer.ShippingAddress) offer.ShippingAddress {
-	if !chileCountry[offer.NormalizeCard(address.Country)] {
+func resolveAddress(address model.ShippingAddress) model.ShippingAddress {
+	if !chileCountry[model.NormalizeCard(address.Country)] {
 		return address
 	}
 	address.Country = "CL"
-	region := offer.NormalizeCard(address.Region)
+	region := model.NormalizeCard(address.Region)
 	region = strings.TrimPrefix(strings.TrimPrefix(region, "region del "), "region de ")
 	if code, found := chileRegions[region]; found {
 		address.Region = code

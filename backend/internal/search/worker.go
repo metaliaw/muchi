@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
 type Worker struct {
@@ -44,7 +44,7 @@ func (w Worker) processNext(ctx context.Context) error {
 	defer cancel()
 	go w.renewLease(work, item.ID)
 
-	query := offer.CardQuery{Name: item.NormalizedName, Match: item.Match, Kind: item.Kind}
+	query := model.CardQuery{Name: item.NormalizedName, Match: item.Match, Kind: item.Kind}
 	items, faults, sourceErr := w.Service.FindCardOffers(work, item.Game, query)
 	if item.VerifyStock {
 		items = w.verifyStocks(work, items)
@@ -59,7 +59,7 @@ func (w Worker) ProcessNext(ctx context.Context) error {
 	return w.processNext(ctx)
 }
 
-func applyItemResult(item Item, items []offer.Offer, sourceErr error) Item {
+func applyItemResult(item model.Item, items []model.Offer, sourceErr error) model.Item {
 	if len(items) > 0 {
 		item.Source = items[0].Source
 	}
@@ -83,11 +83,11 @@ func (w Worker) renewLease(ctx context.Context, itemID string) {
 	}
 }
 
-func (w Worker) verifyStocks(ctx context.Context, items []offer.Offer) []offer.Offer {
+func (w Worker) verifyStocks(ctx context.Context, items []model.Offer) []model.Offer {
 	if w.Service.Stocks == nil {
 		return items
 	}
-	targets := offer.SelectStockOffers(items, w.StockCheckLimit)
+	targets := model.SelectStockOffers(items, w.StockCheckLimit)
 	var group sync.WaitGroup
 	for _, target := range targets {
 		group.Add(1)
@@ -100,7 +100,7 @@ func (w Worker) verifyStocks(ctx context.Context, items []offer.Offer) []offer.O
 	return items
 }
 
-func (w Worker) checkOffer(ctx context.Context, items []offer.Offer, id string) {
+func (w Worker) checkOffer(ctx context.Context, items []model.Offer, id string) {
 	for index := range items {
 		if items[index].ID != id {
 			continue
@@ -114,12 +114,12 @@ func (w Worker) checkOffer(ctx context.Context, items []offer.Offer, id string) 
 	}
 }
 
-func classifyResult(items []offer.Offer, err error) (ItemStatus, string, string) {
+func classifyResult(items []model.Offer, err error) (model.ItemStatus, string, string) {
 	if len(items) > 0 {
-		return ItemFound, "", ""
+		return model.ItemFound, "", ""
 	}
 	if err != nil {
-		return ItemSourceError, "source_unavailable", "Source unavailable"
+		return model.ItemSourceError, "source_unavailable", "Source unavailable"
 	}
-	return ItemNotFound, "", ""
+	return model.ItemNotFound, "", ""
 }

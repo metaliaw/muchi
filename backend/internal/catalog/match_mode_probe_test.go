@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 	"github.com/cangrejometralleta/muchi-api/internal/stores"
 )
@@ -26,9 +26,9 @@ func TestMatchModeProbe(t *testing.T) {
 		Providers:     BuildProviders(fetcher, config),
 		SourcesByGame: BuildSourcesByGame(fetcher, config, nil, time.Hour, nil),
 	}
-	for _, mode := range []offer.MatchMode{offer.MatchExact, offer.MatchIncludes} {
+	for _, mode := range []model.MatchMode{model.MatchExact, model.MatchIncludes} {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-		items, _, err := service.FindCardOffers(ctx, search.GameYuGiOh, offer.CardQuery{Name: "Kuriboh", Match: mode})
+		items, _, err := service.FindCardOffers(ctx, model.GameYuGiOh, model.CardQuery{Name: "Kuriboh", Match: mode})
 		cancel()
 		if err != nil {
 			t.Fatalf("mode=%s err=%v", mode, err)

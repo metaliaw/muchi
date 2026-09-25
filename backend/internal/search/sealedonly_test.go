@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
 // TestACardQuestionSkipsASealedOnlySource Covers the Mirror Mark. A Shop that
@@ -15,12 +15,12 @@ func TestACardQuestionSkipsASealedOnlySource(t *testing.T) {
 	boxes := &countingSource{name: "casamyl.cl"}
 	cards := &countingSource{name: "cards.example.cl"}
 	service := Service{
-		SourcesByGame: map[Game][]OfferSource{GameMitos: {boxes, cards}},
+		SourcesByGame: map[model.Game][]OfferSource{model.GameMitos: {boxes, cards}},
 		SealedOnly:    map[string]bool{"casamyl.cl": true},
 	}
 
-	if _, _, err := service.FindCardOffers(context.Background(), GameMitos,
-		offer.CardQuery{Name: "Dragón de Magma", Kind: offer.KindSingle}); err != nil {
+	if _, _, err := service.FindCardOffers(context.Background(), model.GameMitos,
+		model.CardQuery{Name: "Dragón de Magma", Kind: model.KindSingle}); err != nil {
 		t.Fatal(err)
 	}
 	if boxes.asked != 0 {
@@ -32,8 +32,8 @@ func TestACardQuestionSkipsASealedOnlySource(t *testing.T) {
 
 	// La Caja sí es su Pregunta: la Marca Saca la Tienda de una Lista, no de
 	// la Búsqueda.
-	if _, _, err := service.FindCardOffers(context.Background(), GameMitos,
-		offer.CardQuery{Name: "Display Espada Sagrada", Kind: offer.KindSealed}); err != nil {
+	if _, _, err := service.FindCardOffers(context.Background(), model.GameMitos,
+		model.CardQuery{Name: "Display Espada Sagrada", Kind: model.KindSealed}); err != nil {
 		t.Fatal(err)
 	}
 	if boxes.asked != 1 {

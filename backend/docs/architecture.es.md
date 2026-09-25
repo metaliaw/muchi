@@ -145,8 +145,11 @@ flowchart LR
     transport[internal/httpapi<br/>Handlers y DTO HTTP]
     application[internal/application<br/>Composición]
     catalog[internal/catalog<br/>Construcción de Fuentes]
-    domain[internal/search y offer<br/>Servicio de Búsqueda]
+    domain[internal/search y model<br/>Servicio de Búsqueda]
     repository[SearchRepository<br/>Interfaz de Persistencia]
+    repositories[internal/repositories<br/>Implementaciones de Repositorios]
+    datasources[internal/datasources<br/>Contrato Genérico de Base de Datos]
+    database[internal/db<br/>Adaptador Firebase]
     worker[search.Worker<br/>Trabajo en segundo plano]
     config[config/stores.yaml<br/>Juegos, Orígenes y Tiendas]
     adapters[Adaptadores<br/>Firestore, Tasks y Fuentes]
@@ -156,7 +159,11 @@ flowchart LR
     transport --> domain
     worker --> domain
     domain --> repository
-    repository --> adapters
+    repository --> repositories
+    repositories --> datasources
+    datasources --> database
+    application --> database
+    application --> repositories
     config --> catalog
     catalog --> application
     application --> domain
@@ -166,8 +173,20 @@ flowchart LR
 
 Los handlers decodifican DTO HTTP y entregan solicitudes de negocio al servicio
 de búsqueda. El worker llama al mismo servicio sin pasar por HTTP. El servicio
-accede a la persistencia mediante `SearchRepository`: Firestore lo implementa y
-las pruebas pueden inyectar una implementación en memoria.
+accede a la persistencia mediante `SearchRepository`, implementado en
+`internal/repositories`. Los repositorios usan el contrato neutral
+`datasources.Database`; `internal/db`, respaldado por Firebase, provee su
+implementación actual.
+
+`internal/model` reúne los tipos de dominio de ofertas, carritos, búsquedas y
+salud de fuentes. Estos tipos no llevan etiquetas JSON ni Firestore.
+`internal/httpapi` contiene los DTO de entrada y salida; `internal/db`
+contiene los registros y payloads JSON almacenados. `internal/application`
+selecciona el adaptador Firebase y se lo entrega a los repositorios mediante
+`datasources.Database`. El SDK de Firebase queda dentro de `internal/db`.
+Las conversiones explícitas
+en cada frontera conservan por separado los nombres de campos de la API y de
+los datos persistidos. La idempotencia usa su propia representación estable.
 
 El dominio también declara necesidades como `TaskQueue`, `Provider`,
 `OfferSource`, `StockChecker` y `OfferCache`. `internal/catalog`
@@ -190,14 +209,18 @@ impresión y variante comercial.
 
 ### La Frontera del Almacén
 
-`internal/application` es el único paquete que nombra un proveedor. Fuera de él
-nadie importa `internal/firestore` ni `internal/taskqueue`: el `Runtime` entrega
-puertos, no tipos concretos.
+`internal/application` es la raíz de composición que selecciona la base de
+datos. Los paquetes de producción fuera de ella dependen de puertos de
+repositorio y no importan `internal/db` ni `internal/taskqueue`; el `Runtime`
+expone puertos, no tipos concretos.
 
-- `Vault` reúne los cinco papeles que hoy cumple un solo almacén: guarda las
+- `datasources.Database` es el contrato neutral implementado por el adaptador
+  Firebase. `internal/repositories` implementa los puertos de búsqueda y del
+  worker usando ese contrato.
+- `Vault` reúne los cinco papeles que hoy cumple un repositorio: guarda las
   búsquedas, cachea las ofertas, responde por su salud, cuenta el trabajo que
   espera y regula el tráfico hacia cada fuente. Están listados aparte porque son
-  independientes; que Firestore los cumpla todos es una coincidencia de la
+  independientes; que un repositorio los cumpla todos es una coincidencia de la
   composición, no un supuesto del dominio.
 - `Dispatcher` reúne el despacho de trabajo y el despertar que repone el barredor.
 - `Teller` es opcional: un almacén que tiene algo que decir recibe el logger, y

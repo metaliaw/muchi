@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
 // pageFetcher Serves one Storefront Page, the Way a Buyer would Read it.
@@ -14,13 +14,13 @@ func (f pageFetcher) FetchSource(_ context.Context, _, _ string) ([]byte, error)
 	return []byte(f.body), nil
 }
 
-func readUnits(t *testing.T, body string, config StoreConfig) offer.StockReading {
+func readUnits(t *testing.T, body string, config StoreConfig) model.StockReading {
 	t.Helper()
 	config.Enabled = true
 	checker := Checker{Fetcher: pageFetcher{body}, Config: Config{
 		Stores: map[string]StoreConfig{"tienda.test": config}}}
 	reading, err := checker.CheckStock(context.Background(),
-		offer.Offer{URL: "https://tienda.test/carta/sol-ring"})
+		model.Offer{URL: "https://tienda.test/carta/sol-ring"})
 	if err != nil {
 		t.Fatalf("err=%v", err)
 	}

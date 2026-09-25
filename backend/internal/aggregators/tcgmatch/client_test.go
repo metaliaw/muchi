@@ -7,7 +7,7 @@ import (
 
 	"github.com/cangrejometralleta/muchi-api/internal/cardmetadata"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
 type fixtureFetcher struct {
@@ -60,7 +60,7 @@ func TestSearch(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			fetcher := &fixtureFetcher{catalog: test.catalog, listing: test.listing}
-			items, err := (Client{Fetcher: fetcher, BaseURL: "https://api.tcgmatch.cl", Game: test.game}).Search(context.Background(), offer.CardQuery{Name: test.card})
+			items, err := (Client{Fetcher: fetcher, BaseURL: "https://api.tcgmatch.cl", Game: test.game}).Search(context.Background(), model.CardQuery{Name: test.card})
 			if err != nil || len(items) != 1 {
 				t.Fatalf("Search() items=%v err=%v", items, err)
 			}
@@ -91,7 +91,7 @@ func TestSearchKeepsTheExactCard(t *testing.T) {
 	]}`
 	client := Client{Fetcher: perProductFetcher{catalog: catalog}, BaseURL: "https://api.tcgmatch.cl", Game: "yugioh"}
 
-	items, err := client.Search(context.Background(), offer.CardQuery{Name: "Kuriboh"})
+	items, err := client.Search(context.Background(), model.CardQuery{Name: "Kuriboh"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,7 +111,7 @@ func TestPokemonSearchNamesFunctionsAcrossEditions(t *testing.T) {
 		PokemonCatalogURL: "https://api.tcgdex.net/v2/en",
 	}
 
-	items, err := client.Search(context.Background(), offer.CardQuery{Name: "Slowpoke"})
+	items, err := client.Search(context.Background(), model.CardQuery{Name: "Slowpoke"})
 	if err != nil || len(items) != 3 {
 		t.Fatalf("Search() items=%d err=%v", len(items), err)
 	}

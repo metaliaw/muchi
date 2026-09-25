@@ -4,14 +4,14 @@ import (
 	"context"
 	"testing"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
-type listAdapter struct{ asked offer.Offer }
+type listAdapter struct{ asked model.Offer }
 
-func (a *listAdapter) CheckStock(_ context.Context, item offer.Offer) (offer.StockReading, error) {
+func (a *listAdapter) CheckStock(_ context.Context, item model.Offer) (model.StockReading, error) {
 	a.asked = item
-	return offer.CountStock("unavailable", 0), nil
+	return model.CountStock("unavailable", 0), nil
 }
 
 // A Store that Publishes Lists Points every Offer at the same Deck URL. Asking
@@ -20,7 +20,7 @@ func TestAListedOfferAsksItsShelf(t *testing.T) {
 	shelf := &listAdapter{}
 	checker := Checker{Config: Config{}, Lists: shelf}
 
-	reading, err := checker.CheckStock(context.Background(), offer.Offer{
+	reading, err := checker.CheckStock(context.Background(), model.Offer{
 		ID: "moxfield:wombat:lista:x", Source: "moxfield",
 		URL: "https://moxfield.com/decks/yqdRPdoUlEiFz21qKYHGMA",
 	})

@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 	"github.com/cangrejometralleta/muchi-api/internal/stores/jumpseller"
 	"github.com/cangrejometralleta/muchi-api/internal/stores/shopify"
 )
@@ -19,7 +19,7 @@ type SourceFetcher interface {
 
 // CommerceAdapter Checks Stock according to one Store Platform.
 type CommerceAdapter interface {
-	CheckStock(context.Context, offer.Offer) (offer.StockReading, error)
+	CheckStock(context.Context, model.Offer) (model.StockReading, error)
 }
 
 type Checker struct {
@@ -31,39 +31,39 @@ type Checker struct {
 	Lists CommerceAdapter
 }
 
-func (c Checker) CheckStock(ctx context.Context, item offer.Offer) (offer.StockReading, error) {
+func (c Checker) CheckStock(ctx context.Context, item model.Offer) (model.StockReading, error) {
 	if c.Lists != nil && item.Source == "moxfield" {
 		return c.Lists.CheckStock(ctx, item)
 	}
 	link, err := url.Parse(item.URL)
 	if err != nil {
-		return offer.ReadStock("unknown"), err
+		return model.ReadStock("unknown"), err
 	}
 	config, found := c.Config.Stores[link.Host]
 	if !found || !config.Enabled {
-		return offer.ReadStock("unknown"), nil
+		return model.ReadStock("unknown"), nil
 	}
 	if adapter := c.commerceAdapter(config, link.Host); adapter != nil {
 		return adapter.CheckStock(ctx, item)
 	}
 	data, err := c.Fetcher.FetchSource(ctx, link.Host, item.URL)
 	if err != nil {
-		return offer.ReadStock("unknown"), err
+		return model.ReadStock("unknown"), err
 	}
 	status := inspectStock(data, config)
-	units := offer.CountDeclaredUnits(data)
+	units := model.CountDeclaredUnits(data)
 	if units == nil {
-		return offer.ReadStock(status), nil
+		return model.ReadStock(status), nil
 	}
 	// A Page that Counts its Units has Answered the Question: none Left is
 	// Sold out, and any Number is a Store Saying yes with a Figure behind it.
 	if *units == 0 {
-		return offer.CountStock("unavailable", 0), nil
+		return model.CountStock("unavailable", 0), nil
 	}
 	if status == "unavailable" {
-		return offer.CountStock("unavailable", 0), nil
+		return model.CountStock("unavailable", 0), nil
 	}
-	return offer.CountStock("available", *units), nil
+	return model.CountStock("available", *units), nil
 }
 
 func (c Checker) commerceAdapter(config StoreConfig, domain string) CommerceAdapter {
