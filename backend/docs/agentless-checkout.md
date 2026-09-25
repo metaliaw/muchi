@@ -127,8 +127,8 @@ store falls back to product pages so no buyer lands on an incomplete cart.
 
 ## Level 1 on WooCommerce: Quotes
 
-When the `/checkout` request carries `shipping` (`country`, plus `region` in the
-store's own code such as `CL-RM`), each WooCommerce store fills a fresh cart
+When the `/checkout` request carries `shipping` (`country` and `region` by name,
+such as `Chile` and `Región Metropolitana`), each WooCommerce store fills a fresh cart
 through the Store API: it takes a `Cart-Token`, adds the lines, and sets the
 address. It answers `quote` with subtotal, shipping, total, shipping rates, and
 payment methods. A line the store trims for lack of stock shows in `notices`.
@@ -140,6 +140,19 @@ retry would double the quantity.
 
 Only simple products sent by the store itself are quoted. Aggregator offers and
 variable products get no `quote`.
+
+## Regions and Shopify
+
+The region is written by name, as in `stores.yaml`. A fixed table in
+`internal/stores/regions.go` turns it into the region's ISO code: WooCommerce
+receives `CL-RM` and Shopify `RM`. The code itself is accepted too.
+
+Shopify quotes through its AJAX API: `POST /cart/add.js` builds a cart in a
+cookie of its own, `GET /cart.js` gives the subtotal, and
+`GET /cart/shipping_rates.json` gives the rates for the address. With no rate
+selected, the total uses the cheapest one. Shopify reveals no payment methods
+before checkout. Jumpseller still has no quote: its cart is a form, and its
+Magic stores are paused.
 
 ## Suggested Next Step
 

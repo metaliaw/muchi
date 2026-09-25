@@ -1,11 +1,11 @@
 package stores
 
 import (
-	"net/url"
 	"strconv"
 	"strings"
 
 	"github.com/cangrejometralleta/muchi-api/internal/offer"
+	"github.com/cangrejometralleta/muchi-api/internal/stores/shopify"
 )
 
 // CheckoutLink Builds one URL that Fills a Store's Cart with every Line and
@@ -22,7 +22,7 @@ func (c Config) CheckoutLink(domain string, lines []offer.CartLine) (string, boo
 	quantities := map[string]int{}
 	var order []string
 	for _, line := range lines {
-		variant := shopifyVariant(domain, line.Offer)
+		variant := shopify.VariantID(domain, line.Offer)
 		if variant == "" || line.Quantity <= 0 {
 			return "", false
 		}
@@ -36,21 +36,4 @@ func (c Config) CheckoutLink(domain string, lines []offer.CartLine) (string, boo
 		parts[index] = variant + ":" + strconv.Itoa(quantities[variant])
 	}
 	return "https://" + domain + "/cart/" + strings.Join(parts, ","), true
-}
-
-// shopifyVariant Trusts the Variant the Product URL Carries, and the Offer's own
-// Variant only when the Store Itself Sent it: an Aggregator's Key Names its
-// own Record, not a Shopify Variant.
-func shopifyVariant(domain string, item offer.Offer) string {
-	variant := ""
-	if link, err := url.Parse(item.URL); err == nil && link.Host == domain {
-		variant = link.Query().Get("variant")
-	}
-	if variant == "" && item.Source == domain {
-		variant = item.VariantID
-	}
-	if id, err := strconv.ParseInt(variant, 10, 64); err != nil || id <= 0 {
-		return ""
-	}
-	return variant
 }

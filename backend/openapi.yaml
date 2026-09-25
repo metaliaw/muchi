@@ -172,9 +172,10 @@ paths:
         mode `product_pages` with the page of each line. Stores come back in
         the order first asked. Offers are named by the id the search gave them,
         at most fifty lines of at most 99 units each. With a `shipping`
-        address, each WooCommerce store fills a fresh cart of its own through
-        its Store API and answers `quote`: items, shipping and total, shipping
-        rates, and payment methods. The quote creates no order and holds no
+        address, each WooCommerce and Shopify store fills a fresh cart of its
+        own and answers `quote`: items, shipping and total, shipping rates, and
+        (WooCommerce only) payment methods. Shopify has no selected rate yet,
+        so its shipping total is the cheapest rate. The quote creates no order and holds no
         stock. A store that fails answers `quote_error` and keeps its links.
       requestBody:
         required: true
@@ -201,8 +202,14 @@ paths:
                   additionalProperties: false
                   required: [country]
                   properties:
-                    country: {type: string, examples: [CL]}
-                    region: {type: string, description: "The store's own state code", examples: [CL-RM]}
+                    country: {type: string, examples: [Chile, CL]}
+                    region:
+                      type: string
+                      description: >-
+                        A Chilean region by name, as store locations write it,
+                        or by its ISO 3166-2 code. Each platform receives its own
+                        code.
+                      examples: [Región Metropolitana, CL-RM]
                     city: {type: string}
                     postcode: {type: string}
       responses:

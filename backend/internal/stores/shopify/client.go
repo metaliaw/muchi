@@ -22,6 +22,8 @@ type Client struct {
 	Fetcher SourceFetcher
 	Domain  string
 	Name    string
+	// Sessions Lets QuoteCart Fill a Cart; Searching Never Needs it.
+	Sessions SessionSender
 }
 
 func (c Client) FindOffers(ctx context.Context, query offer.CardQuery) ([]offer.Offer, error) {

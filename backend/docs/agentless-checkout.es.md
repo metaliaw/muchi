@@ -129,8 +129,8 @@ a un carro incompleto.
 
 ## Nivel 1 en WooCommerce: cotización
 
-Si el pedido a `/checkout` trae `shipping` (`country`, más `region` con el
-código de la tienda, como `CL-RM`), cada tienda WooCommerce arma un carro nuevo
+Si el pedido a `/checkout` trae `shipping` (`country` y `region` por nombre,
+como `Chile` y `Región Metropolitana`), cada tienda WooCommerce arma un carro nuevo
 por la Store API: pide el `Cart-Token`, agrega las líneas y fija la dirección.
 Devuelve `quote` con subtotal, envío, total, tarifas de envío y medios de pago.
 Si la tienda recorta una línea por falta de stock, lo avisa en `notices`.
@@ -142,6 +142,19 @@ reintentan, porque un reintento duplicaría la cantidad.
 
 Solo se cotizan productos simples que vienen directo de la tienda. Las ofertas
 de agregadores y los productos variables quedan sin `quote`.
+
+## Regiones y Shopify
+
+La región se escribe por nombre, igual que en `stores.yaml`. Una tabla fija en
+`internal/stores/regions.go` la traduce al código ISO de cada región: WooCommerce
+recibe `CL-RM` y Shopify `RM`. También acepta el código directo.
+
+Shopify cotiza con su API AJAX: `POST /cart/add.js` arma un carro en una cookie
+propia, `GET /cart.js` da el subtotal, y `GET /cart/shipping_rates.json` da las
+tarifas de envío para la dirección. Como el carro no tiene tarifa elegida, el
+envío del total es la más barata. Shopify no informa medios de pago antes del
+checkout. Jumpseller sigue sin cotización: su carro es un formulario y sus
+tiendas de Magic están pausadas.
 
 ## Siguiente paso sugerido
 
