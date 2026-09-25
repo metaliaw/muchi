@@ -198,3 +198,61 @@ func (c Client) FetchStorefront(ctx context.Context, domain, target string) ([]b
 	c.storefront = true
 	return c.FetchSource(ctx, domain, target)
 }
+
+// SessionRequest Carries one Call that Moves a Store Session forward, such as
+// Adding a Line to a Cart.
+type SessionRequest struct {
+	Method string
+	Target string
+	Body   []byte
+	Header http.Header
+}
+
+// SendSession Makes one Call with a Body and Hands back the Reply Headers the
+// Session Lives in. It never Retries: a second Add to Cart Doubles the Line.
+func (c Client) SendSession(ctx context.Context, domain string, request SessionRequest) ([]byte, http.Header, error) {
+	if c.Gate != nil {
+		if err := c.Gate.AwaitSource(ctx, domain); err != nil {
+			return nil, nil, err
+		}
+	}
+	started := time.Now()
+	data, header, err := c.sendSession(ctx, request)
+	if c.Gate != nil {
+		_ = c.Gate.RecordSource(ctx, domain, time.Since(started), err)
+	}
+	if c.Logger != nil {
+		c.Logger.InfoContext(ctx, "Source Session Request", "source", domain, "method", request.Method, "latency_ms", time.Since(started).Milliseconds(), "error", err)
+	}
+	return data, header, err
+}
+
+func (c Client) sendSession(ctx context.Context, request SessionRequest) ([]byte, http.Header, error) {
+	var body io.Reader
+	if request.Body != nil {
+		body = strings.NewReader(string(request.Body))
+	}
+	req, err := http.NewRequestWithContext(ctx, request.Method, request.Target, body)
+	if err != nil {
+		return nil, nil, err
+	}
+	for key, values := range request.Header {
+		req.Header[key] = values
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", c.UserAgent)
+	if request.Body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	response, err := c.HTTP.Do(req)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer response.Body.Close()
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		data, _ := io.ReadAll(io.LimitReader(response.Body, 1024))
+		return nil, response.Header, StatusError{Code: response.StatusCode, Body: string(data)}
+	}
+	data, err := io.ReadAll(io.LimitReader(response.Body, c.bodyCap()))
+	return data, response.Header, err
+}

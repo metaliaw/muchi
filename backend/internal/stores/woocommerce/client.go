@@ -21,11 +21,14 @@ type Client struct {
 	Fetcher SourceFetcher
 	Domain  string
 	Name    string
+	// Sessions Lets QuoteCart Fill a Cart; Searching Never Needs it.
+	Sessions SessionSender
 }
 
 type productReply struct {
 	ID      int    `json:"id"`
 	Name    string `json:"name"`
+	Type    string `json:"type"`
 	URL     string `json:"permalink"`
 	InStock bool   `json:"is_in_stock"`
 	Prices  struct {
@@ -81,6 +84,11 @@ func (c Client) buildOffer(product productReply) (offer.Offer, error) {
 		ID: fmt.Sprintf("%s:%d", c.Domain, product.ID), CardName: html.UnescapeString(product.Name),
 		Store: store, PriceAmount: price, PriceCurrency: product.Prices.Currency,
 		URL: product.URL, Source: c.Domain, StockStatus: status,
+	}
+	// Only a Simple Product Goes in a Cart by its own Id; a Variable one
+	// Needs the Variation.
+	if product.Type == "simple" {
+		item.VariantID = strconv.Itoa(product.ID)
 	}
 	if item.PriceCurrency == "" || offer.ValidateOffer(item) != nil {
 		return offer.Offer{}, fmt.Errorf("invalid store offer from %s", c.Domain)

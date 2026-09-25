@@ -127,8 +127,25 @@ cada línea. Si una línea Shopify no trae su variante (por ejemplo, una oferta
 de scry.cl), la tienda entera cae a páginas de producto, para no mandar a nadie
 a un carro incompleto.
 
+## Nivel 1 en WooCommerce: cotización
+
+Si el pedido a `/checkout` trae `shipping` (`country`, más `region` con el
+código de la tienda, como `CL-RM`), cada tienda WooCommerce arma un carro nuevo
+por la Store API: pide el `Cart-Token`, agrega las líneas y fija la dirección.
+Devuelve `quote` con subtotal, envío, total, tarifas de envío y medios de pago.
+Si la tienda recorta una línea por falta de stock, lo avisa en `notices`.
+
+No crea pedido ni reserva stock: el carro de WooCommerce no bloquea unidades, y
+solo el checkout (el borrador del pedido) las retiene por unos minutos. El carro
+queda abandonado y expira solo. Las llamadas que agregan líneas no se
+reintentan, porque un reintento duplicaría la cantidad.
+
+Solo se cotizan productos simples que vienen directo de la tienda. Las ofertas
+de agregadores y los productos variables quedan sin `quote`.
+
 ## Siguiente paso sugerido
 
-Nivel 1 en WooCommerce: guardar el ID de producto en sus ofertas y recorrer la
-Store API hasta `GET cart` para mostrar el total real con envío, sin crear
-pedido. Después, crear pedidos con transferencia en una tienda piloto.
+Probar la cotización en vivo con onplay.cl y lacripta.cl, y anotar sus
+`payment_methods`. Si alguna acepta `bacs` (transferencia), crear pedidos en
+esa tienda piloto con `POST checkout`, siempre detrás de una confirmación
+explícita del comprador.

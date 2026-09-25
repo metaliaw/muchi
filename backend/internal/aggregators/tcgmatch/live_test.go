@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cangrejometralleta/muchi-api/internal/source"
 	"github.com/cangrejometralleta/muchi-api/internal/aggregators/tcgmatch"
+	"github.com/cangrejometralleta/muchi-api/internal/source"
 
 	"github.com/cangrejometralleta/muchi-api/internal/offer"
 )

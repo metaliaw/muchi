@@ -2,7 +2,10 @@ package search
 
 import (
 	"context"
+	"errors"
 	"net/url"
+	"strings"
+	"sync"
 
 	"github.com/cangrejometralleta/muchi-api/internal/offer"
 )
@@ -33,14 +36,21 @@ type StoreCheckout struct {
 	Mode   string         `json:"mode"`
 	URL    string         `json:"url,omitempty"`
 	Lines  []CheckoutLine `json:"lines"`
+	// Quote is the Store's own Cart Answer, Present only when the Caller Sent
+	// an Address and the Store can be Asked. QuoteError Says why one Failed.
+	Quote      *offer.CartQuote `json:"quote,omitempty"`
+	QuoteError string           `json:"quote_error,omitempty"`
 }
 
 // CheckoutLinks Hands the Buyer one Way into each Store's Checkout.
 //
-// Nothing is Bought and no Cart is Touched here: the Links only Carry the Cart
-// the Buyer Chose, and the Buyer Pays at the Store. Offers are Named by the Id
+// Nothing is Bought: the Links only Carry the Cart the Buyer Chose, and the
+// Buyer Pays at the Store. Offers are Named by the Id
 // the Search gave them, for the same Reason CheckOfferStock Asks for it.
-func (s Service) CheckoutLinks(ctx context.Context, id string, requests []CartRequest) ([]StoreCheckout, error) {
+//
+// With an Address, each Store that can be Asked Fills a Cart of its own and
+// Answers its Total with Shipping. That Cart Holds no Stock and no Order.
+func (s Service) CheckoutLinks(ctx context.Context, id string, requests []CartRequest, address *offer.ShippingAddress) ([]StoreCheckout, error) {
 	if id == "" || len(requests) == 0 || len(requests) > maxCheckedOffers {
 		return nil, ErrInvalid
 	}
@@ -48,6 +58,9 @@ func (s Service) CheckoutLinks(ctx context.Context, id string, requests []CartRe
 		if request.OfferID == "" || request.Quantity <= 0 || request.Quantity > maxCheckoutUnits {
 			return nil, ErrInvalid
 		}
+	}
+	if address != nil && strings.TrimSpace(address.Country) == "" {
+		return nil, ErrInvalid
 	}
 	found, err := s.collectSearchOffers(ctx, id)
 	if err != nil {
@@ -69,11 +82,37 @@ func (s Service) CheckoutLinks(ctx context.Context, id string, requests []CartRe
 		}
 		groups[domain] = append(groups[domain], offer.CartLine{Offer: item, Quantity: request.Quantity})
 	}
-	checkouts := make([]StoreCheckout, 0, len(domains))
-	for _, domain := range domains {
-		checkouts = append(checkouts, s.planCheckout(domain, groups[domain]))
+	checkouts := make([]StoreCheckout, len(domains))
+	var group sync.WaitGroup
+	gate := make(chan struct{}, maxConcurrentSources)
+	for index, domain := range domains {
+		checkouts[index] = s.planCheckout(domain, groups[domain])
+		if address == nil || s.Quotes == nil {
+			continue
+		}
+		group.Add(1)
+		go func(checkout *StoreCheckout, lines []offer.CartLine) {
+			defer group.Done()
+			gate <- struct{}{}
+			defer func() { <-gate }()
+			s.quoteCheckout(ctx, checkout, lines, *address)
+		}(&checkouts[index], groups[domain])
 	}
+	group.Wait()
 	return checkouts, nil
+}
+
+// quoteCheckout Keeps a Store Failure inside the Answer, as readOfferStock does:
+// the Links Stand whether or not the Store Priced its Shipping.
+func (s Service) quoteCheckout(ctx context.Context, checkout *StoreCheckout, lines []offer.CartLine, address offer.ShippingAddress) {
+	quote, err := s.Quotes.QuoteCart(ctx, checkout.Domain, lines, address)
+	switch {
+	case errors.Is(err, offer.ErrNoQuote):
+	case err != nil:
+		checkout.QuoteError = "the store did not answer its cart"
+	default:
+		checkout.Quote = &quote
+	}
 }
 
 func (s Service) planCheckout(domain string, lines []offer.CartLine) StoreCheckout {

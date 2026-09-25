@@ -171,7 +171,11 @@ paths:
         a url that fills the cart and opens checkout; every other store answers
         mode `product_pages` with the page of each line. Stores come back in
         the order first asked. Offers are named by the id the search gave them,
-        at most fifty lines of at most 99 units each.
+        at most fifty lines of at most 99 units each. With a `shipping`
+        address, each WooCommerce store fills a fresh cart of its own through
+        its Store API and answers `quote`: items, shipping and total, shipping
+        rates, and payment methods. The quote creates no order and holds no
+        stock. A store that fails answers `quote_error` and keeps its links.
       requestBody:
         required: true
         content:
@@ -192,6 +196,15 @@ paths:
                     properties:
                       offer_id: {type: string}
                       quantity: {type: integer, minimum: 1, maximum: 99}
+                shipping:
+                  type: object
+                  additionalProperties: false
+                  required: [country]
+                  properties:
+                    country: {type: string, examples: [CL]}
+                    region: {type: string, description: "The store's own state code", examples: [CL-RM]}
+                    city: {type: string}
+                    postcode: {type: string}
       responses:
         "200":
           description: One checkout per store
@@ -426,6 +439,39 @@ components:
               offer_id: {type: string}
               quantity: {type: integer}
               url: {type: string, format: uri}
+        quote: {$ref: "#/components/schemas/CartQuote"}
+        quote_error: {type: string}
+    CartQuote:
+      type: object
+      description: What the store's own cart answered. Nothing is reserved.
+      required: [currency, items_total, shipping_total, total, lines, shipping_rates, payment_methods]
+      properties:
+        currency: {type: string}
+        items_total: {type: string}
+        shipping_total: {type: string}
+        total: {type: string}
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              offer_id: {type: string}
+              quantity: {type: integer}
+              unit_price: {type: string}
+        shipping_rates:
+          type: array
+          items:
+            type: object
+            properties:
+              id: {type: string}
+              name: {type: string}
+              price: {type: string}
+              selected: {type: boolean}
+        payment_methods: {type: array, items: {type: string}}
+        notices:
+          type: array
+          items: {type: string}
+          description: Lines the cart trimmed or dropped, and store messages
     OfferStock:
       type: object
       required: [id, stock_status]

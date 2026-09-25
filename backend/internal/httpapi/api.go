@@ -231,7 +231,8 @@ func (a API) checkStock(w http.ResponseWriter, r *http.Request) {
 
 // checkoutRequest Names the Offers the Buyer Chose and how many of each.
 type checkoutRequest struct {
-	Items []search.CartRequest `json:"items"`
+	Items    []search.CartRequest   `json:"items"`
+	Shipping *offer.ShippingAddress `json:"shipping,omitempty"`
 }
 
 // createCheckoutLinks Hands the Buyer one Way into each Store's Checkout.
@@ -241,7 +242,7 @@ func (a API) createCheckoutLinks(w http.ResponseWriter, r *http.Request) {
 		a.writeError(w, r, search.ErrInvalid)
 		return
 	}
-	checkouts, err := a.Searches.CheckoutLinks(r.Context(), r.PathValue("search_id"), request.Items)
+	checkouts, err := a.Searches.CheckoutLinks(r.Context(), r.PathValue("search_id"), request.Items, request.Shipping)
 	if err != nil {
 		a.writeError(w, r, err)
 		return

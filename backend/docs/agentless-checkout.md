@@ -125,8 +125,25 @@ with the permalink; the rest answer `mode: product_pages` with each line's page.
 If a Shopify line lacks its variant (a scry.cl offer, for example), the whole
 store falls back to product pages so no buyer lands on an incomplete cart.
 
+## Level 1 on WooCommerce: Quotes
+
+When the `/checkout` request carries `shipping` (`country`, plus `region` in the
+store's own code such as `CL-RM`), each WooCommerce store fills a fresh cart
+through the Store API: it takes a `Cart-Token`, adds the lines, and sets the
+address. It answers `quote` with subtotal, shipping, total, shipping rates, and
+payment methods. A line the store trims for lack of stock shows in `notices`.
+
+No order is created and no stock is held: a WooCommerce cart does not reserve
+units; only checkout (the draft order) holds them for a few minutes. The cart is
+abandoned and expires on its own. Add-to-cart calls are never retried, since a
+retry would double the quantity.
+
+Only simple products sent by the store itself are quoted. Aggregator offers and
+variable products get no `quote`.
+
 ## Suggested Next Step
 
-Level 1 on WooCommerce: store the product ID in its offers and walk the Store
-API up to `GET cart` to show the real total with shipping, without creating an
-order. Then create bank-transfer orders at one pilot store.
+Try the quote live on onplay.cl and lacripta.cl and record their
+`payment_methods`. If one accepts `bacs` (bank transfer), create orders at that
+pilot store with `POST checkout`, always behind the buyer's explicit
+confirmation.
