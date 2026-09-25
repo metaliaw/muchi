@@ -1,4 +1,4 @@
-[English](sweeper.md) | [Español](sweeper.es.md)
+**English** | [Español](sweeper.es.md)
 
 # The Sweeper Replaces Spent Queue Wake-ups
 

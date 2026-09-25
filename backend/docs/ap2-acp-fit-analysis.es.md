@@ -1,6 +1,6 @@
 # AP2 y ACP: análisis de encaje para Muchi
 
-[English](ap2-acp-fit-analysis.md) | [Español](ap2-acp-fit-analysis.es.md)
+[English](ap2-acp-fit-analysis.md) | **Español**
 
 Análisis para discusión · 24 de septiembre de 2026
 

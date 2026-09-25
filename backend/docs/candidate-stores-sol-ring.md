@@ -1,6 +1,6 @@
 # Candidate Stores from Sol Ring
 
-[English](candidate-stores-sol-ring.md) | [Español](candidate-stores-sol-ring.es.md)
+**English** | [Español](candidate-stores-sol-ring.es.md)
 
 Verification: September 7, 2026. Live GCP search:
 `search_1bad0a3b9c8aacc035c23576`. It completed with one card found and zero

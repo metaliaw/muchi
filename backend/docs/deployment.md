@@ -1,6 +1,6 @@
 # Deployment with Cats
 
-[English](deployment.md) | [Español](deployment.es.md)
+**English** | [Español](deployment.es.md)
 
 ## Summary
 

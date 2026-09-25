@@ -1,6 +1,6 @@
 # Orphaned Queue Items Incident
 
-[English](orphaned-queue-items.md) | [Español](orphaned-queue-items.es.md)
+**English** | [Español](orphaned-queue-items.es.md)
 
 ## Summary
 

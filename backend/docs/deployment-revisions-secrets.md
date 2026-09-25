@@ -1,6 +1,6 @@
 # Deployment, Revisions, and Secret Rotation
 
-[English](deployment-revisions-secrets.md) | [Español](deployment-revisions-secrets.es.md)
+**English** | [Español](deployment-revisions-secrets.es.md)
 
 ## Summary
 

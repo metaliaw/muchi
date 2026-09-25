@@ -1,6 +1,6 @@
 # Source Pacing
 
-[English](source-pacing.md) | [Español](source-pacing.es.md)
+**English** | [Español](source-pacing.es.md)
 
 ## Summary
 

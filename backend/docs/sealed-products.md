@@ -1,6 +1,6 @@
 # Sealed Products
 
-[English](sealed-products.md) | [Español](sealed-products.es.md)
+**English** | [Español](sealed-products.es.md)
 
 ## Summary
 

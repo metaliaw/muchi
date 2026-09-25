@@ -1,6 +1,6 @@
 # Search Findings
 
-[English](search-findings.md) | [Español](search-findings.es.md)
+**English** | [Español](search-findings.es.md)
 
 ## Summary
 

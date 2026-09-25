@@ -1,4 +1,4 @@
-[English](entrypoints.md) | [Español](entrypoints.es.md)
+**English** | [Español](entrypoints.es.md)
 
 # API Entry Points
 

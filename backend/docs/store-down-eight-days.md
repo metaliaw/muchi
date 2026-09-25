@@ -1,6 +1,6 @@
 # A Store Down for Eight Days
 
-[English](store-down-eight-days.md) | [Español](store-down-eight-days.es.md)
+**English** | [Español](store-down-eight-days.es.md)
 
 September 2026 · the `v3.netdecker.cl` case and what it taught us about the circuit breaker
 

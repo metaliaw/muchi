@@ -1,6 +1,6 @@
 # Muchi API Architecture
 
-[English](architecture.md) | [Español](architecture.es.md)
+**English** | [Español](architecture.es.md)
 
 Muchi is free software across two repositories. Search collection, persistence,
 and processing live here in

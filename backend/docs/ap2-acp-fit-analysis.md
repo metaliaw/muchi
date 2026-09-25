@@ -1,6 +1,6 @@
 # AP2 and ACP: Fit Analysis for Muchi
 
-[English](ap2-acp-fit-analysis.md) | [Español](ap2-acp-fit-analysis.es.md)
+**English** | [Español](ap2-acp-fit-analysis.es.md)
 
 Analysis for discussion · September 24, 2026
 

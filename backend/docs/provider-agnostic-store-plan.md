@@ -1,6 +1,6 @@
 # Plan: Prove the Store Boundary with a Second Adapter
 
-[English](provider-agnostic-store-plan.md) | [Español](provider-agnostic-store-plan.es.md)
+**English** | [Español](provider-agnostic-store-plan.es.md)
 
 This document describes work **that has not been done**. It is a plan to prove
 that the boundary described in [Architecture](architecture.md#the-store-boundary)

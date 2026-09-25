@@ -1,6 +1,6 @@
 # Card Identity Across Games and Sets
 
-[English](card-identity-games-sets.md) | [Español](card-identity-games-sets.es.md)
+**English** | [Español](card-identity-games-sets.es.md)
 
 ## Summary
 

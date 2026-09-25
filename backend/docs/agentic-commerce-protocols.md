@@ -1,6 +1,6 @@
 # Agentic Commerce Protocols
 
-[English](agentic-commerce-protocols.md) | [Español](agentic-commerce-protocols.es.md)
+**English** | [Español](agentic-commerce-protocols.es.md)
 
 ## The Problem They All Solve
 
