@@ -109,6 +109,7 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		SetsByGame:        catalog.BuildSetLibraries(fetcher, storeConfig),
 		SourcesByGame:     sourcesByGame,
 		Stocks:            checker,
+		Checkouts:         storeConfig,
 		Cache:             store,
 		CacheNamespace:    search.HashPayload([]any{"search-providers-v8", storeConfig}) + ":",
 		CacheTTL:          config.OfferCacheTTL,

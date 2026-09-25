@@ -64,6 +64,7 @@ func (a API) BuildHandler() http.Handler {
 	mux.Handle("GET /v1/searches/{search_id}", a.authenticate(http.HandlerFunc(a.getSearch)))
 	mux.Handle("GET /v1/searches/{search_id}/results", a.authenticate(http.HandlerFunc(a.listResults)))
 	mux.Handle("POST /v1/searches/{search_id}/stock", a.authenticate(http.HandlerFunc(a.checkStock)))
+	mux.Handle("POST /v1/searches/{search_id}/checkout", a.authenticate(http.HandlerFunc(a.createCheckoutLinks)))
 	mux.Handle("POST /v1/searches/{search_id}/cancel", a.authenticate(http.HandlerFunc(a.cancelSearch)))
 	mux.Handle("POST /v1/stores/{store_id}/inventory/refresh", a.authenticate(http.HandlerFunc(a.refreshStoreInventory)))
 	mux.Handle("GET /v1/cards/metadata", a.authenticate(http.HandlerFunc(a.getCardMetadata)))
@@ -226,6 +227,26 @@ func (a API) checkStock(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"offers": readings})
+}
+
+// checkoutRequest Names the Offers the Buyer Chose and how many of each.
+type checkoutRequest struct {
+	Items []search.CartRequest `json:"items"`
+}
+
+// createCheckoutLinks Hands the Buyer one Way into each Store's Checkout.
+func (a API) createCheckoutLinks(w http.ResponseWriter, r *http.Request) {
+	var request checkoutRequest
+	if err := decodeJSON(r, &request); err != nil {
+		a.writeError(w, r, search.ErrInvalid)
+		return
+	}
+	checkouts, err := a.Searches.CheckoutLinks(r.Context(), r.PathValue("search_id"), request.Items)
+	if err != nil {
+		a.writeError(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"stores": checkouts})
 }
 
 func (a API) cancelSearch(w http.ResponseWriter, r *http.Request) {

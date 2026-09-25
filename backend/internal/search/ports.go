@@ -41,6 +41,11 @@ type StockChecker interface {
 	CheckStock(context.Context, offer.Offer) (offer.StockReading, error)
 }
 
+// CheckoutLinker Builds a URL that Fills one Store's Cart and Opens its Checkout.
+type CheckoutLinker interface {
+	CheckoutLink(domain string, lines []offer.CartLine) (string, bool)
+}
+
 // OfferCache Reuses Offers under https://www.rfc-editor.org/rfc/rfc9111.html.
 type OfferCache interface {
 	LoadOffers(context.Context, string) ([]offer.Offer, bool, error)

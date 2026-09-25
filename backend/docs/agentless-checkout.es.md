@@ -118,9 +118,17 @@ que **nada de esto se probó en vivo**. Antes de construir:
 3. Revisar qué tiendas aceptan transferencia.
 4. Leer los términos de cada tienda sobre compras automatizadas.
 
+## Nivel 0 implementado
+
+`POST /v1/searches/{search_id}/checkout` recibe `items` con `offer_id` y
+`quantity`, y devuelve una entrada por tienda. Las tiendas Shopify responden
+`mode: cart` con el permalink; el resto, `mode: product_pages` con la página de
+cada línea. Si una línea Shopify no trae su variante (por ejemplo, una oferta
+de scry.cl), la tienda entera cae a páginas de producto, para no mandar a nadie
+a un carro incompleto.
+
 ## Siguiente paso sugerido
 
-Un endpoint en Muchi que, dado un carro de ofertas, devuelva **un enlace de
-checkout por tienda** (nivel 0). No requiere medio de pago, no tiene riesgo de
-cobro doble y ya ahorra la mayor parte del trabajo al comprador. Los niveles 1
-y 2 se construyen encima, tienda por tienda.
+Nivel 1 en WooCommerce: guardar el ID de producto en sus ofertas y recorrer la
+Store API hasta `GET cart` para mostrar el total real con envío, sin crear
+pedido. Después, crear pedidos con transferencia en una tienda piloto.

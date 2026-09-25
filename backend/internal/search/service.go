@@ -22,6 +22,7 @@ type Service struct {
 	Sources           []OfferSource
 	SourcesByGame     map[Game][]OfferSource
 	Stocks            StockChecker
+	Checkouts         CheckoutLinker
 	Cache             OfferCache
 	CacheNamespace    string
 	Tasks             TaskQueue

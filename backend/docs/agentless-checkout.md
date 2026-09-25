@@ -117,9 +117,16 @@ The container where this was written cannot reach the store domains, so
 3. Check which stores accept bank transfer.
 4. Read each store's terms on automated purchases.
 
+## Level 0 Implemented
+
+`POST /v1/searches/{search_id}/checkout` takes `items` with `offer_id` and
+`quantity` and returns one entry per store. Shopify stores answer `mode: cart`
+with the permalink; the rest answer `mode: product_pages` with each line's page.
+If a Shopify line lacks its variant (a scry.cl offer, for example), the whole
+store falls back to product pages so no buyer lands on an incomplete cart.
+
 ## Suggested Next Step
 
-A Muchi endpoint that, given a cart of offers, returns **one checkout link per
-store** (level 0). It needs no payment method, carries no double-charge risk,
-and already saves the buyer most of the work. Levels 1 and 2 build on top, store
-by store.
+Level 1 on WooCommerce: store the product ID in its offers and walk the Store
+API up to `GET cart` to show the real total with shipping, without creating an
+order. Then create bank-transfer orders at one pilot store.
