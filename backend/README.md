@@ -31,6 +31,7 @@ and development decisions.
 - [Sealed Products](docs/sealed-products.md)
 - [Web Agent Purchases Proposal](docs/web-agent-purchases-proposal.md)
 - [Agentic Commerce Protocols](docs/agentic-commerce-protocols.md)
+- [AP2 and ACP: Fit Analysis for Muchi](docs/ap2-acp-fit-analysis.md)
 - [Candidate Stores from Sol Ring](docs/candidate-stores-sol-ring.md)
 - [A Store Down for Eight Days](docs/store-down-eight-days.md)
 
