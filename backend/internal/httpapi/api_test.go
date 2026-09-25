@@ -430,3 +430,112 @@ func TestRefreshUnknownStoreAnswersNotFound(t *testing.T) {
 		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
 	}
 }
+
+// checkoutStore Answers Offers from a Shopify Store, a Store without a Cart
+// Link, and a Second Unit of the same Shopify Variant.
+type checkoutStore struct{ fakeStore }
+
+func (s *checkoutStore) ListResults(context.Context, string, search.ResultPage) (search.Result, error) {
+	return search.Result{SearchID: "search_one", Items: []search.Item{{ID: "item-1", Offers: []offer.Offer{
+		{ID: "ring", Store: "Shop", URL: "https://shop.test/products/sol-ring?variant=11", Source: "shop.test"},
+		{ID: "bolt", Store: "Shop", URL: "https://shop.test/products/bolt", VariantID: "22", Source: "shop.test"},
+		{ID: "woo", Store: "Woo", URL: "https://woo.test/producto/sol-ring", VariantID: "7", Source: "woo.test"},
+	}}}}, nil
+}
+
+func askCheckout(t *testing.T, body string) *httptest.ResponseRecorder {
+	t.Helper()
+	links := stores.Config{Stores: map[string]stores.StoreConfig{
+		"shop.test": {Platform: "shopify", Enabled: true},
+		"woo.test":  {Platform: "woocommerce", Enabled: true},
+	}}
+	api := API{Searches: search.Service{Repository: &checkoutStore{}, Checkouts: links}, Token: "secret"}
+	request := httptest.NewRequest(http.MethodPost, "/v1/searches/search_one/checkout", strings.NewReader(body))
+	request.Header.Set("Authorization", "Bearer secret")
+	recorder := httptest.NewRecorder()
+	api.BuildHandler().ServeHTTP(recorder, request)
+	return recorder
+}
+
+// TestCheckoutLinksGroupsLinesByStore Spells the Contract: one Entry per Store
+// in the Order first Asked, a Cart Link where the Platform has one, and the
+// Product Pages everywhere else.
+func TestCheckoutLinksGroupsLinesByStore(t *testing.T) {
+	recorder := askCheckout(t, `{"items":[{"offer_id":"ring","quantity":2},{"offer_id":"woo","quantity":1},{"offer_id":"bolt","quantity":4}]}`)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d: %s", recorder.Code, recorder.Body)
+	}
+	var reply struct {
+		Stores []search.StoreCheckout `json:"stores"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &reply); err != nil {
+		t.Fatal(err)
+	}
+	if len(reply.Stores) != 2 {
+		t.Fatalf("stores = %+v", reply.Stores)
+	}
+	shop, woo := reply.Stores[0], reply.Stores[1]
+	if shop.Domain != "shop.test" || shop.Mode != "cart" || shop.URL != "https://shop.test/cart/11:2,22:4" || len(shop.Lines) != 2 {
+		t.Fatalf("shop = %+v", shop)
+	}
+	if woo.Mode != "product_pages" || woo.URL != "" || woo.Lines[0].URL != "https://woo.test/producto/sol-ring" {
+		t.Fatalf("woo = %+v", woo)
+	}
+}
+
+// TestCheckoutLinksRefusesUnknownOffersAndBadQuantities Keeps the Route from
+// Linking a URL of the Caller's Choosing or an Absurd Cart.
+func TestCheckoutLinksRefusesUnknownOffersAndBadQuantities(t *testing.T) {
+	if recorder := askCheckout(t, `{"items":[{"offer_id":"https://evil.test/x","quantity":1}]}`); recorder.Code != http.StatusNotFound {
+		t.Fatalf("unknown offer status = %d", recorder.Code)
+	}
+	for _, body := range []string{`{"items":[]}`, `{"items":[{"offer_id":"ring","quantity":0}]}`, `{"items":[{"offer_id":"ring","quantity":100}]}`} {
+		if recorder := askCheckout(t, body); recorder.Code != http.StatusBadRequest {
+			t.Fatalf("%s status = %d", body, recorder.Code)
+		}
+	}
+}
+
+// fixedQuoter Prices every Store but the Shopify one, which it cannot Ask.
+type fixedQuoter struct{ address offer.ShippingAddress }
+
+func (q *fixedQuoter) QuoteCart(_ context.Context, domain string, lines []offer.CartLine, address offer.ShippingAddress) (offer.CartQuote, error) {
+	q.address = address
+	if domain != "woo.test" {
+		return offer.CartQuote{}, offer.ErrNoQuote
+	}
+	return offer.CartQuote{Currency: "CLP", Total: "7990", Lines: []offer.QuoteLine{{OfferID: lines[0].Offer.ID, Quantity: lines[0].Quantity}}}, nil
+}
+
+// TestCheckoutLinksQuotesStoresWhenAskedWithAnAddress Keeps the Quote Optional:
+// only an Address Asks the Stores, and a Store that cannot be Asked Stays Silent.
+func TestCheckoutLinksQuotesStoresWhenAskedWithAnAddress(t *testing.T) {
+	quoter := &fixedQuoter{}
+	api := API{Searches: search.Service{Repository: &checkoutStore{}, Quotes: quoter}, Token: "secret"}
+	body := `{"items":[{"offer_id":"ring","quantity":1},{"offer_id":"woo","quantity":2}],"shipping":{"country":"CL","region":"CL-RM","city":"Santiago"}}`
+	request := httptest.NewRequest(http.MethodPost, "/v1/searches/search_one/checkout", strings.NewReader(body))
+	request.Header.Set("Authorization", "Bearer secret")
+	recorder := httptest.NewRecorder()
+	api.BuildHandler().ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d: %s", recorder.Code, recorder.Body)
+	}
+	var reply struct {
+		Stores []search.StoreCheckout `json:"stores"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &reply); err != nil {
+		t.Fatal(err)
+	}
+	if reply.Stores[0].Quote != nil || reply.Stores[0].QuoteError != "" {
+		t.Fatalf("shop = %+v", reply.Stores[0])
+	}
+	if quote := reply.Stores[1].Quote; quote == nil || quote.Total != "7990" || quote.Lines[0].Quantity != 2 {
+		t.Fatalf("woo = %+v", reply.Stores[1])
+	}
+	if quoter.address.Region != "CL-RM" {
+		t.Fatalf("address = %+v", quoter.address)
+	}
+	if recorder := askCheckout(t, `{"items":[{"offer_id":"woo","quantity":1}],"shipping":{"city":"Santiago"}}`); recorder.Code != http.StatusBadRequest {
+		t.Fatalf("address without country status = %d", recorder.Code)
+	}
+}

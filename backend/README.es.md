@@ -33,6 +33,7 @@ documentan la API y las decisiones de desarrollo.
 - [Producto sellado](docs/sealed-products.es.md)
 - [Propuesta de compras con agentes web](docs/web-agent-purchases-proposal.es.md)
 - [Protocolos de comercio agéntico](docs/agentic-commerce-protocols.es.md)
+- [Checkout sin agentes](docs/agentless-checkout.es.md)
 - [AP2 y ACP: análisis de encaje para Muchi](docs/ap2-acp-fit-analysis.es.md)
 - [Tiendas candidatas desde Sol Ring](docs/candidate-stores-sol-ring.es.md)
 - [Una tienda caída ocho días](docs/store-down-eight-days.es.md)

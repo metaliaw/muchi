@@ -160,6 +160,69 @@ paths:
                 properties:
                   offers: {type: array, items: {$ref: "#/components/schemas/OfferStock"}}
         "404": {$ref: "#/components/responses/NotFound"}
+  /searches/{search_id}/checkout:
+    parameters:
+      - {$ref: "#/components/parameters/SearchID"}
+    post:
+      description: >-
+        Hands the buyer one way into each store's checkout for offers this
+        search already found. Nothing is bought and no cart is touched: stores
+        whose platform has a cart link (Shopify today) answer mode `cart` with
+        a url that fills the cart and opens checkout; every other store answers
+        mode `product_pages` with the page of each line. Stores come back in
+        the order first asked. Offers are named by the id the search gave them,
+        at most fifty lines of at most 99 units each. With a `shipping`
+        address, each WooCommerce and Shopify store fills a fresh cart of its
+        own and answers `quote`: items, shipping and total, shipping rates, and
+        (WooCommerce only) payment methods. Shopify has no selected rate yet,
+        so its shipping total is the cheapest rate. The quote creates no order and holds no
+        stock. A store that fails answers `quote_error` and keeps its links.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [offer_id, quantity]
+                    properties:
+                      offer_id: {type: string}
+                      quantity: {type: integer, minimum: 1, maximum: 99}
+                shipping:
+                  type: object
+                  additionalProperties: false
+                  required: [country]
+                  properties:
+                    country: {type: string, examples: [Chile, CL]}
+                    region:
+                      type: string
+                      description: >-
+                        A Chilean region by name, as store locations write it,
+                        or by its ISO 3166-2 code. Each platform receives its own
+                        code.
+                      examples: [Región Metropolitana, CL-RM]
+                    city: {type: string}
+                    postcode: {type: string}
+      responses:
+        "200":
+          description: One checkout per store
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [stores]
+                properties:
+                  stores: {type: array, items: {$ref: "#/components/schemas/StoreCheckout"}}
+        "404": {$ref: "#/components/responses/NotFound"}
   /searches/{search_id}/cancel:
     parameters:
       - {$ref: "#/components/parameters/SearchID"}
@@ -366,6 +429,56 @@ components:
         error_code: {type: string}
         error_message: {type: string}
         offers: {type: array, items: {$ref: "#/components/schemas/Offer"}}
+    StoreCheckout:
+      type: object
+      required: [store, domain, mode, lines]
+      properties:
+        store: {type: string}
+        domain: {type: string}
+        mode: {type: string, enum: [cart, product_pages]}
+        url: {type: string, format: uri, description: Present only in mode `cart`}
+        lines:
+          type: array
+          items:
+            type: object
+            required: [offer_id, quantity, url]
+            properties:
+              offer_id: {type: string}
+              quantity: {type: integer}
+              url: {type: string, format: uri}
+        quote: {$ref: "#/components/schemas/CartQuote"}
+        quote_error: {type: string}
+    CartQuote:
+      type: object
+      description: What the store's own cart answered. Nothing is reserved.
+      required: [currency, items_total, shipping_total, total, lines, shipping_rates, payment_methods]
+      properties:
+        currency: {type: string}
+        items_total: {type: string}
+        shipping_total: {type: string}
+        total: {type: string}
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              offer_id: {type: string}
+              quantity: {type: integer}
+              unit_price: {type: string}
+        shipping_rates:
+          type: array
+          items:
+            type: object
+            properties:
+              id: {type: string}
+              name: {type: string}
+              price: {type: string}
+              selected: {type: boolean}
+        payment_methods: {type: array, items: {type: string}}
+        notices:
+          type: array
+          items: {type: string}
+          description: Lines the cart trimmed or dropped, and store messages
     OfferStock:
       type: object
       required: [id, stock_status]
