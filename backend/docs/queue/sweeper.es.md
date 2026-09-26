@@ -67,6 +67,6 @@ Scheduler usa la cuenta de servicio de tareas y un token OIDC cuya audiencia
 es la URL de la función. La función necesita acceso a Firestore para contar,
 permiso para crear Cloud Tasks y el token de API configurado al iniciar.
 
-La implementación vive en [`function.go`](../function.go),
-[`internal/sweep/sweeper.go`](../internal/sweep/sweeper.go) y
-[`internal/db/storage.go`](../internal/db/storage.go).
+La implementación vive en [`function.go`](../../function.go),
+[`internal/sweep/sweeper.go`](../../internal/sweep/sweeper.go) y
+[`internal/db/storage.go`](../../internal/db/storage.go).

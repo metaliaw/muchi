@@ -3,7 +3,7 @@
 [English](provider-agnostic-store-plan.md) | **Español**
 
 Este documento describe trabajo **no realizado**. Es el plan para demostrar que
-la frontera descrita en [Arquitectura](architecture.es.md#la-frontera-del-almacén)
+la frontera descrita en [Arquitectura](../architecture.es.md#la-frontera-del-almacén)
 aguanta un cambio de proveedor. Hoy esa frontera es una intención bien formada:
 existen los puertos, pero un solo adaptador los cumple y nadie ha comprobado
 que otro pueda.

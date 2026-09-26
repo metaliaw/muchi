@@ -64,7 +64,7 @@ pregunte por ella en ese rato recibe un fallo que dice hasta cuándo dura.
 
 La espera **dobla con cada falla que sigue**: un minuto, dos, cuatro, hasta un
 techo de una hora. Un minuto fijo servía para una caída de un rato y fallaba para
-una de una semana — [una tienda caída ocho días](store-down-eight-days.es.md) seguía
+una de una semana — [una tienda caída ocho días](../stores/store-down-eight-days.es.md) seguía
 recibiendo cinco consultas por minuto, y cada una le costaba su timeout a la
 búsqueda que la pidió.
 

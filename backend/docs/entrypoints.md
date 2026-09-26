@@ -9,7 +9,7 @@ Each is a separate operational door into the same composed application.
   exists for clients that need searches, status, results, catalog and health.
 - [`ProcessSearch`](entrypoints/process-search.md) handles one private Cloud
   Task wake-up. It exists to move slow source work out of the HTTP request.
-- [`SweepQueue`](sweeper.md) restores wake-ups when ready work remains after
+- [`SweepQueue`](queue/sweeper.md) restores wake-ups when ready work remains after
   worker turns have spent their tasks. It exists for bounded queue recovery.
 
 The entry points share configuration and application composition, but have

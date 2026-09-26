@@ -35,7 +35,7 @@ Son dos problemas distintos que el mismo aviso mezclaba.
 
 ## Por qué el circuito no alcanzaba
 
-La [escalera del castigo](source-pacing.es.md) abría el circuito a la quinta
+La [escalera del castigo](../search/source-pacing.es.md) abría el circuito a la quinta
 falla seguida, por **un minuto fijo**. Para una caída de un rato está bien. Para
 una de ocho días, la cuenta es esta:
 
@@ -95,7 +95,7 @@ castigo de semanas sobre una tienda que ya volvió.
 - **Nadie mide cuánto duró un circuito abierto.** El registro guarda hasta cuándo
   está abierto, no cuántas veces se abrió ni por cuánto. Sin eso, el techo de una
   hora sigue siendo un juicio y no una medición, igual que el resto de las
-  constantes que [castigo y perdón](source-pacing.es.md) ya declara sin validar.
+  constantes que [castigo y perdón](../search/source-pacing.es.md) ya declara sin validar.
 
 ## Estado
 

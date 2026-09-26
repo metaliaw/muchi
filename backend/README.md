@@ -15,26 +15,43 @@ and development decisions.
 
 ## Development Documentation
 
+### Overview
+
 - [Architecture](docs/architecture.md)
 - [API Entry Points](docs/entrypoints.md)
-- [Queue Sweeper](docs/sweeper.md)
-- [Game Search, Aggregators, and Stores](docs/game-search-providers.md)
-- [Source Pacing](docs/source-pacing.md)
-- [Orphaned Queue Items](docs/orphaned-queue-items.md)
-- [Google Cloud Startup Credits](docs/google-cloud-startup-credits.md)
-- [Deployment, Revisions, and Secret Rotation](docs/deployment-revisions-secrets.md)
-- [Deployment with Cats](docs/deployment.md)
-- [Search Findings](docs/search-findings.md)
-- [Card Identity Across Games and Sets](docs/card-identity-games-sets.md)
-- [Cursor Pagination and Consistency](docs/cursor-pagination-consistency.md)
-- [Provider-Agnostic Store Plan](docs/provider-agnostic-store-plan.md)
-- [Sealed Products](docs/sealed-products.md)
-- [Web Agent Purchases Proposal](docs/web-agent-purchases-proposal.md)
-- [Agentic Commerce Protocols](docs/agentic-commerce-protocols.md)
-- [Checkout Without Agents](docs/agentless-checkout.md)
-- [AP2 and ACP: Fit Analysis for Muchi](docs/ap2-acp-fit-analysis.md)
-- [Candidate Stores from Sol Ring](docs/candidate-stores-sol-ring.md)
-- [A Store Down for Eight Days](docs/store-down-eight-days.md)
+
+### Search
+
+- [Game Search, Aggregators, and Stores](docs/search/game-search-providers.md)
+- [Source Pacing](docs/search/source-pacing.md)
+- [Search Findings](docs/search/search-findings.md)
+- [Card Identity Across Games and Sets](docs/search/card-identity-games-sets.md)
+- [Cursor Pagination and Consistency](docs/search/cursor-pagination-consistency.md)
+- [Sealed Products](docs/search/sealed-products.md)
+
+### Stores
+
+- [Provider-Agnostic Store Plan](docs/stores/provider-agnostic-store-plan.md)
+- [Candidate Stores from Sol Ring](docs/stores/candidate-stores-sol-ring.md)
+- [A Store Down for Eight Days](docs/stores/store-down-eight-days.md)
+
+### Queue
+
+- [Queue Sweeper](docs/queue/sweeper.md)
+- [Orphaned Queue Items](docs/queue/orphaned-queue-items.md)
+
+### Checkout
+
+- [Web Agent Purchases Proposal](docs/checkout/web-agent-purchases-proposal.md)
+- [Agentic Commerce Protocols](docs/checkout/agentic-commerce-protocols.md)
+- [Checkout Without Agents](docs/checkout/agentless-checkout.md)
+- [AP2 and ACP: Fit Analysis for Muchi](docs/checkout/ap2-acp-fit-analysis.md)
+
+### Operations
+
+- [Google Cloud Startup Credits](docs/operations/google-cloud-startup-credits.md)
+- [Deployment, Revisions, and Secret Rotation](docs/operations/deployment-revisions-secrets.md)
+- [Deployment with Cats](docs/operations/deployment.md)
 
 ## Local Development
 
@@ -93,19 +110,19 @@ not confirm stock. scry.cl's URL, enabled state, and community setting are confi
 under `search_providers` in `config/stores.yaml`. The reader uses scry.cl's public
 HTML and does not force a cache refresh.
 
-The [game search flow](docs/game-search-providers.es.md) explains how YAML combines
+The [game search flow](docs/search/game-search-providers.es.md) explains how YAML combines
 aggregators and stores, selects each adapter, and handles timing and duplicates.
-The [card identity guide](docs/card-identity-games-sets.es.md) explains
+The [card identity guide](docs/search/card-identity-games-sets.es.md) explains
 what identifies a search, a printing, and a commercial variant. The
-[search findings](docs/search-findings.es.md) track defects at the seam
+[search findings](docs/search/search-findings.es.md) track defects at the seam
 between a store's product title and the card inferred by the code. The
-[sealed product guide](docs/sealed-products.es.md) explains box identity, source
+[sealed product guide](docs/search/sealed-products.es.md) explains box identity, source
 selection, the `sealed` property, and why HTTP 429 is not a source failure. The
-[eight-day store outage](docs/store-down-eight-days.es.md) covers why a fixed
+[eight-day store outage](docs/stores/store-down-eight-days.es.md) covers why a fixed
 one-minute circuit breaker was insufficient and what remains open: `www.deckscards.cl`
 is slow, not down.
 
-The [source pacing policy](docs/source-pacing.es.md) describes what counts as a
+The [source pacing policy](docs/search/source-pacing.es.md) describes what counts as a
 failure, how long sources are paused, which honest responses never count as
 failures, and why uncertainty should favor the caller.
 
@@ -149,19 +166,19 @@ Firestore retains searches and results for 24 hours. Offer caching keeps
 independent positive and negative TTLs. Cloud Tasks invokes a private function
 for each card, without a resident worker.
 
-The [orphaned queue items incident](docs/orphaned-queue-items.es.md) explains how
+The [orphaned queue items incident](docs/queue/orphaned-queue-items.es.md) explains how
 an active queue stopped progressing, the claim pattern that fixed it, and the
 invariants needed to reproduce this architecture safely. The
-[cursor pagination guide](docs/cursor-pagination-consistency.es.md) explains how
+[cursor pagination guide](docs/search/cursor-pagination-consistency.es.md) explains how
 clients read incremental results while workers finish cards out of order.
 
 ## Google Cloud
 
 The [architecture guide](docs/architecture.es.md) shows boundaries among HTTP
 entry points, queue, workers, persistence, sources, identities, and secrets. The
-[deployment, revisions, and secrets incident](docs/deployment-revisions-secrets.es.md)
+[deployment, revisions, and secrets incident](docs/operations/deployment-revisions-secrets.es.md)
 explains why a correct rotation must also move traffic and update every
-consumer. The [provider-agnostic storage plan](docs/provider-agnostic-store-plan.es.md)
+consumer. The [provider-agnostic storage plan](docs/stores/provider-agnostic-store-plan.es.md)
 describes the remaining work to run without a cloud provider and keep provider
 replacement an explicit choice.
 
@@ -178,7 +195,7 @@ documents even if Firestore has not deleted them yet.
 
 ## Deployment
 
-The [deployment guide](docs/deployment.es.md) explains how `deploy.sh` orchestrates
+The [deployment guide](docs/operations/deployment.es.md) explains how `deploy.sh` orchestrates
 the four components, what each script does, required permissions, shared
 `config/deploy.env` options, and token handling.
 

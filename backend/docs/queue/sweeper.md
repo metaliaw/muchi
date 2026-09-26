@@ -65,6 +65,6 @@ uses the task service account and an OIDC token whose audience is the function
 URL. The function needs Firestore access to count items, permission to create
 Cloud Tasks, and the configured API token at startup.
 
-The implementation is in [`function.go`](../function.go),
-[`internal/sweep/sweeper.go`](../internal/sweep/sweeper.go), and
-[`internal/db/storage.go`](../internal/db/storage.go).
+The implementation is in [`function.go`](../../function.go),
+[`internal/sweep/sweeper.go`](../../internal/sweep/sweeper.go), and
+[`internal/db/storage.go`](../../internal/db/storage.go).

@@ -85,7 +85,7 @@ worker, sweeper, and API can omit them, preventing everyday deployments from
 rewriting project permissions by accident.
 
 The service accounts created by `deploy-infra.sh` are different: they govern
-runtime access in GCP, not deployment. The [architecture diagram](architecture.md)
+runtime access in GCP, not deployment. The [architecture diagram](../architecture.md)
 shows where each identity is used.
 
 This list was inferred from the scripts, not tested in a real session with

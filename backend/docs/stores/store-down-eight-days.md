@@ -35,7 +35,7 @@ These are two different problems that the same warning combined.
 
 ## Why the Circuit Was Not Enough
 
-The [penalty ladder](source-pacing.md) opened the circuit after five consecutive
+The [penalty ladder](../search/source-pacing.md) opened the circuit after five consecutive
 failures for **one fixed minute**. That works for a brief outage. For an outage
 of eight days, the sequence is:
 
@@ -95,7 +95,7 @@ leave a weeks-long penalty on a store that has recovered.
 - **Nobody measures how long a circuit stayed open.** The record stores when it
   opens until, not how many times it opened or for how long. Without that, the
   one-hour cap remains a judgment rather than a measurement, like the other
-  unvalidated constants in [Source Pacing](source-pacing.md).
+  unvalidated constants in [Source Pacing](../search/source-pacing.md).
 
 ## Status
 

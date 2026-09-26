@@ -65,7 +65,7 @@ pause ends.
 
 The wait **doubles with each further failure**: one minute, two, four, up to one
 hour. A fixed one-minute pause helped with brief outages but failed during an
-eight-day outage: the [store that was down for eight days](store-down-eight-days.md)
+eight-day outage: the [store that was down for eight days](../stores/store-down-eight-days.md)
 still received five requests per minute, and each request consumed its timeout
 from the search that asked for it.
 

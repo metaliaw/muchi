@@ -53,7 +53,7 @@ Scale and Scale AI depend on funding, not the product: without an institutional
 investor, access is unavailable regardless of the use case.
 
 If Muchi ever raises a round, the Scale AI case is not the price comparison—that
-is not an AI startup—but the [web agent purchases proposal](web-agent-purchases-proposal.md).
+is not an AI startup—but the [web agent purchases proposal](../checkout/web-agent-purchases-proposal.md).
 Purchases executed by autonomous agents fit the profile the program seeks.
 Remember this if both the proposal and funding move forward.
 

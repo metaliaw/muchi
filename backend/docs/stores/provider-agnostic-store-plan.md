@@ -3,7 +3,7 @@
 **English** | [Español](provider-agnostic-store-plan.es.md)
 
 This document describes work **that has not been done**. It is a plan to prove
-that the boundary described in [Architecture](architecture.md#the-store-boundary)
+that the boundary described in [Architecture](../architecture.md#the-store-boundary)
 survives a provider change. Today the boundary is a well-formed intention: the
 ports exist, but only one adapter implements them, and nobody has checked
 whether another one can.

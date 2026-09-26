@@ -11,7 +11,7 @@ Cada uno es una puerta operativa distinta hacia la misma aplicación compuesta.
 - [`ProcessSearch`](entrypoints/process-search.es.md) atiende un despertar
   privado de Cloud Tasks. Existe para sacar el trabajo lento con tiendas de la
   petición HTTP.
-- [`SweepQueue`](sweeper.es.md) repone despertares cuando quedan ítems listos
+- [`SweepQueue`](queue/sweeper.es.md) repone despertares cuando quedan ítems listos
   después de que los turnos gastaron sus tareas. Existe para recuperar la Cola
   de manera acotada.
 

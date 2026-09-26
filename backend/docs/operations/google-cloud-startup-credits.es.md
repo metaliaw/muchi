@@ -56,7 +56,7 @@ inversionista institucional no hay acceso, por bueno que sea el caso.
 
 Si alguna vez se levanta una ronda, la carta para Scale AI no es el comparador
 de precios —eso no es una startup de IA— sino la
-[propuesta de compras con agentes web](web-agent-purchases-proposal.es.md).
+[propuesta de compras con agentes web](../checkout/web-agent-purchases-proposal.es.md).
 Compras ejecutadas por agentes autónomos sí calzan con el perfil que el programa
 busca. Vale la pena Recordarlo si la propuesta avanza y el financiamiento
 también.
