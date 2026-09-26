@@ -113,6 +113,8 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		Stocks:            checker,
 		Checkouts:         storeConfig,
 		Quotes:            stores.Quoter{Sessions: fetcher, Config: storeConfig},
+		Orderer:           stores.Orderer{Sessions: fetcher, Config: storeConfig},
+		Orders:            store,
 		Cache:             store,
 		CacheNamespace:    search.HashPayload([]any{"search-providers-v9", storeConfig}) + ":",
 		CacheTTL:          config.OfferCacheTTL,

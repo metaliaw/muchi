@@ -84,4 +84,16 @@ func (r *Repository) RecordSource(ctx context.Context, domain string, latency ti
 	return r.database.RecordSource(ctx, domain, latency, sourceErr)
 }
 
+func (r *Repository) CreateOrder(ctx context.Context, key, hash string, order model.Order) (model.Order, error) {
+	return r.database.CreateOrder(ctx, key, hash, order)
+}
+
+func (r *Repository) GetOrder(ctx context.Context, id string) (model.Order, error) {
+	return r.database.GetOrder(ctx, id)
+}
+
+func (r *Repository) MoveOrderStatus(ctx context.Context, id string, from, to model.OrderStatus) (model.Order, error) {
+	return r.database.MoveOrderStatus(ctx, id, from, to)
+}
+
 func (r *Repository) Close() error { return r.database.CloseStore() }

@@ -123,12 +123,21 @@ func TestListResultPages(t *testing.T) {
 func TestOrderStatusMoves(t *testing.T) {
 	store := openTestStore(t)
 	ctx := context.Background()
-	order, err := store.CreateOrder(ctx, model.Order{
+	draft := model.Order{
 		Store: "Konoha Store", Domain: "konohastore.cl", Status: model.OrderPending,
 		Lines: []model.CheckoutLine{{OfferID: "konohastore.cl:1", Quantity: 2}},
-	})
+	}
+	order, err := store.CreateOrder(ctx, "order-key", "same-hash", draft)
 	if err != nil || order.ID == "" || order.Status != model.OrderPending {
 		t.Fatalf("create order=%#v err=%v", order, err)
+	}
+	// A retried Call with the same Key Answers the Order already Placed.
+	again, err := store.CreateOrder(ctx, "order-key", "same-hash", draft)
+	if err != nil || again.ID != order.ID {
+		t.Fatalf("retried create order=%#v err=%v want id=%s", again, err, order.ID)
+	}
+	if _, err := store.CreateOrder(ctx, "order-key", "other-hash", draft); !errors.Is(err, search.ErrConflict) {
+		t.Fatalf("conflicting create order err=%v", err)
 	}
 	fetched, err := store.GetOrder(ctx, order.ID)
 	if err != nil || fetched.Domain != "konohastore.cl" || len(fetched.Lines) != 1 {

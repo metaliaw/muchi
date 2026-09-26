@@ -52,6 +52,12 @@ type CartQuoter interface {
 	QuoteCart(ctx context.Context, domain string, lines []model.CartLine, address model.ShippingAddress) (model.CartQuote, error)
 }
 
+// OrderPlacer Checks a Cart out at the Store it Belongs to, for real. A Store
+// that cannot yet Answers model.ErrOrderNotSupported.
+type OrderPlacer interface {
+	PlaceOrder(ctx context.Context, domain string, lines []model.CartLine, address model.ShippingAddress) (model.Order, error)
+}
+
 // OfferCache Reuses Offers under https://www.rfc-editor.org/rfc/rfc9111.html.
 type OfferCache interface {
 	LoadOffers(context.Context, string) ([]model.Offer, bool, error)

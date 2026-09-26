@@ -223,6 +223,59 @@ paths:
                 properties:
                   stores: {type: array, items: {$ref: "#/components/schemas/StoreCheckout"}}
         "404": {$ref: "#/components/responses/NotFound"}
+  /searches/{search_id}/orders:
+    parameters:
+      - {$ref: "#/components/parameters/SearchID"}
+      - {$ref: "#/components/parameters/IdempotencyKey"}
+    post:
+      description: >-
+        Places a real order at one store, for offers this search already
+        found. Every line must belong to the same store; a cart spanning more
+        than one is rejected, since paying happens one store at a time. Only
+        WooCommerce stores support this today (`422 order_not_supported`
+        otherwise); it fills the store's own cart, picks its own selected
+        shipping rate, and checks out by bank transfer. The order lands
+        `pending`; nothing here waits for the transfer to arrive. A retried
+        call with the same idempotency key and cart answers the order already
+        placed, never a second one.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [items, shipping]
+              properties:
+                items:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [offer_id, quantity]
+                    properties:
+                      offer_id: {type: string}
+                      quantity: {type: integer, minimum: 1, maximum: 99}
+                shipping:
+                  type: object
+                  additionalProperties: false
+                  required: [country]
+                  properties:
+                    country: {type: string, examples: [Chile, CL]}
+                    region: {type: string, examples: [Región Metropolitana, CL-RM]}
+                    city: {type: string}
+                    postcode: {type: string}
+      responses:
+        "201":
+          description: Order placed
+          content: {application/json: {schema: {$ref: "#/components/schemas/Order"}}}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+        "422":
+          description: This store cannot place an order yet
+          content: {application/json: {schema: {$ref: "#/components/schemas/Error"}}}
   /searches/{search_id}/cancel:
     parameters:
       - {$ref: "#/components/parameters/SearchID"}
@@ -448,6 +501,28 @@ components:
               url: {type: string, format: uri}
         quote: {$ref: "#/components/schemas/CartQuote"}
         quote_error: {type: string}
+    Order:
+      type: object
+      required: [id, search_id, store, domain, lines, status, created_at, updated_at]
+      properties:
+        id: {type: string}
+        search_id: {type: string}
+        store: {type: string}
+        domain: {type: string}
+        lines:
+          type: array
+          items:
+            type: object
+            required: [offer_id, quantity, url]
+            properties:
+              offer_id: {type: string}
+              quantity: {type: integer}
+              url: {type: string, format: uri}
+        status: {type: string, enum: [pending, confirmed, released]}
+        store_order: {type: string, description: The order id the store itself assigned}
+        payment_url: {type: string, format: uri, description: Present when the payment method redirects to a payment page}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
     CartQuote:
       type: object
       description: What the store's own cart answered. Nothing is reserved.

@@ -80,6 +80,14 @@ type checkoutRequest struct {
 	Shipping *shippingAddressDTO `json:"shipping,omitempty"`
 }
 
+// orderRequest Names the Offers to Place a real Order for, all at the same
+// Store. Shipping is Required here where checkoutRequest Leaves it optional:
+// a Quote can Skip the Store, an Order cannot.
+type orderRequest struct {
+	Items    []cartRequestDTO   `json:"items"`
+	Shipping shippingAddressDTO `json:"shipping"`
+}
+
 // createCheckoutLinks Hands the Buyer one Way into each Store's Checkout.
 
 type refreshInventoryReply struct {

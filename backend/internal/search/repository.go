@@ -21,3 +21,12 @@ type SearchItemRepository interface {
 	RenewItemLease(context.Context, string, string, time.Duration) error
 	CompleteSearchItem(context.Context, model.Item, []model.Offer) error
 }
+
+// OrderRepository Persists a placed Order and Moves it between Statuses. A
+// second Create with the same idempotency Key and Payload Answers the same
+// Order, never a new one.
+type OrderRepository interface {
+	CreateOrder(ctx context.Context, key, hash string, order model.Order) (model.Order, error)
+	GetOrder(ctx context.Context, id string) (model.Order, error)
+	MoveOrderStatus(ctx context.Context, id string, from, to model.OrderStatus) (model.Order, error)
+}

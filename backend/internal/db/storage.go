@@ -397,16 +397,54 @@ func (s *Store) DropOffers(ctx context.Context, key string) error {
 
 // CreateOrder Reserves the Stock a Store's own Checkout just Committed. The
 // Caller Names the Status, since a Store that Redirects to Payment and one
-// that Waits for a Transfer both Start Pending, and nothing here Decides which.
-func (s *Store) CreateOrder(ctx context.Context, order model.Order) (model.Order, error) {
+// that Waits for a Transfer both Start Pending, and nothing here Decides
+// which.
+//
+// A retried Call with the same Key and Payload Answers the Order it already
+// Placed, never a second one: a Buyer's double Tap must not become two
+// Orders at the same Store.
+func (s *Store) CreateOrder(ctx context.Context, key, hash string, order model.Order) (model.Order, error) {
 	ctx, cancel := boundContext(ctx)
 	defer cancel()
-	now := time.Now().UTC()
-	order.ID = buildID("order")
-	order.CreatedAt, order.UpdatedAt = now, now
-	record := orderRecord{Payload: mustJSON(renderOrder(order)), Status: string(order.Status), UpdatedAt: now}
-	_, err := s.client.Collection("orders").Doc(order.ID).Create(ctx, record)
-	return order, err
+	var result model.Order
+	err := s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
+		stored, found, err := s.readRequest(ctx, tx, "place-order", key)
+		if err != nil {
+			return err
+		}
+		if found {
+			if stored.Hash != hash {
+				return search.ErrConflict
+			}
+			result, err = s.readOrder(ctx, tx, stored.ResourceID)
+			return err
+		}
+		now := time.Now().UTC()
+		order.ID = buildID("order")
+		order.CreatedAt, order.UpdatedAt = now, now
+		result = order
+		record := orderRecord{Payload: mustJSON(renderOrder(order)), Status: string(order.Status), UpdatedAt: now}
+		if err := tx.Create(s.client.Collection("orders").Doc(order.ID), record); err != nil {
+			return err
+		}
+		expires := now.Add(s.searchTTL)
+		return tx.Set(s.client.Collection("idempotency").Doc(hashKey("place-order:"+key)), requestRecord{Hash: hash, ResourceID: order.ID, ExpiresAt: expires})
+	})
+	if err != nil {
+		return model.Order{}, mapStoreError(err)
+	}
+	return result, nil
+}
+
+func (s *Store) readOrder(ctx context.Context, tx *firestorelib.Transaction, id string) (model.Order, error) {
+	document, err := tx.Get(s.client.Collection("orders").Doc(id))
+	if status.Code(err) == codes.NotFound {
+		return model.Order{}, model.ErrOrderNotFound
+	}
+	if err != nil {
+		return model.Order{}, err
+	}
+	return decodeOrder(document)
 }
 
 // GetOrder Reads one Order back by its Id.
