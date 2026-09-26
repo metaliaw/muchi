@@ -2,11 +2,11 @@
 
 This repository is a Go API that Follows OneTwoThree.
 
-The generated snapshot Lives in `.agents`.
+The generated snapshot Lives in `.agents`, versioned in this Repository.
 Its source is `https://github.com/cangrejometralleta/OneTwoThree.git`, branch `main`.
 The manifest `.agents/distribution.json` Records commit
-`2fa30254daf2f297181f1c9baf576c4427ece1c8` and `dirty: false`.
-This is a local working-tree Snapshot, not a published canon release.
+`51b6d190b0709055177d9b589ca5a28ad066c2af` and `dirty: false`.
+This is a committed working-tree Snapshot, not a published canon release.
 
 [Rules](.agents/canon/RULES.md) Holds the how; read it first.
 [Values](.agents/canon/VALUES.md) Holds the why.
@@ -25,5 +25,6 @@ then OneTwoReload to Validate client entrances.
 Verify manifest hashes and preserve local changes before Replacement.
 The joke skill is Unavailable because its required material is excluded.
 
-The snapshot and client entrances are local Caches excluded from Git and deployment.
-A fresh checkout Requires snapshot installation before these references resolve.
+The snapshot is versioned in Git; client entrances stay local Caches excluded
+from Git and deployment. A fresh checkout Resolves these references immediately;
+only the client links Require OneTwoReload.
