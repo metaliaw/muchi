@@ -55,6 +55,10 @@ var ErrNoQuote = errors.New("cart cannot be quoted at this store")
 // ErrOrderNotFound Answers an Order Id no Store Placed.
 var ErrOrderNotFound = errors.New("order not found")
 
+// ErrOrderNotSupported Answers a Store whose Platform has no Way to Place a
+// real Order yet; the Caller Falls back to a Link instead.
+var ErrOrderNotSupported = errors.New("store cannot place an order yet")
+
 // ErrOrderConflict Answers a Status Move that did not Start where it Claimed
 // to: two Webhooks Racing, or a Release Arriving after a Confirm already Won.
 var ErrOrderConflict = errors.New("order already moved past that status")
