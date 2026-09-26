@@ -52,6 +52,13 @@ type ShippingRate struct {
 // to Ask, or a Line cannot Name its Product there.
 var ErrNoQuote = errors.New("cart cannot be quoted at this store")
 
+// ErrOrderNotFound Answers an Order Id no Store Placed.
+var ErrOrderNotFound = errors.New("order not found")
+
+// ErrOrderConflict Answers a Status Move that did not Start where it Claimed
+// to: two Webhooks Racing, or a Release Arriving after a Confirm already Won.
+var ErrOrderConflict = errors.New("order already moved past that status")
+
 // CartRequest Asks for some Units of an Offer this Search Found.
 type CartRequest struct {
 	OfferID  string

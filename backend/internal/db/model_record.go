@@ -224,6 +224,77 @@ func buildItem(value itemPayload) model.Item {
 	}
 }
 
+type checkoutLinePayload struct {
+	OfferID  string `json:"offer_id"`
+	Quantity int    `json:"quantity"`
+	URL      string `json:"url"`
+}
+
+func renderCheckoutLines(values []model.CheckoutLine) []checkoutLinePayload {
+	if values == nil {
+		return nil
+	}
+	result := make([]checkoutLinePayload, len(values))
+	for i, value := range values {
+		result[i] = checkoutLinePayload{OfferID: value.OfferID, Quantity: value.Quantity, URL: value.URL}
+	}
+	return result
+}
+
+func buildCheckoutLines(values []checkoutLinePayload) []model.CheckoutLine {
+	if values == nil {
+		return nil
+	}
+	result := make([]model.CheckoutLine, len(values))
+	for i, value := range values {
+		result[i] = model.CheckoutLine{OfferID: value.OfferID, Quantity: value.Quantity, URL: value.URL}
+	}
+	return result
+}
+
+type orderPayload struct {
+	ID         string                `json:"id"`
+	SearchID   string                `json:"search_id"`
+	Store      string                `json:"store"`
+	Domain     string                `json:"domain"`
+	Lines      []checkoutLinePayload `json:"lines"`
+	Status     string                `json:"status"`
+	StoreOrder string                `json:"store_order,omitempty"`
+	PaymentURL string                `json:"payment_url,omitempty"`
+	CreatedAt  time.Time             `json:"created_at"`
+	UpdatedAt  time.Time             `json:"updated_at"`
+}
+
+func renderOrder(value model.Order) orderPayload {
+	return orderPayload{
+		ID:         value.ID,
+		SearchID:   value.SearchID,
+		Store:      value.Store,
+		Domain:     value.Domain,
+		Lines:      renderCheckoutLines(value.Lines),
+		Status:     string(value.Status),
+		StoreOrder: value.StoreOrder,
+		PaymentURL: value.PaymentURL,
+		CreatedAt:  value.CreatedAt,
+		UpdatedAt:  value.UpdatedAt,
+	}
+}
+
+func buildOrder(value orderPayload) model.Order {
+	return model.Order{
+		ID:         value.ID,
+		SearchID:   value.SearchID,
+		Store:      value.Store,
+		Domain:     value.Domain,
+		Lines:      buildCheckoutLines(value.Lines),
+		Status:     model.OrderStatus(value.Status),
+		StoreOrder: value.StoreOrder,
+		PaymentURL: value.PaymentURL,
+		CreatedAt:  value.CreatedAt,
+		UpdatedAt:  value.UpdatedAt,
+	}
+}
+
 type sourceFaultPayload struct {
 	Source string `json:"source"`
 	Reason string `json:"reason"`

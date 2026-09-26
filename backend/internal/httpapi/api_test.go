@@ -452,7 +452,8 @@ func askCheckout(t *testing.T, body string) *httptest.ResponseRecorder {
 
 // TestCheckoutLinksGroupsLinesByStore Spells the Contract: one Entry per Store
 // in the Order first Asked, a Cart Link where the Platform has one, and the
-// Product Pages everywhere else.
+// Product Pages everywhere else. A single WooCommerce Line gets its own
+// `add-to-cart` Link; a second one would not.
 func TestCheckoutLinksGroupsLinesByStore(t *testing.T) {
 	recorder := askCheckout(t, `{"items":[{"offer_id":"ring","quantity":2},{"offer_id":"woo","quantity":1},{"offer_id":"bolt","quantity":4}]}`)
 	if recorder.Code != http.StatusOK {
@@ -471,7 +472,7 @@ func TestCheckoutLinksGroupsLinesByStore(t *testing.T) {
 	if shop.Domain != "shop.test" || shop.Mode != "cart" || shop.URL != "https://shop.test/cart/11:2,22:4" || len(shop.Lines) != 2 {
 		t.Fatalf("shop = %+v", shop)
 	}
-	if woo.Mode != "product_pages" || woo.URL != "" || woo.Lines[0].URL != "https://woo.test/producto/sol-ring" {
+	if woo.Mode != "cart" || woo.URL != "https://woo.test/?add-to-cart=7&quantity=1" || woo.Lines[0].URL != "https://woo.test/producto/sol-ring" {
 		t.Fatalf("woo = %+v", woo)
 	}
 }

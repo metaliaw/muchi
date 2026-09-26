@@ -131,6 +131,12 @@ type requestRecord struct {
 	ExpiresAt  time.Time `firestore:"expires_at"`
 }
 
+type orderRecord struct {
+	Payload   []byte    `firestore:"payload"`
+	Status    string    `firestore:"status"`
+	UpdatedAt time.Time `firestore:"updated_at"`
+}
+
 type sourceRecord struct {
 	Source              string     `firestore:"source"`
 	LastSuccess         *time.Time `firestore:"last_success,omitempty"`
@@ -387,6 +393,64 @@ func (s *Store) DropOffers(ctx context.Context, key string) error {
 	defer cancel()
 	_, err := s.client.Collection("offer_cache").Doc(hashKey(key)).Delete(ctx)
 	return err
+}
+
+// CreateOrder Reserves the Stock a Store's own Checkout just Committed. The
+// Caller Names the Status, since a Store that Redirects to Payment and one
+// that Waits for a Transfer both Start Pending, and nothing here Decides which.
+func (s *Store) CreateOrder(ctx context.Context, order model.Order) (model.Order, error) {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
+	now := time.Now().UTC()
+	order.ID = buildID("order")
+	order.CreatedAt, order.UpdatedAt = now, now
+	record := orderRecord{Payload: mustJSON(renderOrder(order)), Status: string(order.Status), UpdatedAt: now}
+	_, err := s.client.Collection("orders").Doc(order.ID).Create(ctx, record)
+	return order, err
+}
+
+// GetOrder Reads one Order back by its Id.
+func (s *Store) GetOrder(ctx context.Context, id string) (model.Order, error) {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
+	document, err := s.client.Collection("orders").Doc(id).Get(ctx)
+	if status.Code(err) == codes.NotFound {
+		return model.Order{}, model.ErrOrderNotFound
+	}
+	if err != nil {
+		return model.Order{}, err
+	}
+	return decodeOrder(document)
+}
+
+// MoveOrderStatus Advances an Order from one Status to the next, never past
+// where the Caller Believes it Stands: a Webhook Confirming an Order the
+// Sweeper already Released must Lose, not Overwrite the Release.
+func (s *Store) MoveOrderStatus(ctx context.Context, id string, from, to model.OrderStatus) (model.Order, error) {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
+	var order model.Order
+	err := s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
+		reference := s.client.Collection("orders").Doc(id)
+		document, err := tx.Get(reference)
+		if status.Code(err) == codes.NotFound {
+			return model.ErrOrderNotFound
+		}
+		if err != nil {
+			return err
+		}
+		order, err = decodeOrder(document)
+		if err != nil {
+			return err
+		}
+		if order.Status != from {
+			return model.ErrOrderConflict
+		}
+		order.Status, order.UpdatedAt = to, time.Now().UTC()
+		record := orderRecord{Payload: mustJSON(renderOrder(order)), Status: string(order.Status), UpdatedAt: order.UpdatedAt}
+		return tx.Set(reference, record)
+	})
+	return order, err
 }
 
 func (s *Store) AwaitSource(ctx context.Context, domain string) error {
@@ -691,6 +755,16 @@ func decodeSearch(document *firestorelib.DocumentSnapshot) (model.Job, error) {
 	var job jobPayload
 	err := json.Unmarshal(record.Payload, &job)
 	return buildJob(job), err
+}
+
+func decodeOrder(document *firestorelib.DocumentSnapshot) (model.Order, error) {
+	var record orderRecord
+	if err := document.DataTo(&record); err != nil {
+		return model.Order{}, err
+	}
+	var stored orderPayload
+	err := json.Unmarshal(record.Payload, &stored)
+	return buildOrder(stored), err
 }
 
 func decodeItem(document *firestorelib.DocumentSnapshot) (model.Item, itemRecord, error) {

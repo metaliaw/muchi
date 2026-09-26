@@ -120,6 +120,34 @@ func TestListResultPages(t *testing.T) {
 	}
 }
 
+func TestOrderStatusMoves(t *testing.T) {
+	store := openTestStore(t)
+	ctx := context.Background()
+	order, err := store.CreateOrder(ctx, model.Order{
+		Store: "Konoha Store", Domain: "konohastore.cl", Status: model.OrderPending,
+		Lines: []model.CheckoutLine{{OfferID: "konohastore.cl:1", Quantity: 2}},
+	})
+	if err != nil || order.ID == "" || order.Status != model.OrderPending {
+		t.Fatalf("create order=%#v err=%v", order, err)
+	}
+	fetched, err := store.GetOrder(ctx, order.ID)
+	if err != nil || fetched.Domain != "konohastore.cl" || len(fetched.Lines) != 1 {
+		t.Fatalf("get order=%#v err=%v", fetched, err)
+	}
+	// The Payment already Failed: a stale Belief that it is still Pending
+	// must not Confirm what is already Gone.
+	if _, err := store.MoveOrderStatus(ctx, order.ID, model.OrderConfirmed, model.OrderReleased); !errors.Is(err, model.ErrOrderConflict) {
+		t.Fatalf("move from wrong status err=%v", err)
+	}
+	confirmed, err := store.MoveOrderStatus(ctx, order.ID, model.OrderPending, model.OrderConfirmed)
+	if err != nil || confirmed.Status != model.OrderConfirmed {
+		t.Fatalf("confirm order=%#v err=%v", confirmed, err)
+	}
+	if _, err := store.GetOrder(ctx, "order_missing"); !errors.Is(err, model.ErrOrderNotFound) {
+		t.Fatalf("get missing order err=%v", err)
+	}
+}
+
 func openTestStore(t *testing.T) *Store {
 	t.Helper()
 	if os.Getenv("FIRESTORE_EMULATOR_HOST") == "" {
