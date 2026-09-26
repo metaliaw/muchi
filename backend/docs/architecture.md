@@ -134,7 +134,7 @@ flowchart TB
 
 The task carries a signal, not an item ID. This lets competing consumers and
 lease recovery make progress, but requires the claim to remove dead work so FIFO
-progress is preserved. The [orphaned items incident](queue/orphaned-queue-items.es.md)
+progress is preserved. The [orphaned items incident](queue/orphaned-queue-items.md)
 explains this invariant.
 
 ## Code Layers
@@ -199,8 +199,8 @@ Store configuration and stock checking live in `internal/stores`. Its
 contain the platform-specific clients. Offer aggregators live separately in
 `internal/aggregators`.
 
-The [game provider flow](search/game-search-providers.es.md) details this composition. The
-[card identity guide](search/card-identity-games-sets.es.md) separates searches,
+The [game provider flow](search/game-search-providers.md) details this composition. The
+[card identity guide](search/card-identity-games-sets.md) separates searches,
 printings, and commercial variants.
 
 ### The Store Boundary
@@ -231,7 +231,7 @@ to `firestore.indexes.json`; the code rejects expired records because deletion
 is eventual. A store without native TTL must sweep records itself. That is the
 costliest piece to port, not the queries.
 
-The [provider-agnostic storage plan](stores/provider-agnostic-store-plan.es.md) describes how to
+The [provider-agnostic storage plan](stores/provider-agnostic-store-plan.md) describes how to
 test this boundary with a second adapter.
 
 ## Availability and Recovery
