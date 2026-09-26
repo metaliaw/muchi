@@ -110,19 +110,19 @@ not confirm stock. scry.cl's URL, enabled state, and community setting are confi
 under `search_providers` in `config/stores.yaml`. The reader uses scry.cl's public
 HTML and does not force a cache refresh.
 
-The [game search flow](docs/search/game-search-providers.es.md) explains how YAML combines
+The [game search flow](docs/search/game-search-providers.md) explains how YAML combines
 aggregators and stores, selects each adapter, and handles timing and duplicates.
-The [card identity guide](docs/search/card-identity-games-sets.es.md) explains
+The [card identity guide](docs/search/card-identity-games-sets.md) explains
 what identifies a search, a printing, and a commercial variant. The
-[search findings](docs/search/search-findings.es.md) track defects at the seam
+[search findings](docs/search/search-findings.md) track defects at the seam
 between a store's product title and the card inferred by the code. The
-[sealed product guide](docs/search/sealed-products.es.md) explains box identity, source
+[sealed product guide](docs/search/sealed-products.md) explains box identity, source
 selection, the `sealed` property, and why HTTP 429 is not a source failure. The
-[eight-day store outage](docs/stores/store-down-eight-days.es.md) covers why a fixed
+[eight-day store outage](docs/stores/store-down-eight-days.md) covers why a fixed
 one-minute circuit breaker was insufficient and what remains open: `www.deckscards.cl`
 is slow, not down.
 
-The [source pacing policy](docs/search/source-pacing.es.md) describes what counts as a
+The [source pacing policy](docs/search/source-pacing.md) describes what counts as a
 failure, how long sources are paused, which honest responses never count as
 failures, and why uncertainty should favor the caller.
 
@@ -166,19 +166,19 @@ Firestore retains searches and results for 24 hours. Offer caching keeps
 independent positive and negative TTLs. Cloud Tasks invokes a private function
 for each card, without a resident worker.
 
-The [orphaned queue items incident](docs/queue/orphaned-queue-items.es.md) explains how
+The [orphaned queue items incident](docs/queue/orphaned-queue-items.md) explains how
 an active queue stopped progressing, the claim pattern that fixed it, and the
 invariants needed to reproduce this architecture safely. The
-[cursor pagination guide](docs/search/cursor-pagination-consistency.es.md) explains how
+[cursor pagination guide](docs/search/cursor-pagination-consistency.md) explains how
 clients read incremental results while workers finish cards out of order.
 
 ## Google Cloud
 
-The [architecture guide](docs/architecture.es.md) shows boundaries among HTTP
+The [architecture guide](docs/architecture.md) shows boundaries among HTTP
 entry points, queue, workers, persistence, sources, identities, and secrets. The
-[deployment, revisions, and secrets incident](docs/operations/deployment-revisions-secrets.es.md)
+[deployment, revisions, and secrets incident](docs/operations/deployment-revisions-secrets.md)
 explains why a correct rotation must also move traffic and update every
-consumer. The [provider-agnostic storage plan](docs/stores/provider-agnostic-store-plan.es.md)
+consumer. The [provider-agnostic storage plan](docs/stores/provider-agnostic-store-plan.md)
 describes the remaining work to run without a cloud provider and keep provider
 replacement an explicit choice.
 
@@ -195,7 +195,7 @@ documents even if Firestore has not deleted them yet.
 
 ## Deployment
 
-The [deployment guide](docs/operations/deployment.es.md) explains how `deploy.sh` orchestrates
+The [deployment guide](docs/operations/deployment.md) explains how `deploy.sh` orchestrates
 the four components, what each script does, required permissions, shared
 `config/deploy.env` options, and token handling.
 
