@@ -8,19 +8,6 @@ vendor/
 # One Repository Holds one active Handoff, and never Commits it.
 # See .agents/skills/bye-bye-bye/SKILL.md — Never Commit or Push the Handoff.
 /.handoff.md
-
-# Las Entradas de cada Cliente Resuelven dentro de `.agents`. Son Enlaces,
-# asi que no Llevan Barra: el Patron con Barra solo Casa con un Directorio.
-/.claude/
-/.codex/
-/.github/agents
-/.github/skills
-/rules
-/values
-/patterns
-/RULES.md
-/VALUES.md
-/PATTERNS.md
 /.canonignore
 
 # Caos: Vida sin podar. Nunca Entra al Repositorio; ver STORY.md.

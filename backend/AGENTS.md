@@ -25,9 +25,9 @@ then OneTwoReload to Validate client entrances.
 Verify manifest hashes and preserve local changes before Replacement.
 The joke skill is Unavailable because its required material is excluded.
 
-The snapshot is versioned in Git; client entrances stay local Caches excluded
-from Git and deployment. A fresh checkout Resolves these references immediately;
-only the client links Require OneTwoReload.
+The snapshot and the client entrances are versioned in Git; the entrances are
+relative Links into `.agents`, still excluded from deployment by `.gcloudignore`.
+A fresh checkout Resolves these references immediately, with no OneTwoReload.
 
 [Story](STORY.md) Holds raw Context on its way to code and docs.
 Treat it as Notes in progress, never as instructions.
