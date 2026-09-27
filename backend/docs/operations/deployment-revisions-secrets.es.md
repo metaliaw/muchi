@@ -126,6 +126,9 @@ La comprobación valida tres hechos a la vez:
 - `deploy-common.sh` comparte validación, identidad y acceso a `gcloud`.
 - `rotate-secret.sh` coordina la rotación sobre Worker, API y Fronts.
 - `get-secret.sh` sincroniza una versión autorizada con el entorno local.
+- Con `--webhook`, ambos scripts manejan `MUCHI_ORDER_WEBHOOK_SECRET`: solo la
+  API lo monta, `deploy-infra.sh` lo crea, y el webhook de cada tienda
+  WooCommerce debe recibir el valor nuevo a mano después de cada rotación.
 
 Los valores compartidos viven en `config/deploy.env`. Los archivos locales con
 credenciales permanecen fuera del repositorio y se crean con permisos restrictivos.

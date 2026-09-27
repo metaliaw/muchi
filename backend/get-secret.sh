@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Imprime el Token de Muchi en stdout y lo sincroniza en .env.
+# Con --webhook Lee el Secreto que Firma los Webhooks de Pedidos WooCommerce.
 #
 # Es para el Desarrollo local: en la Nube los Servicios montan el Token desde
 # Secret Manager y nadie lo copia a mano a ningun panel.
@@ -11,12 +12,14 @@ ROOT=$(cd -- "$(dirname -- "$0")" && pwd)
 source "$ROOT/config/deploy.env"
 PROJECT=""
 SECRET_NAME=${MUCHI_API_TOKEN%:*}
+ENV_KEY=MUCHI_API_TOKEN
 VERSION="latest"
 WORK_DIR=""
 
 usage() {
-  printf '%s\n' '🐱 get-secret.sh --project ID [--secret NOMBRE] [--version NUMERO]' \
-    'Imprime el Valor del Secreto en stdout y lo Escribe en .env.'
+  printf '%s\n' '🐱 get-secret.sh --project ID [--webhook] [--secret NOMBRE] [--version NUMERO]' \
+    'Imprime el Valor del Secreto en stdout y lo Escribe en .env.' \
+    '--webhook: el Secreto de los Webhooks de Pedidos (MUCHI_ORDER_WEBHOOK_SECRET).'
 }
 
 cleanup() {
@@ -36,15 +39,16 @@ sync_env_token() {
   if [[ -f "$env_file" ]]; then
     tmp=$(mktemp "$env_file.XXXXXXXX")
     while IFS= read -r line || [[ -n "$line" ]]; do
-      if [[ "$line" == MUCHI_API_TOKEN=* ]]; then
-        printf 'MUCHI_API_TOKEN=%s\n' "$token"
+      if [[ "$line" == "$ENV_KEY"=* ]]; then
+        printf '%s=%s\n' "$ENV_KEY" "$token"
       else
         printf '%s\n' "$line"
       fi
     done < "$env_file" > "$tmp"
     mv -f "$tmp" "$env_file"
+    grep -q "^$ENV_KEY=" "$env_file" || printf '%s=%s\n' "$ENV_KEY" "$token" >> "$env_file"
   else
-    printf 'MUCHI_API_TOKEN=%s\n' "$token" > "$env_file"
+    printf '%s=%s\n' "$ENV_KEY" "$token" > "$env_file"
   fi
 }
 
@@ -56,6 +60,7 @@ while (( $# )); do
         --project) PROJECT=$2 ;; --secret) SECRET_NAME=$2 ;; --version) VERSION=$2 ;;
       esac
       shift 2 ;;
+    --webhook) SECRET_NAME=${ORDER_WEBHOOK_SECRET%:*}; ENV_KEY=MUCHI_ORDER_WEBHOOK_SECRET; shift ;;
     --help|-h) usage; exit 0 ;;
     *) fail "Argumento Desconocido: $1" ;;
   esac

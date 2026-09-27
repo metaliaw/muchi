@@ -35,6 +35,21 @@ for email in "$API_EMAIL" "$WORKER_EMAIL"; do
 	cloud secrets add-iam-policy-binding "$SECRET_NAME" --member="serviceAccount:$email" \
 		--role=roles/secretmanager.secretAccessor --condition=None --format=none
 done
+# El Secreto de los Webhooks de Pedidos Nace aqui con un Valor Aleatorio, para
+# que deploy-api.sh pueda Montarlo antes de la Primera Rotacion. Solo la API
+# lo Lee; rotate-secret.sh --webhook Entrega el Valor para las Tiendas.
+WEBHOOK_SECRET_NAME=${ORDER_WEBHOOK_SECRET%:*}
+case "$WEBHOOK_SECRET_NAME" in '' | *[!a-zA-Z0-9_-]*) fail_deploy 'Nombre del Secreto del Webhook Inválido.' ;; esac
+existing=$(cloud secrets list --filter="name:$WEBHOOK_SECRET_NAME" --format='value(name.basename())')
+if [ "$existing" != "$WEBHOOK_SECRET_NAME" ]; then
+	cloud secrets create "$WEBHOOK_SECRET_NAME" --replication-policy=automatic
+	if ! "$DRY_RUN"; then
+		head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' |
+			gcloud secrets versions add "$WEBHOOK_SECRET_NAME" --data-file=- --project="$PROJECT" --quiet --format=none
+	fi
+fi
+cloud secrets add-iam-policy-binding "$WEBHOOK_SECRET_NAME" --member="serviceAccount:$API_EMAIL" \
+	--role=roles/secretmanager.secretAccessor --condition=None --format=none
 cloud iam service-accounts add-iam-policy-binding "$TASK_EMAIL" --member="serviceAccount:$API_EMAIL" \
 	--role=roles/iam.serviceAccountUser --condition=None --format=none
 agent=$(cloud beta services identity create --service=cloudtasks.googleapis.com --format='value(email)')
