@@ -27,6 +27,7 @@ type Database interface {
 	RecordSource(context.Context, string, time.Duration, error) error
 	CreateOrder(context.Context, string, string, model.Order) (model.Order, error)
 	GetOrder(context.Context, string) (model.Order, error)
+	FindOrderByStoreOrder(context.Context, string, string) (model.Order, error)
 	MoveOrderStatus(context.Context, string, model.OrderStatus, model.OrderStatus) (model.Order, error)
 	ReleaseExpiredOrders(context.Context, time.Duration, int) (int, error)
 	CloseStore() error

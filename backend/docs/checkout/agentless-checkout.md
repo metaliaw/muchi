@@ -204,13 +204,37 @@ that lands mid-sweep wins instead of being overwritten. Deployed and
 scheduled by `deploy-order-release.sh`, hourly by default
 (`ORDER_RELEASE_SCHEDULE` in `config/deploy.env`).
 
+## Confirming What Got Paid
+
+`POST /v1/webhooks/woocommerce/{domain}/orders` is where a WooCommerce
+store's own `order.updated` webhook lands, once someone configures it in
+that store's admin. It carries no bearer token — the store calls it, not a
+Muchi client — so it authenticates by `X-WC-Webhook-Signature` instead:
+HMAC-SHA256 of the raw body, base64-encoded, checked against
+`MUCHI_ORDER_WEBHOOK_SECRET` in constant time
+(`woocommerce.VerifyWebhookSignature`). No secret configured refuses every
+delivery outright, rather than accepting an unsigned one by default.
+
+`processing` and `completed` move the order to `confirmed`; `cancelled`,
+`failed` and `refunded` move it to `released` (a store cancelling an order
+its own admin already knows about). Every other status — `on-hold`,
+`pending` itself, anything this app does not read — acks `200` without
+moving anything, the same as an order the webhook names that this domain
+never placed, or one already past the target status: none of those are the
+delivery's fault, and retrying would not change any of them.
+`search.Service.ConfirmOrder` looks the order up by `(domain, store_order)`
+— the only id a store's own payload carries — then moves it through the same
+from-status guard `MoveOrderStatus` always uses, so a release that landed
+first still wins over a late confirm.
+
 ## Suggested Next Step
 
-Try a live order on a pilot WooCommerce store, behind the buyer's explicit
-confirmation, and confirm the store's own confirmation email reaches the
-provisional inbox and matches what the Store API answered. Then build the
-confirm side: a webhook or poll that reads the transfer and moves the order
-`pending → confirmed` before it ages into a release.
+Configure the webhook in a pilot WooCommerce store's own admin (Settings →
+Advanced → Webhooks: topic `Order updated`, delivery URL
+`https://.../v1/webhooks/woocommerce/{domain}/orders`, secret matching
+`MUCHI_ORDER_WEBHOOK_SECRET`), then run the Manual Pilot Checklist below end
+to end — including marking the order paid in the store's admin and watching
+it move to `confirmed`.
 
 ### Manual Pilot Checklist
 
@@ -225,18 +249,22 @@ with network access runs this by hand, on one low-stakes item:
    and `enabled: true` (`konohastore.cl`, `lacripta.cl`, or `onplay.cl` today)
    and confirm it still accepts `bacs` — its `payment_methods` showed it in
    the `/checkout` quote response; re-check live, stores change this.
-3. Run a search that finds one cheap, in-stock offer at that store.
-4. `POST /v1/searches/{id}/orders` with that one offer, quantity 1, a real
+3. In that store's own admin, add a webhook: topic `Order updated`,
+   delivery URL `https://.../v1/webhooks/woocommerce/{domain}/orders`,
+   secret matching `MUCHI_ORDER_WEBHOOK_SECRET`.
+4. Run a search that finds one cheap, in-stock offer at that store.
+5. `POST /v1/searches/{id}/orders` with that one offer, quantity 1, a real
    shipping address, and a fresh `Idempotency-Key`.
-5. Confirm the response: `status: "pending"`, a `store_order` id, `domain`
+6. Confirm the response: `status: "pending"`, a `store_order` id, `domain`
    matching the pilot store.
-6. Open the store's own admin or confirmation email and check the order
-   exists there with the same id, the same line, and "pending payment".
-7. Repeat step 4 with the *same* `Idempotency-Key` and cart — confirm it
+7. Open the store's own admin and check the order exists there with the same
+   id, the same line, and "pending payment".
+8. Repeat step 5 with the *same* `Idempotency-Key` and cart — confirm it
    answers the same order id, not a second order.
-8. Either let the order expire past `MUCHI_ORDER_PENDING_TTL_SECONDS` and
-   confirm `ReleaseOrders` moves it to `released`, or cancel it by hand in
-   the store's admin and note that Muchi's own copy does not yet notice a
-   store-side cancellation (nothing here listens for one).
-9. Never actually send the bank transfer for a pilot order — the point is to
-   verify the order is created correctly, not to pay it.
+9. In the store's admin, mark the order "Processing" (as if the transfer
+   arrived) — never actually send it. Confirm the webhook fires and
+   `GET`ting the order (once that route exists) or reading Firestore
+   directly shows `status: "confirmed"`.
+10. On a second, separate order, let it age past
+    `MUCHI_ORDER_PENDING_TTL_SECONDS` without marking it paid, and confirm
+    `ReleaseOrders` moves it to `released`.

@@ -57,3 +57,22 @@ func (s Service) PlaceOrder(ctx context.Context, id, key string, requests []mode
 	hash := HashPayload(map[string]any{"search_id": id, "action": "place-order", "domain": domain, "items": requests})
 	return s.Orders.CreateOrder(ctx, key, hash, order)
 }
+
+// ConfirmOrder Moves the Order a Store's own Webhook Names, by the Id the
+// Store gave it, to whichever Status the Webhook Reported. It is Idempotent
+// two ways: a redelivered Webhook Naming the Status the Order already Holds
+// is a silent no-op, and a Webhook Naming a Status the Order already Moved
+// past Loses to whichever Caller Won that Race, per MoveOrderStatus.
+func (s Service) ConfirmOrder(ctx context.Context, domain, storeOrder string, target model.OrderStatus) (model.Order, error) {
+	if domain == "" || storeOrder == "" || s.Orders == nil {
+		return model.Order{}, ErrInvalid
+	}
+	order, err := s.Orders.FindOrderByStoreOrder(ctx, domain, storeOrder)
+	if err != nil {
+		return model.Order{}, err
+	}
+	if order.Status == target {
+		return order, nil
+	}
+	return s.Orders.MoveOrderStatus(ctx, order.ID, model.OrderPending, target)
+}

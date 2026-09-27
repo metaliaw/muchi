@@ -92,6 +92,10 @@ func (r *Repository) GetOrder(ctx context.Context, id string) (model.Order, erro
 	return r.database.GetOrder(ctx, id)
 }
 
+func (r *Repository) FindOrderByStoreOrder(ctx context.Context, domain, storeOrder string) (model.Order, error) {
+	return r.database.FindOrderByStoreOrder(ctx, domain, storeOrder)
+}
+
 func (r *Repository) MoveOrderStatus(ctx context.Context, id string, from, to model.OrderStatus) (model.Order, error) {
 	return r.database.MoveOrderStatus(ctx, id, from, to)
 }

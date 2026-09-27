@@ -51,6 +51,9 @@ type Config struct {
 	// way SweepMaxWakes caps sweep.Sweeper's.
 	OrderPendingTTL      time.Duration
 	OrderReleaseMaxWakes int
+	// OrderWebhookSecret Verifies a Store's own Order Webhook. Empty Refuses
+	// every Delivery.
+	OrderWebhookSecret string
 }
 
 func LoadConfig() (Config, error) {
@@ -105,6 +108,7 @@ func LoadConfig() (Config, error) {
 		// slow bank Transfer Room without Holding a Card the Store already let go.
 		OrderPendingTTL:      readSecondsOr("MUCHI_ORDER_PENDING_TTL_SECONDS", 86400),
 		OrderReleaseMaxWakes: readIntOr("MUCHI_ORDER_RELEASE_MAX_WAKES", 50),
+		OrderWebhookSecret:   os.Getenv("MUCHI_ORDER_WEBHOOK_SECRET"),
 	}
 	if config.APIToken == "" {
 		return Config{}, errors.New("MUCHI_API_TOKEN is required")

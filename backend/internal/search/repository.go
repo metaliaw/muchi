@@ -28,5 +28,6 @@ type SearchItemRepository interface {
 type OrderRepository interface {
 	CreateOrder(ctx context.Context, key, hash string, order model.Order) (model.Order, error)
 	GetOrder(ctx context.Context, id string) (model.Order, error)
+	FindOrderByStoreOrder(ctx context.Context, domain, storeOrder string) (model.Order, error)
 	MoveOrderStatus(ctx context.Context, id string, from, to model.OrderStatus) (model.Order, error)
 }

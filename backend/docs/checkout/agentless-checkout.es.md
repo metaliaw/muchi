@@ -211,14 +211,37 @@ confirmación que llega a mitad del barrido gana en vez de ser sobrescrita.
 Desplegado y programado por `deploy-order-release.sh`, una vez por hora por
 defecto (`ORDER_RELEASE_SCHEDULE` en `config/deploy.env`).
 
+## Confirmar lo que sí se pagó
+
+`POST /v1/webhooks/woocommerce/{domain}/orders` es donde llega el webhook
+propio `order.updated` de una tienda WooCommerce, una vez que alguien lo
+configura en el admin de esa tienda. No lleva token bearer — lo llama la
+tienda, no un cliente de Muchi — así que se autentica con
+`X-WC-Webhook-Signature` en su lugar: HMAC-SHA256 del cuerpo crudo,
+codificado en base64, comparado contra `MUCHI_ORDER_WEBHOOK_SECRET` en tiempo
+constante (`woocommerce.VerifyWebhookSignature`). Sin secreto configurado,
+rechaza toda entrega, en vez de aceptar una sin firmar por defecto.
+
+`processing` y `completed` mueven el pedido a `confirmed`; `cancelled`,
+`failed` y `refunded` lo mueven a `released` (la tienda cancelando un pedido
+que su propio admin ya conoce). Cualquier otro estado — `on-hold`, `pending`
+mismo, cualquiera que esta app todavía no lee — responde `200` sin mover
+nada, igual que un pedido que el webhook nombra pero que este dominio nunca
+creó, o uno que ya pasó el estado objetivo: ninguno de esos es culpa de la
+entrega, y reintentar no cambiaría ninguno. `search.Service.ConfirmOrder` lo
+busca por `(domain, store_order)` — el único id que trae el payload propio de
+la tienda — y lo mueve con la misma guarda desde-estado que usa siempre
+`MoveOrderStatus`, así que una liberación que llegó primero sigue ganando
+sobre una confirmación tardía.
+
 ## Siguiente paso sugerido
 
-Probar un pedido en vivo en una tienda WooCommerce piloto, siempre detrás de
-una confirmación explícita del comprador, y confirmar que el correo de
-confirmación de la tienda llega al buzón provisorio y coincide con lo que
-respondió la Store API. Después construir el lado de la confirmación: un
-webhook o poll que lea la transferencia y mueva el pedido `pending →
-confirmed` antes de que envejezca hasta liberarse.
+Configurar el webhook en el admin de una tienda WooCommerce piloto (Ajustes →
+Avanzado → Webhooks: tema `Order updated`, URL de entrega
+`https://.../v1/webhooks/woocommerce/{domain}/orders`, secreto igual a
+`MUCHI_ORDER_WEBHOOK_SECRET`), y después correr el Checklist para la prueba
+piloto manual de punta a punta — incluyendo marcar el pedido como pagado en
+el admin de la tienda y ver que se mueve a `confirmed`.
 
 ### Checklist para la prueba piloto manual
 
@@ -235,19 +258,23 @@ bajo riesgo:
    `onplay.cl` hoy) y confirmar que sigue aceptando `bacs` — sus
    `payment_methods` lo mostraban en la respuesta de cotización de
    `/checkout`; revisar en vivo, las tiendas cambian esto.
-3. Correr una búsqueda que encuentre una oferta barata y con stock en esa
+3. En el admin de esa tienda, agregar un webhook: tema `Order updated`, URL
+   de entrega `https://.../v1/webhooks/woocommerce/{domain}/orders`, secreto
+   igual a `MUCHI_ORDER_WEBHOOK_SECRET`.
+4. Correr una búsqueda que encuentre una oferta barata y con stock en esa
    tienda.
-4. `POST /v1/searches/{id}/orders` con esa sola oferta, cantidad 1, una
+5. `POST /v1/searches/{id}/orders` con esa sola oferta, cantidad 1, una
    dirección de envío real, y un `Idempotency-Key` nuevo.
-5. Confirmar la respuesta: `status: "pending"`, un `store_order` id, `domain`
+6. Confirmar la respuesta: `status: "pending"`, un `store_order` id, `domain`
    coincidiendo con la tienda piloto.
-6. Abrir el admin de la tienda o el correo de confirmación y verificar que el
-   pedido existe ahí con el mismo id, la misma línea, y "pendiente de pago".
-7. Repetir el paso 4 con el *mismo* `Idempotency-Key` y carro — confirmar que
+7. Abrir el admin de la tienda y verificar que el pedido existe ahí con el
+   mismo id, la misma línea, y "pendiente de pago".
+8. Repetir el paso 5 con el *mismo* `Idempotency-Key` y carro — confirmar que
    responde el mismo id de pedido, no uno segundo.
-8. O dejar que el pedido venza pasado `MUCHI_ORDER_PENDING_TTL_SECONDS` y
-   confirmar que `ReleaseOrders` lo mueve a `released`, o cancelarlo a mano
-   en el admin de la tienda y anotar que la copia de Muchi todavía no Nota
-   una cancelación del lado de la tienda (nada acá escucha una).
-9. Nunca mandar la transferencia bancaria de un pedido piloto — el punto es
-   verificar que el pedido se crea bien, no pagarlo.
+9. En el admin de la tienda, marcar el pedido "Procesando" (como si la
+   transferencia hubiera llegado) — nunca mandarla de verdad. Confirmar que
+   el webhook dispara y que consultar el pedido (leyendo Firestore
+   directamente, hasta que exista esa ruta) muestra `status: "confirmed"`.
+10. En un segundo pedido aparte, dejarlo envejecer pasado
+    `MUCHI_ORDER_PENDING_TTL_SECONDS` sin marcarlo pagado, y confirmar que
+    `ReleaseOrders` lo mueve a `released`.

@@ -567,6 +567,9 @@ func (r *fixedOrderRepository) CreateOrder(_ context.Context, key, hash string, 
 func (r *fixedOrderRepository) GetOrder(context.Context, string) (model.Order, error) {
 	return model.Order{}, model.ErrOrderNotFound
 }
+func (r *fixedOrderRepository) FindOrderByStoreOrder(context.Context, string, string) (model.Order, error) {
+	return model.Order{}, model.ErrOrderNotFound
+}
 func (r *fixedOrderRepository) MoveOrderStatus(context.Context, string, model.OrderStatus, model.OrderStatus) (model.Order, error) {
 	return model.Order{}, model.ErrOrderNotFound
 }

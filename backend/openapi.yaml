@@ -286,6 +286,42 @@ paths:
           description: Search cancelled
           content: {application/json: {schema: {$ref: "#/components/schemas/Search"}}}
         "409": {$ref: "#/components/responses/Conflict"}
+  /webhooks/woocommerce/{domain}/orders:
+    parameters:
+      - name: domain
+        in: path
+        required: true
+        schema: {type: string}
+    post:
+      security: []
+      description: >-
+        Where a WooCommerce store's own admin sends its `order.updated`
+        webhook, configured by hand per store. Not part of the public
+        contract: authenticated by the `X-WC-Webhook-Signature` header
+        (HMAC-SHA256 of the raw body, base64-encoded, under
+        MUCHI_ORDER_WEBHOOK_SECRET) instead of a bearer token, since the
+        store calls it, not a Muchi client. `processing` and `completed`
+        move the order to `confirmed`; `cancelled`, `failed` and `refunded`
+        move it to `released`. Any other status, an unknown order, or one
+        already past the target status answers `200` without moving
+        anything, so the store never retries or disables the webhook over a
+        delivery that was never a failure.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, status]
+              properties:
+                id: {type: integer, description: The store's own order id}
+                status: {type: string}
+      responses:
+        "200": {description: Acknowledged, whether or not anything moved}
+        "400": {description: Malformed delivery}
+        "401": {description: Signature missing or invalid}
+        "500": {$ref: "#/components/responses/InternalError"}
+        "503": {description: MUCHI_ORDER_WEBHOOK_SECRET is not configured}
   /cards/offers:
     get:
       parameters:

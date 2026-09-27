@@ -58,6 +58,7 @@ func ServeAPI(w http.ResponseWriter, r *http.Request) {
 			SupportedGames:     runtime.SupportedGames,
 			Inventories:        runtime.Inventories,
 			HealthCheckTimeout: settings.HealthCheckTimeout,
+			OrderWebhookSecret: settings.OrderWebhookSecret,
 		}
 		apiHandler = api.BuildHandler()
 	})

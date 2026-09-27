@@ -132,9 +132,14 @@ type requestRecord struct {
 }
 
 type orderRecord struct {
-	Payload   []byte    `firestore:"payload"`
-	Status    string    `firestore:"status"`
-	UpdatedAt time.Time `firestore:"updated_at"`
+	Payload []byte `firestore:"payload"`
+	Status  string `firestore:"status"`
+	// Domain and StoreOrder are Indexed Copies of Fields the Payload already
+	// Carries: FindOrderByStoreOrder Needs to Query by them, and a Payload is
+	// opaque JSON to Firestore.
+	Domain     string    `firestore:"domain"`
+	StoreOrder string    `firestore:"store_order"`
+	UpdatedAt  time.Time `firestore:"updated_at"`
 }
 
 type sourceRecord struct {
@@ -423,7 +428,7 @@ func (s *Store) CreateOrder(ctx context.Context, key, hash string, order model.O
 		order.ID = buildID("order")
 		order.CreatedAt, order.UpdatedAt = now, now
 		result = order
-		record := orderRecord{Payload: mustJSON(renderOrder(order)), Status: string(order.Status), UpdatedAt: now}
+		record := orderRecord{Payload: mustJSON(renderOrder(order)), Status: string(order.Status), Domain: order.Domain, StoreOrder: order.StoreOrder, UpdatedAt: now}
 		if err := tx.Create(s.client.Collection("orders").Doc(order.ID), record); err != nil {
 			return err
 		}
@@ -461,6 +466,25 @@ func (s *Store) GetOrder(ctx context.Context, id string) (model.Order, error) {
 	return decodeOrder(document)
 }
 
+// FindOrderByStoreOrder Reads the Order a Store's own Webhook Names by its
+// own Order Id — the only Id a Store Payload Carries, never Muchi's.
+func (s *Store) FindOrderByStoreOrder(ctx context.Context, domain, storeOrder string) (model.Order, error) {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
+	documents := s.client.Collection("orders").
+		Where("domain", "==", domain).Where("store_order", "==", storeOrder).
+		Limit(1).Documents(ctx)
+	defer documents.Stop()
+	document, err := documents.Next()
+	if errors.Is(err, iterator.Done) {
+		return model.Order{}, model.ErrOrderNotFound
+	}
+	if err != nil {
+		return model.Order{}, err
+	}
+	return decodeOrder(document)
+}
+
 // MoveOrderStatus Advances an Order from one Status to the next, never past
 // where the Caller Believes it Stands: a Webhook Confirming an Order the
 // Sweeper already Released must Lose, not Overwrite the Release.
@@ -485,7 +509,7 @@ func (s *Store) MoveOrderStatus(ctx context.Context, id string, from, to model.O
 			return model.ErrOrderConflict
 		}
 		order.Status, order.UpdatedAt = to, time.Now().UTC()
-		record := orderRecord{Payload: mustJSON(renderOrder(order)), Status: string(order.Status), UpdatedAt: order.UpdatedAt}
+		record := orderRecord{Payload: mustJSON(renderOrder(order)), Status: string(order.Status), Domain: order.Domain, StoreOrder: order.StoreOrder, UpdatedAt: order.UpdatedAt}
 		return tx.Set(reference, record)
 	})
 	return order, err

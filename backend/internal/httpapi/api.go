@@ -29,6 +29,10 @@ type API struct {
 	Token              string
 	Logger             *slog.Logger
 	HealthCheckTimeout time.Duration
+	// OrderWebhookSecret Verifies a WooCommerce Order Webhook's own
+	// Signature. Empty Refuses every Delivery: an unsigned Webhook route is
+	// an open Door to Confirm or Release an Order nobody Placed.
+	OrderWebhookSecret string
 }
 
 // InventoryShelf Forgets the Published Lists a Store Keeps, so the next Search
@@ -53,6 +57,7 @@ func (a API) BuildHandler() http.Handler {
 	a.registerSearchRoutes(mux)
 	a.registerCardRoutes(mux)
 	a.registerInventoryRoutes(mux)
+	a.registerOrderWebhookRoutes(mux)
 	return a.identifyRequest(a.recoverPanic(mux))
 }
 
