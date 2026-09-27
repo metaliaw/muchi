@@ -42,6 +42,18 @@ func (r *memoryOrderRepository) FindOrderByStoreOrder(_ context.Context, domain,
 	}
 	return model.Order{}, model.ErrOrderNotFound
 }
+func (r *memoryOrderRepository) ReportOrder(_ context.Context, id, storeOrder string) (model.Order, error) {
+	order, found := r.orders[id]
+	if !found {
+		return model.Order{}, model.ErrOrderNotFound
+	}
+	if order.Status != model.OrderLinked {
+		return model.Order{}, model.ErrOrderConflict
+	}
+	order.Status, order.StoreOrder = model.OrderReported, storeOrder
+	r.orders[id] = order
+	return order, nil
+}
 func (r *memoryOrderRepository) MoveOrderStatus(_ context.Context, id string, from, to model.OrderStatus) (model.Order, error) {
 	order, found := r.orders[id]
 	if !found {
@@ -153,5 +165,49 @@ func TestOrderWebhookAcksAnUnknownOrder(t *testing.T) {
 	body := `{"id":999,"status":"completed"}`
 	if recorder := sendWebhook(t, api, "woo.test", "shh", body); recorder.Code != http.StatusOK {
 		t.Fatalf("status = %d: %s", recorder.Code, recorder.Body)
+	}
+}
+
+// TestLinkedOrderMovesToReportedOnlyOnce Spells the Buyer-Reported Path: a
+// Link Records a `linked` Order at one Store, the Buyer's Report Moves it to
+// `reported` with the Store's Number, a Repeat Answers the same Order, and a
+// different Number after that Conflicts instead of Overwriting.
+func TestLinkedOrderMovesToReportedOnlyOnce(t *testing.T) {
+	repository := &memoryOrderRepository{}
+	api := API{Searches: search.Service{Repository: &checkoutStore{}, Orders: repository}, Token: "secret"}
+	call := func(path, key, body string) *httptest.ResponseRecorder {
+		request := httptest.NewRequest(http.MethodPost, path, strings.NewReader(body))
+		request.Header.Set("Authorization", "Bearer secret")
+		if key != "" {
+			request.Header.Set("Idempotency-Key", key)
+		}
+		recorder := httptest.NewRecorder()
+		api.BuildHandler().ServeHTTP(recorder, request)
+		return recorder
+	}
+	linked := call("/v1/searches/search_one/orders/links", "link-key", `{"items":[{"offer_id":"bolt","quantity":1}]}`)
+	if linked.Code != http.StatusCreated || !strings.Contains(linked.Body.String(), `"status":"linked"`) || !strings.Contains(linked.Body.String(), `"domain":"shop.test"`) {
+		t.Fatalf("link status = %d body = %s", linked.Code, linked.Body)
+	}
+	if mixed := call("/v1/searches/search_one/orders/links", "mixed-key", `{"items":[{"offer_id":"bolt","quantity":1},{"offer_id":"woo","quantity":1}]}`); mixed.Code != http.StatusBadRequest {
+		t.Fatalf("mixed-store link status = %d", mixed.Code)
+	}
+	report := func(body string) *httptest.ResponseRecorder {
+		return call("/v1/searches/search_one/orders/order_/report", "", body)
+	}
+	if first := report(`{"store_order":" #1042 "}`); first.Code != http.StatusOK || !strings.Contains(first.Body.String(), `"status":"reported"`) || !strings.Contains(first.Body.String(), `"store_order":"#1042"`) {
+		t.Fatalf("report status = %d body = %s", first.Code, first.Body)
+	}
+	if again := report(`{"store_order":"#1042"}`); again.Code != http.StatusOK {
+		t.Fatalf("repeated report status = %d", again.Code)
+	}
+	if other := report(`{"store_order":"#9999"}`); other.Code != http.StatusConflict {
+		t.Fatalf("different number status = %d", other.Code)
+	}
+	if empty := report(`{"store_order":"  "}`); empty.Code != http.StatusBadRequest {
+		t.Fatalf("empty number status = %d", empty.Code)
+	}
+	if foreign := call("/v1/searches/search_two/orders/order_/report", "", `{"store_order":"#1"}`); foreign.Code != http.StatusNotFound {
+		t.Fatalf("other search status = %d", foreign.Code)
 	}
 }

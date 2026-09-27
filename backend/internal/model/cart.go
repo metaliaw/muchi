@@ -111,6 +111,14 @@ const (
 	// OrderReleased Means the Stock is Freed again: the Payment never Came,
 	// the Store Cancelled it, or the Attempt Failed before an Order Existed.
 	OrderReleased OrderStatus = "released"
+	// OrderLinked Means the Buyer was Handed the Store's own Cart Link: a
+	// Platform with no Order Muchi can Place (Shopify, Jumpseller) Stops here
+	// until the Buyer Says what Happened.
+	OrderLinked OrderStatus = "linked"
+	// OrderReported Means the Buyer Says the Store took the Order, and Named
+	// the Number it Showed. Nobody Verifies it: a Store's own Signal is the
+	// only thing that Confirms, and a Linked Store Sends none.
+	OrderReported OrderStatus = "reported"
 )
 
 // Order Names one Reservation a Store's own Checkout Created. Placing it is

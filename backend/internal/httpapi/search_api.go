@@ -17,6 +17,8 @@ func (a API) registerSearchRoutes(mux *http.ServeMux) {
 	mux.Handle("POST /v1/searches/{search_id}/checkout", a.authenticate(http.HandlerFunc(a.createCheckoutLinks)))
 	mux.Handle("POST /v1/searches/{search_id}/orders", a.authenticate(http.HandlerFunc(a.placeOrder)))
 	mux.Handle("GET /v1/searches/{search_id}/orders/{order_id}", a.authenticate(http.HandlerFunc(a.getOrder)))
+	mux.Handle("POST /v1/searches/{search_id}/orders/links", a.authenticate(http.HandlerFunc(a.linkOrder)))
+	mux.Handle("POST /v1/searches/{search_id}/orders/{order_id}/report", a.authenticate(http.HandlerFunc(a.reportOrder)))
 	mux.Handle("POST /v1/searches/{search_id}/cancel", a.authenticate(http.HandlerFunc(a.cancelSearch)))
 }
 
@@ -145,6 +147,38 @@ func (a API) placeOrder(w http.ResponseWriter, r *http.Request) {
 
 func (a API) getOrder(w http.ResponseWriter, r *http.Request) {
 	order, err := a.Searches.GetOrder(r.Context(), r.PathValue("search_id"), r.PathValue("order_id"))
+	if err != nil {
+		a.reportError(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, renderOrder(order))
+}
+
+func (a API) linkOrder(w http.ResponseWriter, r *http.Request) {
+	key, ok := requireIdempotency(w, r)
+	if !ok {
+		return
+	}
+	var request linkRequest
+	if err := decodeJSON(r, &request); err != nil {
+		a.reportError(w, r, search.ErrInvalid)
+		return
+	}
+	order, err := a.Searches.LinkOrder(r.Context(), r.PathValue("search_id"), key, buildCartRequestList(request.Items))
+	if err != nil {
+		a.reportError(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, renderOrder(order))
+}
+
+func (a API) reportOrder(w http.ResponseWriter, r *http.Request) {
+	var request reportRequest
+	if err := decodeJSON(r, &request); err != nil {
+		a.reportError(w, r, search.ErrInvalid)
+		return
+	}
+	order, err := a.Searches.ReportOrder(r.Context(), r.PathValue("search_id"), r.PathValue("order_id"), request.StoreOrder)
 	if err != nil {
 		a.reportError(w, r, err)
 		return

@@ -515,6 +515,36 @@ func (s *Store) MoveOrderStatus(ctx context.Context, id string, from, to model.O
 	return order, err
 }
 
+// ReportOrder Moves a `linked` Order to `reported` with the Number the Buyer
+// Read off the Store, in one Transaction: the Status and its Number Land
+// together or not at all.
+func (s *Store) ReportOrder(ctx context.Context, id, storeOrder string) (model.Order, error) {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
+	var order model.Order
+	err := s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
+		reference := s.client.Collection("orders").Doc(id)
+		document, err := tx.Get(reference)
+		if status.Code(err) == codes.NotFound {
+			return model.ErrOrderNotFound
+		}
+		if err != nil {
+			return err
+		}
+		order, err = decodeOrder(document)
+		if err != nil {
+			return err
+		}
+		if order.Status != model.OrderLinked {
+			return model.ErrOrderConflict
+		}
+		order.Status, order.StoreOrder, order.UpdatedAt = model.OrderReported, storeOrder, time.Now().UTC()
+		record := orderRecord{Payload: mustJSON(renderOrder(order)), Status: string(order.Status), Domain: order.Domain, StoreOrder: order.StoreOrder, UpdatedAt: order.UpdatedAt}
+		return tx.Set(reference, record)
+	})
+	return order, err
+}
+
 // ReleaseExpiredOrders Moves every `pending` Order whose own Cutoff already
 // Passed to `released`, and Answers how many it Moved. It Needs a Composite
 // Index on `orders` over `status` (equality) and `updated_at` (range),

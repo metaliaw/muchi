@@ -276,6 +276,74 @@ paths:
         "422":
           description: This store cannot place an order yet
           content: {application/json: {schema: {$ref: "#/components/schemas/Error"}}}
+  /searches/{search_id}/orders/links:
+    parameters:
+      - {$ref: "#/components/parameters/SearchID"}
+      - {$ref: "#/components/parameters/IdempotencyKey"}
+    post:
+      description: >-
+        Records that the buyer is about to follow a store's own cart link, for
+        a store where Muchi cannot place the order itself (Shopify, Jumpseller,
+        and any other). Every line must belong to the same store. The order
+        starts `linked`; `payment_url` carries the cart link when the store
+        has one, otherwise each line's `url` is its product page.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [offer_id, quantity]
+                    properties:
+                      offer_id: {type: string}
+                      quantity: {type: integer, minimum: 1, maximum: 99}
+      responses:
+        "201":
+          description: Link recorded
+          content: {application/json: {schema: {$ref: "#/components/schemas/Order"}}}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /searches/{search_id}/orders/{order_id}/report:
+    parameters:
+      - {$ref: "#/components/parameters/SearchID"}
+      - name: order_id
+        in: path
+        required: true
+        schema: {type: string}
+    post:
+      description: >-
+        The buyer says the store took the order and gives the number it
+        showed. Moves a `linked` order to `reported`. Repeating the same
+        number answers the same order; a different one answers 409. Nothing
+        here verifies the number with the store.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [store_order]
+              properties:
+                store_order: {type: string, maxLength: 64, examples: ["#1042"]}
+      responses:
+        "200":
+          description: Order reported
+          content: {application/json: {schema: {$ref: "#/components/schemas/Order"}}}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
   /searches/{search_id}/orders/{order_id}:
     parameters:
       - {$ref: "#/components/parameters/SearchID"}
@@ -428,6 +496,7 @@ components:
     SearchID: {name: search_id, in: path, required: true, schema: {type: string}}
     IdempotencyKey: {name: Idempotency-Key, in: header, required: true, schema: {type: string, maxLength: 128}}
   responses:
+    BadRequest: {description: Invalid request, content: {application/json: {schema: {$ref: "#/components/schemas/Error"}}}}
     Conflict: {description: Idempotency or state conflict, content: {application/json: {schema: {$ref: "#/components/schemas/Error"}}}}
     NotFound: {description: Search not found, content: {application/json: {schema: {$ref: "#/components/schemas/Error"}}}}
     InternalError: {description: Internal error, content: {application/json: {schema: {$ref: "#/components/schemas/Error"}}}}
@@ -571,7 +640,14 @@ components:
               offer_id: {type: string}
               quantity: {type: integer}
               url: {type: string, format: uri}
-        status: {type: string, enum: [pending, confirmed, released]}
+        status:
+          type: string
+          enum: [pending, confirmed, released, linked, reported]
+          description: >-
+            `pending`, `confirmed` and `released` belong to orders Muchi placed.
+            `linked` and `reported` belong to orders the buyer placed through
+            the store's own cart link; `reported` is the buyer's word, never
+            verified.
         store_order: {type: string, description: The order id the store itself assigned}
         payment_url: {type: string, format: uri, description: Present when the payment method redirects to a payment page}
         created_at: {type: string, format: date-time}

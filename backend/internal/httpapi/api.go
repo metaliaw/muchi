@@ -88,6 +88,16 @@ type checkoutRequest struct {
 // orderRequest Names the Offers to Place a real Order for, all at the same
 // Store. Shipping is Required here where checkoutRequest Leaves it optional:
 // a Quote can Skip the Store, an Order cannot.
+// linkRequest Names the Lines a Buyer is about to Take to a Store's own Cart.
+type linkRequest struct {
+	Items []cartRequestDTO `json:"items"`
+}
+
+// reportRequest Carries the Order Number the Store Showed the Buyer.
+type reportRequest struct {
+	StoreOrder string `json:"store_order"`
+}
+
 type orderRequest struct {
 	Items    []cartRequestDTO   `json:"items"`
 	Shipping shippingAddressDTO `json:"shipping"`

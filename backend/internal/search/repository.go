@@ -30,4 +30,5 @@ type OrderRepository interface {
 	GetOrder(ctx context.Context, id string) (model.Order, error)
 	FindOrderByStoreOrder(ctx context.Context, domain, storeOrder string) (model.Order, error)
 	MoveOrderStatus(ctx context.Context, id string, from, to model.OrderStatus) (model.Order, error)
+	ReportOrder(ctx context.Context, id, storeOrder string) (model.Order, error)
 }

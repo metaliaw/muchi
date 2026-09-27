@@ -100,6 +100,10 @@ func (r *Repository) MoveOrderStatus(ctx context.Context, id string, from, to mo
 	return r.database.MoveOrderStatus(ctx, id, from, to)
 }
 
+func (r *Repository) ReportOrder(ctx context.Context, id, storeOrder string) (model.Order, error) {
+	return r.database.ReportOrder(ctx, id, storeOrder)
+}
+
 func (r *Repository) ReleaseExpiredOrders(ctx context.Context, olderThan time.Duration, limit int) (int, error) {
 	return r.database.ReleaseExpiredOrders(ctx, olderThan, limit)
 }
