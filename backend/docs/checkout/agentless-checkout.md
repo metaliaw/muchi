@@ -61,9 +61,10 @@ With bank transfer (`bacs`), the order stays "pending payment" and the store
 sends its bank details. No browser involved. With Webpay, Flow, or Mercado Pago,
 the response carries `payment_result.redirect_url`, and a payment page begins.
 
-Two caveats: Muchi does not store the WooCommerce product ID today, and some
-stores disable the Store API or use the classic checkout. For a single product,
-`/?add-to-cart=ID&quantity=N` adds it by link.
+One caveat: some stores disable the Store API or use the classic checkout.
+For a single simple product, `/?add-to-cart=ID&quantity=N` adds it by link —
+`stores.CheckoutLink` uses it for a single-line WooCommerce cart, the one case
+it can name without the Store API.
 
 ### Jumpseller: The MCP Hands Over the Link
 
@@ -121,9 +122,11 @@ The container where this was written cannot reach the store domains, so
 
 `POST /v1/searches/{search_id}/checkout` takes `items` with `offer_id` and
 `quantity` and returns one entry per store. Shopify stores answer `mode: cart`
-with the permalink; the rest answer `mode: product_pages` with each line's page.
-If a Shopify line lacks its variant (a scry.cl offer, for example), the whole
-store falls back to product pages so no buyer lands on an incomplete cart.
+with the permalink; a single-line WooCommerce cart answers `mode: cart` with
+an `add-to-cart` link; everything else answers `mode: product_pages` with each
+line's page. If a Shopify line lacks its variant (a scry.cl offer, for
+example), or a WooCommerce cart carries more than one line, the whole store
+falls back to product pages so no buyer lands on an incomplete cart.
 
 ## Level 1 on WooCommerce: Quotes
 
@@ -154,9 +157,48 @@ selected, the total uses the cheapest one. Shopify reveals no payment methods
 before checkout. Jumpseller still has no quote: its cart is a form, and its
 Magic stores are paused.
 
+## Level 1 Implemented: Orders
+
+`POST /v1/searches/{search_id}/orders` places a real order at one store, for
+offers the search already found. Every line must resolve to the same store
+domain — an order is one store's transaction, unlike `/checkout`'s per-store
+grouping — so a cart spanning more than one store is rejected before any call
+is made. An `Idempotency-Key` guards a doubled tap the way `POST /searches`
+does: a retried call with the same key and the same cart answers the order
+already placed, never a second one.
+
+Only WooCommerce supports this today (`422 order_not_supported` for every
+other platform). `woocommerce.Client.PlaceOrder`
+(`internal/stores/woocommerce/order.go`) fills the cart, reads the shipping
+rate the cart already selected, and checks out by bank transfer (`bacs`) —
+the one payment method the Store API confirms without a browser or a card.
+The order lands `pending`; nothing here waits for the transfer to arrive.
+
+The Store API checkout needs a buyer identity `QuoteCart` never did (name,
+email) — a cart quote only needs to know *where*, an order needs to know
+*who*. Until an operator names a real one, every order would check out as
+Muchi itself: `MUCHI_ORDER_BUYER_NAME` and `MUCHI_ORDER_BUYER_EMAIL` set that
+identity; left unset, the client falls back to a reserved, undeliverable
+placeholder (`orders@muchi.invalid`, RFC 2606) and `PlaceOrder` refuses to run
+rather than check out on a mailbox nobody reads.
+
+`model.Order` carries a `Status` (`pending → confirmed | released`),
+persisted one Firestore document per order (`db.Store.CreateOrder`,
+`GetOrder`, `MoveOrderStatus`). A move is transactional and names the status
+it expects to move *from*, so a stale caller — a webhook confirming an order
+a sweep already released — loses instead of overwriting.
+
 ## Suggested Next Step
 
-Try the quote live on onplay.cl and lacripta.cl and record their
-`payment_methods`. If one accepts `bacs` (bank transfer), create orders at that
-pilot store with `POST checkout`, always behind the buyer's explicit
-confirmation.
+Nothing yet moves a `pending` order forward or back: no webhook confirms a
+transfer, and nothing releases an order whose transfer never arrived. The
+Sweeper that backs `SweepQueue` (`internal/sweep`) does not fit — it counts
+waiting search items and replaces lost worker wake-ups, a different shape
+from reading `orders` where `status == "pending"` and `updated_at` is past a
+cutoff. A sibling entry point, `ReleaseOrders`, on its own schedule, is the
+next piece.
+
+Once that exists: try a live order on a pilot WooCommerce store with a real
+`MUCHI_ORDER_BUYER_EMAIL` set, behind the buyer's explicit confirmation, and
+confirm the store's own confirmation email matches what the Store API
+answered.

@@ -62,9 +62,10 @@ la tienda envía los datos bancarios. Todo sin navegador. Con Webpay, Flow o
 Mercado Pago, la respuesta trae `payment_result.redirect_url`, y ahí empieza una
 página de pago.
 
-Dos avisos: Muchi no guarda hoy el ID de producto de WooCommerce, y algunas
-tiendas desactivan la Store API o usan el checkout clásico. Para una tienda
-puntual, `/?add-to-cart=ID&quantity=N` agrega un producto por enlace.
+Un aviso: algunas tiendas desactivan la Store API o usan el checkout clásico.
+Para un solo producto simple, `/?add-to-cart=ID&quantity=N` lo agrega por
+enlace — `stores.CheckoutLink` lo usa para un carro WooCommerce de una sola
+línea, el único caso que puede nombrar sin la Store API.
 
 ### Jumpseller: el MCP entrega el enlace
 
@@ -122,10 +123,12 @@ que **nada de esto se probó en vivo**. Antes de construir:
 
 `POST /v1/searches/{search_id}/checkout` recibe `items` con `offer_id` y
 `quantity`, y devuelve una entrada por tienda. Las tiendas Shopify responden
-`mode: cart` con el permalink; el resto, `mode: product_pages` con la página de
-cada línea. Si una línea Shopify no trae su variante (por ejemplo, una oferta
-de scry.cl), la tienda entera cae a páginas de producto, para no mandar a nadie
-a un carro incompleto.
+`mode: cart` con el permalink; un carro WooCommerce de una sola línea responde
+`mode: cart` con un enlace `add-to-cart`; el resto responde `mode:
+product_pages` con la página de cada línea. Si una línea Shopify no trae su
+variante (por ejemplo, una oferta de scry.cl), o un carro WooCommerce trae más
+de una línea, la tienda entera cae a páginas de producto, para no mandar a
+nadie a un carro incompleto.
 
 ## Nivel 1 en WooCommerce: cotización
 
@@ -156,9 +159,52 @@ envío del total es la más barata. Shopify no informa medios de pago antes del
 checkout. Jumpseller sigue sin cotización: su carro es un formulario y sus
 tiendas de Magic están pausadas.
 
+## Nivel 1 implementado: pedidos
+
+`POST /v1/searches/{search_id}/orders` crea un pedido real en una tienda, para
+ofertas que esa búsqueda ya encontró. Todas las líneas deben resolver al mismo
+dominio de tienda — un pedido es la transacción de una sola tienda, a
+diferencia de la agrupación por tienda de `/checkout` — así que un carro que
+cruza más de una tienda se rechaza antes de hacer ninguna llamada. Un
+`Idempotency-Key` protege contra un doble toque igual que `POST /searches`:
+una llamada repetida con la misma clave y el mismo carro devuelve el pedido ya
+creado, nunca uno segundo.
+
+Solo WooCommerce lo soporta hoy (`422 order_not_supported` para cualquier otra
+plataforma). `woocommerce.Client.PlaceOrder`
+(`internal/stores/woocommerce/order.go`) llena el carro, lee la tarifa de
+envío que el carro ya eligió, y hace checkout por transferencia bancaria
+(`bacs`) — el único medio de pago que la Store API confirma sin navegador ni
+tarjeta. El pedido queda `pending`; nada acá espera a que la transferencia
+llegue.
+
+El checkout de la Store API necesita una identidad de comprador que
+`QuoteCart` nunca necesitó (nombre, correo) — una cotización de carro solo
+necesita saber *dónde*, un pedido necesita saber *quién*. Hasta que alguien de
+operaciones nombre uno real, todo pedido haría checkout como Muchi misma:
+`MUCHI_ORDER_BUYER_NAME` y `MUCHI_ORDER_BUYER_EMAIL` fijan esa identidad; sin
+definir, el cliente cae a un placeholder reservado y no entregable
+(`orders@muchi.invalid`, RFC 2606) y `PlaceOrder` se niega a correr en vez de
+hacer checkout en un correo que nadie lee.
+
+`model.Order` lleva un `Status` (`pending → confirmed | released`), persistido
+como un documento de Firestore por pedido (`db.Store.CreateOrder`, `GetOrder`,
+`MoveOrderStatus`). Cada movimiento es transaccional y nombra el estado desde
+el que espera moverse, así que un llamador con información vieja — un webhook
+que confirma un pedido que un barrido ya liberó — pierde en vez de
+sobrescribir.
+
 ## Siguiente paso sugerido
 
-Probar la cotización en vivo con onplay.cl y lacripta.cl, y anotar sus
-`payment_methods`. Si alguna acepta `bacs` (transferencia), crear pedidos en
-esa tienda piloto con `POST checkout`, siempre detrás de una confirmación
-explícita del comprador.
+Todavía nada mueve un pedido `pending` hacia adelante ni hacia atrás: ningún
+webhook confirma una transferencia, y nada libera un pedido cuya transferencia
+nunca llegó. El Sweeper que sostiene `SweepQueue` (`internal/sweep`) no calza
+— cuenta ítems de búsqueda en espera y repone turnos de worker perdidos, una
+forma distinta a leer `orders` donde `status == "pending"` y `updated_at` pasó
+un plazo. Un punto de entrada hermano, `ReleaseOrders`, con su propio
+calendario, es la pieza que sigue.
+
+Una vez que exista eso: probar un pedido en vivo en una tienda WooCommerce
+piloto con un `MUCHI_ORDER_BUYER_EMAIL` real, siempre detrás de una
+confirmación explícita del comprador, y confirmar que el correo de
+confirmación de la tienda coincide con lo que respondió la Store API.
