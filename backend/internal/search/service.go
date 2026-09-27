@@ -269,7 +269,7 @@ func queryGameSources(ctx context.Context, provider Provider, hasProvider bool, 
 		found, err := provider.Search(ctx, query)
 		items = append(items, found...)
 		if err != nil {
-			faults = append(faults, model.SourceFault{provider.SourceName(), err.Error()})
+			faults = append(faults, model.SourceFault{Source: provider.SourceName(), Reason: err.Error()})
 			lastErr = err
 		}
 	}
@@ -403,7 +403,7 @@ func combineSources(sources []OfferSource, results [][]model.Offer, errors []err
 	var lastErr error
 	for index, items := range results {
 		if errors[index] != nil {
-			faults = append(faults, model.SourceFault{sources[index].SourceName(), errors[index].Error()})
+			faults = append(faults, model.SourceFault{Source: sources[index].SourceName(), Reason: errors[index].Error()})
 			lastErr = errors[index]
 		}
 		result = append(result, items...)
