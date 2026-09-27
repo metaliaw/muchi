@@ -185,7 +185,9 @@ operaciones nombre uno real, todo pedido haría checkout como Muchi misma:
 `MUCHI_ORDER_BUYER_NAME` y `MUCHI_ORDER_BUYER_EMAIL` fijan esa identidad; sin
 definir, el cliente cae a un placeholder reservado y no entregable
 (`orders@muchi.invalid`, RFC 2606) y `PlaceOrder` se niega a correr en vez de
-hacer checkout en un correo que nadie lee.
+hacer checkout en un correo que nadie lee. `config/deploy.env` ya fija
+`ORDER_BUYER_EMAIL=cangrejometralleta@gmail.com` como correo provisorio —
+alguien lo lee, aunque todavía no es un correo propio de Muchi.
 
 `model.Order` lleva un `Status` (`pending → confirmed | released`), persistido
 como un documento de Firestore por pedido (`db.Store.CreateOrder`, `GetOrder`,
@@ -205,6 +207,6 @@ un plazo. Un punto de entrada hermano, `ReleaseOrders`, con su propio
 calendario, es la pieza que sigue.
 
 Una vez que exista eso: probar un pedido en vivo en una tienda WooCommerce
-piloto con un `MUCHI_ORDER_BUYER_EMAIL` real, siempre detrás de una
-confirmación explícita del comprador, y confirmar que el correo de
-confirmación de la tienda coincide con lo que respondió la Store API.
+piloto, siempre detrás de una confirmación explícita del comprador, y
+confirmar que el correo de confirmación de la tienda llega al buzón
+provisorio y coincide con lo que respondió la Store API.

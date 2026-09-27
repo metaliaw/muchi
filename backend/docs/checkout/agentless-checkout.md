@@ -180,7 +180,9 @@ email) — a cart quote only needs to know *where*, an order needs to know
 Muchi itself: `MUCHI_ORDER_BUYER_NAME` and `MUCHI_ORDER_BUYER_EMAIL` set that
 identity; left unset, the client falls back to a reserved, undeliverable
 placeholder (`orders@muchi.invalid`, RFC 2606) and `PlaceOrder` refuses to run
-rather than check out on a mailbox nobody reads.
+rather than check out on a mailbox nobody reads. `config/deploy.env` now sets
+`ORDER_BUYER_EMAIL=cangrejometralleta@gmail.com` as a provisional inbox —
+someone reads every order, not a real Muchi mailbox yet.
 
 `model.Order` carries a `Status` (`pending → confirmed | released`),
 persisted one Firestore document per order (`db.Store.CreateOrder`,
@@ -198,7 +200,6 @@ from reading `orders` where `status == "pending"` and `updated_at` is past a
 cutoff. A sibling entry point, `ReleaseOrders`, on its own schedule, is the
 next piece.
 
-Once that exists: try a live order on a pilot WooCommerce store with a real
-`MUCHI_ORDER_BUYER_EMAIL` set, behind the buyer's explicit confirmation, and
-confirm the store's own confirmation email matches what the Store API
-answered.
+Once that exists: try a live order on a pilot WooCommerce store, behind the
+buyer's explicit confirmation, and confirm the store's own confirmation email
+reaches the provisional inbox and matches what the Store API answered.
