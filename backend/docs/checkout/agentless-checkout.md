@@ -211,3 +211,32 @@ confirmation, and confirm the store's own confirmation email reaches the
 provisional inbox and matches what the Store API answered. Then build the
 confirm side: a webhook or poll that reads the transfer and moves the order
 `pending → confirmed` before it ages into a release.
+
+### Manual Pilot Checklist
+
+Not run automatically — the container these docs are edited in has no route
+to the store domains, and placing a real order commits real stock. Someone
+with network access runs this by hand, on one low-stakes item:
+
+1. Set `MUCHI_ORDER_BUYER_EMAIL` and `MUCHI_ORDER_BUYER_NAME` (already set in
+   `config/deploy.env` for the deployed API; for a local run, export them or
+   add them to `.env`).
+2. Pick a pilot store from `config/stores.yaml` with `platform: woocommerce`
+   and `enabled: true` (`konohastore.cl`, `lacripta.cl`, or `onplay.cl` today)
+   and confirm it still accepts `bacs` — its `payment_methods` showed it in
+   the `/checkout` quote response; re-check live, stores change this.
+3. Run a search that finds one cheap, in-stock offer at that store.
+4. `POST /v1/searches/{id}/orders` with that one offer, quantity 1, a real
+   shipping address, and a fresh `Idempotency-Key`.
+5. Confirm the response: `status: "pending"`, a `store_order` id, `domain`
+   matching the pilot store.
+6. Open the store's own admin or confirmation email and check the order
+   exists there with the same id, the same line, and "pending payment".
+7. Repeat step 4 with the *same* `Idempotency-Key` and cart — confirm it
+   answers the same order id, not a second order.
+8. Either let the order expire past `MUCHI_ORDER_PENDING_TTL_SECONDS` and
+   confirm `ReleaseOrders` moves it to `released`, or cancel it by hand in
+   the store's admin and note that Muchi's own copy does not yet notice a
+   store-side cancellation (nothing here listens for one).
+9. Never actually send the bank transfer for a pilot order — the point is to
+   verify the order is created correctly, not to pay it.

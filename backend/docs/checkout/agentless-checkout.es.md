@@ -219,3 +219,35 @@ confirmación de la tienda llega al buzón provisorio y coincide con lo que
 respondió la Store API. Después construir el lado de la confirmación: un
 webhook o poll que lea la transferencia y mueva el pedido `pending →
 confirmed` antes de que envejezca hasta liberarse.
+
+### Checklist para la prueba piloto manual
+
+No corre automático — el contenedor donde se edita esta documentación no
+alcanza los dominios de las tiendas, y crear un pedido real compromete Stock
+de verdad. Alguien con acceso de red la corre a mano, sobre un solo ítem de
+bajo riesgo:
+
+1. Fijar `MUCHI_ORDER_BUYER_EMAIL` y `MUCHI_ORDER_BUYER_NAME` (ya están en
+   `config/deploy.env` para la API desplegada; para correr local, exportarlas
+   o agregarlas a `.env`).
+2. Elegir una tienda piloto de `config/stores.yaml` con `platform:
+   woocommerce` y `enabled: true` (`konohastore.cl`, `lacripta.cl` u
+   `onplay.cl` hoy) y confirmar que sigue aceptando `bacs` — sus
+   `payment_methods` lo mostraban en la respuesta de cotización de
+   `/checkout`; revisar en vivo, las tiendas cambian esto.
+3. Correr una búsqueda que encuentre una oferta barata y con stock en esa
+   tienda.
+4. `POST /v1/searches/{id}/orders` con esa sola oferta, cantidad 1, una
+   dirección de envío real, y un `Idempotency-Key` nuevo.
+5. Confirmar la respuesta: `status: "pending"`, un `store_order` id, `domain`
+   coincidiendo con la tienda piloto.
+6. Abrir el admin de la tienda o el correo de confirmación y verificar que el
+   pedido existe ahí con el mismo id, la misma línea, y "pendiente de pago".
+7. Repetir el paso 4 con el *mismo* `Idempotency-Key` y carro — confirmar que
+   responde el mismo id de pedido, no uno segundo.
+8. O dejar que el pedido venza pasado `MUCHI_ORDER_PENDING_TTL_SECONDS` y
+   confirmar que `ReleaseOrders` lo mueve a `released`, o cancelarlo a mano
+   en el admin de la tienda y anotar que la copia de Muchi todavía no Nota
+   una cancelación del lado de la tienda (nada acá escucha una).
+9. Nunca mandar la transferencia bancaria de un pedido piloto — el punto es
+   verificar que el pedido se crea bien, no pagarlo.
