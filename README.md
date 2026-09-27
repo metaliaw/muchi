@@ -375,6 +375,8 @@ Repository's translations cover the Documents maintained here.
 - [When MUCHI Buys](docs/when-muchi-buys.md): the Plan for automated Agent
   purchases, Implementation and Costs under consideration, and their
   relationship to the MUCHI Dollar and Cart costing. A Plan without a Date.
+- [Reported Purchases](docs/reported-purchases.md): what the Cart does today —
+  it takes you to each Store's cart and writes down the order number you bring back.
 
 ### Decisions in Detail
 
