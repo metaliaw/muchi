@@ -71,6 +71,13 @@ export const readCart = (id, shipping, match = 'exact') =>
 export const readCartWithUnits = (id, shipping, picks, match = 'exact') =>
   post(`/api/searches/${encodeURIComponent(id)}/cart?shipping=${shipping}&match=${match}`,
        { picks })
+// La Salida hacia el Carrito de una Tienda, y el Número que la Persona Trae
+// de vuelta. Muchi Compra solo donde Puede; en el Resto Recuerda y Pregunta.
+export const linkStoreOrder = (id, items, key) =>
+  post(`/api/searches/${encodeURIComponent(id)}/orders/links`, { items, key })
+export const reportStoreOrder = (id, orderId, storeOrder) =>
+  post(`/api/searches/${encodeURIComponent(id)}/orders/${encodeURIComponent(orderId)}/report`,
+       { store_order: storeOrder })
 export const readSources = () => request('/api/sources')
 export const readLanguages = () => request('/api/languages')
 export const readCardArt = ({ name, language = '', edition = '', foil = false }) =>
