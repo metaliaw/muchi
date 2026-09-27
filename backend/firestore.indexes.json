@@ -7,6 +7,14 @@
         {"fieldPath": "search_id", "order": "ASCENDING"},
         {"fieldPath": "completion_sequence", "order": "ASCENDING"}
       ]
+    },
+    {
+      "collectionGroup": "orders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "status", "order": "ASCENDING"},
+        {"fieldPath": "updated_at", "order": "ASCENDING"}
+      ]
     }
   ],
   "fieldOverrides": [

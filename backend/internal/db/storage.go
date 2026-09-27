@@ -517,9 +517,8 @@ func (s *Store) MoveOrderStatus(ctx context.Context, id string, from, to model.O
 
 // ReleaseExpiredOrders Moves every `pending` Order whose own Cutoff already
 // Passed to `released`, and Answers how many it Moved. It Needs a Composite
-// Index on `orders` over `status` (equality) and `updated_at` (range); a
-// fresh Project's Firestore Console Offers to Create it the first time this
-// Query Runs.
+// Index on `orders` over `status` (equality) and `updated_at` (range),
+// declared in firestore.indexes.json and created by deploy-infra.sh.
 //
 // Each Move Repeats the same from-Pending Guard MoveOrderStatus Uses: a
 // Confirm that Landed between the Query and the Write must Win, never be

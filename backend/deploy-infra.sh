@@ -57,6 +57,16 @@ if [ -z "$result_index" ]; then
 		--field-config=field-path=search_id,order=ascending \
 		--field-config=field-path=completion_sequence,order=ascending --async
 fi
+# ReleaseOrders Filtra `status ==` con Rango en `updated_at`: sin este Indice
+# la Consulta Falla en vez de Liberar nada.
+release_index=$(cloud firestore indexes composite list \
+	--filter='queryScope=COLLECTION AND fields.fieldPath:status AND fields.fieldPath:updated_at' \
+	--format='value(name)')
+if [ -z "$release_index" ]; then
+	cloud firestore indexes composite create --collection-group=orders --query-scope=collection \
+		--field-config=field-path=status,order=ascending \
+		--field-config=field-path=updated_at,order=ascending --async
+fi
 existing=$(cloud tasks queues list --location="$REGION" --filter="name:$TASK_QUEUE" --format='value(name.basename())')
 action=create
 if [ "$existing" = "$TASK_QUEUE" ]; then action=update; fi
