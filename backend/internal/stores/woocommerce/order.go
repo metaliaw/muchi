@@ -68,7 +68,10 @@ func (c Client) PlaceOrder(ctx context.Context, lines []model.CartLine, address 
 	}
 	session := http.Header{"Cart-Token": {token}}
 	base := "https://" + c.Domain + "/wp-json/wc/store/v1"
-	rateBody, _ := json.Marshal(map[string]string{"package_id": "0", "rate_id": rate})
+	// package_id Travels as a Number: the Store API Schema Types it an Integer,
+	// and a JSON String there is a plausible Reason a real Store Rejects the
+	// Call outright.
+	rateBody, _ := json.Marshal(map[string]any{"package_id": 0, "rate_id": rate})
 	if _, _, err := c.Sessions.SendSession(ctx, c.Domain, source.SessionRequest{Method: http.MethodPost, Target: base + "/cart/select-shipping-rate", Body: rateBody, Header: session}); err != nil {
 		return model.Order{}, fmt.Errorf("select shipping rate %s: %w", rate, err)
 	}

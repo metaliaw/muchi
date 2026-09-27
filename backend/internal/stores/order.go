@@ -31,6 +31,15 @@ func (o Orderer) PlaceOrder(ctx context.Context, domain string, lines []model.Ca
 	if config.Platform != "woocommerce" {
 		return model.Order{}, model.ErrOrderNotSupported
 	}
+	// resolveAddress Turns "Chile"/"Región Metropolitana" into "CL"/"RM" the
+	// way Quoter Reads them; WooCommerce's own State Code Needs the further
+	// "CL-" Prefix Quoter Adds too — Checkout Deserves the same Address
+	// Quoting already Agreed on, never a raw Buyer Spelling the Store API may
+	// Refuse or Silently Mis-rate.
+	address = resolveAddress(address)
+	if address.Country == "CL" && len(address.Region) == 2 {
+		address.Region = "CL-" + address.Region
+	}
 	client := woocommerce.Client{
 		Domain: domain, Name: config.Name, Sessions: o.Sessions,
 		BuyerName: o.BuyerName, BuyerEmail: o.BuyerEmail,
