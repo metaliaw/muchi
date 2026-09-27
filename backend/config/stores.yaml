@@ -59,6 +59,7 @@ games:
     origins:
       - tcgmatch
       - shopify
+      - woocommerce
 
 search_providers:
   scrycl:
@@ -121,6 +122,26 @@ stores:
   konohastore.cl:
     games: [yugioh]
     name: "Konoha Store"
+    platform: woocommerce
+    timeout_seconds: 10
+    estimated_response_seconds: 10
+    allow_redirects: true
+    enabled: true
+  # Medido: Store API Abierta, Acepta bacs, 9.358 Singles de Pokémon. Pausada:
+  # tras unas Pocas Consultas Respondio 200 con Cuerpo Vacio; Verificar antes
+  # de Encenderla.
+  www.playset.cl:
+    games: [pokemon]
+    name: "Playset TCG Store"
+    platform: woocommerce
+    timeout_seconds: 10
+    estimated_response_seconds: 10
+    allow_redirects: true
+    enabled: false
+  # Medido: Store API Abierta, Acepta bacs, 426 Singles de Mitos y Leyendas.
+  dealertcg.cl:
+    games: [mitos-y-leyendas]
+    name: "DealerTCG"
     platform: woocommerce
     timeout_seconds: 10
     estimated_response_seconds: 10
