@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from muchi.mtg.ports import CardNotFound, QueryFailed, SearchRejected, TranslationFailed
 from muchi.mtg.search import (SearchItem, SearchOffer, SearchResults, SearchState,
-                              StockCheck)
+                              StockCheck, StoreOrder)
 from server import links, main, presenter
 
 
@@ -51,6 +51,15 @@ class FakeSearches:
         self.asked.append(offer_ids)
         return tuple(StockCheck(offer_id, *self.stock.get(offer_id, ("available", None)))
                      for offer_id in offer_ids)
+
+    def link_order(self, search_id, picks, key):
+        self.linked = (search_id, picks, key)
+        return StoreOrder("order-1", "linked", "Shop", "shop.test", "https://shop.test/cart/11:1")
+
+    def report_order(self, search_id, order_id, store_order):
+        self.reported = (search_id, order_id, store_order)
+        return StoreOrder("order-1", "reported", "Shop", "shop.test",
+                          "https://shop.test/cart/11:1", store_order)
 
     def read_sources(self):
         return [{"source": "scry", "status": "ok"}]
@@ -1057,3 +1066,28 @@ def test_an_offer_carries_the_picture_its_store_published():
 
     row = presenter.build_offer(offer, 1000, verified=False)
     assert row["image"] == "https://cdn.shopify.com/box.png"
+
+
+def test_link_hands_back_the_store_door(client):
+    http, searches = client
+    reply = http.post("/api/searches/abc/orders/links", json={
+        "items": [{"offer_id": "of-4000", "quantity": 2}], "key": "link-key-1"})
+    assert reply.status_code == 200
+    assert reply.json() == {"order_id": "order-1", "status": "linked", "store": "Shop",
+                            "domain": "shop.test", "url": "https://shop.test/cart/11:1",
+                            "store_order": ""}
+    assert searches.linked == ("abc", (("of-4000", 2),), "link-key-1")
+
+
+def test_report_carries_the_number_the_person_typed(client):
+    http, searches = client
+    reply = http.post("/api/searches/abc/orders/order-1/report", json={"store_order": " #1042 "})
+    assert reply.status_code == 200
+    assert reply.json()["status"] == "reported"
+    assert searches.reported == ("abc", "order-1", "#1042")
+
+
+def test_report_needs_a_number(client):
+    http, _ = client
+    assert http.post("/api/searches/abc/orders/order-1/report",
+                     json={"store_order": ""}).status_code == 422

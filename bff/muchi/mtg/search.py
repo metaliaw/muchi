@@ -60,6 +60,22 @@ class SearchItem:
 
 
 @dataclass(frozen=True)
+class StoreOrder:
+    """Una Compra en una Tienda, tal como la API la Recuerda.
+
+    `linked` Dice que la Persona Salió hacia el Carrito de la Tienda;
+    `reported` que Volvió con el Número que la Tienda le Mostró. Nadie lo
+    Verifica: es su Palabra, y el Estado lo Dice así.
+    """
+    order_id: str
+    status: str
+    store: str
+    domain: str
+    url: str
+    store_order: str = ""
+
+
+@dataclass(frozen=True)
 class StockCheck:
     """Lo que la Tienda contesto cuando se le volvio a preguntar por una Oferta."""
     offer_id: str

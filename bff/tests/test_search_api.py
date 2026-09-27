@@ -286,3 +286,44 @@ def test_a_broken_answer_names_the_field_it_lost():
     from muchi.api.client import name_contract_fault
 
     assert "original_name" in name_contract_fault(KeyError("original_name"))
+
+
+def order_reply(status="linked", store_order=""):
+    return {"id": "order-1", "search_id": "search-1", "store": "Shop", "domain": "shop.test",
+            "lines": [{"offer_id": "of-1", "quantity": 1, "url": "https://shop.test/products/a"}],
+            "status": status, "store_order": store_order,
+            "payment_url": "https://shop.test/cart/11:1",
+            "created_at": "2026-09-27T00:00:00Z", "updated_at": "2026-09-27T00:00:00Z"}
+
+
+def test_link_order_posts_one_store_with_its_key():
+    provider = make_provider(order_reply(), 201)
+    order = provider.link_order("search/1", (("of-1", 2),), "link-key")
+    assert (order.status, order.url) == ("linked", "https://shop.test/cart/11:1")
+    args, kwargs = provider.session.request.call_args
+    assert args[1].endswith("/searches/search%2F1/orders/links")
+    assert kwargs["json"] == {"items": [{"offer_id": "of-1", "quantity": 2}]}
+    assert kwargs["headers"]["Idempotency-Key"] == "link-key"
+
+
+def test_link_order_falls_back_to_the_first_page():
+    reply = order_reply()
+    reply.pop("payment_url")
+    order = make_provider(reply, 201).link_order("search-1", (("of-1", 1),), "link-key")
+    assert order.url == "https://shop.test/products/a"
+
+
+def test_report_order_sends_the_number():
+    provider = make_provider(order_reply("reported", "#1042"))
+    order = provider.report_order("search-1", "order/1", "#1042")
+    assert (order.status, order.store_order) == ("reported", "#1042")
+    args, kwargs = provider.session.request.call_args
+    assert args[1].endswith("/searches/search-1/orders/order%2F1/report")
+    assert kwargs["json"] == {"store_order": "#1042"}
+
+
+def test_link_order_rejects_an_empty_pick():
+    provider = make_provider({})
+    with pytest.raises(QueryFailed):
+        provider.link_order("search-1", (), "link-key")
+    provider.session.request.assert_not_called()

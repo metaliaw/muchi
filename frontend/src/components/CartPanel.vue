@@ -1,7 +1,8 @@
 <script setup>
 /** El Carrito en CLP: reparte la Lista entre Tiendas cuidando los Envíos. */
 import { computed, ref, watch } from 'vue'
-import { formatClp, readCartWithUnits } from '../api.js'
+import { formatClp, linkStoreOrder, newKey, readCartWithUnits, reportStoreOrder } from '../api.js'
+import { buildLinkItems, cleanStoreOrder, readPurchases, rememberPurchases } from '../purchase.js'
 
 const props = defineProps({
   searchId: { type: String, required: true },
@@ -49,6 +50,58 @@ async function refresh() {
 }
 
 watch([open, () => props.searchId, () => props.match, () => props.units], refresh)
+
+// Una Compra por Tienda: `linked` al Salir hacia su Carrito, `reported` cuando
+// la Persona Vuelve con el Número. Se Guarda por Búsqueda para Sobrevivir a
+// una Recarga; la Verdad Vive en la API.
+const purchases = ref({})
+const numbers = ref({})
+const busy = ref({})
+const purchaseError = ref({})
+watch(() => props.searchId, (id) => { purchases.value = readPurchases(id) }, { immediate: true })
+
+function keep(store, order) {
+  purchases.value = { ...purchases.value, [store]: order }
+  rememberPurchases(props.searchId, purchases.value)
+}
+
+async function goBuy(store) {
+  // La Pestaña se Abre en el mismo Clic: después de un `await` el Navegador
+  // la Trataría como Ventana Emergente y la Bloquearía.
+  const tab = window.open('', '_blank')
+  if (tab) tab.opener = null
+  busy.value = { ...busy.value, [store.store]: true }
+  purchaseError.value = { ...purchaseError.value, [store.store]: '' }
+  try {
+    const order = await linkStoreOrder(props.searchId, buildLinkItems(store), newKey())
+    keep(store.store, order)
+    if (tab) tab.location.href = order.url
+    else window.open(order.url, '_blank', 'noopener')
+  } catch (failure) {
+    tab?.close()
+    purchaseError.value = { ...purchaseError.value, [store.store]: failure.message }
+  } finally {
+    busy.value = { ...busy.value, [store.store]: false }
+  }
+}
+
+async function report(store) {
+  const order = purchases.value[store]
+  const number = cleanStoreOrder(numbers.value[store])
+  if (!order || !number) {
+    purchaseError.value = { ...purchaseError.value, [store]: 'Escribe el número de pedido que te mostró la tienda.' }
+    return
+  }
+  busy.value = { ...busy.value, [store]: true }
+  purchaseError.value = { ...purchaseError.value, [store]: '' }
+  try {
+    keep(store, await reportStoreOrder(props.searchId, order.order_id, number))
+  } catch (failure) {
+    purchaseError.value = { ...purchaseError.value, [store]: failure.message }
+  } finally {
+    busy.value = { ...busy.value, [store]: false }
+  }
+}
 </script>
 
 <template>
@@ -70,8 +123,9 @@ watch([open, () => props.searchId, () => props.match, () => props.units], refres
              se Topa con algo raro Tiene dónde Contarlo sin salir a buscarlo. -->
         <p v-if="!ready" class="mu-aviso mu-obra">
           <span aria-hidden="true">⚠️</span>
-          Todavía estamos trabajando en la compra: por ahora el carrito reparte
-          tu lista entre tiendas y te deja los enlaces para comprar en cada una.
+          Todavía no compramos por ti: el carrito reparte tu lista entre
+          tiendas, te lleva al carrito de cada una y, al volver, anotas el
+          número de pedido para no perder la cuenta.
           <a v-if="repositoryUrl" :href="feedbackUrl"
              target="_blank" rel="noopener noreferrer">Cuéntanos qué te pasó</a>
           <span v-else>Cuéntanos cualquier cosa que veas rara.</span>
@@ -94,6 +148,34 @@ watch([open, () => props.searchId, () => props.match, () => props.units], refres
             <p class="mu-caption">
               {{ store.cards }} cartas · {{ formatClp(store.subtotal) }} · Envío aparte
             </p>
+            <!-- La Compra en esta Tienda: Salir, Volver y Contar. Lo que se
+                 Anota es la Palabra de quien Compró; por eso Dice "informada"
+                 y no "confirmada". -->
+            <div class="mu-compra">
+              <button v-if="!purchases[store.store]" class="mu-boton" type="button"
+                      :disabled="busy[store.store]" @click="goBuy(store)">
+                Comprar en {{ store.store }}
+              </button>
+              <form v-else-if="purchases[store.store].status === 'linked'"
+                    class="mu-compra__informe" @submit.prevent="report(store.store)">
+                <label>
+                  ¿Terminaste la compra? Número de pedido
+                  <input v-model="numbers[store.store]" maxlength="64"
+                         autocomplete="off" placeholder="#1042">
+                </label>
+                <span class="mu-compra__acciones">
+                  <button class="mu-boton" type="submit" :disabled="busy[store.store]">Ya compré</button>
+                  <a :href="purchases[store.store].url" target="_blank"
+                     rel="noopener noreferrer">Volver a la tienda</a>
+                </span>
+              </form>
+              <p v-else class="mu-caption mu-compra__hecha">
+                ✓ Compra informada · pedido {{ purchases[store.store].store_order }}
+              </p>
+              <p v-if="purchaseError[store.store]" class="mu-aviso error">
+                {{ purchaseError[store.store] }}
+              </p>
+            </div>
             <p v-for="line in store.lines" :key="`${line.card_name}-${line.url}`" class="mu-linea">
               <span>
                 {{ line.quantity }}× {{ line.card_name }}
@@ -168,6 +250,11 @@ label { display: flex; flex-direction: column; gap: 6px; max-width: 240px; font-
 .mu-total { font-size: 1.3rem; font-weight: 800; color: var(--mu-acento); }
 .mu-tienda { border-top: 1px solid var(--mu-rosa-cl); padding-top: 10px; }
 .mu-tienda h3 { margin: 0; }
+.mu-compra { margin: 8px 0; display: flex; flex-direction: column; gap: 6px; }
+.mu-compra__informe { display: flex; flex-direction: column; gap: 6px; }
+.mu-compra__informe label { max-width: none; }
+.mu-compra__acciones { display: flex; align-items: center; gap: 12px; }
+.mu-compra__hecha { color: var(--mu-acento); font-weight: 600; }
 .mu-linea { display: flex; justify-content: space-between; gap: 12px; margin: 4px 0; }
 
 /* En Móvil el Botón se Pone al lado del de MUCHI, en la misma Esquina, y el

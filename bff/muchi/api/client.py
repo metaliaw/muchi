@@ -10,7 +10,7 @@ import requests
 from muchi.mtg.models import Order
 from muchi.mtg.ports import QueryFailed, SearchRejected
 from muchi.mtg.search import (SearchItem, SearchOffer, SearchResults, SearchState,
-                              StockCheck)
+                              StockCheck, StoreOrder)
 
 
 def build_search(reply: dict) -> SearchState:
@@ -132,6 +132,20 @@ def name_contract_fault(error: Exception) -> str:
     return f"{detail[:120]}."
 
 
+def build_store_order(reply: dict) -> StoreOrder:
+    lines = reply["lines"]
+    # Sin Enlace de Carrito, la Tienda se Compra Página por Página: la Primera
+    # Línea es la Puerta, y el Resto Sigue en el Carrito de Muchi.
+    url = reply.get("payment_url") or (lines[0]["url"] if lines else "")
+    if not url.startswith("https://"):
+        raise ValueError("payment_url")
+    return StoreOrder(
+        order_id=str(reply["id"]), status=str(reply["status"]),
+        store=str(reply["store"]), domain=str(reply["domain"]), url=url,
+        store_order=str(reply.get("store_order") or ""),
+    )
+
+
 def build_stock_checks(reply: dict) -> tuple[StockCheck, ...]:
     return tuple(StockCheck(
         offer_id=str(row["id"]),
@@ -235,6 +249,27 @@ class SearchProvider:
             payload={"offers": list(offer_ids)},
         )
         return self.parse_reply(build_stock_checks, reply)
+
+    def link_order(self, search_id: str, picks: tuple[tuple[str, int], ...],
+                   key: str) -> StoreOrder:
+        """Anota que la Persona Sale al Carrito de una Tienda con estas Ofertas."""
+        if not picks or any(not offer or not 1 <= units <= 99 for offer, units in picks):
+            raise QueryFailed("Cada Oferta requiere Identificador y entre 1 y 99 Copias.")
+        reply = self.request_reply(
+            "POST", f"/searches/{quote(search_id, safe='')}/orders/links",
+            payload={"items": [{"offer_id": offer, "quantity": units} for offer, units in picks]},
+            key=key,
+        )
+        return self.parse_reply(build_store_order, reply)
+
+    def report_order(self, search_id: str, order_id: str, store_order: str) -> StoreOrder:
+        """Entrega el Número de Pedido que la Persona Trajo de la Tienda."""
+        reply = self.request_reply(
+            "POST",
+            f"/searches/{quote(search_id, safe='')}/orders/{quote(order_id, safe='')}/report",
+            payload={"store_order": store_order},
+        )
+        return self.parse_reply(build_store_order, reply)
 
     def read_sources(self) -> list[dict]:
         reply = self.request_reply("GET", "/health/sources")

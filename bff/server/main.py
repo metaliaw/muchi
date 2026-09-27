@@ -468,6 +468,46 @@ def read_chosen_cart(search_id: str, request: CartRequest,
                                 picks={row.offer_id: row.units for row in request.picks})
 
 
+class LinkLine(BaseModel):
+    offer_id: str = Field(min_length=1, max_length=200)
+    quantity: int = Field(ge=1, le=99)
+
+
+class LinkRequest(BaseModel):
+    """Las Líneas de una sola Tienda que la Persona va a Comprar allá."""
+    items: list[LinkLine] = Field(min_length=1, max_length=50)
+    key: str = Field(min_length=8, max_length=100)
+
+
+class ReportRequest(BaseModel):
+    store_order: str = Field(min_length=1, max_length=64)
+
+
+def present_store_order(order) -> dict:
+    return {"order_id": order.order_id, "status": order.status, "store": order.store,
+            "domain": order.domain, "url": order.url, "store_order": order.store_order}
+
+
+@app.post("/api/searches/{search_id}/orders/links")
+def link_store_order(search_id: str, request: LinkRequest) -> dict:
+    """Anota la Salida hacia el Carrito de una Tienda y Devuelve su Enlace.
+
+    Muchi no Puede Comprar en la Mayoría de las Tiendas: la Persona Compra
+    allá. Lo que Sí Puede es Recordar a dónde Fue, para que Vuelva y Cuente
+    qué Pasó sin Rearmar nada.
+    """
+    order = build_muchi().searches.link_order(
+        search_id, tuple((row.offer_id, row.quantity) for row in request.items), request.key)
+    return present_store_order(order)
+
+
+@app.post("/api/searches/{search_id}/orders/{order_id}/report")
+def report_store_order(search_id: str, order_id: str, request: ReportRequest) -> dict:
+    """El Número que la Tienda le Mostró a la Persona. Es su Palabra, no una Prueba."""
+    order = build_muchi().searches.report_order(search_id, order_id, request.store_order.strip())
+    return present_store_order(order)
+
+
 def read_all_results(searches, search_id: str):
     items = []
     cursor = 0
