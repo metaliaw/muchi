@@ -9,9 +9,9 @@ A session Closing, not a Summary for Display.
 It Leaves the next Session one durable Thread to pick up.
 
 The next Turn Lives in [YoYoYo](../yo-yo-yo/SKILL.md).
-The Canon Lives in [Change Growth](../../../rules/change-growth.md).
+The Canon Lives in [Change Growth](../../canon/rules/change-growth.md).
 The working Snapshot Lives in [OneTwoCheckpoint](../one-two-checkpoint/SKILL.md).
-The Shape Lives in [The Lever and the Tape](../../../patterns/the-lever-and-the-tape.md).
+The Shape Lives in [The Lever and the Tape](../../canon/patterns/the-lever-and-the-tape.md).
 
 ```mermaid
 flowchart TD

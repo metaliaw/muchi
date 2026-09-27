@@ -36,11 +36,11 @@ and instructs it to read that markdown before it talks.
 Skills use the shorter `one-two-` Prefix.
 The repeated three-part names Mark fundamental workflow operations —
 open, advance, commit and close — so they stand out from the rest.
-[yo-yo-yo](../.agents/skills/yo-yo-yo/SKILL.md) Opens the session.
-[next-next-next](../.agents/skills/next-next-next/SKILL.md) Advances one step.
-[commit-commit-commit](../.agents/skills/commit-commit-commit/SKILL.md) Handles commits and the final push.
-[bye-bye-bye](../.agents/skills/bye-bye-bye/SKILL.md) Closes with a handoff.
-The typography skill is [de-la-case](../.agents/skills/de-la-case/SKILL.md),
+[yo-yo-yo](../../skills/yo-yo-yo/SKILL.md) Opens the session.
+[next-next-next](../../skills/next-next-next/SKILL.md) Advances one step.
+[commit-commit-commit](../../skills/commit-commit-commit/SKILL.md) Handles commits and the final push.
+[bye-bye-bye](../../skills/bye-bye-bye/SKILL.md) Closes with a handoff.
+The typography skill is [de-la-case](../../skills/de-la-case/SKILL.md),
 and its convention is [DeLaCase](de-la-case.md).
 The third word Carries no stage; the triple chant is the lever,
 and [The Lever and the Tape](../patterns/the-lever-and-the-tape.md) Draws it.

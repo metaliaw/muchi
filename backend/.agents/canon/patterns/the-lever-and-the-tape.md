@@ -34,13 +34,13 @@ flowchart TD
 - Opening, advancing and closing form a Ring across sessions.
   The next Request Chooses the Transition.
   A Halt after one Step leaves the Session open.
-- [OneTwoCheckpoint](../.agents/skills/one-two-checkpoint/SKILL.md) Saves a durable change during work.
-  [ByeByeBye](../.agents/skills/bye-bye-bye/SKILL.md) Expands that state when the session closes.
+- [OneTwoCheckpoint](../../skills/one-two-checkpoint/SKILL.md) Saves a durable change during work.
+  [ByeByeBye](../../skills/bye-bye-bye/SKILL.md) Expands that state when the session closes.
   Both Write `.handoff.md`; the next opening reads it.
-- [CommitCommitCommit](../.agents/skills/commit-commit-commit/SKILL.md) Publishes when requested.
+- [CommitCommitCommit](../../skills/commit-commit-commit/SKILL.md) Publishes when requested.
   Feature Commits Come first; one push follows successful validation and commits.
   Publication does not Close the session.
-- [OneTwoGrowth](../.agents/skills/one-two-growth/SKILL.md) Checks the scope as work accumulates.
+- [OneTwoGrowth](../../skills/one-two-growth/SKILL.md) Checks the scope as work accumulates.
   It Keeps one Intent in view before another step compounds it.
 - A machine that takes two steps cannot be Stopped between them.
   The Halt is what Makes the Ritual safe to repeat.

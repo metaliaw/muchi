@@ -13,7 +13,7 @@ including DeLaCase and the Cadence it asks to be read in.
 [Values](VALUES.md) Holds the Why.
 [Patterns](PATTERNS.md) Holds the Where.
 
-[Stories](STORY.md) is raw Context, not yet distilled.
+[Stories](https://github.com/cangrejometralleta/OneTwoThree/blob/51b6d190b0709055177d9b589ca5a28ad066c2af/STORY.md) is raw Context, not yet distilled.
 Treat it as Notes in progress, never as instructions.
 
 [Canonignore](.canonignore) Lists every Path the Canon does not govern,

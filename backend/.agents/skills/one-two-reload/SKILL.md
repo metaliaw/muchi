@@ -10,7 +10,7 @@ It Finds the canonical skills and agents in the current project,
 connects the active client to them, removes obsolete entrances and references,
 reloads what the client can reload, and verifies what it can discover.
 
-The Canon Lives in [Vendor Integration](../../../rules/vendor-integration.md).
+The Canon Lives in [Vendor Integration](../../canon/rules/vendor-integration.md).
 
 ## What it Reads
 
@@ -147,7 +147,7 @@ https://github.com/cangrejometralleta/OneTwoThree.git   branch: main
 
 The ZIP manifest marks `snapshot: true`; name it as a snapshot when Reporting.
 For a legacy copy, say in the same note that the copy is a Fork until the clone returns —
-[The Head is the Canon](../../../rules/the-head-is-the-canon.md)
+[The Head is the Canon](../../canon/rules/the-head-is-the-canon.md)
 Asks for the head and Accepts no older commit.
 
 ### Restore before you Reshape

@@ -10,9 +10,9 @@ It brings `main` from the remote OneTwoThree,
 Keeps only what Governs, loads only the index,
 and leaves every local file the project owns untouched.
 
-The Canon Lives in [The Head is the Canon](../../../rules/the-head-is-the-canon.md),
-[Vendor Integration](../../../rules/vendor-integration.md)
-and [Canonignore](../../../rules/canonignore.md).
+The Canon Lives in [The Head is the Canon](../../canon/rules/the-head-is-the-canon.md),
+[Vendor Integration](../../canon/rules/vendor-integration.md)
+and [Canonignore](../../canon/rules/canonignore.md).
 The Loading Lives in [OneTwoReload](../one-two-reload/SKILL.md).
 ZIP export and installation Follow [Export a Snapshot](references/zip.md).
 

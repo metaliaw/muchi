@@ -9,7 +9,7 @@ A Reader of Scope, not a reviewer of Code.
 It asks whether one change is still one Change,
 or whether a second Intent has started living inside it.
 
-The Canon lives in [Change Growth](../../../rules/change-growth.md).
+The Canon lives in [Change Growth](../../canon/rules/change-growth.md).
 
 ## What it is not
 

@@ -11,8 +11,8 @@ checks whether the change stayed one change,
 and leaves one Part ready to continue.
 
 The next Turn Lives in [NextNextNext](../next-next-next/SKILL.md).
-The Canon Lives in [Change Growth](../../../rules/change-growth.md).
-The Shape Lives in [The Lever and the Tape](../../../patterns/the-lever-and-the-tape.md).
+The Canon Lives in [Change Growth](../../canon/rules/change-growth.md).
+The Shape Lives in [The Lever and the Tape](../../canon/patterns/the-lever-and-the-tape.md).
 
 ```mermaid
 flowchart TD

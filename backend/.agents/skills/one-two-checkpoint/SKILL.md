@@ -9,7 +9,7 @@ A small Snapshot during work, not a session closing.
 It Leaves the current thread outside the session
 without turning every turn into a full handoff.
 
-The Canon lives in [Session Checkpoint](../../../rules/session-checkpoint.md).
+The Canon lives in [Session Checkpoint](../../canon/rules/session-checkpoint.md).
 The closing Handoff Lives in [ByeByeBye](../bye-bye-bye/SKILL.md).
 
 ## When it Runs
