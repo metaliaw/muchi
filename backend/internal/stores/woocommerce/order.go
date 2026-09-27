@@ -11,23 +11,23 @@ import (
 	"github.com/cangrejometralleta/muchi-api/internal/source"
 )
 
-// virtualBuyerName and virtualBuyerEmail Name Muchi itself as the Buyer of
-// Record until a real Person's Identity Enters the Checkout Request. Every
-// Order this Places Lands, at worst, in a Mailbox Muchi Reads — never in a
-// Stranger's.
+// muchiFallbackName and muchiFallbackEmail Name Muchi itself as the Buyer of
+// Record when no Environment Names a real one. Every Order this Places
+// Lands, at worst, in a Mailbox Muchi Reads — never in a Stranger's.
 //
-// TODO: orders@muchi.invalid is a reserved, undeliverable Address (RFC 2606).
-// Replace it with a real Muchi Mailbox before any Order is Placed against a
-// live Store; until then, PlaceOrder Refuses to Run.
+// muchiFallbackEmail is a reserved, undeliverable Address (RFC 2606) on
+// Purpose: it is the value the App reads until an Operator Sets
+// MUCHI_ORDER_BUYER_EMAIL to a real Mailbox, and PlaceOrder Refuses to Run
+// while it Still Reads this one.
 const (
-	virtualBuyerName  = "Muchi"
-	virtualBuyerEmail = "orders@muchi.invalid"
+	muchiFallbackName  = "Muchi"
+	muchiFallbackEmail = "orders@muchi.invalid"
 )
 
-// ErrVirtualBuyerNotConfigured Answers a PlaceOrder Call while the Virtual
-// Buyer is still the Placeholder: Real Money should never Move on a Mailbox
-// nobody Reads.
-var ErrVirtualBuyerNotConfigured = errors.New("woocommerce: virtual buyer email is a placeholder")
+// ErrVirtualBuyerNotConfigured Answers a PlaceOrder Call while the Buyer is
+// still muchiFallbackEmail: Real Money should never Move on a Mailbox nobody
+// Reads.
+var ErrVirtualBuyerNotConfigured = errors.New("woocommerce: order buyer email is not configured")
 
 // checkoutReply Reads only what PlaceOrder Needs back; the Store API Answers
 // far more per https://github.com/woocommerce/woocommerce/blob/trunk/plugins/woocommerce/src/StoreApi/docs/checkout.md
@@ -45,7 +45,14 @@ type checkoutReply struct {
 // API Confirms without a Browser or a Card. The Order Lands "pending
 // payment"; nothing here Waits for the Transfer to Arrive.
 func (c Client) PlaceOrder(ctx context.Context, lines []model.CartLine, address model.ShippingAddress) (model.Order, error) {
-	if virtualBuyerEmail == "orders@muchi.invalid" {
+	name, email := c.BuyerName, c.BuyerEmail
+	if name == "" {
+		name = muchiFallbackName
+	}
+	if email == "" {
+		email = muchiFallbackEmail
+	}
+	if email == muchiFallbackEmail {
 		return model.Order{}, ErrVirtualBuyerNotConfigured
 	}
 	if c.Sessions == nil || len(lines) == 0 {
@@ -66,7 +73,7 @@ func (c Client) PlaceOrder(ctx context.Context, lines []model.CartLine, address 
 		return model.Order{}, fmt.Errorf("select shipping rate %s: %w", rate, err)
 	}
 	person := map[string]string{
-		"first_name": virtualBuyerName, "last_name": virtualBuyerName, "email": virtualBuyerEmail,
+		"first_name": name, "last_name": name, "email": email,
 		"country": address.Country, "state": address.Region, "city": address.City, "postcode": address.Postcode,
 	}
 	body, _ := json.Marshal(map[string]any{

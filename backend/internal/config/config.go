@@ -41,6 +41,11 @@ type Config struct {
 	SweepMaxWakes           int
 	MaxQuantityPerCard      int
 	SuspiciousPricePercent  int
+	// OrderBuyerName and OrderBuyerEmail Name the Buyer PlaceOrder Checks a
+	// Cart out as. Empty Leaves the Store Adapter's own Fallback in place,
+	// which no Platform Accepts — a real Order Needs these Set.
+	OrderBuyerName  string
+	OrderBuyerEmail string
 }
 
 func LoadConfig() (Config, error) {
@@ -88,6 +93,8 @@ func LoadConfig() (Config, error) {
 		SweepMaxWakes:          readIntOr("MUCHI_SWEEP_MAX_WAKES", 50),
 		MaxQuantityPerCard:     readIntOr("MUCHI_MAX_QUANTITY_PER_CARD", 99),
 		SuspiciousPricePercent: readIntOr("MUCHI_SUSPICIOUS_PRICE_PERCENT", 30),
+		OrderBuyerName:         os.Getenv("MUCHI_ORDER_BUYER_NAME"),
+		OrderBuyerEmail:        os.Getenv("MUCHI_ORDER_BUYER_EMAIL"),
 	}
 	if config.APIToken == "" {
 		return Config{}, errors.New("MUCHI_API_TOKEN is required")

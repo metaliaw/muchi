@@ -23,6 +23,11 @@ type Client struct {
 	Name    string
 	// Sessions Lets QuoteCart Fill a Cart; Searching Never Needs it.
 	Sessions SessionSender
+	// BuyerName and BuyerEmail Name the Buyer PlaceOrder Checks a Cart out as.
+	// Empty Falls back to muchiFallbackName and muchiFallbackEmail — Muchi's
+	// own reserved Placeholder, which PlaceOrder Refuses to Checkout with.
+	BuyerName  string
+	BuyerEmail string
 }
 
 type productReply struct {
