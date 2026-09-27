@@ -74,6 +74,11 @@ para comprar. Eso es nivel 0 sin programar nada nuevo. Las herramientas de pago
 del MCP todavía no existen, así que el nivel 2 requiere un script, como en
 Shopify. El checkout de Jumpseller también es común a todas sus tiendas.
 
+### El Wombat Rabioso: resuelto en casa
+
+El Wombat es una tienda interna cuyo stock vive en listas de Moxfield. Muchi
+gestiona esa compra directamente, así que no necesita carro, enlace ni cotización.
+
 ### PrestaShop
 
 El controlador `index.php?controller=cart&add=1&id_product=…&id_product_attribute=…`

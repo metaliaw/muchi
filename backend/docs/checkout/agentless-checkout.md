@@ -73,6 +73,11 @@ buy. That is level 0 with nothing new to build. The MCP payment tools do not
 exist yet, so level 2 needs a script, as with Shopify. Jumpseller checkout is
 also shared across its stores.
 
+### El Wombat Rabioso: Resolved In-House
+
+El Wombat is an internal store whose stock lives in Moxfield lists. Muchi
+handles that purchase itself, so it needs no cart, link, or quote.
+
 ### PrestaShop
 
 The `index.php?controller=cart&add=1&id_product=…&id_product_attribute=…`
