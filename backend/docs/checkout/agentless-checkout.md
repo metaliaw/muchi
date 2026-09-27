@@ -232,6 +232,27 @@ delivery's fault, and retrying would not change any of them.
 from-status guard `MoveOrderStatus` always uses, so a release that landed
 first still wins over a late confirm.
 
+## Level 0 with Memory: Reported Orders
+
+Most stores cannot take an order from Muchi: every Shopify and Jumpseller
+store, and every game outside Magic and Yu-Gi-Oh. For them the buyer still
+pays at the store, but Muchi now records the trip and asks what happened.
+
+`POST /v1/searches/{search_id}/orders/links` takes one store's lines (the same
+single-store rule and `Idempotency-Key` as `/orders`) and stores an order in
+status `linked`, with the store's cart link in `payment_url` when it has one.
+`POST /v1/searches/{search_id}/orders/{order_id}/report` takes the number the
+store showed the buyer and moves `linked → reported` in one transaction
+(`db.Store.ReportOrder`). The same number again answers the same order; a
+different one answers `409`, so a second tap cannot overwrite the first.
+
+`reported` is the buyer's word. No store signal reaches Muchi from a linked
+store, so nothing moves an order to `confirmed` on this path, and
+`ReleaseOrders` does not touch `linked` orders. The front (metaliaw/muchi)
+shows one "Buy at this store" button per store and a field for the order
+number; its [Reported Purchases](https://github.com/metaliaw/muchi/blob/main/docs/reported-purchases.md)
+page describes that side.
+
 ## Suggested Next Step
 
 Configure the webhook in a pilot WooCommerce store's own admin (Settings →

@@ -191,6 +191,9 @@ stateDiagram-v2
     pending --> confirmed: webhook processing o completed
     pending --> released: webhook cancelled, failed, refunded
     pending --> released: ReleaseOrders tras el TTL
+    [*] --> linked: quien compra sigue el enlace al carrito
+    linked --> reported: quien compra da el número de pedido
+    reported --> [*]
     confirmed --> [*]
     released --> [*]
 ```

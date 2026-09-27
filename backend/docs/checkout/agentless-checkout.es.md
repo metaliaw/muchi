@@ -239,6 +239,31 @@ la tienda — y lo mueve con la misma guarda desde-estado que usa siempre
 `MoveOrderStatus`, así que una liberación que llegó primero sigue ganando
 sobre una confirmación tardía.
 
+## Nivel 0 con memoria: pedidos informados
+
+La mayoría de las tiendas no puede recibir un pedido de Muchi: todas las
+Shopify y Jumpseller, y todos los juegos fuera de Magic y Yu-Gi-Oh. En ellas
+quien compra sigue pagando en la tienda, pero ahora Muchi anota la salida y
+pregunta qué pasó.
+
+`POST /v1/searches/{search_id}/orders/links` recibe las líneas de una tienda
+(la misma regla de una sola tienda y la misma `Idempotency-Key` que `/orders`)
+y guarda un pedido en estado `linked`, con el enlace al carrito de la tienda
+en `payment_url` cuando lo tiene.
+`POST /v1/searches/{search_id}/orders/{order_id}/report` recibe el número que
+la tienda le mostró a quien compra y mueve `linked → reported` en una
+transacción (`db.Store.ReportOrder`). El mismo número otra vez responde el
+mismo pedido; uno distinto responde `409`, así un segundo toque no pisa el
+primero.
+
+`reported` es la palabra de quien compra. Ninguna señal de una tienda
+enlazada llega a Muchi, así que en este camino nada mueve un pedido a
+`confirmed`, y `ReleaseOrders` no toca los pedidos `linked`. El front
+(metaliaw/muchi) muestra un botón "Comprar en esta tienda" por tienda y un
+campo para el número de pedido; su página
+[Compras Informadas](https://github.com/metaliaw/muchi/blob/main/docs/reported-purchases.es.md)
+describe ese lado.
+
 ## Siguiente paso sugerido
 
 Configurar el webhook en el admin de una tienda WooCommerce piloto (Ajustes →
