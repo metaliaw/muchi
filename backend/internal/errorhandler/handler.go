@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/cangrejometralleta/muchi-api/internal/model"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 	"github.com/cangrejometralleta/muchi-api/internal/stores/moxfield"
 )
@@ -31,6 +32,9 @@ var (
 	unsupportedCardMetadata = Description{http.StatusNotFound, "not_found", "Card metadata is not supported for this game"}
 	unsupportedAutocomplete = Description{http.StatusNotFound, "not_found", "Card autocomplete is not supported for this game"}
 	missingCardName         = Description{http.StatusBadRequest, "invalid_request", "Card name is required"}
+	orderNotFound           = Description{http.StatusNotFound, "not_found", "Order was not found"}
+	orderNotSupported       = Description{http.StatusUnprocessableEntity, "order_not_supported", "This store cannot place an order yet"}
+	orderConflict           = Description{http.StatusConflict, "order_conflict", "Order already moved past that status"}
 )
 
 func Unauthorized() Description            { return unauthorized }
@@ -44,6 +48,9 @@ func Internal() Description                { return internal }
 func UnsupportedCardMetadata() Description { return unsupportedCardMetadata }
 func UnsupportedAutocomplete() Description { return unsupportedAutocomplete }
 func MissingCardName() Description         { return missingCardName }
+func OrderNotFound() Description           { return orderNotFound }
+func OrderNotSupported() Description       { return orderNotSupported }
+func OrderConflict() Description           { return orderConflict }
 
 type reply struct {
 	Code       string `json:"code"`
@@ -93,6 +100,12 @@ func Describe(failure error) Description {
 		return idempotencyConflict
 	case errors.Is(failure, search.ErrNotRunning):
 		return invalidState
+	case errors.Is(failure, model.ErrOrderNotFound):
+		return orderNotFound
+	case errors.Is(failure, model.ErrOrderNotSupported):
+		return orderNotSupported
+	case errors.Is(failure, model.ErrOrderConflict):
+		return orderConflict
 	default:
 		return internal
 	}

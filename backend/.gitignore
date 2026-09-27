@@ -9,11 +9,6 @@ vendor/
 # See .agents/skills/bye-bye-bye/SKILL.md — Never Commit or Push the Handoff.
 /.handoff.md
 
-# El Canon Vive entero en `.agents`, sin Clon intermedio. Sigue siendo una
-# Cache: se Ignora, no se Carga. AGENTS.md Nombra la Direccion y el Commit.
-# Ver rules/the-head-is-the-canon.md — la Cabeza es la Afirmacion.
-/.agents/
-
 # Las Entradas de cada Cliente Resuelven dentro de `.agents`. Son Enlaces,
 # asi que no Llevan Barra: el Patron con Barra solo Casa con un Directorio.
 /.claude/

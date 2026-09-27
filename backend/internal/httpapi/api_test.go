@@ -452,7 +452,8 @@ func askCheckout(t *testing.T, body string) *httptest.ResponseRecorder {
 
 // TestCheckoutLinksGroupsLinesByStore Spells the Contract: one Entry per Store
 // in the Order first Asked, a Cart Link where the Platform has one, and the
-// Product Pages everywhere else.
+// Product Pages everywhere else. A single WooCommerce Line gets its own
+// `add-to-cart` Link; a second one would not.
 func TestCheckoutLinksGroupsLinesByStore(t *testing.T) {
 	recorder := askCheckout(t, `{"items":[{"offer_id":"ring","quantity":2},{"offer_id":"woo","quantity":1},{"offer_id":"bolt","quantity":4}]}`)
 	if recorder.Code != http.StatusOK {
@@ -471,7 +472,7 @@ func TestCheckoutLinksGroupsLinesByStore(t *testing.T) {
 	if shop.Domain != "shop.test" || shop.Mode != "cart" || shop.URL != "https://shop.test/cart/11:2,22:4" || len(shop.Lines) != 2 {
 		t.Fatalf("shop = %+v", shop)
 	}
-	if woo.Mode != "product_pages" || woo.URL != "" || woo.Lines[0].URL != "https://woo.test/producto/sol-ring" {
+	if woo.Mode != "cart" || woo.URL != "https://woo.test/?add-to-cart=7&quantity=1" || woo.Lines[0].URL != "https://woo.test/producto/sol-ring" {
 		t.Fatalf("woo = %+v", woo)
 	}
 }
@@ -530,5 +531,86 @@ func TestCheckoutLinksQuotesStoresWhenAskedWithAnAddress(t *testing.T) {
 	}
 	if recorder := askCheckout(t, `{"items":[{"offer_id":"woo","quantity":1}],"shipping":{"city":"Santiago"}}`); recorder.Code != http.StatusBadRequest {
 		t.Fatalf("address without country status = %d", recorder.Code)
+	}
+}
+
+// fixedOrderer Places one fixed Order for whichever domain it is Asked, and
+// Remembers the Lines it Saw.
+type fixedOrderer struct{ domain string }
+
+func (o *fixedOrderer) PlaceOrder(_ context.Context, domain string, lines []model.CartLine, _ model.ShippingAddress) (model.Order, error) {
+	o.domain = domain
+	return model.Order{Store: "Woo", Domain: domain, Status: model.OrderPending, StoreOrder: "501"}, nil
+}
+
+// fixedOrderRepository Plays the Idempotency Contract CreateOrder Promises:
+// the same Key Answers the same Order, a different Hash Conflicts.
+type fixedOrderRepository struct {
+	byKey map[string]model.Order
+	hash  map[string]string
+}
+
+func (r *fixedOrderRepository) CreateOrder(_ context.Context, key, hash string, order model.Order) (model.Order, error) {
+	if r.byKey == nil {
+		r.byKey, r.hash = map[string]model.Order{}, map[string]string{}
+	}
+	if existing, found := r.byKey[key]; found {
+		if r.hash[key] != hash {
+			return model.Order{}, search.ErrConflict
+		}
+		return existing, nil
+	}
+	order.ID = "order_one"
+	r.byKey[key], r.hash[key] = order, hash
+	return order, nil
+}
+func (r *fixedOrderRepository) GetOrder(context.Context, string) (model.Order, error) {
+	return model.Order{}, model.ErrOrderNotFound
+}
+func (r *fixedOrderRepository) FindOrderByStoreOrder(context.Context, string, string) (model.Order, error) {
+	return model.Order{}, model.ErrOrderNotFound
+}
+func (r *fixedOrderRepository) MoveOrderStatus(context.Context, string, model.OrderStatus, model.OrderStatus) (model.Order, error) {
+	return model.Order{}, model.ErrOrderNotFound
+}
+
+// TestPlaceOrderCreatesOneOrderForOneStore Spells the Contract: every Line
+// must Belong to the same Store, the Idempotency Key Guards a doubled Tap,
+// and a Store the Orderer Refuses Answers 422.
+func TestPlaceOrderCreatesOneOrderForOneStore(t *testing.T) {
+	orderer, repository := &fixedOrderer{}, &fixedOrderRepository{}
+	api := API{Searches: search.Service{Repository: &checkoutStore{}, Orderer: orderer, Orders: repository}, Token: "secret"}
+	place := func(key, body string) *httptest.ResponseRecorder {
+		request := httptest.NewRequest(http.MethodPost, "/v1/searches/search_one/orders", strings.NewReader(body))
+		request.Header.Set("Authorization", "Bearer secret")
+		if key != "" {
+			request.Header.Set("Idempotency-Key", key)
+		}
+		recorder := httptest.NewRecorder()
+		api.BuildHandler().ServeHTTP(recorder, request)
+		return recorder
+	}
+	body := `{"items":[{"offer_id":"woo","quantity":1}],"shipping":{"country":"CL"}}`
+	first := place("order-key", body)
+	if first.Code != http.StatusCreated {
+		t.Fatalf("status = %d: %s", first.Code, first.Body)
+	}
+	var reply orderDTO
+	if err := json.Unmarshal(first.Body.Bytes(), &reply); err != nil {
+		t.Fatal(err)
+	}
+	if reply.ID != "order_one" || reply.Domain != "woo.test" || reply.Status != "pending" {
+		t.Fatalf("order = %+v", reply)
+	}
+	// A retried Call with the same Key Answers the same Order.
+	if again := place("order-key", body); again.Code != http.StatusCreated || !strings.Contains(again.Body.String(), `"id":"order_one"`) {
+		t.Fatalf("retry status = %d body = %s", again.Code, again.Body)
+	}
+	if missing := place("", body); missing.Code != http.StatusBadRequest {
+		t.Fatalf("missing idempotency key status = %d", missing.Code)
+	}
+	mixed := `{"items":[{"offer_id":"ring","quantity":1},{"offer_id":"woo","quantity":1}],"shipping":{"country":"CL"}}`
+	if crossed := place("mixed-key", mixed); crossed.Code != http.StatusBadRequest {
+		t.Fatalf("mixed-store order status = %d: %s", crossed.Code, crossed.Body)
 	}
 }

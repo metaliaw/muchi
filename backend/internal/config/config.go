@@ -41,6 +41,19 @@ type Config struct {
 	SweepMaxWakes           int
 	MaxQuantityPerCard      int
 	SuspiciousPricePercent  int
+	// OrderBuyerName and OrderBuyerEmail Name the Buyer PlaceOrder Checks a
+	// Cart out as. Empty Leaves the Store Adapter's own Fallback in place,
+	// which no Platform Accepts — a real Order Needs these Set.
+	OrderBuyerName  string
+	OrderBuyerEmail string
+	// OrderPendingTTL Names how long a `pending` Order gets before
+	// ReleaseOrders Frees its Stock; OrderReleaseMaxWakes caps one Sweep, the
+	// way SweepMaxWakes caps sweep.Sweeper's.
+	OrderPendingTTL      time.Duration
+	OrderReleaseMaxWakes int
+	// OrderWebhookSecret Verifies a Store's own Order Webhook. Empty Refuses
+	// every Delivery.
+	OrderWebhookSecret string
 }
 
 func LoadConfig() (Config, error) {
@@ -88,6 +101,14 @@ func LoadConfig() (Config, error) {
 		SweepMaxWakes:          readIntOr("MUCHI_SWEEP_MAX_WAKES", 50),
 		MaxQuantityPerCard:     readIntOr("MUCHI_MAX_QUANTITY_PER_CARD", 99),
 		SuspiciousPricePercent: readIntOr("MUCHI_SUSPICIOUS_PRICE_PERCENT", 30),
+		OrderBuyerName:         os.Getenv("MUCHI_ORDER_BUYER_NAME"),
+		OrderBuyerEmail:        os.Getenv("MUCHI_ORDER_BUYER_EMAIL"),
+		// A WooCommerce Store holds a Draft Order's Stock for a few Minutes on
+		// its own, then Releases it whether Muchi Asks or not; a Day gives a
+		// slow bank Transfer Room without Holding a Card the Store already let go.
+		OrderPendingTTL:      readSecondsOr("MUCHI_ORDER_PENDING_TTL_SECONDS", 86400),
+		OrderReleaseMaxWakes: readIntOr("MUCHI_ORDER_RELEASE_MAX_WAKES", 50),
+		OrderWebhookSecret:   os.Getenv("MUCHI_ORDER_WEBHOOK_SECRET"),
 	}
 	if config.APIToken == "" {
 		return Config{}, errors.New("MUCHI_API_TOKEN is required")

@@ -426,6 +426,34 @@ func renderStoreCheckoutList(values []model.StoreCheckout) []storeCheckoutDTO {
 	return result
 }
 
+type orderDTO struct {
+	ID         string            `json:"id"`
+	SearchID   string            `json:"search_id"`
+	Store      string            `json:"store"`
+	Domain     string            `json:"domain"`
+	Lines      []checkoutLineDTO `json:"lines"`
+	Status     string            `json:"status"`
+	StoreOrder string            `json:"store_order,omitempty"`
+	PaymentURL string            `json:"payment_url,omitempty"`
+	CreatedAt  time.Time         `json:"created_at"`
+	UpdatedAt  time.Time         `json:"updated_at"`
+}
+
+func renderOrder(value model.Order) orderDTO {
+	return orderDTO{
+		ID:         value.ID,
+		SearchID:   value.SearchID,
+		Store:      value.Store,
+		Domain:     value.Domain,
+		Lines:      renderCheckoutLineList(value.Lines),
+		Status:     string(value.Status),
+		StoreOrder: value.StoreOrder,
+		PaymentURL: value.PaymentURL,
+		CreatedAt:  value.CreatedAt,
+		UpdatedAt:  value.UpdatedAt,
+	}
+}
+
 type offerStockDTO struct {
 	ID string `json:"id"`
 	stockReadingDTO

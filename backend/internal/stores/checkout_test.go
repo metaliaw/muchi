@@ -37,3 +37,31 @@ func TestCheckoutLinkNeedsAShopifyVariantForEveryLine(t *testing.T) {
 		}
 	}
 }
+
+// TestCheckoutLinkAddsOneWooCommerceProduct Keeps the `add-to-cart` Link to
+// the one Case WooCommerce Answers without an Order: a single Product it can
+// Name by its own simple Id.
+func TestCheckoutLinkAddsOneWooCommerceProduct(t *testing.T) {
+	config := Config{Stores: map[string]StoreConfig{
+		"wc.test": {Platform: "woocommerce", Enabled: true},
+	}}
+	simple := model.Offer{Source: "wc.test", VariantID: "42"}
+	variable := model.Offer{Source: "wc.test"}
+	aggregated := model.Offer{VariantID: "42", Source: "scry.cl"}
+	cases := []struct {
+		name  string
+		lines []model.CartLine
+		want  string
+	}{
+		{"single simple product", []model.CartLine{{Offer: simple, Quantity: 2}}, "https://wc.test/?add-to-cart=42&quantity=2"},
+		{"variable product has no cart id", []model.CartLine{{Offer: variable, Quantity: 1}}, ""},
+		{"aggregator key is not trusted", []model.CartLine{{Offer: aggregated, Quantity: 1}}, ""},
+		{"a second line has no link", []model.CartLine{{Offer: simple, Quantity: 1}, {Offer: simple, Quantity: 1}}, ""},
+	}
+	for _, test := range cases {
+		link, ok := config.CheckoutLink("wc.test", test.lines)
+		if link != test.want || ok != (test.want != "") {
+			t.Errorf("%s: link = %q, %v; want %q", test.name, link, ok, test.want)
+		}
+	}
+}

@@ -12,26 +12,31 @@ import (
 	"github.com/cangrejometralleta/muchi-api/internal/application"
 	"github.com/cangrejometralleta/muchi-api/internal/config"
 	"github.com/cangrejometralleta/muchi-api/internal/httpapi"
+	"github.com/cangrejometralleta/muchi-api/internal/orders"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 	"github.com/cangrejometralleta/muchi-api/internal/sweep"
 )
 
 var (
-	apiOnce    sync.Once
-	apiHandler http.Handler
-	apiError   error
-	taskOnce   sync.Once
-	taskWorker search.Worker
-	taskError  error
-	sweepOnce  sync.Once
-	sweeper    sweep.Sweeper
-	sweepError error
+	apiOnce      sync.Once
+	apiHandler   http.Handler
+	apiError     error
+	taskOnce     sync.Once
+	taskWorker   search.Worker
+	taskError    error
+	sweepOnce    sync.Once
+	sweeper      sweep.Sweeper
+	sweepError   error
+	releaseOnce  sync.Once
+	releaser     orders.Releaser
+	releaseError error
 )
 
 func init() {
 	functions.HTTP("ServeAPI", ServeAPI)
 	functions.HTTP("ProcessSearch", ProcessSearch)
 	functions.HTTP("SweepQueue", SweepQueue)
+	functions.HTTP("ReleaseOrders", ReleaseOrders)
 }
 
 // ServeAPI Serves the public Muchi HTTP contract.
@@ -53,6 +58,7 @@ func ServeAPI(w http.ResponseWriter, r *http.Request) {
 			SupportedGames:     runtime.SupportedGames,
 			Inventories:        runtime.Inventories,
 			HealthCheckTimeout: settings.HealthCheckTimeout,
+			OrderWebhookSecret: settings.OrderWebhookSecret,
 		}
 		apiHandler = api.BuildHandler()
 	})
@@ -132,6 +138,43 @@ func SweepQueue(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, `{"woken":%d}`, woken)
+}
+
+// ReleaseOrders Frees the Stock a `pending` Order held past its own Patience.
+//
+// A WooCommerce Store's own Draft Order Expires on its own after a few
+// Minutes; Muchi's Copy does not Notice unless something Asks. Run on a
+// Schedule of its own — Orders and Searches Expire at different Paces — this
+// Moves every Order whose Transfer never Arrived to `released`.
+func ReleaseOrders(w http.ResponseWriter, r *http.Request) {
+	releaseOnce.Do(func() {
+		settings, err := config.LoadConfig()
+		if err != nil {
+			releaseError = err
+			return
+		}
+		runtime, err := application.BuildRuntime(r.Context(), settings, buildLogger(), false)
+		if err != nil {
+			releaseError = err
+			return
+		}
+		releaser = orders.Releaser{
+			Orders: runtime.Store, Logger: buildLogger(),
+			MaxAge: settings.OrderPendingTTL, MaxReleases: settings.OrderReleaseMaxWakes,
+		}
+	})
+	if releaseError != nil {
+		buildLogger().Error("ReleaseOrders Startup Failed", "error", releaseError)
+		http.Error(w, "Service unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	released, err := releaser.ReleaseOrders(r.Context())
+	if err != nil {
+		http.Error(w, "Release failed", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, `{"released":%d}`, released)
 }
 
 func buildLogger() *slog.Logger {

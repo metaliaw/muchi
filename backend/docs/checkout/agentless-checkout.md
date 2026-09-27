@@ -61,9 +61,10 @@ With bank transfer (`bacs`), the order stays "pending payment" and the store
 sends its bank details. No browser involved. With Webpay, Flow, or Mercado Pago,
 the response carries `payment_result.redirect_url`, and a payment page begins.
 
-Two caveats: Muchi does not store the WooCommerce product ID today, and some
-stores disable the Store API or use the classic checkout. For a single product,
-`/?add-to-cart=ID&quantity=N` adds it by link.
+One caveat: some stores disable the Store API or use the classic checkout.
+For a single simple product, `/?add-to-cart=ID&quantity=N` adds it by link —
+`stores.CheckoutLink` uses it for a single-line WooCommerce cart, the one case
+it can name without the Store API.
 
 ### Jumpseller: The MCP Hands Over the Link
 
@@ -121,9 +122,11 @@ The container where this was written cannot reach the store domains, so
 
 `POST /v1/searches/{search_id}/checkout` takes `items` with `offer_id` and
 `quantity` and returns one entry per store. Shopify stores answer `mode: cart`
-with the permalink; the rest answer `mode: product_pages` with each line's page.
-If a Shopify line lacks its variant (a scry.cl offer, for example), the whole
-store falls back to product pages so no buyer lands on an incomplete cart.
+with the permalink; a single-line WooCommerce cart answers `mode: cart` with
+an `add-to-cart` link; everything else answers `mode: product_pages` with each
+line's page. If a Shopify line lacks its variant (a scry.cl offer, for
+example), or a WooCommerce cart carries more than one line, the whole store
+falls back to product pages so no buyer lands on an incomplete cart.
 
 ## Level 1 on WooCommerce: Quotes
 
@@ -154,9 +157,114 @@ selected, the total uses the cheapest one. Shopify reveals no payment methods
 before checkout. Jumpseller still has no quote: its cart is a form, and its
 Magic stores are paused.
 
+## Level 1 Implemented: Orders
+
+`POST /v1/searches/{search_id}/orders` places a real order at one store, for
+offers the search already found. Every line must resolve to the same store
+domain — an order is one store's transaction, unlike `/checkout`'s per-store
+grouping — so a cart spanning more than one store is rejected before any call
+is made. An `Idempotency-Key` guards a doubled tap the way `POST /searches`
+does: a retried call with the same key and the same cart answers the order
+already placed, never a second one.
+
+Only WooCommerce supports this today (`422 order_not_supported` for every
+other platform). `woocommerce.Client.PlaceOrder`
+(`internal/stores/woocommerce/order.go`) fills the cart, reads the shipping
+rate the cart already selected, and checks out by bank transfer (`bacs`) —
+the one payment method the Store API confirms without a browser or a card.
+The order lands `pending`; nothing here waits for the transfer to arrive.
+
+The Store API checkout needs a buyer identity `QuoteCart` never did (name,
+email) — a cart quote only needs to know *where*, an order needs to know
+*who*. Until an operator names a real one, every order would check out as
+Muchi itself: `MUCHI_ORDER_BUYER_NAME` and `MUCHI_ORDER_BUYER_EMAIL` set that
+identity; left unset, the client falls back to a reserved, undeliverable
+placeholder (`orders@muchi.invalid`, RFC 2606) and `PlaceOrder` refuses to run
+rather than check out on a mailbox nobody reads. `config/deploy.env` now sets
+`ORDER_BUYER_EMAIL=cangrejometralleta@gmail.com` as a provisional inbox —
+someone reads every order, not a real Muchi mailbox yet.
+
+`model.Order` carries a `Status` (`pending → confirmed | released`),
+persisted one Firestore document per order (`db.Store.CreateOrder`,
+`GetOrder`, `MoveOrderStatus`). A move is transactional and names the status
+it expects to move *from*, so a stale caller — a webhook confirming an order
+a sweep already released — loses instead of overwriting.
+
+## Releasing What Never Got Paid
+
+Nothing yet confirms a `pending` order forward: no webhook reads a bank
+transfer. Release, the other direction, is implemented: `ReleaseOrders`
+(`function.go`, backed by `orders.Releaser` and `db.Store.ReleaseExpiredOrders`)
+is a sibling entry point to `SweepQueue`, not a reuse of `sweep.Sweeper` —
+that Sweeper counts waiting search items and replaces lost worker wake-ups, a
+different shape from reading `orders` where `status == "pending"` and
+`updated_at` is past `MUCHI_ORDER_PENDING_TTL_SECONDS` (a day, by default).
+Each release repeats `MoveOrderStatus`'s own from-pending guard, so a confirm
+that lands mid-sweep wins instead of being overwritten. Deployed and
+scheduled by `deploy-order-release.sh`, hourly by default
+(`ORDER_RELEASE_SCHEDULE` in `config/deploy.env`).
+
+## Confirming What Got Paid
+
+`POST /v1/webhooks/woocommerce/{domain}/orders` is where a WooCommerce
+store's own `order.updated` webhook lands, once someone configures it in
+that store's admin. It carries no bearer token — the store calls it, not a
+Muchi client — so it authenticates by `X-WC-Webhook-Signature` instead:
+HMAC-SHA256 of the raw body, base64-encoded, checked against
+`MUCHI_ORDER_WEBHOOK_SECRET` in constant time
+(`woocommerce.VerifyWebhookSignature`). No secret configured refuses every
+delivery outright, rather than accepting an unsigned one by default.
+
+`processing` and `completed` move the order to `confirmed`; `cancelled`,
+`failed` and `refunded` move it to `released` (a store cancelling an order
+its own admin already knows about). Every other status — `on-hold`,
+`pending` itself, anything this app does not read — acks `200` without
+moving anything, the same as an order the webhook names that this domain
+never placed, or one already past the target status: none of those are the
+delivery's fault, and retrying would not change any of them.
+`search.Service.ConfirmOrder` looks the order up by `(domain, store_order)`
+— the only id a store's own payload carries — then moves it through the same
+from-status guard `MoveOrderStatus` always uses, so a release that landed
+first still wins over a late confirm.
+
 ## Suggested Next Step
 
-Try the quote live on onplay.cl and lacripta.cl and record their
-`payment_methods`. If one accepts `bacs` (bank transfer), create orders at that
-pilot store with `POST checkout`, always behind the buyer's explicit
-confirmation.
+Configure the webhook in a pilot WooCommerce store's own admin (Settings →
+Advanced → Webhooks: topic `Order updated`, delivery URL
+`https://.../v1/webhooks/woocommerce/{domain}/orders`, secret matching
+`MUCHI_ORDER_WEBHOOK_SECRET`), then run the Manual Pilot Checklist below end
+to end — including marking the order paid in the store's admin and watching
+it move to `confirmed`.
+
+### Manual Pilot Checklist
+
+Not run automatically — the container these docs are edited in has no route
+to the store domains, and placing a real order commits real stock. Someone
+with network access runs this by hand, on one low-stakes item:
+
+1. Set `MUCHI_ORDER_BUYER_EMAIL` and `MUCHI_ORDER_BUYER_NAME` (already set in
+   `config/deploy.env` for the deployed API; for a local run, export them or
+   add them to `.env`).
+2. Pick a pilot store from `config/stores.yaml` with `platform: woocommerce`
+   and `enabled: true` (`konohastore.cl`, `lacripta.cl`, or `onplay.cl` today)
+   and confirm it still accepts `bacs` — its `payment_methods` showed it in
+   the `/checkout` quote response; re-check live, stores change this.
+3. In that store's own admin, add a webhook: topic `Order updated`,
+   delivery URL `https://.../v1/webhooks/woocommerce/{domain}/orders`,
+   secret matching `MUCHI_ORDER_WEBHOOK_SECRET`.
+4. Run a search that finds one cheap, in-stock offer at that store.
+5. `POST /v1/searches/{id}/orders` with that one offer, quantity 1, a real
+   shipping address, and a fresh `Idempotency-Key`.
+6. Confirm the response: `status: "pending"`, a `store_order` id, `domain`
+   matching the pilot store.
+7. Open the store's own admin and check the order exists there with the same
+   id, the same line, and "pending payment".
+8. Repeat step 5 with the *same* `Idempotency-Key` and cart — confirm it
+   answers the same order id, not a second order.
+9. In the store's admin, mark the order "Processing" (as if the transfer
+   arrived) — never actually send it. Confirm the webhook fires and
+   `GET`ting the order (once that route exists) or reading Firestore
+   directly shows `status: "confirmed"`.
+10. On a second, separate order, let it age past
+    `MUCHI_ORDER_PENDING_TTL_SECONDS` without marking it paid, and confirm
+    `ReleaseOrders` moves it to `released`.

@@ -24,6 +24,8 @@ type Service struct {
 	Stocks            StockChecker
 	Checkouts         CheckoutLinker
 	Quotes            CartQuoter
+	Orderer           OrderPlacer
+	Orders            OrderRepository
 	Cache             OfferCache
 	CacheNamespace    string
 	Tasks             TaskQueue

@@ -84,4 +84,24 @@ func (r *Repository) RecordSource(ctx context.Context, domain string, latency ti
 	return r.database.RecordSource(ctx, domain, latency, sourceErr)
 }
 
+func (r *Repository) CreateOrder(ctx context.Context, key, hash string, order model.Order) (model.Order, error) {
+	return r.database.CreateOrder(ctx, key, hash, order)
+}
+
+func (r *Repository) GetOrder(ctx context.Context, id string) (model.Order, error) {
+	return r.database.GetOrder(ctx, id)
+}
+
+func (r *Repository) FindOrderByStoreOrder(ctx context.Context, domain, storeOrder string) (model.Order, error) {
+	return r.database.FindOrderByStoreOrder(ctx, domain, storeOrder)
+}
+
+func (r *Repository) MoveOrderStatus(ctx context.Context, id string, from, to model.OrderStatus) (model.Order, error) {
+	return r.database.MoveOrderStatus(ctx, id, from, to)
+}
+
+func (r *Repository) ReleaseExpiredOrders(ctx context.Context, olderThan time.Duration, limit int) (int, error) {
+	return r.database.ReleaseExpiredOrders(ctx, olderThan, limit)
+}
+
 func (r *Repository) Close() error { return r.database.CloseStore() }

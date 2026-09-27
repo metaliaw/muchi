@@ -1,6 +1,9 @@
 package model
 
-import "errors"
+import (
+	"errors"
+	"time"
+)
 
 // CartLine Asks for some Units of one Offer.
 type CartLine struct {
@@ -49,6 +52,17 @@ type ShippingRate struct {
 // to Ask, or a Line cannot Name its Product there.
 var ErrNoQuote = errors.New("cart cannot be quoted at this store")
 
+// ErrOrderNotFound Answers an Order Id no Store Placed.
+var ErrOrderNotFound = errors.New("order not found")
+
+// ErrOrderNotSupported Answers a Store whose Platform has no Way to Place a
+// real Order yet; the Caller Falls back to a Link instead.
+var ErrOrderNotSupported = errors.New("store cannot place an order yet")
+
+// ErrOrderConflict Answers a Status Move that did not Start where it Claimed
+// to: two Webhooks Racing, or a Release Arriving after a Confirm already Won.
+var ErrOrderConflict = errors.New("order already moved past that status")
+
 // CartRequest Asks for some Units of an Offer this Search Found.
 type CartRequest struct {
 	OfferID  string
@@ -81,4 +95,36 @@ type StoreCheckout struct {
 type OfferStock struct {
 	ID string
 	StockReading
+}
+
+// OrderStatus Names where a placed Order Stands. It only ever Moves forward
+// to Confirmed or sideways to Released; nothing Returns to Pending.
+type OrderStatus string
+
+const (
+	// OrderPending Holds the Stock a Store just Committed: the Order Exists
+	// there, but its Payment has not Landed yet.
+	OrderPending OrderStatus = "pending"
+	// OrderConfirmed Means the Payment Arrived — a transfer Matched or a
+	// Payment Method's own Webhook Said so.
+	OrderConfirmed OrderStatus = "confirmed"
+	// OrderReleased Means the Stock is Freed again: the Payment never Came,
+	// the Store Cancelled it, or the Attempt Failed before an Order Existed.
+	OrderReleased OrderStatus = "released"
+)
+
+// Order Names one Reservation a Store's own Checkout Created. Placing it is
+// the Line an Agent should never Cross: everything up to here is one fixed
+// HTTP Call, Named by Code, not Chosen by a Model.
+type Order struct {
+	ID         string
+	SearchID   string
+	Store      string
+	Domain     string
+	Lines      []CheckoutLine
+	Status     OrderStatus
+	StoreOrder string
+	PaymentURL string
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }

@@ -59,11 +59,22 @@ func (c Client) QuoteCart(ctx context.Context, lines []model.CartLine, address m
 	if c.Sessions == nil || len(lines) == 0 {
 		return model.CartQuote{}, ErrNotQuotable
 	}
+	_, cart, products, err := c.fillCart(ctx, lines, address)
+	if err != nil {
+		return model.CartQuote{}, err
+	}
+	return readQuote(cart, lines, products)
+}
+
+// fillCart Opens a fresh Store API Cart, Adds every Line and Gives it the
+// Address. It Answers the Cart-Token alongside the Cart, since Checkout Needs
+// to Keep Writing to the same Cart the Quote just Read.
+func (c Client) fillCart(ctx context.Context, lines []model.CartLine, address model.ShippingAddress) (string, cartReply, []int, error) {
 	products := make([]int, len(lines))
 	for index, line := range lines {
 		id, err := ProductID(c.Domain, line.Offer)
 		if err != nil {
-			return model.CartQuote{}, err
+			return "", cartReply{}, nil, err
 		}
 		products[index] = id
 	}
@@ -71,17 +82,17 @@ func (c Client) QuoteCart(ctx context.Context, lines []model.CartLine, address m
 	// The Cart-Token Names the Cart and Spares the Nonce a Browser would Carry.
 	_, header, err := c.Sessions.SendSession(ctx, c.Domain, source.SessionRequest{Method: http.MethodGet, Target: base})
 	if err != nil {
-		return model.CartQuote{}, err
+		return "", cartReply{}, nil, err
 	}
 	token := header.Get("Cart-Token")
 	if token == "" {
-		return model.CartQuote{}, fmt.Errorf("%s answered no Cart-Token", c.Domain)
+		return "", cartReply{}, nil, fmt.Errorf("%s answered no Cart-Token", c.Domain)
 	}
 	session := http.Header{"Cart-Token": {token}}
 	for index, line := range lines {
 		body, _ := json.Marshal(map[string]int{"id": products[index], "quantity": line.Quantity})
 		if _, _, err := c.Sessions.SendSession(ctx, c.Domain, source.SessionRequest{Method: http.MethodPost, Target: base + "/add-item", Body: body, Header: session}); err != nil {
-			return model.CartQuote{}, fmt.Errorf("add %s: %w", line.Offer.ID, err)
+			return "", cartReply{}, nil, fmt.Errorf("add %s: %w", line.Offer.ID, err)
 		}
 	}
 	body, _ := json.Marshal(map[string]any{"shipping_address": map[string]string{
@@ -89,13 +100,13 @@ func (c Client) QuoteCart(ctx context.Context, lines []model.CartLine, address m
 	}})
 	data, _, err := c.Sessions.SendSession(ctx, c.Domain, source.SessionRequest{Method: http.MethodPost, Target: base + "/update-customer", Body: body, Header: session})
 	if err != nil {
-		return model.CartQuote{}, err
+		return "", cartReply{}, nil, err
 	}
 	var cart cartReply
 	if err := json.Unmarshal(data, &cart); err != nil {
-		return model.CartQuote{}, fmt.Errorf("decode cart %s: %w", c.Domain, err)
+		return "", cartReply{}, nil, fmt.Errorf("decode cart %s: %w", c.Domain, err)
 	}
-	return readQuote(cart, lines, products)
+	return token, cart, products, nil
 }
 
 func readQuote(cart cartReply, lines []model.CartLine, products []int) (model.CartQuote, error) {

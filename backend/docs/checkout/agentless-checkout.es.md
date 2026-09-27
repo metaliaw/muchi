@@ -62,9 +62,10 @@ la tienda envía los datos bancarios. Todo sin navegador. Con Webpay, Flow o
 Mercado Pago, la respuesta trae `payment_result.redirect_url`, y ahí empieza una
 página de pago.
 
-Dos avisos: Muchi no guarda hoy el ID de producto de WooCommerce, y algunas
-tiendas desactivan la Store API o usan el checkout clásico. Para una tienda
-puntual, `/?add-to-cart=ID&quantity=N` agrega un producto por enlace.
+Un aviso: algunas tiendas desactivan la Store API o usan el checkout clásico.
+Para un solo producto simple, `/?add-to-cart=ID&quantity=N` lo agrega por
+enlace — `stores.CheckoutLink` lo usa para un carro WooCommerce de una sola
+línea, el único caso que puede nombrar sin la Store API.
 
 ### Jumpseller: el MCP entrega el enlace
 
@@ -122,10 +123,12 @@ que **nada de esto se probó en vivo**. Antes de construir:
 
 `POST /v1/searches/{search_id}/checkout` recibe `items` con `offer_id` y
 `quantity`, y devuelve una entrada por tienda. Las tiendas Shopify responden
-`mode: cart` con el permalink; el resto, `mode: product_pages` con la página de
-cada línea. Si una línea Shopify no trae su variante (por ejemplo, una oferta
-de scry.cl), la tienda entera cae a páginas de producto, para no mandar a nadie
-a un carro incompleto.
+`mode: cart` con el permalink; un carro WooCommerce de una sola línea responde
+`mode: cart` con un enlace `add-to-cart`; el resto responde `mode:
+product_pages` con la página de cada línea. Si una línea Shopify no trae su
+variante (por ejemplo, una oferta de scry.cl), o un carro WooCommerce trae más
+de una línea, la tienda entera cae a páginas de producto, para no mandar a
+nadie a un carro incompleto.
 
 ## Nivel 1 en WooCommerce: cotización
 
@@ -156,9 +159,122 @@ envío del total es la más barata. Shopify no informa medios de pago antes del
 checkout. Jumpseller sigue sin cotización: su carro es un formulario y sus
 tiendas de Magic están pausadas.
 
+## Nivel 1 implementado: pedidos
+
+`POST /v1/searches/{search_id}/orders` crea un pedido real en una tienda, para
+ofertas que esa búsqueda ya encontró. Todas las líneas deben resolver al mismo
+dominio de tienda — un pedido es la transacción de una sola tienda, a
+diferencia de la agrupación por tienda de `/checkout` — así que un carro que
+cruza más de una tienda se rechaza antes de hacer ninguna llamada. Un
+`Idempotency-Key` protege contra un doble toque igual que `POST /searches`:
+una llamada repetida con la misma clave y el mismo carro devuelve el pedido ya
+creado, nunca uno segundo.
+
+Solo WooCommerce lo soporta hoy (`422 order_not_supported` para cualquier otra
+plataforma). `woocommerce.Client.PlaceOrder`
+(`internal/stores/woocommerce/order.go`) llena el carro, lee la tarifa de
+envío que el carro ya eligió, y hace checkout por transferencia bancaria
+(`bacs`) — el único medio de pago que la Store API confirma sin navegador ni
+tarjeta. El pedido queda `pending`; nada acá espera a que la transferencia
+llegue.
+
+El checkout de la Store API necesita una identidad de comprador que
+`QuoteCart` nunca necesitó (nombre, correo) — una cotización de carro solo
+necesita saber *dónde*, un pedido necesita saber *quién*. Hasta que alguien de
+operaciones nombre uno real, todo pedido haría checkout como Muchi misma:
+`MUCHI_ORDER_BUYER_NAME` y `MUCHI_ORDER_BUYER_EMAIL` fijan esa identidad; sin
+definir, el cliente cae a un placeholder reservado y no entregable
+(`orders@muchi.invalid`, RFC 2606) y `PlaceOrder` se niega a correr en vez de
+hacer checkout en un correo que nadie lee. `config/deploy.env` ya fija
+`ORDER_BUYER_EMAIL=cangrejometralleta@gmail.com` como correo provisorio —
+alguien lo lee, aunque todavía no es un correo propio de Muchi.
+
+`model.Order` lleva un `Status` (`pending → confirmed | released`), persistido
+como un documento de Firestore por pedido (`db.Store.CreateOrder`, `GetOrder`,
+`MoveOrderStatus`). Cada movimiento es transaccional y nombra el estado desde
+el que espera moverse, así que un llamador con información vieja — un webhook
+que confirma un pedido que un barrido ya liberó — pierde en vez de
+sobrescribir.
+
+## Liberar lo que nunca se pagó
+
+Todavía nada confirma un pedido `pending` hacia adelante: ningún webhook lee
+una transferencia bancaria. Liberar, la otra dirección, ya está implementado:
+`ReleaseOrders` (`function.go`, con `orders.Releaser` y
+`db.Store.ReleaseExpiredOrders` detrás) es un punto de entrada hermano de
+`SweepQueue`, no una reutilización de `sweep.Sweeper` — ese Sweeper cuenta
+ítems de búsqueda en espera y repone turnos de worker perdidos, una forma
+distinta a leer `orders` donde `status == "pending"` y `updated_at` pasó
+`MUCHI_ORDER_PENDING_TTL_SECONDS` (un día, por defecto). Cada liberación
+repite la misma guarda desde-pending de `MoveOrderStatus`, así que una
+confirmación que llega a mitad del barrido gana en vez de ser sobrescrita.
+Desplegado y programado por `deploy-order-release.sh`, una vez por hora por
+defecto (`ORDER_RELEASE_SCHEDULE` en `config/deploy.env`).
+
+## Confirmar lo que sí se pagó
+
+`POST /v1/webhooks/woocommerce/{domain}/orders` es donde llega el webhook
+propio `order.updated` de una tienda WooCommerce, una vez que alguien lo
+configura en el admin de esa tienda. No lleva token bearer — lo llama la
+tienda, no un cliente de Muchi — así que se autentica con
+`X-WC-Webhook-Signature` en su lugar: HMAC-SHA256 del cuerpo crudo,
+codificado en base64, comparado contra `MUCHI_ORDER_WEBHOOK_SECRET` en tiempo
+constante (`woocommerce.VerifyWebhookSignature`). Sin secreto configurado,
+rechaza toda entrega, en vez de aceptar una sin firmar por defecto.
+
+`processing` y `completed` mueven el pedido a `confirmed`; `cancelled`,
+`failed` y `refunded` lo mueven a `released` (la tienda cancelando un pedido
+que su propio admin ya conoce). Cualquier otro estado — `on-hold`, `pending`
+mismo, cualquiera que esta app todavía no lee — responde `200` sin mover
+nada, igual que un pedido que el webhook nombra pero que este dominio nunca
+creó, o uno que ya pasó el estado objetivo: ninguno de esos es culpa de la
+entrega, y reintentar no cambiaría ninguno. `search.Service.ConfirmOrder` lo
+busca por `(domain, store_order)` — el único id que trae el payload propio de
+la tienda — y lo mueve con la misma guarda desde-estado que usa siempre
+`MoveOrderStatus`, así que una liberación que llegó primero sigue ganando
+sobre una confirmación tardía.
+
 ## Siguiente paso sugerido
 
-Probar la cotización en vivo con onplay.cl y lacripta.cl, y anotar sus
-`payment_methods`. Si alguna acepta `bacs` (transferencia), crear pedidos en
-esa tienda piloto con `POST checkout`, siempre detrás de una confirmación
-explícita del comprador.
+Configurar el webhook en el admin de una tienda WooCommerce piloto (Ajustes →
+Avanzado → Webhooks: tema `Order updated`, URL de entrega
+`https://.../v1/webhooks/woocommerce/{domain}/orders`, secreto igual a
+`MUCHI_ORDER_WEBHOOK_SECRET`), y después correr el Checklist para la prueba
+piloto manual de punta a punta — incluyendo marcar el pedido como pagado en
+el admin de la tienda y ver que se mueve a `confirmed`.
+
+### Checklist para la prueba piloto manual
+
+No corre automático — el contenedor donde se edita esta documentación no
+alcanza los dominios de las tiendas, y crear un pedido real compromete Stock
+de verdad. Alguien con acceso de red la corre a mano, sobre un solo ítem de
+bajo riesgo:
+
+1. Fijar `MUCHI_ORDER_BUYER_EMAIL` y `MUCHI_ORDER_BUYER_NAME` (ya están en
+   `config/deploy.env` para la API desplegada; para correr local, exportarlas
+   o agregarlas a `.env`).
+2. Elegir una tienda piloto de `config/stores.yaml` con `platform:
+   woocommerce` y `enabled: true` (`konohastore.cl`, `lacripta.cl` u
+   `onplay.cl` hoy) y confirmar que sigue aceptando `bacs` — sus
+   `payment_methods` lo mostraban en la respuesta de cotización de
+   `/checkout`; revisar en vivo, las tiendas cambian esto.
+3. En el admin de esa tienda, agregar un webhook: tema `Order updated`, URL
+   de entrega `https://.../v1/webhooks/woocommerce/{domain}/orders`, secreto
+   igual a `MUCHI_ORDER_WEBHOOK_SECRET`.
+4. Correr una búsqueda que encuentre una oferta barata y con stock en esa
+   tienda.
+5. `POST /v1/searches/{id}/orders` con esa sola oferta, cantidad 1, una
+   dirección de envío real, y un `Idempotency-Key` nuevo.
+6. Confirmar la respuesta: `status: "pending"`, un `store_order` id, `domain`
+   coincidiendo con la tienda piloto.
+7. Abrir el admin de la tienda y verificar que el pedido existe ahí con el
+   mismo id, la misma línea, y "pendiente de pago".
+8. Repetir el paso 5 con el *mismo* `Idempotency-Key` y carro — confirmar que
+   responde el mismo id de pedido, no uno segundo.
+9. En el admin de la tienda, marcar el pedido "Procesando" (como si la
+   transferencia hubiera llegado) — nunca mandarla de verdad. Confirmar que
+   el webhook dispara y que consultar el pedido (leyendo Firestore
+   directamente, hasta que exista esa ruta) muestra `status: "confirmed"`.
+10. En un segundo pedido aparte, dejarlo envejecer pasado
+    `MUCHI_ORDER_PENDING_TTL_SECONDS` sin marcarlo pagado, y confirmar que
+    `ReleaseOrders` lo mueve a `released`.

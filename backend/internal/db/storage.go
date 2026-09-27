@@ -131,6 +131,17 @@ type requestRecord struct {
 	ExpiresAt  time.Time `firestore:"expires_at"`
 }
 
+type orderRecord struct {
+	Payload []byte `firestore:"payload"`
+	Status  string `firestore:"status"`
+	// Domain and StoreOrder are Indexed Copies of Fields the Payload already
+	// Carries: FindOrderByStoreOrder Needs to Query by them, and a Payload is
+	// opaque JSON to Firestore.
+	Domain     string    `firestore:"domain"`
+	StoreOrder string    `firestore:"store_order"`
+	UpdatedAt  time.Time `firestore:"updated_at"`
+}
+
 type sourceRecord struct {
 	Source              string     `firestore:"source"`
 	LastSuccess         *time.Time `firestore:"last_success,omitempty"`
@@ -387,6 +398,162 @@ func (s *Store) DropOffers(ctx context.Context, key string) error {
 	defer cancel()
 	_, err := s.client.Collection("offer_cache").Doc(hashKey(key)).Delete(ctx)
 	return err
+}
+
+// CreateOrder Reserves the Stock a Store's own Checkout just Committed. The
+// Caller Names the Status, since a Store that Redirects to Payment and one
+// that Waits for a Transfer both Start Pending, and nothing here Decides
+// which.
+//
+// A retried Call with the same Key and Payload Answers the Order it already
+// Placed, never a second one: a Buyer's double Tap must not become two
+// Orders at the same Store.
+func (s *Store) CreateOrder(ctx context.Context, key, hash string, order model.Order) (model.Order, error) {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
+	var result model.Order
+	err := s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
+		stored, found, err := s.readRequest(ctx, tx, "place-order", key)
+		if err != nil {
+			return err
+		}
+		if found {
+			if stored.Hash != hash {
+				return search.ErrConflict
+			}
+			result, err = s.readOrder(ctx, tx, stored.ResourceID)
+			return err
+		}
+		now := time.Now().UTC()
+		order.ID = buildID("order")
+		order.CreatedAt, order.UpdatedAt = now, now
+		result = order
+		record := orderRecord{Payload: mustJSON(renderOrder(order)), Status: string(order.Status), Domain: order.Domain, StoreOrder: order.StoreOrder, UpdatedAt: now}
+		if err := tx.Create(s.client.Collection("orders").Doc(order.ID), record); err != nil {
+			return err
+		}
+		expires := now.Add(s.searchTTL)
+		return tx.Set(s.client.Collection("idempotency").Doc(hashKey("place-order:"+key)), requestRecord{Hash: hash, ResourceID: order.ID, ExpiresAt: expires})
+	})
+	if err != nil {
+		return model.Order{}, mapStoreError(err)
+	}
+	return result, nil
+}
+
+func (s *Store) readOrder(ctx context.Context, tx *firestorelib.Transaction, id string) (model.Order, error) {
+	document, err := tx.Get(s.client.Collection("orders").Doc(id))
+	if status.Code(err) == codes.NotFound {
+		return model.Order{}, model.ErrOrderNotFound
+	}
+	if err != nil {
+		return model.Order{}, err
+	}
+	return decodeOrder(document)
+}
+
+// GetOrder Reads one Order back by its Id.
+func (s *Store) GetOrder(ctx context.Context, id string) (model.Order, error) {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
+	document, err := s.client.Collection("orders").Doc(id).Get(ctx)
+	if status.Code(err) == codes.NotFound {
+		return model.Order{}, model.ErrOrderNotFound
+	}
+	if err != nil {
+		return model.Order{}, err
+	}
+	return decodeOrder(document)
+}
+
+// FindOrderByStoreOrder Reads the Order a Store's own Webhook Names by its
+// own Order Id — the only Id a Store Payload Carries, never Muchi's.
+func (s *Store) FindOrderByStoreOrder(ctx context.Context, domain, storeOrder string) (model.Order, error) {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
+	documents := s.client.Collection("orders").
+		Where("domain", "==", domain).Where("store_order", "==", storeOrder).
+		Limit(1).Documents(ctx)
+	defer documents.Stop()
+	document, err := documents.Next()
+	if errors.Is(err, iterator.Done) {
+		return model.Order{}, model.ErrOrderNotFound
+	}
+	if err != nil {
+		return model.Order{}, err
+	}
+	return decodeOrder(document)
+}
+
+// MoveOrderStatus Advances an Order from one Status to the next, never past
+// where the Caller Believes it Stands: a Webhook Confirming an Order the
+// Sweeper already Released must Lose, not Overwrite the Release.
+func (s *Store) MoveOrderStatus(ctx context.Context, id string, from, to model.OrderStatus) (model.Order, error) {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
+	var order model.Order
+	err := s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
+		reference := s.client.Collection("orders").Doc(id)
+		document, err := tx.Get(reference)
+		if status.Code(err) == codes.NotFound {
+			return model.ErrOrderNotFound
+		}
+		if err != nil {
+			return err
+		}
+		order, err = decodeOrder(document)
+		if err != nil {
+			return err
+		}
+		if order.Status != from {
+			return model.ErrOrderConflict
+		}
+		order.Status, order.UpdatedAt = to, time.Now().UTC()
+		record := orderRecord{Payload: mustJSON(renderOrder(order)), Status: string(order.Status), Domain: order.Domain, StoreOrder: order.StoreOrder, UpdatedAt: order.UpdatedAt}
+		return tx.Set(reference, record)
+	})
+	return order, err
+}
+
+// ReleaseExpiredOrders Moves every `pending` Order whose own Cutoff already
+// Passed to `released`, and Answers how many it Moved. It Needs a Composite
+// Index on `orders` over `status` (equality) and `updated_at` (range); a
+// fresh Project's Firestore Console Offers to Create it the first time this
+// Query Runs.
+//
+// Each Move Repeats the same from-Pending Guard MoveOrderStatus Uses: a
+// Confirm that Landed between the Query and the Write must Win, never be
+// Overwritten by a Release that read a Moment too early.
+func (s *Store) ReleaseExpiredOrders(ctx context.Context, olderThan time.Duration, limit int) (int, error) {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
+	cutoff := time.Now().UTC().Add(-olderThan)
+	documents := s.client.Collection("orders").
+		Where("status", "==", string(model.OrderPending)).
+		Where("updated_at", "<=", cutoff).
+		OrderBy("updated_at", firestorelib.Asc).
+		Limit(limit).
+		Documents(ctx)
+	defer documents.Stop()
+	released := 0
+	for {
+		document, err := documents.Next()
+		if errors.Is(err, iterator.Done) {
+			return released, nil
+		}
+		if err != nil {
+			return released, err
+		}
+		if _, err := s.MoveOrderStatus(ctx, document.Ref.ID, model.OrderPending, model.OrderReleased); err != nil {
+			// A Conflict here means someone else already Moved it — not a
+			// Failure this Sweep needs to Stop for.
+			if errors.Is(err, model.ErrOrderConflict) {
+				continue
+			}
+			return released, err
+		}
+		released++
+	}
 }
 
 func (s *Store) AwaitSource(ctx context.Context, domain string) error {
@@ -691,6 +858,16 @@ func decodeSearch(document *firestorelib.DocumentSnapshot) (model.Job, error) {
 	var job jobPayload
 	err := json.Unmarshal(record.Payload, &job)
 	return buildJob(job), err
+}
+
+func decodeOrder(document *firestorelib.DocumentSnapshot) (model.Order, error) {
+	var record orderRecord
+	if err := document.DataTo(&record); err != nil {
+		return model.Order{}, err
+	}
+	var stored orderPayload
+	err := json.Unmarshal(record.Payload, &stored)
+	return buildOrder(stored), err
 }
 
 func decodeItem(document *firestorelib.DocumentSnapshot) (model.Item, itemRecord, error) {

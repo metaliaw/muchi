@@ -120,6 +120,81 @@ func TestListResultPages(t *testing.T) {
 	}
 }
 
+func TestOrderStatusMoves(t *testing.T) {
+	store := openTestStore(t)
+	ctx := context.Background()
+	draft := model.Order{
+		Store: "Konoha Store", Domain: "konohastore.cl", Status: model.OrderPending,
+		Lines: []model.CheckoutLine{{OfferID: "konohastore.cl:1", Quantity: 2}},
+	}
+	order, err := store.CreateOrder(ctx, "order-key", "same-hash", draft)
+	if err != nil || order.ID == "" || order.Status != model.OrderPending {
+		t.Fatalf("create order=%#v err=%v", order, err)
+	}
+	// A retried Call with the same Key Answers the Order already Placed.
+	again, err := store.CreateOrder(ctx, "order-key", "same-hash", draft)
+	if err != nil || again.ID != order.ID {
+		t.Fatalf("retried create order=%#v err=%v want id=%s", again, err, order.ID)
+	}
+	if _, err := store.CreateOrder(ctx, "order-key", "other-hash", draft); !errors.Is(err, search.ErrConflict) {
+		t.Fatalf("conflicting create order err=%v", err)
+	}
+	fetched, err := store.GetOrder(ctx, order.ID)
+	if err != nil || fetched.Domain != "konohastore.cl" || len(fetched.Lines) != 1 {
+		t.Fatalf("get order=%#v err=%v", fetched, err)
+	}
+	// The Payment already Failed: a stale Belief that it is still Pending
+	// must not Confirm what is already Gone.
+	if _, err := store.MoveOrderStatus(ctx, order.ID, model.OrderConfirmed, model.OrderReleased); !errors.Is(err, model.ErrOrderConflict) {
+		t.Fatalf("move from wrong status err=%v", err)
+	}
+	confirmed, err := store.MoveOrderStatus(ctx, order.ID, model.OrderPending, model.OrderConfirmed)
+	if err != nil || confirmed.Status != model.OrderConfirmed {
+		t.Fatalf("confirm order=%#v err=%v", confirmed, err)
+	}
+	if _, err := store.GetOrder(ctx, "order_missing"); !errors.Is(err, model.ErrOrderNotFound) {
+		t.Fatalf("get missing order err=%v", err)
+	}
+}
+
+func TestReleaseExpiredOrders(t *testing.T) {
+	store := openTestStore(t)
+	ctx := context.Background()
+	stale := model.Order{
+		ID: buildID("order"), Store: "Konoha Store", Domain: "konohastore.cl",
+		Status: model.OrderPending, CreatedAt: time.Now().UTC().Add(-48 * time.Hour),
+		UpdatedAt: time.Now().UTC().Add(-48 * time.Hour),
+	}
+	// CreateOrder always Stamps "now"; write the aged Record directly so the
+	// Query has something already Past its Cutoff to Find.
+	staleRecord := orderRecord{Payload: mustJSON(renderOrder(stale)), Status: string(stale.Status), UpdatedAt: stale.UpdatedAt}
+	if _, err := store.client.Collection("orders").Doc(stale.ID).Set(ctx, staleRecord); err != nil {
+		t.Fatal(err)
+	}
+	fresh, err := store.CreateOrder(ctx, "fresh-key", "fresh-hash", model.Order{
+		Store: "Konoha Store", Domain: "konohastore.cl", Status: model.OrderPending,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	released, err := store.ReleaseExpiredOrders(ctx, 24*time.Hour, 10)
+	if err != nil || released != 1 {
+		t.Fatalf("released=%d err=%v", released, err)
+	}
+	movedStale, err := store.GetOrder(ctx, stale.ID)
+	if err != nil || movedStale.Status != model.OrderReleased {
+		t.Fatalf("stale order=%#v err=%v", movedStale, err)
+	}
+	untouchedFresh, err := store.GetOrder(ctx, fresh.ID)
+	if err != nil || untouchedFresh.Status != model.OrderPending {
+		t.Fatalf("fresh order=%#v err=%v", untouchedFresh, err)
+	}
+	// A second Sweep Finds nothing left Past the Cutoff.
+	if released, err := store.ReleaseExpiredOrders(ctx, 24*time.Hour, 10); err != nil || released != 0 {
+		t.Fatalf("second sweep released=%d err=%v", released, err)
+	}
+}
+
 func openTestStore(t *testing.T) *Store {
 	t.Helper()
 	if os.Getenv("FIRESTORE_EMULATOR_HOST") == "" {

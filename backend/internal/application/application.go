@@ -11,6 +11,7 @@ import (
 	"github.com/cangrejometralleta/muchi-api/internal/constants"
 	"github.com/cangrejometralleta/muchi-api/internal/db"
 	"github.com/cangrejometralleta/muchi-api/internal/model"
+	"github.com/cangrejometralleta/muchi-api/internal/orders"
 	"github.com/cangrejometralleta/muchi-api/internal/repositories"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 	"github.com/cangrejometralleta/muchi-api/internal/source"
@@ -31,8 +32,10 @@ type Vault interface {
 	search.SearchItemRepository
 	search.OfferCache
 	search.HealthStore
+	search.OrderRepository
 	sweep.WaitingCounter
 	source.TrafficGate
+	orders.Expirer
 }
 
 // Dispatcher Carries Work to a Worker that Runs somewhere else, and Adds a Turn
@@ -113,6 +116,8 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		Stocks:            checker,
 		Checkouts:         storeConfig,
 		Quotes:            stores.Quoter{Sessions: fetcher, Config: storeConfig},
+		Orderer:           stores.Orderer{Sessions: fetcher, Config: storeConfig, BuyerName: config.OrderBuyerName, BuyerEmail: config.OrderBuyerEmail},
+		Orders:            store,
 		Cache:             store,
 		CacheNamespace:    search.HashPayload([]any{"search-providers-v9", storeConfig}) + ":",
 		CacheTTL:          config.OfferCacheTTL,
