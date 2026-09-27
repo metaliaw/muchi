@@ -491,6 +491,47 @@ func (s *Store) MoveOrderStatus(ctx context.Context, id string, from, to model.O
 	return order, err
 }
 
+// ReleaseExpiredOrders Moves every `pending` Order whose own Cutoff already
+// Passed to `released`, and Answers how many it Moved. It Needs a Composite
+// Index on `orders` over `status` (equality) and `updated_at` (range); a
+// fresh Project's Firestore Console Offers to Create it the first time this
+// Query Runs.
+//
+// Each Move Repeats the same from-Pending Guard MoveOrderStatus Uses: a
+// Confirm that Landed between the Query and the Write must Win, never be
+// Overwritten by a Release that read a Moment too early.
+func (s *Store) ReleaseExpiredOrders(ctx context.Context, olderThan time.Duration, limit int) (int, error) {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
+	cutoff := time.Now().UTC().Add(-olderThan)
+	documents := s.client.Collection("orders").
+		Where("status", "==", string(model.OrderPending)).
+		Where("updated_at", "<=", cutoff).
+		OrderBy("updated_at", firestorelib.Asc).
+		Limit(limit).
+		Documents(ctx)
+	defer documents.Stop()
+	released := 0
+	for {
+		document, err := documents.Next()
+		if errors.Is(err, iterator.Done) {
+			return released, nil
+		}
+		if err != nil {
+			return released, err
+		}
+		if _, err := s.MoveOrderStatus(ctx, document.Ref.ID, model.OrderPending, model.OrderReleased); err != nil {
+			// A Conflict here means someone else already Moved it — not a
+			// Failure this Sweep needs to Stop for.
+			if errors.Is(err, model.ErrOrderConflict) {
+				continue
+			}
+			return released, err
+		}
+		released++
+	}
+}
+
 func (s *Store) AwaitSource(ctx context.Context, domain string) error {
 	boundCtx, cancel := boundContext(ctx)
 	defer cancel()

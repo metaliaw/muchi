@@ -157,6 +157,44 @@ func TestOrderStatusMoves(t *testing.T) {
 	}
 }
 
+func TestReleaseExpiredOrders(t *testing.T) {
+	store := openTestStore(t)
+	ctx := context.Background()
+	stale := model.Order{
+		ID: buildID("order"), Store: "Konoha Store", Domain: "konohastore.cl",
+		Status: model.OrderPending, CreatedAt: time.Now().UTC().Add(-48 * time.Hour),
+		UpdatedAt: time.Now().UTC().Add(-48 * time.Hour),
+	}
+	// CreateOrder always Stamps "now"; write the aged Record directly so the
+	// Query has something already Past its Cutoff to Find.
+	staleRecord := orderRecord{Payload: mustJSON(renderOrder(stale)), Status: string(stale.Status), UpdatedAt: stale.UpdatedAt}
+	if _, err := store.client.Collection("orders").Doc(stale.ID).Set(ctx, staleRecord); err != nil {
+		t.Fatal(err)
+	}
+	fresh, err := store.CreateOrder(ctx, "fresh-key", "fresh-hash", model.Order{
+		Store: "Konoha Store", Domain: "konohastore.cl", Status: model.OrderPending,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	released, err := store.ReleaseExpiredOrders(ctx, 24*time.Hour, 10)
+	if err != nil || released != 1 {
+		t.Fatalf("released=%d err=%v", released, err)
+	}
+	movedStale, err := store.GetOrder(ctx, stale.ID)
+	if err != nil || movedStale.Status != model.OrderReleased {
+		t.Fatalf("stale order=%#v err=%v", movedStale, err)
+	}
+	untouchedFresh, err := store.GetOrder(ctx, fresh.ID)
+	if err != nil || untouchedFresh.Status != model.OrderPending {
+		t.Fatalf("fresh order=%#v err=%v", untouchedFresh, err)
+	}
+	// A second Sweep Finds nothing left Past the Cutoff.
+	if released, err := store.ReleaseExpiredOrders(ctx, 24*time.Hour, 10); err != nil || released != 0 {
+		t.Fatalf("second sweep released=%d err=%v", released, err)
+	}
+}
+
 func openTestStore(t *testing.T) *Store {
 	t.Helper()
 	if os.Getenv("FIRESTORE_EMULATOR_HOST") == "" {

@@ -46,6 +46,11 @@ type Config struct {
 	// which no Platform Accepts — a real Order Needs these Set.
 	OrderBuyerName  string
 	OrderBuyerEmail string
+	// OrderPendingTTL Names how long a `pending` Order gets before
+	// ReleaseOrders Frees its Stock; OrderReleaseMaxWakes caps one Sweep, the
+	// way SweepMaxWakes caps sweep.Sweeper's.
+	OrderPendingTTL      time.Duration
+	OrderReleaseMaxWakes int
 }
 
 func LoadConfig() (Config, error) {
@@ -95,6 +100,11 @@ func LoadConfig() (Config, error) {
 		SuspiciousPricePercent: readIntOr("MUCHI_SUSPICIOUS_PRICE_PERCENT", 30),
 		OrderBuyerName:         os.Getenv("MUCHI_ORDER_BUYER_NAME"),
 		OrderBuyerEmail:        os.Getenv("MUCHI_ORDER_BUYER_EMAIL"),
+		// A WooCommerce Store holds a Draft Order's Stock for a few Minutes on
+		// its own, then Releases it whether Muchi Asks or not; a Day gives a
+		// slow bank Transfer Room without Holding a Card the Store already let go.
+		OrderPendingTTL:      readSecondsOr("MUCHI_ORDER_PENDING_TTL_SECONDS", 86400),
+		OrderReleaseMaxWakes: readIntOr("MUCHI_ORDER_RELEASE_MAX_WAKES", 50),
 	}
 	if config.APIToken == "" {
 		return Config{}, errors.New("MUCHI_API_TOKEN is required")

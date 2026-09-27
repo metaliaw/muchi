@@ -196,17 +196,26 @@ el que espera moverse, así que un llamador con información vieja — un webhoo
 que confirma un pedido que un barrido ya liberó — pierde en vez de
 sobrescribir.
 
+## Liberar lo que nunca se pagó
+
+Todavía nada confirma un pedido `pending` hacia adelante: ningún webhook lee
+una transferencia bancaria. Liberar, la otra dirección, ya está implementado:
+`ReleaseOrders` (`function.go`, con `orders.Releaser` y
+`db.Store.ReleaseExpiredOrders` detrás) es un punto de entrada hermano de
+`SweepQueue`, no una reutilización de `sweep.Sweeper` — ese Sweeper cuenta
+ítems de búsqueda en espera y repone turnos de worker perdidos, una forma
+distinta a leer `orders` donde `status == "pending"` y `updated_at` pasó
+`MUCHI_ORDER_PENDING_TTL_SECONDS` (un día, por defecto). Cada liberación
+repite la misma guarda desde-pending de `MoveOrderStatus`, así que una
+confirmación que llega a mitad del barrido gana en vez de ser sobrescrita.
+Desplegado y programado por `deploy-order-release.sh`, una vez por hora por
+defecto (`ORDER_RELEASE_SCHEDULE` en `config/deploy.env`).
+
 ## Siguiente paso sugerido
 
-Todavía nada mueve un pedido `pending` hacia adelante ni hacia atrás: ningún
-webhook confirma una transferencia, y nada libera un pedido cuya transferencia
-nunca llegó. El Sweeper que sostiene `SweepQueue` (`internal/sweep`) no calza
-— cuenta ítems de búsqueda en espera y repone turnos de worker perdidos, una
-forma distinta a leer `orders` donde `status == "pending"` y `updated_at` pasó
-un plazo. Un punto de entrada hermano, `ReleaseOrders`, con su propio
-calendario, es la pieza que sigue.
-
-Una vez que exista eso: probar un pedido en vivo en una tienda WooCommerce
-piloto, siempre detrás de una confirmación explícita del comprador, y
-confirmar que el correo de confirmación de la tienda llega al buzón
-provisorio y coincide con lo que respondió la Store API.
+Probar un pedido en vivo en una tienda WooCommerce piloto, siempre detrás de
+una confirmación explícita del comprador, y confirmar que el correo de
+confirmación de la tienda llega al buzón provisorio y coincide con lo que
+respondió la Store API. Después construir el lado de la confirmación: un
+webhook o poll que lea la transferencia y mueva el pedido `pending →
+confirmed` antes de que envejezca hasta liberarse.

@@ -190,16 +190,24 @@ persisted one Firestore document per order (`db.Store.CreateOrder`,
 it expects to move *from*, so a stale caller — a webhook confirming an order
 a sweep already released — loses instead of overwriting.
 
+## Releasing What Never Got Paid
+
+Nothing yet confirms a `pending` order forward: no webhook reads a bank
+transfer. Release, the other direction, is implemented: `ReleaseOrders`
+(`function.go`, backed by `orders.Releaser` and `db.Store.ReleaseExpiredOrders`)
+is a sibling entry point to `SweepQueue`, not a reuse of `sweep.Sweeper` —
+that Sweeper counts waiting search items and replaces lost worker wake-ups, a
+different shape from reading `orders` where `status == "pending"` and
+`updated_at` is past `MUCHI_ORDER_PENDING_TTL_SECONDS` (a day, by default).
+Each release repeats `MoveOrderStatus`'s own from-pending guard, so a confirm
+that lands mid-sweep wins instead of being overwritten. Deployed and
+scheduled by `deploy-order-release.sh`, hourly by default
+(`ORDER_RELEASE_SCHEDULE` in `config/deploy.env`).
+
 ## Suggested Next Step
 
-Nothing yet moves a `pending` order forward or back: no webhook confirms a
-transfer, and nothing releases an order whose transfer never arrived. The
-Sweeper that backs `SweepQueue` (`internal/sweep`) does not fit — it counts
-waiting search items and replaces lost worker wake-ups, a different shape
-from reading `orders` where `status == "pending"` and `updated_at` is past a
-cutoff. A sibling entry point, `ReleaseOrders`, on its own schedule, is the
-next piece.
-
-Once that exists: try a live order on a pilot WooCommerce store, behind the
-buyer's explicit confirmation, and confirm the store's own confirmation email
-reaches the provisional inbox and matches what the Store API answered.
+Try a live order on a pilot WooCommerce store, behind the buyer's explicit
+confirmation, and confirm the store's own confirmation email reaches the
+provisional inbox and matches what the Store API answered. Then build the
+confirm side: a webhook or poll that reads the transfer and moves the order
+`pending → confirmed` before it ages into a release.

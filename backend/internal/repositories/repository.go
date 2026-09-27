@@ -96,4 +96,8 @@ func (r *Repository) MoveOrderStatus(ctx context.Context, id string, from, to mo
 	return r.database.MoveOrderStatus(ctx, id, from, to)
 }
 
+func (r *Repository) ReleaseExpiredOrders(ctx context.Context, olderThan time.Duration, limit int) (int, error) {
+	return r.database.ReleaseExpiredOrders(ctx, olderThan, limit)
+}
+
 func (r *Repository) Close() error { return r.database.CloseStore() }
