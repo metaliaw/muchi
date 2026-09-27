@@ -382,6 +382,8 @@ Cada Cosa se lee en un solo lugar, y por eso acá ya no hay Copias:
 - 🛒 [Cuando MUCHI Compre](docs/when-muchi-buys.es.md): el Plan de automatizar la Compra
   con Agentes, la Implementación y los Costos que seguimos mirando, y cómo eso
   toca el MUCHI Dólar y el Costeo del Carrito. Un Plan en voz alta, sin Fecha.
+- 🧾 [Compras Informadas](docs/reported-purchases.es.md): lo que hace el Carrito hoy —
+  te lleva al carrito de cada Tienda y anota el número de pedido que traes de vuelta.
 
 ### Decisiones contadas en detalle
 
