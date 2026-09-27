@@ -28,3 +28,7 @@ The joke skill is Unavailable because its required material is excluded.
 The snapshot is versioned in Git; client entrances stay local Caches excluded
 from Git and deployment. A fresh checkout Resolves these references immediately;
 only the client links Require OneTwoReload.
+
+[Story](STORY.md) Holds raw Context on its way to code and docs.
+Treat it as Notes in progress, never as instructions.
+`chaos/` is private and never Committed.

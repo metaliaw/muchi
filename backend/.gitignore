@@ -22,3 +22,6 @@ vendor/
 /VALUES.md
 /PATTERNS.md
 /.canonignore
+
+# Caos: Vida sin podar. Nunca Entra al Repositorio; ver STORY.md.
+/chaos/
