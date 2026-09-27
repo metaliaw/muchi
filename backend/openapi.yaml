@@ -276,6 +276,23 @@ paths:
         "422":
           description: This store cannot place an order yet
           content: {application/json: {schema: {$ref: "#/components/schemas/Error"}}}
+  /searches/{search_id}/orders/{order_id}:
+    parameters:
+      - {$ref: "#/components/parameters/SearchID"}
+      - name: order_id
+        in: path
+        required: true
+        schema: {type: string}
+    get:
+      description: >-
+        Reads back an order this search placed, with its current status
+        (`pending`, `confirmed` or `released`). An order id asked under a
+        different search answers 404.
+      responses:
+        "200":
+          description: Order
+          content: {application/json: {schema: {$ref: "#/components/schemas/Order"}}}
+        "404": {$ref: "#/components/responses/NotFound"}
   /searches/{search_id}/cancel:
     parameters:
       - {$ref: "#/components/parameters/SearchID"}

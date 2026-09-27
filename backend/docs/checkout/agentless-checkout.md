@@ -268,8 +268,7 @@ with network access runs this by hand, on one low-stakes item:
    answers the same order id, not a second order.
 9. In the store's admin, mark the order "Processing" (as if the transfer
    arrived) — never actually send it. Confirm the webhook fires and
-   `GET`ting the order (once that route exists) or reading Firestore
-   directly shows `status: "confirmed"`.
+   `GET /v1/searches/{id}/orders/{order_id}` shows `status: "confirmed"`.
 10. On a second, separate order, let it age past
     `MUCHI_ORDER_PENDING_TTL_SECONDS` without marking it paid, and confirm
     `ReleaseOrders` moves it to `released`.

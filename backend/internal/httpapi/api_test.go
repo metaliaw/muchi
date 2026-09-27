@@ -564,7 +564,12 @@ func (r *fixedOrderRepository) CreateOrder(_ context.Context, key, hash string, 
 	r.byKey[key], r.hash[key] = order, hash
 	return order, nil
 }
-func (r *fixedOrderRepository) GetOrder(context.Context, string) (model.Order, error) {
+func (r *fixedOrderRepository) GetOrder(_ context.Context, id string) (model.Order, error) {
+	for _, order := range r.byKey {
+		if order.ID == id {
+			return order, nil
+		}
+	}
 	return model.Order{}, model.ErrOrderNotFound
 }
 func (r *fixedOrderRepository) FindOrderByStoreOrder(context.Context, string, string) (model.Order, error) {
@@ -612,5 +617,31 @@ func TestPlaceOrderCreatesOneOrderForOneStore(t *testing.T) {
 	mixed := `{"items":[{"offer_id":"ring","quantity":1},{"offer_id":"woo","quantity":1}],"shipping":{"country":"CL"}}`
 	if crossed := place("mixed-key", mixed); crossed.Code != http.StatusBadRequest {
 		t.Fatalf("mixed-store order status = %d: %s", crossed.Code, crossed.Body)
+	}
+}
+
+// TestGetOrderReadsBackOnlyThroughItsOwnSearch Keeps an Order Id from Leaking
+// across Searches: the Search that Placed it Reads it, any other Answers 404.
+func TestGetOrderReadsBackOnlyThroughItsOwnSearch(t *testing.T) {
+	repository := &fixedOrderRepository{byKey: map[string]model.Order{
+		"key": {ID: "order_one", SearchID: "search_one", Domain: "woo.test", Status: model.OrderConfirmed},
+	}}
+	api := API{Searches: search.Service{Orders: repository}, Token: "secret"}
+	read := func(path string) *httptest.ResponseRecorder {
+		request := httptest.NewRequest(http.MethodGet, path, nil)
+		request.Header.Set("Authorization", "Bearer secret")
+		recorder := httptest.NewRecorder()
+		api.BuildHandler().ServeHTTP(recorder, request)
+		return recorder
+	}
+	found := read("/v1/searches/search_one/orders/order_one")
+	if found.Code != http.StatusOK || !strings.Contains(found.Body.String(), `"status":"confirmed"`) {
+		t.Fatalf("status = %d body = %s", found.Code, found.Body)
+	}
+	if other := read("/v1/searches/search_two/orders/order_one"); other.Code != http.StatusNotFound {
+		t.Fatalf("other search status = %d", other.Code)
+	}
+	if missing := read("/v1/searches/search_one/orders/order_nine"); missing.Code != http.StatusNotFound {
+		t.Fatalf("missing order status = %d", missing.Code)
 	}
 }

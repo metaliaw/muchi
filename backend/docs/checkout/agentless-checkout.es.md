@@ -278,8 +278,8 @@ bajo riesgo:
    responde el mismo id de pedido, no uno segundo.
 9. En el admin de la tienda, marcar el pedido "Procesando" (como si la
    transferencia hubiera llegado) — nunca mandarla de verdad. Confirmar que
-   el webhook dispara y que consultar el pedido (leyendo Firestore
-   directamente, hasta que exista esa ruta) muestra `status: "confirmed"`.
+   el webhook dispara y que `GET /v1/searches/{id}/orders/{order_id}`
+   muestra `status: "confirmed"`.
 10. En un segundo pedido aparte, dejarlo envejecer pasado
     `MUCHI_ORDER_PENDING_TTL_SECONDS` sin marcarlo pagado, y confirmar que
     `ReleaseOrders` lo mueve a `released`.

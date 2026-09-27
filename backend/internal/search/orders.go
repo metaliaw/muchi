@@ -58,6 +58,23 @@ func (s Service) PlaceOrder(ctx context.Context, id, key string, requests []mode
 	return s.Orders.CreateOrder(ctx, key, hash, order)
 }
 
+// GetOrder Reads one Order back, but only through the Search that Placed it:
+// an Order Id Asked under another Search Answers Not Found, the same as one
+// that never Existed, so a Path cannot Reach an Order it did not Create.
+func (s Service) GetOrder(ctx context.Context, id, orderID string) (model.Order, error) {
+	if id == "" || orderID == "" || s.Orders == nil {
+		return model.Order{}, ErrInvalid
+	}
+	order, err := s.Orders.GetOrder(ctx, orderID)
+	if err != nil {
+		return model.Order{}, err
+	}
+	if order.SearchID != id {
+		return model.Order{}, model.ErrOrderNotFound
+	}
+	return order, nil
+}
+
 // ConfirmOrder Moves the Order a Store's own Webhook Names, by the Id the
 // Store gave it, to whichever Status the Webhook Reported. It is Idempotent
 // two ways: a redelivered Webhook Naming the Status the Order already Holds
