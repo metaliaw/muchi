@@ -9,7 +9,7 @@ prepare_deploy "$@"
 read_worker
 
 cloud functions deploy "$ORDER_RELEASE_NAME" --gen2 --trigger-http --no-allow-unauthenticated \
-	--runtime="$RUNTIME" --region="$REGION" --source=. --entry-point=ReleaseOrders --ignore-file=.gcloudignore \
+	--runtime="$RUNTIME" --region="$REGION" --source=. --entry-point=ReleaseOrders --ignore-file=.gcloudignore --set-build-env-vars=GOFLAGS=-buildvcs=false \
 	--service-account="$API_EMAIL" --build-service-account="projects/$PROJECT/serviceAccounts/$BUILD_EMAIL" \
 	--memory="$MEMORY" --timeout=120s --min-instances=0 --max-instances=1 --concurrency=1 \
 	--set-env-vars="GOOGLE_CLOUD_PROJECT=$PROJECT,MUCHI_STORES_CONFIG=serverless_function_source_code/config/stores.yaml,MUCHI_TASK_REGION=$REGION,MUCHI_TASK_QUEUE=$TASK_QUEUE,MUCHI_TASK_URL=$WORKER_URL,MUCHI_TASK_SERVICE_ACCOUNT=$TASK_EMAIL" \

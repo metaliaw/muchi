@@ -8,7 +8,7 @@ DEPLOY_COMPONENT="Worker"
 prepare_deploy "$@"
 
 cloud functions deploy "$WORKER_NAME" --gen2 --trigger-http --no-allow-unauthenticated \
-	--runtime="$RUNTIME" --region="$REGION" --source=. --entry-point=ProcessSearch --ignore-file=.gcloudignore \
+	--runtime="$RUNTIME" --region="$REGION" --source=. --entry-point=ProcessSearch --ignore-file=.gcloudignore --set-build-env-vars=GOFLAGS=-buildvcs=false \
 	--service-account="$WORKER_EMAIL" --build-service-account="projects/$PROJECT/serviceAccounts/$BUILD_EMAIL" \
 	--memory="$MEMORY" --timeout="$TIMEOUT" --min-instances=0 --max-instances="$MAX_INSTANCES" --concurrency=1 \
 	--set-env-vars="GOOGLE_CLOUD_PROJECT=$PROJECT,MUCHI_STORES_CONFIG=serverless_function_source_code/config/stores.yaml" \
