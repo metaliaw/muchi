@@ -39,9 +39,13 @@ flowchart TB
         auth[Bearer Token<br/>Idempotency Key]
         health[Salud pública]
       cards[Consultas de Juegos,<br/>Metadata y Ofertas]
+      purchase[Rutas de Checkout,<br/>Cotización y Pedidos]
+        hook[Webhook WooCommerce<br/>Firma HMAC]
         auth --> api
         health --> api
       cards --> api
+      purchase --> api
+        hook --> api
     end
 
     subgraph control[Plano de Control]
@@ -50,6 +54,9 @@ flowchart TB
         sweeper[SweepQueue<br/>reconciliación acotada]
         scheduler -->|OIDC| sweeper
         sweeper -->|repone despertares| tasks
+        hourly[Cloud Scheduler<br/>cada hora]
+        releaser[ReleaseOrders<br/>libera pedidos pendientes vencidos]
+        hourly -->|OIDC| releaser
     end
 
     subgraph work[Plano de Trabajo]
@@ -68,11 +75,13 @@ flowchart TB
         offers[(item_offers)]
         cache[(offer_cache)]
         healthStore[(source_health)]
+        ordersStore[(orders)]
         firestore --- searches
         firestore --- items
         firestore --- offers
         firestore --- cache
         firestore --- healthStore
+        firestore --- ordersStore
     end
 
     subgraph providers[Fuentes Externas]
@@ -104,6 +113,10 @@ flowchart TB
     taskIdentity -.-> tasks
     taskIdentity -.-> worker
     apiIdentity -.-> api
+    api -->|carro, cotización, checkout bacs| stores
+    stores -.->|order.updated| hook
+    api -->|pedidos: crea, confirma, libera| firestore
+    releaser -->|pending a released| firestore
     workerIdentity -.-> worker
 ```
 
@@ -115,7 +128,8 @@ flowchart TB
 | Cloud Tasks | Entrega despertares con control de ritmo y reintentos. | Invoca al worker mediante identidad OIDC. |
 | `ProcessSearch` | Reclama una carta, consulta ofertas, verifica stock y guarda el resultado. | Función privada; no admite invocación anónima. |
 | `SweepQueue` | Cuenta trabajo listo y repone despertares perdidos con un tope. | Función privada invocada por Cloud Scheduler. |
-| Firestore | Conserva búsquedas, ítems, ofertas, idempotencia, caché y salud. | Acceso exclusivo de las cuentas de servicio autorizadas. |
+| `ReleaseOrders` | Mueve a `released` los pedidos `pending` vencidos, con un tope por ejecución. | Función privada invocada cada hora por Cloud Scheduler. |
+| Firestore | Conserva búsquedas, ítems, ofertas, pedidos, idempotencia, caché y salud. | Acceso exclusivo de las cuentas de servicio autorizadas. |
 | Secret Manager | Entrega la versión vigente del token al arrancar una instancia. | El secreto nunca se incluye en imágenes ni respuestas. |
 | Fuentes | Proveen catálogos y disponibilidad con formatos independientes. | Red externa no confiable; usa timeouts, reintentos y límites de cuerpo. |
 
@@ -137,6 +151,53 @@ permite consumidores competidores y recuperación de leases, pero exige que el
 reclamo retire trabajo muerto para conservar el progreso FIFO. El
 [incidente de ítems huérfanos](queue/orphaned-queue-items.es.md) explica ese invariante.
 
+## Flujo de una Compra
+
+La compra está en curso: WooCommerce es la única plataforma que llega a un
+pedido real, y todavía ningún pedido corrió contra una tienda en vivo. La
+[guía de checkout sin agentes](checkout/agentless-checkout.es.md) tiene el
+detalle y la lista de verificación del piloto manual.
+
+```mermaid
+sequenceDiagram
+    participant C as Cliente
+    participant A as ServeAPI
+    participant S as search.Service
+    participant W as Tienda WooCommerce
+    participant F as Firestore
+    participant R as ReleaseOrders
+
+    C->>A: POST /searches/{id}/checkout
+    A->>S: CheckoutLinks
+    S-->>C: enlace de carro o páginas de producto por tienda
+    C->>A: POST /searches/{id}/checkout con shipping
+    S->>W: carro por Store API, sin pedido
+    W-->>C: cotización con envío y medios de pago
+    C->>A: POST /searches/{id}/orders + Idempotency-Key
+    S->>W: llena el carro, checkout por bacs
+    W-->>S: id del pedido en la tienda
+    S->>F: CreateOrder, estado pending
+    A-->>C: 201 Order
+    W->>A: webhook order.updated, firmado con HMAC
+    A->>F: pending a confirmed o released
+    R->>F: pending vencido a released
+    C->>A: GET /searches/{id}/orders/{order_id}
+    A-->>C: estado actual
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> pending: PlaceOrder
+    pending --> confirmed: webhook processing o completed
+    pending --> released: webhook cancelled, failed, refunded
+    pending --> released: ReleaseOrders tras el TTL
+    confirmed --> [*]
+    released --> [*]
+```
+
+Cada movimiento nombra el estado que espera dejar, así que un webhook tardío
+pierde ante una liberación que llegó primero, y al revés.
+
 ## Capas del Código
 
 ```mermaid
@@ -146,6 +207,8 @@ flowchart LR
     application[internal/application<br/>Composición]
     catalog[internal/catalog<br/>Construcción de Fuentes]
     domain[internal/search y model<br/>Servicio de Búsqueda]
+    orderer[internal/stores<br/>Orderer y woocommerce.Client]
+    releaser[internal/orders<br/>Releaser]
     repository[SearchRepository<br/>Interfaz de Persistencia]
     repositories[internal/repositories<br/>Implementaciones de Repositorios]
     datasources[internal/datasources<br/>Contrato Genérico de Base de Datos]
@@ -168,6 +231,9 @@ flowchart LR
     catalog --> application
     application --> domain
     application --> adapters
+    domain -->|OrderPlacer| orderer
+    function --> releaser
+    releaser -->|Expirer| repositories
     adapters --> domain
 ```
 
@@ -271,5 +337,8 @@ La topología se crea en orden de dependencias:
 3. `deploy-sweeper.sh`: barredor privado y programación periódica.
 4. `deploy-api.sh`: API pública conectada a la URL real del worker.
 
-`deploy.sh` orquesta los cuatro pasos. Cada componente puede desplegarse por
+`deploy-order-release.sh` despliega `ReleaseOrders` y su tarea horaria.
+`deploy-infra.sh` también crea el índice de `orders` que su consulta necesita.
+
+`deploy.sh` orquesta los cinco pasos, el liberador después del barredor. Cada componente puede desplegarse por
 separado para reducir tiempo y superficie de cambio durante una corrección.
