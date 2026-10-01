@@ -86,6 +86,7 @@ const history = ref(JSON.parse(localStorage.getItem('muchi_historial') || '[]'))
 // Cuántas Copias Tiene cada Oferta, contadas a mano por quien está mirando la
 // Tienda. Viven acá porque las Escribe la Lista y las Usa el Carrito.
 const units = ref({})
+const staleOfferIds = ref([])
 // El Reparto lo Hace la Lista, que es la única que Sabe qué Edición se está
 // Mirando y con qué Criterio. Acá solo se Guarda lo Elegido.
 
@@ -233,6 +234,7 @@ function applyTheme() {
   localStorage.setItem(THEME_KEY, dark.value ? 'oscuro' : 'claro')
 }
 watch(dark, applyTheme)
+watch(searchId, () => { staleOfferIds.value = [] })
 watch(game, (named) => {
   watched.value = null
   if (named) localStorage.setItem(GAME_KEY, named)
@@ -249,6 +251,16 @@ function playGame(named) {
   if (named) game.value = named
 }
 
+function markStaleOffers(ids) {
+  staleOfferIds.value = ids
+}
+
+function removeCartOffer(offerId) {
+  const { [offerId]: removed, ...remaining } = units.value
+  units.value = remaining
+  staleOfferIds.value = staleOfferIds.value.filter((id) => id !== offerId)
+}
+
 function remember(id, label) {
   const rest = history.value.filter((entry) => entry.id !== id)
   history.value = [{ id, label: label || id }, ...rest].slice(0, 20)
@@ -256,6 +268,7 @@ function remember(id, label) {
 }
 
 function selectSearch(id, initialState = null, initialItems = []) {
+  staleOfferIds.value = []
   startSearch(id, initialState, initialItems)
   localStorage.setItem(LAST_KEY, JSON.stringify(
     { id, match: match.value, kind: kind.value }))
@@ -597,6 +610,7 @@ onUnmounted(stopPolling)
         :notices="notices" :placeholder="placeholder"
         :advertise-groups="advertiseSections"
         v-model:units="units"
+        :stale-offer-ids="staleOfferIds"
         @confirm="confirmOne"
         @look="lookAtCard"
         @detail="detailed = $event"
@@ -629,7 +643,9 @@ onUnmounted(stopPolling)
          no Está. -->
     <CartPanel v-if="offers.length"
                :search-id="searchId" :match="match"
-               :units="units" :docked="dockOpen" v-model:open="cartOpen"
+               :units="units" :offers="offers" :docked="dockOpen" v-model:open="cartOpen"
+               @stale-offers="markStaleOffers"
+               @remove-offer="removeCartOffer"
                :repository-url="config.repository_url"
                :ready="config.cart_ready" />
   </main>

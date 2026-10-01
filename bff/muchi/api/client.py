@@ -162,7 +162,8 @@ class SearchProvider:
     session: requests.Session = field(default_factory=requests.Session, repr=False)
 
     def request_reply(self, method: str, path: str, *, payload=None,
-                      key: str | None = None, params=None) -> dict:
+                      key: str | None = None, params=None,
+                      allow_not_found: bool = False) -> dict | None:
         headers = {"Authorization": f"Bearer {self.token}", "Accept": "application/json"}
         if key:
             headers["Idempotency-Key"] = key
@@ -175,6 +176,8 @@ class SearchProvider:
             with response:
                 if response.status_code in (401, 403):
                     raise SearchRejected("La API rechazó el Código de Seguridad.")
+                if response.status_code == 404 and allow_not_found:
+                    return None
                 if response.status_code == 409:
                     raise SearchRejected("La API informó un Conflicto de Estado o Idempotencia.")
                 if 400 <= response.status_code < 500 and response.status_code not in (408, 429):
@@ -216,6 +219,18 @@ class SearchProvider:
         }
         reply = self.request_reply("POST", "/searches", payload=payload, key=key)
         return self.parse_reply(build_search, reply)
+
+    def read_offer(self, offer_id: str) -> SearchOffer | None:
+        """Lee el último Snapshot de una Oferta, o None si ya no existe."""
+        reply = self.request_reply(
+            "GET", f"/offers/{quote(offer_id, safe='')}", allow_not_found=True,
+        )
+        if reply is None:
+            return None
+        offer = self.parse_reply(build_offer, reply)
+        if offer.offer_id != offer_id:
+            raise QueryFailed("La API devolvió otra Oferta para este Identificador.")
+        return offer
 
     def read_search(self, search_id: str) -> SearchState:
         reply = self.request_reply("GET", f"/searches/{quote(search_id, safe='')}")

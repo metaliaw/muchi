@@ -6,6 +6,7 @@ Pedido con el mismo Dominio de siempre y devuelve JSON ya presentado.
 """
 from __future__ import annotations
 
+from dataclasses import replace
 import os
 from pathlib import Path
 from typing import Literal
@@ -451,6 +452,23 @@ def read_cart(search_id: str, shipping: int = Query(4000, ge=0, le=1_000_000),
                                 match=match)
 
 
+def refresh_cart_offers(searches, items, picks):
+    """Refresca las Ofertas elegidas y conserva las que ya no pudo resolver."""
+    selected = {pick.offer_id for pick in picks if pick.units > 0}
+    refreshed = {}
+    stale = []
+    for offer_id in selected:
+        offer = searches.read_offer(offer_id)
+        if offer is None:
+            stale.append(offer_id)
+        else:
+            refreshed[offer_id] = offer
+    items = tuple(replace(item, offers=tuple(
+        refreshed.get(offer.offer_id, offer) for offer in item.offers,
+    )) for item in items)
+    return items, sorted(stale)
+
+
 @app.post("/api/searches/{search_id}/cart")
 def read_chosen_cart(search_id: str, request: CartRequest,
                      shipping: int = Query(4000, ge=0, le=1_000_000),
@@ -463,9 +481,12 @@ def read_chosen_cart(search_id: str, request: CartRequest,
     """
     searches = build_muchi().searches
     items = read_all_results(searches, search_id)
-    return presenter.build_cart(items, shipping, load_rate_settings().muchi_dolar,
+    items, stale = refresh_cart_offers(searches, items, request.picks)
+    plan = presenter.build_cart(items, shipping, load_rate_settings().muchi_dolar,
                                 match=match,
                                 picks={row.offer_id: row.units for row in request.picks})
+    plan["stale_offers"] = stale
+    return plan
 
 
 class LinkLine(BaseModel):

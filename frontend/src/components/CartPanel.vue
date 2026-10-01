@@ -4,12 +4,15 @@ import { computed, ref, watch } from 'vue'
 import { formatClp, linkStoreOrder, newKey, readCartWithUnits, reportStoreOrder } from '../api.js'
 import { buildLinkItems, cleanStoreOrder, readPurchases, rememberPurchases } from '../purchase.js'
 
+const emit = defineEmits(['remove-offer', 'stale-offers'])
+
 const props = defineProps({
   searchId: { type: String, required: true },
   // El Carrito vuelve a la Carta pedida: el Modo le dice si hubo Derivados.
   match: { type: String, default: 'exact' },
   // Cuántas Copias se Compran en cada Oferta. Vacío Devuelve la Recomendación.
   units: { type: Object, default: () => ({}) },
+  offers: { type: Array, default: () => [] },
   // MUCHI Abierto se Queda con el Borde de abajo en Móvil. El Botón del
   // Carrito Espera a que MUCHI se Guarde en vez de Pisarle la Barra.
   docked: { type: Boolean, default: false },
@@ -32,6 +35,9 @@ const error = ref('')
 // Reparten la misma Esquina, y abiertos los dos uno Tapa al otro.
 const open = defineModel('open', { type: Boolean, default: false })
 const loading = ref(false)
+const staleOffers = computed(() => plan.value?.stale_offers || [])
+const purchaseBlocked = computed(() => loading.value || staleOffers.value.length > 0)
+const offerFor = (offerId) => props.offers.find((offer) => offer.offer_id === offerId)
 
 async function refresh() {
   if (!open.value) return
@@ -42,6 +48,7 @@ async function refresh() {
       props.searchId, SHIPPING_GUESS,
       Object.entries(props.units).map(([offer_id, count]) => ({ offer_id, units: count })),
       props.match)
+    emit('stale-offers', plan.value.stale_offers || [])
   } catch (failure) {
     error.value = failure.message
   } finally {
@@ -66,6 +73,7 @@ function keep(store, order) {
 }
 
 async function goBuy(store) {
+  if (purchaseBlocked.value) return
   // La Pestaña se Abre en el mismo Clic: después de un `await` el Navegador
   // la Trataría como Ventana Emergente y la Bloquearía.
   const tab = window.open('', '_blank')
@@ -132,6 +140,14 @@ async function report(store) {
         </p>
         <p v-if="error" class="mu-aviso error">{{ error }}</p>
         <p v-else-if="loading" class="mu-caption">Calculando…</p>
+        <div v-if="staleOffers.length" class="mu-aviso error">
+          <p>Hay ofertas que ya no existen. Quítalas del carrito antes de terminar la compra.</p>
+          <button v-for="offerId in staleOffers" :key="offerId" class="mu-boton"
+                  type="button" @click="emit('remove-offer', offerId)">
+            Quitar {{ offerFor(offerId)?.card_name || `oferta ${offerId}` }}
+            {{ offerFor(offerId)?.store || '' }}
+          </button>
+        </div>
 
         <template v-if="plan && !loading">
           <!-- El MUCHI Dólar Salía acá, al lado del Envío y del Total, y ahí
@@ -153,7 +169,7 @@ async function report(store) {
                  y no "confirmada". -->
             <div class="mu-compra">
               <button v-if="!purchases[store.store]" class="mu-boton" type="button"
-                      :disabled="busy[store.store]" @click="goBuy(store)">
+                      :disabled="busy[store.store] || purchaseBlocked" @click="goBuy(store)">
                 Comprar en {{ store.store }}
               </button>
               <form v-else-if="purchases[store.store].status === 'linked'"
