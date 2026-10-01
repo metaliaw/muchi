@@ -1,11 +1,12 @@
 <script setup>
 /** Las Ofertas, agrupadas por Tipo de Carta y por Precio dentro de cada una. */
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { formatAmount, formatClp } from '../api.js'
 import {
   BY_EDITION, BY_PRICE, declaredStock, groupByCardType, limitOf,
   hasStoreCatalog, pickable as canPick, spreadUnits, topOf,
 } from '../search.js'
+import { askLocation, distanceKm, sortByDistance } from '../nearby.js'
 
 const emit = defineEmits(['look', 'confirm', 'cheap', 'detail'])
 
@@ -143,6 +144,35 @@ watch(variants, (values) => {
 const groups = computed(() => groupByCardType(visibleOffers.value))
 const grouped = computed(() => groups.value.length > 1)
 
+// Cerca mío es el Orden por defecto: la Ubicación se Pide al Cargar y Nunca
+// Sale del Navegador; el Orden se Hace aquí. Solo Cambia el Orden que se Ve;
+// el Reparto sigue Leyendo `groups` por Precio.
+const origin = ref(null)
+const nearby = ref(true)
+const locating = ref(false)
+const nearbyNotice = ref('')
+async function locate() {
+  locating.value = true
+  origin.value = await askLocation()
+  locating.value = false
+  nearby.value = Boolean(origin.value)
+  nearbyNotice.value = origin.value
+    ? ''
+    : 'No pude saber dónde estás: el permiso se negó o el navegador no lo ofrece. Queda el orden por precio.'
+}
+function toggleNearby() {
+  if (!origin.value) return locate()
+  nearby.value = !nearby.value
+}
+onMounted(locate)
+const sortedNearby = computed(() => nearby.value && origin.value)
+const shownGroups = computed(() => sortedNearby.value
+  ? groups.value.map((group) => ({ ...group, rows: sortByDistance(group.rows, origin.value) }))
+  : groups.value)
+const kmTo = (offer) => origin.value && offer.location
+  ? Math.round(distanceKm(origin.value, offer.location))
+  : null
+
 // La Cantidad pedida se Reparte sola sobre lo que se Ve, de la barata a la
 // cara. Lo último repartido se Guarda: mientras los Selectores Sigan igual a
 // eso, nadie los Tocó y se Pueden Rehacer. Tocado uno, no se Pisa más —salvo
@@ -192,6 +222,15 @@ watch(() => groups.value, () => spreadNow(), { immediate: true })
       </label>
     </div>
 
+    <div v-if="offers.length" class="mu-filtros">
+      <button type="button" class="mu-cerca" :disabled="locating" :aria-pressed="Boolean(sortedNearby)"
+              @click="toggleNearby">
+        <span aria-hidden="true">📍</span>
+        {{ locating ? 'Buscando…' : sortedNearby ? 'Ordenar por precio' : 'Cerca mío' }}
+      </button>
+    </div>
+    <p v-if="nearbyNotice" class="mu-aviso" role="status">{{ nearbyNotice }}</p>
+
     <div v-if="editions.length > 1 || variants.length > 1" class="mu-filtros">
       <label v-if="editions.length > 1" class="mu-filtro">
         <span>Edición</span>
@@ -225,7 +264,7 @@ watch(() => groups.value, () => spreadNow(), { immediate: true })
       </div>
     </div>
 
-    <template v-for="group in groups" :key="group.card">
+    <template v-for="group in shownGroups" :key="group.card">
     <h2 v-if="grouped || advertiseGroups" class="mu-grupo">{{ group.name }}
       <span class="mu-caption">{{ group.rows.length }} ofertas</span>
     </h2>
@@ -303,6 +342,7 @@ watch(() => groups.value, () => spreadNow(), { immediate: true })
           <li v-for="location in offer.locations" :key="location">{{ location }}</li>
         </ul>
       </details>
+      <p v-if="kmTo(offer) !== null" class="mu-caption">A {{ kmTo(offer) }} km de ti</p>
       <p v-if="offer.note" class="mu-caption">{{ offer.note }}</p>
       <button v-if="hasStoreCatalog(offer)" type="button" class="mu-detalle-boton"
               @click="emit('detail', offer)">Ver detalle</button>
