@@ -10,10 +10,23 @@ Work not yet distilled into them lives in [STORY.md](STORY.md).
 
 ## Checkout
 
+- [Cart and Reservation Data Model](docs/checkout/cart-and-reservation-data-model.md)
 - [Agentic Commerce Protocols](docs/checkout/agentic-commerce-protocols.md)
 - [Checkout Without Agents](docs/checkout/agentless-checkout.md)
 - [AP2 and ACP: Fit Analysis for Muchi](docs/checkout/ap2-acp-fit-analysis.md)
 - [Web Agent Purchases 🐈](docs/checkout/web-agent-purchases-proposal.md)
+
+## Paired Repositories
+
+These repositories are commonly worked on locally together under
+`~/src/github.com/`:
+
+- `cangrejometralleta/muchi-api` — API contract and Firestore data.
+- `metaliaw/muchi` — browser interface and BFF.
+
+For changes across their boundary, inspect and update both repositories using
+these paths. Do not ask the user for their locations again when both checkouts
+are present.
 
 ## Entrypoints
 
