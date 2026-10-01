@@ -464,7 +464,7 @@ def refresh_cart_offers(searches, items, picks):
         else:
             refreshed[offer_id] = offer
     items = tuple(replace(item, offers=tuple(
-        refreshed.get(offer.offer_id, offer) for offer in item.offers,
+        refreshed.get(offer.offer_id, offer) for offer in item.offers
     )) for item in items)
     return items, sorted(stale)
 
