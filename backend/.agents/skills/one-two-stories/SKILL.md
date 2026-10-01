@@ -9,7 +9,7 @@ A Drain, not a Writer.
 It Shows what waits in the Passage,
 and moves one piece to where it Governs.
 
-The Passage Lives in [STORY.md](https://github.com/cangrejometralleta/OneTwoThree/blob/93d28555f49e1f2968565b358f320e113bb50a5d/STORY.md)
+The Passage Lives in [STORY.md](https://github.com/cangrejometralleta/OneTwoThree/blob/f620c09da052d9a43484bef8a097f6406ec21f1d/STORY.md)
 and in the README, under "How Context Becomes Canon".
 The Flow Lives in [the Distillation Flow](distillation-flow.md).
 

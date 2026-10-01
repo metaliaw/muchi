@@ -39,6 +39,8 @@ Only ordinary grammar does.
 
 Proper names and acronyms keep their established Spelling.  
 Their required capitals stay outside the emphasis Budget.
+The project Name is one name in every Form:  
+`OneTwoThree`, `one-two-three`, `One Two Three` and `one_two_three`.
 A list of names is exempt.  
 `Intent, Done, Open, State and Next` names a schema.
 

@@ -49,7 +49,7 @@ when a rule read here disagrees with the rule named upstream,
 or when the user requests a ZIP of selected agents and skills.
 
 Do not invoke to load skills into a client; OneTwoReload Does that.
-Do not invoke to open a session; YoYoYo Pulls the project's own branch.
+Do not invoke to open a session; HaHaHey Pulls the project's own branch.
 
 ## Choose the Distribution
 

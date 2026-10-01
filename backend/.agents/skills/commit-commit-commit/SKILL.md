@@ -90,6 +90,8 @@ Do not stage a mixed Hunk merely because its file is already in a group.
 - Never Include unrelated local changes to make the tree clean.
 - Never Push when validation fails or a commit fails.
 - Never force Push.
+- Never Brand a commit or pull request with its Vendor —
+  no co-author, session or generated-by Trailer; the message carries the Change.
 - Never create an Upstream without naming the branch and asking first.
 - If nothing Changed, say so and stop.
 

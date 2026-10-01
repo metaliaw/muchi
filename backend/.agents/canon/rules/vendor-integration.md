@@ -6,6 +6,8 @@
   where the tool supports them.
 - Add only the Metadata and format adapter each vendor requires.
   The Adapter Points to the Instructions; it never repeats them.
+- The same Rule unbrands the Words:
+  [Unbrand](unbrand.md) keeps the Vendor out of the Work.
 
 ## One Source, every Entrance
 
@@ -36,7 +38,7 @@ and instructs it to read that markdown before it talks.
 Skills use the shorter `one-two-` Prefix.
 The repeated three-part names Mark fundamental workflow operations —
 open, advance, commit and close — so they stand out from the rest.
-[yo-yo-yo](../../skills/yo-yo-yo/SKILL.md) Opens the session.
+[ha-ha-hey](../../skills/ha-ha-hey/SKILL.md) Opens the session.
 [next-next-next](../../skills/next-next-next/SKILL.md) Advances one step.
 [commit-commit-commit](../../skills/commit-commit-commit/SKILL.md) Handles commits and the final push.
 [bye-bye-bye](../../skills/bye-bye-bye/SKILL.md) Closes with a handoff.

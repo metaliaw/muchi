@@ -34,6 +34,7 @@
 - [No Inherited Structure, more Invented Ritual](patterns/no-inherited-structure-more-invented-ritual.md)
 - [Lineage](patterns/lineage.md)
 - [Provenance](patterns/provenance.md)
+- [Musical References](patterns/musical-references.md)
 - [The Test is an Entry Point](patterns/the-test-is-an-entry-point.md)
 - [The Lever and the Tape](patterns/the-lever-and-the-tape.md)
 - [Branches Give Cooperation a Path](patterns/branches-give-cooperation-a-path.md)

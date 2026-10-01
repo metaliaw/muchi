@@ -1,6 +1,6 @@
 ---
 name: one-two-purge
-description: "Find an exact sensitive value across files, Git history and local shell histories, then remove it through an explicit detect, confirm and purge workflow. Use when a secret, token, credential or private value may have entered repository or terminal history."
+description: "Find an exact sensitive value across files, Git history and local shell histories, then remove it through an explicit detect, confirm and purge workflow. Also removes agent authorship and attribution trailers from Git history as a last resort. Use when a secret, token, credential or private value may have entered repository or terminal history, or when the user asks to unbrand it."
 ---
 
 # OneTwoPurge
@@ -120,6 +120,28 @@ multiline history as plain independent lines when that would corrupt entries.
 Write a replacement File atomically, preserve Permissions and ownership,
 then ask the user to restart or reload affected shell sessions.
 Never clear an entire History when exact entry removal is possible.
+
+## Unbrand
+
+A vendor Name is not a secret, so the Value rules above do not Apply.
+The Target is authorship and Trailers, never a Value to hide:
+an agent identity as Author or Committer, and `Co-Authored-By`,
+session-link or generated-by lines in messages.
+
+[Unbrand](../../canon/rules/unbrand.md) says to keep them out in the first place.
+Git history is Appreciated here, so this is a last Resort, not a Cleanup habit.
+Before offering it, name what it Costs:
+
+- every rewritten commit ID Changes, and so does every Descendant;
+- clones, forks, vendored canons and snapshot Manifests keep the old IDs;
+- signatures, tags and pull request Links Break;
+- the contributors list on the host may take a while to Refresh.
+
+Detect by counting authors and Trailers with `git log`, and report Counts only.
+Rewrite with `git-filter-repo` through a mailmap and a message Callback,
+under the same Bundle, Confirm and Force Push rules as any other history Rewrite.
+Replace the identity with the project's own; never Delete the commits.
+Verify with the same Counts at zero before any Push.
 
 ## Verify
 

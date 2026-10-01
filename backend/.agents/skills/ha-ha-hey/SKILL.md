@@ -1,9 +1,9 @@
 ---
-name: yo-yo-yo
+name: ha-ha-hey
 description: "Resume work at the beginning of a new session from recent conversation history and repository changes. Use when starting or returning to a project, asking where work stopped, recovering context, checking whether recent work grew into multiple intents, or deciding which part to continue first."
 ---
 
-# YoYoYo
+# HaHaHey
 
 A session Opening, not a standup and not a code Review.
 It Reconstructs where the work stopped,
@@ -16,7 +16,7 @@ The Shape Lives in [The Lever and the Tape](../../canon/patterns/the-lever-and-t
 
 ```mermaid
 flowchart TD
-    START["yo dove"] --> UPSTREAM{"Upstream Exists?"}
+    START["ha · hey · yo · hi · sup dove"] --> UPSTREAM{"Upstream Exists?"}
     UPSTREAM -- Yes --> PULL["Attempt Pull · Rebase · Autostash"]
     UPSTREAM -- No --> LOCAL["Continue from local State"]
     PULL --> SYNC{"Synchronization Succeeded?"}

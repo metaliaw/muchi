@@ -92,8 +92,9 @@ before the turn ends.
 The Checkpoint Preserves the current Knot; it is not a second knot.
 Conversation alone does not Trigger it.
 
-When the user says exactly `yo dove`,
-invoke [yo-yo-yo](../skills/yo-yo-yo/SKILL.md)
+When the user greets Dove with exactly `ha dove`, `hey dove`,
+`yo dove`, `hi dove` or `sup dove`,
+invoke [ha-ha-hey](../skills/ha-ha-hey/SKILL.md)
 before taking another Thread.
 
 When the user says exactly `bye dove`,

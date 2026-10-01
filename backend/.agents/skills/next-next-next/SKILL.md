@@ -17,7 +17,7 @@ The Shape Lives in [The Lever and the Tape](../../canon/patterns/the-lever-and-t
 ```mermaid
 flowchart TD
     START["next · sigue · 1/2/3"] --> FIND{"Recommendation Found?"}
-    FIND -- No --> OPEN["Defer to YoYoYo · Stop"]
+    FIND -- No --> OPEN["Defer to HaHaHey · Stop"]
     FIND -- Yes --> HOLDS{"Still Holds?"}
     HOLDS -- No --> RENAME["Name what Changed · Restate one Step"]
     HOLDS -- Yes --> SIZE{"One Step?"}
@@ -35,7 +35,7 @@ Invoke when the user says `next`, `sigue`, `continue` or `go on`,
 replies with the number of a presented choice,
 or asks what to do now and wants it Done, not listed.
 
-Do not invoke to open a Session; YoYoYo reconstructs state.
+Do not invoke to open a Session; HaHaHey reconstructs state.
 Do not invoke to close one; ByeByeBye writes the Handoff.
 Do not invoke for a new Ask that carries its own intent.
 
@@ -54,7 +54,7 @@ The Thread Wins over the Handoff when both speak.
 `Now` names the current Scope. `Later` preserves context.
 Neither is a Recommendation.
 When no source names a step, do not Invent one.
-Say so, and defer to YoYoYo.
+Say so, and defer to HaHaHey.
 
 ## Confirm it Holds
 
@@ -108,7 +108,7 @@ When nothing Holds:
 
 ```text
 ⚠️ No standing Recommendation found.
-Open the Session with YoYoYo, or name the step.
+Open the Session with HaHaHey, or name the step.
 ```
 
 ## Bounds

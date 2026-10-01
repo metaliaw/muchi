@@ -6,7 +6,7 @@
 
 ```mermaid
 flowchart TD
-    YO["yo-yo-yo<br/>Open · Read the Tape"]
+    HEY["ha-ha-hey<br/>Open · Read the Tape"]
     NEXT["next-next-next<br/>Advance · Move one Cell"]
     BYE["bye-bye-bye<br/>Close · Write the Tape"]
 
@@ -14,7 +14,7 @@ flowchart TD
     WAIT["Wait for the next Request"]
     COMMIT["commit-commit-commit<br/>Group · Validate · Commit · Push"]
 
-    YO -- "Name one next Step" --> WAIT
+    HEY -- "Name one next Step" --> WAIT
     WAIT -- "next · sigue · selected Option" --> NEXT
     NEXT -- "Durable edit, decision or Validation" --> CHECKPOINT
     CHECKPOINT -- "Write .handoff.md" --> WAIT
@@ -22,7 +22,7 @@ flowchart TD
     WAIT -- "Request commit and Push" --> COMMIT
     COMMIT -- "Record the durable Result" --> CHECKPOINT
     WAIT -- "bye dove · request Handoff" --> BYE
-    BYE -- "Next session · yo dove" --> YO
+    BYE -- "Next session · ha dove" --> HEY
 ```
 
 - The Name is the Lever. A triple Chant Pulls it,

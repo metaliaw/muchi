@@ -33,6 +33,7 @@
 - [Failures](rules/failures.md) — the failure Carries its answer. *(Provisional)*
 - [Tests](rules/tests.md) — spell the Expectation, then mutate. *(Provisional)*
 - [Vendor Integration](rules/vendor-integration.md) — one source, links and small Adapters.
+- [Unbrand](rules/unbrand.md) — the Work Signs nothing. *(Provisional)*
 - [Naming](rules/naming.md) — Verb + Noun + context.
 - [Shapes](rules/shapes.md) — the entity is never the DTO.
 - [Values](rules/values.md) — the index counts, the name Explains. *(Provisional)*
