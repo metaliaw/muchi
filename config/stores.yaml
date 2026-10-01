@@ -1,0 +1,501 @@
+# Dónde Queda cada Tienda, para que el Front Ordene por Cercanía.
+#
+# Se Mantiene a mano: ninguna Fuente Publica Coordenadas. Una Tienda sin
+# `lat`/`lng` o con `online: true` Viaja con `location: null` y el Front la
+# Deja al final del Orden. El Nombre se Compara sin Mayúsculas ni Espacios de
+# más, igual que lo Escribe la Fuente.
+#
+# `source` Dice cómo se Obtuvo la Coordenada, para Afinar las aproximadas:
+#   maps     — Coordenada publicada por la Tienda (enlace de Maps o su Sitio).
+#   address  — Dirección publicada por la Tienda, geocodificada con Nominatim.
+#   comuna   — Centro de la Comuna (Nominatim): la del Perfil, su Metro o su
+#              Punto de Retiro en Scry. Aproximada por definición.
+# El Comentario de cada Entrada Dice de dónde Salió el Dato (octubre 2026).
+# Ordenadas por Cantidad de Ofertas observadas.
+stores:
+  # Providencia: retiro gratis en PiedraBruja (Av. Providencia 1100), dato del usuario
+  - name: "CatLotus"
+    lat: -33.4288
+    lng: -70.6113
+    online: false
+    source: comuna
+  # cardnexus.cl/contact: Agustinas 1476 of. 703, Santiago (Nominatim)
+  - name: "CardNexus"
+    lat: -33.4416
+    lng: -70.65731
+    online: false
+    source: address
+  # sin dato confiable
+  - name: "Rhystic Bazaar"
+    lat: null
+    lng: null
+    online: false
+  # collectorcenter.cl: Sucursal Condell 1176, Providencia, único retiro (Nominatim)
+  - name: "Collector Center"
+    lat: -33.4456
+    lng: -70.62612
+    online: false
+    source: address
+  # cardsouls.cl enlace Maps "Argama Cards" (Osorno); el sitio dice retiro en Puerto Montt y Osorno
+  - name: "CardSouls"
+    lat: -40.57469
+    lng: -73.12868
+    online: false
+    source: maps
+  # gameofmagicsingles.cl/pages/contact: O'Higgins 1397, Concepción (Nominatim)
+  - name: "Game of Magic Singles"
+    lat: -36.82361
+    lng: -73.04057
+    online: false
+    source: address
+  # Providencia: punto de retiro Scry PiedraBruja (Av. Providencia 1100); también El Reino de los Duelos (Santiago)
+  - name: "Grafitos"
+    lat: -33.4288
+    lng: -70.6113
+    online: false
+    source: comuna
+  # onplay.cl publica Merced 832 Local 54, Santiago (geo del sitio)
+  - name: "OnPlay Singles"
+    lat: -33.4376
+    lng: -70.6486
+    online: false
+    source: maps
+  # Santiago: punto de retiro Scry El Reino de los Duelos (Huérfanos 786)
+  - name: "Mana Surge"
+    lat: -33.4377
+    lng: -70.6511
+    online: false
+    source: comuna
+  # sin dato confiable; Scry solo dice región Tarapacá
+  - name: "Ineko Card Shop"
+    lat: null
+    lng: null
+    online: false
+  # magic4ever.cl/contact: Moneda 840, Santiago (geo del sitio)
+  - name: "Magic4Ever"
+    lat: -33.4449
+    lng: -70.6549
+    online: false
+    source: maps
+  # sin dato confiable; Scry solo dice región Metropolitana de Santiago
+  - name: "moxes"
+    lat: null
+    lng: null
+    online: false
+  # gamequest.cl/contact: Suecia 42 of. 1001, Providencia (geo del sitio)
+  - name: "GameQuest"
+    lat: -33.4211
+    lng: -70.6077
+    online: false
+    source: maps
+  # cartaslafortaleza.cl/contact: Balmaceda 441, Punta Arenas (geo del sitio)
+  - name: "Cartas La Fortaleza"
+    lat: -53.1349
+    lng: -70.9121
+    online: false
+    source: maps
+  # sin dato confiable
+  - name: "LaCripta"
+    lat: null
+    lng: null
+    online: false
+  # Lo Barnechea: título Scry; retiros en PiedraBruja y Cartonazo
+  - name: "Fallen Angel"
+    lat: -33.3616
+    lng: -70.5052
+    online: false
+    source: comuna
+  # sin dato confiable
+  - name: "Dominio Arcano"
+    lat: null
+    lng: null
+    online: false
+  # sin dato confiable; Scry solo dice región Valparaíso
+  - name: "Kydroukair"
+    lat: null
+    lng: null
+    online: false
+  # Providencia: punto de retiro Scry PiedraBruja (Av. Providencia 1100); la región Scry dice Valparaíso
+  - name: "Zanahoria"
+    lat: -33.4288
+    lng: -70.6113
+    online: false
+    source: comuna
+  # sin dato confiable; Scry solo dice región Los Lagos
+  - name: "laipp's store"
+    lat: null
+    lng: null
+    online: false
+  # paytowin.cl enlace Maps "PaytoWin", Av. Apoquindo 7331, Las Condes
+  - name: "PayToWin"
+    lat: -33.40906
+    lng: -70.55268
+    online: false
+    source: maps
+  # sin dato confiable; Scry solo dice región Libertador Gral. Bernardo O’Higgins
+  - name: "Naipes Embrujados TCG"
+    lat: null
+    lng: null
+    online: false
+  # chronomagic.cl/contact: Av. Macul 2594 (Nominatim lo ubica en Macul)
+  - name: "ChronoMagic"
+    lat: -33.47854
+    lng: -70.59886
+    online: false
+    source: address
+  # sin dato confiable
+  - name: "HunterCard TCG"
+    lat: null
+    lng: null
+    online: false
+  # Ñuñoa: punto de retiro Scry Pedro de Valdivia 3462; Nominatim no halló el número
+  - name: "Set & Play"
+    lat: -33.4543
+    lng: -70.5936
+    online: false
+    source: comuna
+  # Providencia: punto de retiro Scry PiedraBruja (Av. Providencia 1100); también El Reino y Zendicard
+  - name: "Magic Master"
+    lat: -33.4288
+    lng: -70.6113
+    online: false
+    source: comuna
+  # San Miguel: título Scry; retiro en Zendicard
+  - name: "Bazar de Waldosky"
+    lat: -33.486
+    lng: -70.6495
+    online: false
+    source: comuna
+  # sin dato confiable; Scry solo dice región Los Lagos
+  - name: "La resistencia de Gerrard"
+    lat: null
+    lng: null
+    online: false
+  # sin dato confiable; Scry solo dice región Valparaíso
+  - name: "Woodedcard"
+    lat: null
+    lng: null
+    online: false
+  # Puerto Montt: dragondurmiente.cl: retiro presencial en Puerto Montt
+  - name: "Dragon Durmiente"
+    lat: -41.4718
+    lng: -72.9396
+    online: false
+    source: comuna
+  # sin dato confiable; Scry solo dice región Metropolitana de Santiago
+  - name: "Wither and Bloom"
+    lat: null
+    lng: null
+    online: false
+  # sin dato confiable; Scry solo dice región Metropolitana de Santiago
+  - name: "Tiendálogo"
+    lat: null
+    lng: null
+    online: false
+  # sin dato confiable; Scry solo dice región Metropolitana de Santiago
+  - name: "SlimeTcg"
+    lat: null
+    lng: null
+    online: false
+  # Santiago: descripción Scry: cercanías a metro U. de Chile
+  - name: "Mox & Mana"
+    lat: -33.4377
+    lng: -70.6511
+    online: false
+    source: comuna
+  # Providencia: punto de retiro Scry PiedraBruja (Av. Providencia 1100); también El Reino (Santiago)
+  - name: "El Bazar de Olguis"
+    lat: -33.4288
+    lng: -70.6113
+    online: false
+    source: comuna
+  # sin dato confiable
+  - name: "Cartas del Nexo"
+    lat: null
+    lng: null
+    online: false
+  # metagame.cl: José Manuel Infante 100, Providencia (Nominatim)
+  - name: "MetaGame"
+    lat: -33.4328
+    lng: -70.62349
+    online: false
+    source: address
+  # frikicards.cl/contact: Apoquindo 6410 of. 605, Las Condes (geo del sitio)
+  - name: "Friki Cards"
+    lat: -33.4083
+    lng: -70.5485
+    online: false
+    source: maps
+  # zendicard.cl enlace Maps "ZendiCard", León Prado 1091, San Miguel
+  - name: "Zendicard"
+    lat: -33.50494
+    lng: -70.655
+    online: false
+    source: maps
+  # Providencia: descripción Scry: entregas en metro Salvador
+  - name: "mtgpox"
+    lat: -33.4288
+    lng: -70.6113
+    online: false
+    source: comuna
+  # sin dato confiable
+  - name: "BloodMoon"
+    lat: null
+    lng: null
+    online: false
+  # Santiago: descripción Scry: retiro en Metro Bellas Artes
+  - name: "Bowito"
+    lat: -33.4377
+    lng: -70.6511
+    online: false
+    source: comuna
+  # Santiago: descripción Scry: retiros en El Reino de los Duelos
+  - name: "The Stack"
+    lat: -33.4377
+    lng: -70.6511
+    online: false
+    source: comuna
+  # sin dato confiable; Scry solo dice región Valparaíso
+  - name: "CardPlanet"
+    lat: null
+    lng: null
+    online: false
+  # Antofagasta: descripción Scry: desde la ciudad de Antofagasta
+  - name: "Junkyard Cards"
+    lat: -23.6464
+    lng: -70.398
+    online: false
+    source: comuna
+  # sin dato confiable; Scry solo dice región Biobío
+  - name: "DinoMTG"
+    lat: null
+    lng: null
+    online: false
+  # Providencia: punto de retiro Scry PiedraBruja (Av. Providencia 1100); también El Reino (Santiago)
+  - name: "Tienda Coton"
+    lat: -33.4288
+    lng: -70.6113
+    online: false
+    source: comuna
+  # sin dato confiable
+  - name: "Cartas Magicsur"
+    lat: null
+    lng: null
+    online: false
+  # sin dato confiable
+  - name: "AFK Store"
+    lat: null
+    lng: null
+    online: false
+  # Providencia: punto de retiro Scry PiedraBruja (Av. Providencia 1100)
+  - name: "Magic Monkey store"
+    lat: -33.4288
+    lng: -70.6113
+    online: false
+    source: comuna
+  # sin dato confiable; Scry solo dice región Metropolitana de Santiago
+  - name: "ctmagic"
+    lat: null
+    lng: null
+    online: false
+  # sin dato confiable; Scry solo dice región Metropolitana de Santiago
+  - name: "Seboca's Box"
+    lat: null
+    lng: null
+    online: false
+  # rivendelelconcilio.cl/contact: Moneda 772 local 0101-a, Santiago (Nominatim)
+  - name: "Rivendel El Concilio"
+    lat: -33.44176
+    lng: -70.64741
+    online: false
+    source: address
+  # sin dato confiable; Scry solo dice región Coquimbo
+  - name: "Extra Turn"
+    lat: null
+    lng: null
+    online: false
+  # Santiago: descripción Scry: metro Santa Isabel o Irarrázaval; también PiedraBruja
+  - name: "Juaco's MTG shop"
+    lat: -33.4377
+    lng: -70.6511
+    online: false
+    source: comuna
+  # Santiago: título Scry; retiros en Providencia, Vitacura y Santiago
+  - name: "Hot Singles in Your Area"
+    lat: -33.4377
+    lng: -70.6511
+    online: false
+    source: comuna
+  # Providencia: punto de retiro Scry PiedraBruja (Av. Providencia 1100); también Zendicard (San Miguel)
+  - name: "El Bazar del Lalo"
+    lat: -33.4288
+    lng: -70.6113
+    online: false
+    source: comuna
+  # descripción Scry: tienda online, envíos a todo Chile
+  - name: "CodexMTG"
+    lat: null
+    lng: null
+    online: true
+  # Estación Central: descripción Scry: retiro en la comuna de Estación Central
+  - name: "Challa's Store"
+    lat: -33.4536
+    lng: -70.6899
+    online: false
+    source: comuna
+  # Providencia: punto de retiro Scry PiedraBruja (Av. Providencia 1100); también El Reino, Set & Play y metros del centro
+  - name: "TengoEsaSingle"
+    lat: -33.4288
+    lng: -70.6113
+    online: false
+    source: comuna
+  # sin dato confiable; Scry solo dice región Los Lagos
+  - name: "Peluca MTG"
+    lat: null
+    lng: null
+    online: false
+  # Ñuñoa: punto de retiro Scry Set & Play
+  - name: "Necropolis"
+    lat: -33.4543
+    lng: -70.5936
+    online: false
+    source: comuna
+  # Providencia: punto de retiro Scry PiedraBruja (Av. Providencia 1100)
+  - name: "Ertai"
+    lat: -33.4288
+    lng: -70.6113
+    online: false
+    source: comuna
+  # Pucón: nombre de la tienda; región Scry Araucanía
+  - name: "El Crisol de Pucon"
+    lat: -39.2731
+    lng: -71.9778
+    online: false
+    source: comuna
+  # sin dato confiable; Scry solo dice región Metropolitana de Santiago
+  - name: "Aecollector"
+    lat: null
+    lng: null
+    online: false
+  # Providencia: punto de retiro Scry PiedraBruja (Av. Providencia 1100); también El Reino (Santiago)
+  - name: "The Gallery"
+    lat: -33.4288
+    lng: -70.6113
+    online: false
+    source: comuna
+  # sin dato confiable; Scry solo dice región Coquimbo
+  - name: "NyanGang"
+    lat: null
+    lng: null
+    online: false
+  # sin dato confiable; Scry solo dice región Metropolitana de Santiago
+  - name: "No Leo Las Cartas"
+    lat: null
+    lng: null
+    online: false
+  # Providencia: punto de retiro Scry PiedraBruja (Av. Providencia 1100); también El Reino; la región Scry dice Valparaíso
+  - name: "Nesta"
+    lat: -33.4288
+    lng: -70.6113
+    online: false
+    source: comuna
+  # Providencia: punto de retiro Scry PiedraBruja (Av. Providencia 1100)
+  - name: "Iceend"
+    lat: -33.4288
+    lng: -70.6113
+    online: false
+    source: comuna
+  # Providencia: punto de retiro Scry PiedraBruja (Av. Providencia 1100); también El Reino (Santiago)
+  - name: "Gazoo"
+    lat: -33.4288
+    lng: -70.6113
+    online: false
+    source: comuna
+  # Providencia: punto de retiro Scry PiedraBruja (Av. Providencia 1100)
+  - name: "Challa Ramosiana"
+    lat: -33.4288
+    lng: -70.6113
+    online: false
+    source: comuna
+  # Providencia: punto de retiro Scry PiedraBruja (Av. Providencia 1100)
+  - name: "Chadblo store"
+    lat: -33.4288
+    lng: -70.6113
+    online: false
+    source: comuna
+  # sin dato confiable
+  - name: "CENTAURO MTG"
+    lat: null
+    lng: null
+    online: false
+  # Providencia: punto de retiro Scry PiedraBruja (Av. Providencia 1100); también Set & Play (Ñuñoa)
+  - name: "Bazar del  León"
+    lat: -33.4288
+    lng: -70.6113
+    online: false
+    source: comuna
+  # Providencia: descripción Scry: entregas en metro Los Leones
+  - name: "solteraslascartas"
+    lat: -33.4288
+    lng: -70.6113
+    online: false
+    source: comuna
+  # sin dato confiable; Scry solo dice región Atacama
+  - name: "batossai"
+    lat: null
+    lng: null
+    online: false
+  # Providencia: punto de retiro Scry PiedraBruja (Av. Providencia 1100)
+  - name: "Ulamog Store"
+    lat: -33.4288
+    lng: -70.6113
+    online: false
+    source: comuna
+  # sin dato confiable
+  - name: "TheYard"
+    lat: null
+    lng: null
+    online: false
+  # sin dato confiable
+  - name: "Singles Winterland"
+    lat: null
+    lng: null
+    online: false
+  # sin dato confiable; Scry solo dice región Metropolitana de Santiago
+  - name: "Memu Challas"
+    lat: null
+    lng: null
+    online: false
+  # sin dato confiable; Scry solo dice región Valparaíso
+  - name: "Have Store"
+    lat: null
+    lng: null
+    online: false
+  # sin dato confiable; Scry solo dice región Metropolitana de Santiago
+  - name: "Evans"
+    lat: null
+    lng: null
+    online: false
+  # Providencia: punto de retiro Scry PiedraBruja (Av. Providencia 1100); también Cartonazo (Vitacura)
+  - name: "Carpeta de X"
+    lat: -33.4288
+    lng: -70.6113
+    online: false
+    source: comuna
+  # sin dato confiable; Scry solo dice región Metropolitana de Santiago
+  - name: "CAMPIMANA"
+    lat: null
+    lng: null
+    online: false
+  # Providencia: punto de retiro Scry PiedraBruja (Av. Providencia 1100)
+  - name: "Bodega Tolariana"
+    lat: -33.4288
+    lng: -70.6113
+    online: false
+    source: comuna
+  # Providencia: punto de retiro Scry PiedraBruja (Av. Providencia 1100)
+  - name: "Armando Mazos Store"
+    lat: -33.4288
+    lng: -70.6113
+    online: false
+    source: comuna
