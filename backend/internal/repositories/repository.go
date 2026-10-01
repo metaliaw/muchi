@@ -64,6 +64,10 @@ func (r *Repository) SaveOffers(ctx context.Context, key string, offers []model.
 	return r.database.SaveOffers(ctx, key, offers, ttl)
 }
 
+func (r *Repository) GetOffer(ctx context.Context, id string) (model.Offer, error) {
+	return r.database.GetOffer(ctx, id)
+}
+
 func (r *Repository) DropOffers(ctx context.Context, key string) error {
 	return r.database.DropOffers(ctx, key)
 }

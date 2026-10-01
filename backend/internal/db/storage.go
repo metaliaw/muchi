@@ -65,9 +65,10 @@ const throttleCooldown = 30 * time.Second
 // circuitThreshold Counts the Falls in a row that Leave a Store unasked, and
 // circuitCooldown the first Wait. circuitCeiling Caps the Doubling.
 const (
-	circuitThreshold = 5
-	circuitCooldown  = time.Minute
-	circuitCeiling   = time.Hour
+	circuitThreshold         = 5
+	circuitCooldown          = time.Minute
+	circuitCeiling           = time.Hour
+	maxOfferIndexBatchWrites = 500
 )
 
 // PaceSources Tunes both Waits. Zero Keeps the Default, so a Caller may Set
@@ -121,8 +122,9 @@ type itemRecord struct {
 }
 
 type valueRecord struct {
-	Payload   []byte    `firestore:"payload"`
-	ExpiresAt time.Time `firestore:"expires_at,omitempty"`
+	Payload      []byte    `firestore:"payload"`
+	ExpiresAt    time.Time `firestore:"expires_at,omitempty"`
+	OfferIndexed bool      `firestore:"offer_indexed,omitempty"`
 }
 
 type requestRecord struct {
@@ -377,7 +379,19 @@ func (s *Store) LoadOffers(ctx context.Context, key string) ([]model.Offer, bool
 	}
 	var items []offerPayload
 	err = json.Unmarshal(record.Payload, &items)
-	return buildOfferList(items), err == nil, err
+	if err != nil {
+		return nil, false, err
+	}
+	offers := buildOfferList(items)
+	if !record.OfferIndexed {
+		if err := s.indexMissingOffers(ctx, offers, record.ExpiresAt); err != nil {
+			return nil, false, err
+		}
+		if _, err := document.Ref.Update(ctx, []firestorelib.Update{{Path: "offer_indexed", Value: true}}); err != nil {
+			return nil, false, err
+		}
+	}
+	return offers, true, nil
 }
 
 func (s *Store) SaveOffers(ctx context.Context, key string, items []model.Offer, ttl time.Duration) error {
@@ -387,9 +401,118 @@ func (s *Store) SaveOffers(ctx context.Context, key string, items []model.Offer,
 	if err != nil {
 		return err
 	}
-	record := valueRecord{Payload: data, ExpiresAt: time.Now().UTC().Add(ttl)}
+	expiresAt := time.Now().UTC().Add(ttl)
+	record := valueRecord{Payload: data, ExpiresAt: expiresAt}
 	_, err = s.client.Collection("offer_cache").Doc(hashKey(key)).Set(ctx, record)
+	if err != nil {
+		return err
+	}
+	if err := s.saveOfferIndex(ctx, items, expiresAt); err != nil {
+		return err
+	}
+	_, err = s.client.Collection("offer_cache").Doc(hashKey(key)).Update(ctx, []firestorelib.Update{{Path: "offer_indexed", Value: true}})
 	return err
+}
+
+func (s *Store) saveOfferIndex(ctx context.Context, items []model.Offer, expiresAt time.Time) error {
+	for start := 0; start < len(items); start += maxOfferIndexBatchWrites {
+		end := min(start+maxOfferIndexBatchWrites, len(items))
+		batch := s.client.Batch()
+		writes := 0
+		for _, item := range items[start:end] {
+			if item.ID == "" {
+				continue
+			}
+			payload, err := json.Marshal(renderOffer(item))
+			if err != nil {
+				return err
+			}
+			record := valueRecord{Payload: payload, ExpiresAt: expiresAt}
+			batch.Set(s.client.Collection("offers").Doc(hashKey(item.ID)), record)
+			writes++
+		}
+		if writes == 0 {
+			continue
+		}
+		if _, err := batch.Commit(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Store) indexMissingOffers(ctx context.Context, items []model.Offer, expiresAt time.Time) error {
+	indexed := make([]model.Offer, 0, len(items))
+	for _, item := range items {
+		if item.ID != "" {
+			indexed = append(indexed, item)
+		}
+	}
+	for start := 0; start < len(indexed); start += maxOfferIndexBatchWrites {
+		end := min(start+maxOfferIndexBatchWrites, len(indexed))
+		group := indexed[start:end]
+		references := make([]*firestorelib.DocumentRef, len(group))
+		for index, item := range group {
+			references[index] = s.client.Collection("offers").Doc(hashKey(item.ID))
+		}
+		documents, err := s.client.GetAll(ctx, references)
+		if err != nil {
+			return err
+		}
+		batch := s.client.Batch()
+		writes := 0
+		for index, document := range documents {
+			if document.Exists() {
+				var record valueRecord
+				if err := document.DataTo(&record); err == nil && record.ExpiresAt.After(time.Now().UTC()) {
+					continue
+				}
+			}
+			payload, err := json.Marshal(renderOffer(group[index]))
+			if err != nil {
+				return err
+			}
+			record := valueRecord{Payload: payload, ExpiresAt: expiresAt}
+			batch.Set(references[index], record)
+			writes++
+		}
+		if writes == 0 {
+			continue
+		}
+		if _, err := batch.Commit(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// GetOffer Reads one Stable Offer Snapshot until the Cache Entry Expires.
+func (s *Store) GetOffer(ctx context.Context, id string) (model.Offer, error) {
+	ctx, cancel := boundContext(ctx)
+	defer cancel()
+	document, err := s.client.Collection("offers").Doc(hashKey(id)).Get(ctx)
+	if status.Code(err) == codes.NotFound {
+		return model.Offer{}, search.ErrNotFound
+	}
+	if err != nil {
+		return model.Offer{}, err
+	}
+	var record valueRecord
+	if err := document.DataTo(&record); err != nil {
+		return model.Offer{}, err
+	}
+	if !record.ExpiresAt.After(time.Now().UTC()) {
+		return model.Offer{}, search.ErrNotFound
+	}
+	var payload offerPayload
+	if err := json.Unmarshal(record.Payload, &payload); err != nil {
+		return model.Offer{}, err
+	}
+	offer := buildOffer(payload)
+	if offer.ID != id {
+		return model.Offer{}, search.ErrNotFound
+	}
+	return offer, nil
 }
 
 // DropOffers Forgets one Cached Entry; a Missing Entry is already Forgotten.

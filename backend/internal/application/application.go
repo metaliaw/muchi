@@ -31,6 +31,7 @@ type Vault interface {
 	search.SearchRepository
 	search.SearchItemRepository
 	search.OfferCache
+	search.OfferReader
 	search.HealthStore
 	search.OrderRepository
 	sweep.WaitingCounter
@@ -119,6 +120,7 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		Orderer:           stores.Orderer{Sessions: fetcher, Config: storeConfig, BuyerName: config.OrderBuyerName, BuyerEmail: config.OrderBuyerEmail},
 		Orders:            store,
 		Cache:             store,
+		Offers:            store,
 		CacheNamespace:    search.HashPayload([]any{"search-providers-v9", storeConfig}) + ":",
 		CacheTTL:          config.OfferCacheTTL,
 		EmptyCacheTTL:     config.OfferCacheEmptyTTL,

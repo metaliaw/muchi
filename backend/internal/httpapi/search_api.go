@@ -10,6 +10,7 @@ import (
 
 func (a API) registerSearchRoutes(mux *http.ServeMux) {
 	mux.Handle("GET /v1/supported-games", a.authenticate(http.HandlerFunc(a.listSupportedGames)))
+	mux.Handle("GET /v1/offers/{offer_id}", a.authenticate(http.HandlerFunc(a.getOffer)))
 	mux.Handle("POST /v1/searches", a.authenticate(http.HandlerFunc(a.createSearch)))
 	mux.Handle("GET /v1/searches/{search_id}", a.authenticate(http.HandlerFunc(a.getSearch)))
 	mux.Handle("GET /v1/searches/{search_id}/results", a.authenticate(http.HandlerFunc(a.listResults)))
@@ -20,6 +21,15 @@ func (a API) registerSearchRoutes(mux *http.ServeMux) {
 	mux.Handle("POST /v1/searches/{search_id}/orders/links", a.authenticate(http.HandlerFunc(a.linkOrder)))
 	mux.Handle("POST /v1/searches/{search_id}/orders/{order_id}/report", a.authenticate(http.HandlerFunc(a.reportOrder)))
 	mux.Handle("POST /v1/searches/{search_id}/cancel", a.authenticate(http.HandlerFunc(a.cancelSearch)))
+}
+
+func (a API) getOffer(w http.ResponseWriter, r *http.Request) {
+	offer, err := a.Searches.GetOffer(r.Context(), r.PathValue("offer_id"))
+	if err != nil {
+		a.reportError(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, renderOffer(offer))
 }
 
 func (a API) listSupportedGames(w http.ResponseWriter, r *http.Request) {

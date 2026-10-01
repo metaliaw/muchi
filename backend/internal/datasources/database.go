@@ -20,6 +20,7 @@ type Database interface {
 	CountWaitingItems(context.Context, int) (int, error)
 	LoadOffers(context.Context, string) ([]model.Offer, bool, error)
 	SaveOffers(context.Context, string, []model.Offer, time.Duration) error
+	GetOffer(context.Context, string) (model.Offer, error)
 	DropOffers(context.Context, string) error
 	CheckHealth(context.Context) error
 	ListSourceHealth(context.Context) ([]model.SourceHealth, error)

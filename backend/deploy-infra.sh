@@ -61,7 +61,7 @@ existing=$(cloud firestore databases list --filter='name:(default)' --format='va
 if [ -z "$existing" ]; then
 	cloud firestore databases create '--database=(default)' --location="$FIRESTORE_LOCATION" --type=firestore-native
 fi
-for group in searches items item_offers idempotency offer_cache; do
+for group in searches items item_offers idempotency offer_cache offers; do
 	cloud firestore fields ttls update expires_at --collection-group="$group" '--database=(default)' --enable-ttl --async
 done
 result_index=$(cloud firestore indexes composite list \

@@ -72,13 +72,15 @@ flowchart TB
         firestore[(Firestore)]
         searches[(searches)]
         items[(items)]
-        offers[(item_offers)]
+        itemOffers[(item_offers)]
+        offerIndex[(offers)]
         cache[(offer_cache)]
         healthStore[(source_health)]
         ordersStore[(orders)]
         firestore --- searches
         firestore --- items
-        firestore --- offers
+        firestore --- itemOffers
+        firestore --- offerIndex
         firestore --- cache
         firestore --- healthStore
         firestore --- ordersStore

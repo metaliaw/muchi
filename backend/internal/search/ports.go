@@ -64,6 +64,11 @@ type OfferCache interface {
 	SaveOffers(context.Context, string, []model.Offer, time.Duration) error
 }
 
+// OfferReader Reads the latest Offer Snapshot stored under one stable Offer Id.
+type OfferReader interface {
+	GetOffer(context.Context, string) (model.Offer, error)
+}
+
 // HealthStore Reports health through https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml.
 type HealthStore interface {
 	CheckHealth(context.Context) error

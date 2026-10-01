@@ -81,6 +81,26 @@ paths:
                   list: {type: string}
                   refreshed: {type: integer, minimum: 1}
         "404": {$ref: "#/components/responses/NotFound"}
+  /offers/{offer_id}:
+    parameters:
+      - name: offer_id
+        in: path
+        required: true
+        description: Stable id assigned by the source that publishes this offer
+        schema: {type: string, minLength: 1}
+    get:
+      description: >-
+        Reads the latest offer snapshot indexed by id. The snapshot is shared
+        across searches and expires with the cache entry that last refreshed it;
+        it is not a live stock check. Use the search stock route to ask the store
+        about current availability.
+      responses:
+        "200":
+          description: Cached offer snapshot
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Offer"}
+        "404": {$ref: "#/components/responses/NotFound"}
   /searches:
     post:
       parameters:
@@ -498,7 +518,7 @@ components:
   responses:
     BadRequest: {description: Invalid request, content: {application/json: {schema: {$ref: "#/components/schemas/Error"}}}}
     Conflict: {description: Idempotency or state conflict, content: {application/json: {schema: {$ref: "#/components/schemas/Error"}}}}
-    NotFound: {description: Search not found, content: {application/json: {schema: {$ref: "#/components/schemas/Error"}}}}
+    NotFound: {description: Resource not found or its snapshot expired, content: {application/json: {schema: {$ref: "#/components/schemas/Error"}}}}
     InternalError: {description: Internal error, content: {application/json: {schema: {$ref: "#/components/schemas/Error"}}}}
   schemas:
     CreateSearch:

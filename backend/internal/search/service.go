@@ -27,6 +27,7 @@ type Service struct {
 	Orderer           OrderPlacer
 	Orders            OrderRepository
 	Cache             OfferCache
+	Offers            OfferReader
 	CacheNamespace    string
 	Tasks             TaskQueue
 	CacheTTL          time.Duration
@@ -86,6 +87,14 @@ func (s Service) FindCardOffers(ctx context.Context, game model.Game, query mode
 		return nil, nil, ErrInvalid
 	}
 	return s.collectOffers(ctx, game, query)
+}
+
+// GetOffer Reads the Latest Cached Snapshot for one Stable Offer Id.
+func (s Service) GetOffer(ctx context.Context, id string) (model.Offer, error) {
+	if strings.TrimSpace(id) == "" || s.Offers == nil {
+		return model.Offer{}, ErrInvalid
+	}
+	return s.Offers.GetOffer(ctx, id)
 }
 
 // collectOffers Keys the Cache by Match Mode and Product Kind too: a wide

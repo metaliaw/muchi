@@ -42,6 +42,7 @@ and development decisions.
 
 ### Checkout
 
+- [Cart and Reservation Data Model](docs/checkout/cart-and-reservation-data-model.md)
 - [Web Agent Purchases Proposal](docs/checkout/web-agent-purchases-proposal.md)
 - [Agentic Commerce Protocols](docs/checkout/agentic-commerce-protocols.md)
 - [Checkout Without Agents](docs/checkout/agentless-checkout.md)
@@ -190,8 +191,8 @@ Required variables: `GOOGLE_CLOUD_PROJECT`, `MUCHI_API_TOKEN`,
 `MUCHI_TASK_SERVICE_ACCOUNT`.
 
 Enable a TTL policy on `expires_at` for the `searches`, `items`, `item_offers`,
-`idempotency`, and `offer_cache` collection groups. The code rejects expired
-documents even if Firestore has not deleted them yet.
+`idempotency`, `offer_cache`, and `offers` collection groups. The code rejects
+expired documents even if Firestore has not deleted them yet.
 
 ## Deployment
 

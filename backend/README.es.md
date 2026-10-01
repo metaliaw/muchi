@@ -44,6 +44,7 @@ documentan la API y las decisiones de desarrollo.
 
 ### Checkout
 
+- [Modelo de datos para carritos y reservas](docs/checkout/cart-and-reservation-data-model.es.md)
 - [Propuesta de compras con agentes web](docs/checkout/web-agent-purchases-proposal.es.md)
 - [Protocolos de comercio agéntico](docs/checkout/agentic-commerce-protocols.es.md)
 - [Checkout sin agentes](docs/checkout/agentless-checkout.es.md)
@@ -198,8 +199,8 @@ Variables requeridas: `GOOGLE_CLOUD_PROJECT`, `MUCHI_API_TOKEN`,
 `MUCHI_TASK_SERVICE_ACCOUNT`.
 
 Activa una política TTL sobre el campo `expires_at` en los collection groups
-`searches`, `items`, `item_offers`, `idempotency` y `offer_cache`. El código
-rechaza documentos vencidos aunque Firestore aún no los haya eliminado.
+`searches`, `items`, `item_offers`, `idempotency`, `offer_cache` y `offers`. El
+código rechaza documentos vencidos aunque Firestore aún no los haya eliminado.
 
 ## Despliegue
 
