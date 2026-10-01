@@ -39,6 +39,10 @@ class FakeSearches:
     def read_search(self, search_id):
         return self.state
 
+    def read_offer(self, offer_id):
+        return next((offer for item in self.items for offer in item.offers
+                     if offer.offer_id == offer_id), None)
+
     def read_results(self, search_id, after=0):
         remaining = tuple(item for item in self.items if item.sequence > after)
         cursor = remaining[-1].sequence if remaining else after
@@ -649,6 +653,17 @@ def test_a_pick_outside_the_search_is_ignored(client):
     ]}).json()
 
     assert [(row["store"], row["cards"]) for row in plan["stores"]] == [("Dudosa", 2)]
+
+
+def test_chosen_cart_marks_missing_offer_as_stale(client):
+    """Una Oferta ausente se devuelve para que el Front bloquee el checkout."""
+    http, _ = client
+
+    plan = http.post("/api/searches/abc/cart?shipping=0", json={"picks": [
+        {"offer_id": "of-deleted", "units": 1},
+    ]}).json()
+
+    assert plan["stale_offers"] == ["of-deleted"]
 
 
 def test_the_config_says_how_long_a_stock_lasts(client):
