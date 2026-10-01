@@ -13,6 +13,7 @@ from decimal import Decimal
 from muchi.mtg import optimizer, treatment
 from muchi.mtg.models import Offer, Order
 from muchi.mtg.search import SearchItem, SearchOffer, SearchState, StockCheck
+from server import places
 
 # La API marca "unknown" cuando la Fuente no publica Stock: Agregadores como
 # scry.cl indexan Precios, no Inventario. No es Ausencia de Carta.
@@ -113,6 +114,9 @@ def build_offer(offer: SearchOffer, muchi_dolar: int,
         "edition": offer.edition,
         "finish": offer.finish,
         "locations": list(offer.locations),
+        # Dónde Queda la Tienda, para Ordenar por Cercanía. Nulo si es online
+        # o si `config/stores.yaml` todavía no lo Sabe.
+        "location": places.locate_store(offer.store),
         # La Foto de la Tienda. Es la unica que una Caja sellada va a tener.
         "image": offer.image,
         "metadata": offer.metadata,

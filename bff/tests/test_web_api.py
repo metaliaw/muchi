@@ -1106,3 +1106,48 @@ def test_report_needs_a_number(client):
     http, _ = client
     assert http.post("/api/searches/abc/orders/order-1/report",
                      json={"store_order": ""}).status_code == 422
+
+
+# ------------------------------------------------------- el Lugar de la Tienda
+from server import places  # noqa: E402
+
+
+def test_an_offer_carries_its_store_location(monkeypatch):
+    monkeypatch.setattr(places, "load_places", lambda: places.validate_stores({"stores": [
+        {"name": "Bazar del León", "lat": -33.45, "lng": -70.66, "source": "comuna"},
+    ]}))
+
+    row = presenter.build_offer(build_offer(store="Bazar del  León"), muchi_dolar=1000)
+
+    assert row["location"] == {"lat": -33.45, "lng": -70.66}
+
+
+def test_an_online_or_unknown_store_has_no_location(monkeypatch):
+    monkeypatch.setattr(places, "load_places", lambda: places.validate_stores({"stores": [
+        {"name": "Nube", "lat": -33.4, "lng": -70.6, "online": True, "source": "maps"},
+        {"name": "Sin Dato", "lat": None, "lng": None},
+    ]}))
+
+    for store in ("Nube", "Sin Dato", "Desconocida"):
+        assert presenter.build_offer(build_offer(store=store), muchi_dolar=1000)["location"] is None
+
+
+def test_a_bad_stores_file_stops_the_start():
+    with pytest.raises(ValueError):
+        places.validate_stores({"stores": [{"name": "X", "lat": 120, "lng": 0}]})
+    with pytest.raises(ValueError):
+        places.validate_stores({"stores": [{"name": "X", "city": "Santiago"}]})
+
+
+def test_a_coordinate_must_say_where_it_came_from():
+    with pytest.raises(ValueError):
+        places.validate_stores({"stores": [{"name": "X", "lat": -33.4, "lng": -70.6}]})
+    with pytest.raises(ValueError):
+        places.validate_stores({"stores": [{"name": "X", "lat": -33.4, "lng": -70.6, "source": "rumor"}]})
+    with pytest.raises(ValueError):
+        places.validate_stores({"stores": [{"name": "X", "source": "comuna"}]})
+
+
+def test_the_shipped_stores_file_loads():
+    places.load_places.cache_clear()
+    assert isinstance(places.load_places(), dict)
