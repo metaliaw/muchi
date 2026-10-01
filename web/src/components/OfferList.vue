@@ -27,7 +27,18 @@ const units = defineModel('units', { type: Object, default: () => ({}) })
 // Una Agotada no se Compra. Se Sigue Mostrando —su Precio Dice algo del
 // Mercado— pero en gris y sin Selector: Ofrecerla sería Ofrecer una Compra
 // que la Tienda ya Dijo que no Puede hacer.
-const pickable = (offer) => canPick(offer)
+const props = defineProps({
+  items: { type: Array, default: () => [] },
+  offers: { type: Array, default: () => [] },
+  summary: { type: Object, default: null },
+  notices: { type: Array, default: () => [] },
+  placeholder: { type: String, default: '' },
+  advertiseGroups: { type: Boolean, default: false },
+  staleOfferIds: { type: Array, default: () => [] },
+})
+
+const isStale = (offer) => props.staleOfferIds.includes(offer.offer_id)
+const pickable = (offer) => !isStale(offer) && canPick(offer)
 const bought = (offer) => units.value[offer.offer_id] || 0
 
 // Cuántas Copias de esta Carta Faltan por Elegir, sin Contar esta Oferta.
@@ -87,15 +98,6 @@ const printingOf = (offer) => ({
   url: offer.metadata?.url || '',
 })
 
-const props = defineProps({
-  items: { type: Array, default: () => [] },
-  offers: { type: Array, default: () => [] },
-  summary: { type: Object, default: null },
-  notices: { type: Array, default: () => [] },
-  placeholder: { type: String, default: '' },
-  advertiseGroups: { type: Boolean, default: false },
-})
-
 // Cuántas Copias Pide la Lista de cada Carta. Con eso se Reparte sobre las
 // Ofertas que se Ven; el Contador Muestra el Tope de la Tienda, no esto.
 const asked = computed(() => Object.fromEntries(
@@ -148,7 +150,10 @@ const grouped = computed(() => groups.value.length > 1)
 const spread = ref({})
 function spreadNow(force = false) {
   if (!force && JSON.stringify(units.value) !== JSON.stringify(spread.value)) return
-  spread.value = spreadUnits(groups.value, (group) => askedFor(group.rows[0]),
+  const eligibleGroups = groups.value.map((group) => ({
+    ...group, rows: group.rows.filter((offer) => !isStale(offer)),
+  }))
+  spread.value = spreadUnits(eligibleGroups, (group) => askedFor(group.rows[0]),
                              criterion.value)
   units.value = { ...spread.value }
 }
@@ -228,7 +233,8 @@ watch(() => groups.value, () => spreadNow(), { immediate: true })
     <article v-for="(offer, index) in group.rows" :key="`${offer.url}-${index}`"
              class="mu-panel mu-oferta"
              :class="{ mejor: offer.best, elegida: bought(offer) > 0,
-                       agotada: offer.offer_id && !pickable(offer),
+                       desactualizada: isStale(offer),
+                       agotada: offer.offer_id && !isStale(offer) && !pickable(offer),
                        tomable: offer.offer_id && pickable(offer) }"
              @click="touchOffer(offer, $event)"
              @mouseenter="cheerCheap(offer)">
@@ -239,7 +245,7 @@ watch(() => groups.value, () => spreadNow(), { immediate: true })
              :aria-label="`Compra ${offer.card_name} en ${offer.store}`"
              @change="toggleOffer(group, offer, $event.target.checked)" />
       <span v-else-if="offer.offer_id" class="mu-elige mu-elige--fuera"
-            aria-hidden="true" title="Agotada: no se puede comprar"></span>
+            aria-hidden="true" :title="isStale(offer) ? 'Oferta desactualizada' : 'Agotada: no se puede comprar'"></span>
 
       <!-- Cuántas Copias Salen de acá. Cero es lo normal, y el Total al lado
            Evita Contar de memoria cuántas Faltan. -->
@@ -263,7 +269,7 @@ watch(() => groups.value, () => spreadNow(), { immediate: true })
         <span class="mu-copias__rotulo">Copias</span>
       </div>
       <span v-else-if="offer.offer_id" class="mu-copias mu-copias--fuera">
-        <span class="mu-copias__rotulo">Agotada</span>
+        <span class="mu-copias__rotulo">{{ isStale(offer) ? 'Desactualizada' : 'Agotada' }}</span>
       </span>
 
       <div class="mu-oferta-cuerpo">
@@ -327,7 +333,7 @@ watch(() => groups.value, () => spreadNow(), { immediate: true })
 /* Se Puede Tocar para Sumar, y la Mano lo Dice antes que cualquier Cartel. */
 .mu-oferta.tomable { cursor: pointer; }
 .mu-oferta.tomable:hover { border-color: var(--mu-rosa); }
-.mu-oferta.agotada { opacity: .55; }
+.mu-oferta.agotada, .mu-oferta.desactualizada { opacity: .55; }
 .mu-oferta.agotada .mu-precio { color: var(--mu-tinta-sw); }
 .mu-copias--fuera {
   flex: none; min-width: 4.6rem; padding: 10px 12px; border-radius: 16px;
