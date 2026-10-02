@@ -18,11 +18,15 @@ Work not yet distilled into them lives in [STORY.md](STORY.md).
 
 ## Paired Repositories
 
-These repositories are commonly worked on locally together under
-`~/src/github.com/`:
+These repositories are commonly worked on locally together. Paths are
+relative to this repository:
 
-- `cangrejometralleta/muchi-api` — API contract and Firestore data.
-- `metaliaw/muchi` — browser interface and BFF.
+- `.` — `cangrejometralleta/muchi-api`, API contract and Firestore data (this
+  repository).
+- `../../metaliaw/muchi` — browser interface and BFF.
+- `../OneTwoThree` — the manifesto: Rules, Values and
+  Patterns that govern how this repository is read and written. A Pattern or
+  Rule that belongs to every project is written there, not here.
 
 For changes across their boundary, inspect and update both repositories using
 these paths. Do not ask the user for their locations again when both checkouts
