@@ -173,7 +173,7 @@ Came from one practice and has not yet survived a second.
 [Naming](../../canon/rules/naming.md) ·
 [Seams](../../canon/rules/seams.md) ·
 [Comments](../../canon/rules/comments.md) ·
-[Values](../../canon/rules/values.md) *(Provisional)* ·
+[Magic Numbers](../../canon/rules/magic-numbers.md) *(Provisional)* ·
 [Emoji](../../canon/rules/emoji.md)
 
 **The Boundary** —
@@ -192,6 +192,6 @@ Came from one practice and has not yet survived a second.
 [Vendor Integration](../../canon/rules/vendor-integration.md) ·
 [Canonignore](../../canon/rules/canonignore.md) *(Provisional)*
 
-A worked Example Lives in [examples/school](https://github.com/cangrejometralleta/OneTwoThree/blob/f620c09da052d9a43484bef8a097f6406ec21f1d/examples/school),
+A worked Example Lives in [examples/school](https://github.com/cangrejometralleta/OneTwoThree/blob/0f0c4ddc8b3e11e27e700fb2aba52911ac5ec049/examples/school),
 the same service in Go, TypeScript and Java, with
-[the Before](https://github.com/cangrejometralleta/OneTwoThree/blob/f620c09da052d9a43484bef8a097f6406ec21f1d/examples/school/BEFORE.md) reading the original.
+[the Before](https://github.com/cangrejometralleta/OneTwoThree/blob/0f0c4ddc8b3e11e27e700fb2aba52911ac5ec049/examples/school/BEFORE.md) reading the original.

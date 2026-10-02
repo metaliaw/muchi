@@ -26,6 +26,7 @@
 - [Structure](rules/structure.md) — three Beats, not three newlines.
 - [Change Growth](rules/change-growth.md) — pause when one change starts Becoming two. *(Provisional)*
 - [Session Checkpoint](rules/session-checkpoint.md) — state Survives outside the session. *(Provisional)*
+- [Paired Repositories](rules/paired-repositories.md) — Pairs Name each other, the Canon Keeps no Address. *(Provisional)*
 - [Coercion](rules/coercion.md) — authority Stays explicit under pressure.
 - [Script](rules/script.md) — the handler is its Script.
 - [Providers](rules/providers.md) — a Port, never a vendor.
@@ -36,7 +37,7 @@
 - [Unbrand](rules/unbrand.md) — the Work Signs nothing. *(Provisional)*
 - [Naming](rules/naming.md) — Verb + Noun + context.
 - [Shapes](rules/shapes.md) — the entity is never the DTO.
-- [Values](rules/values.md) — the index counts, the name Explains. *(Provisional)*
+- [Magic Numbers](rules/magic-numbers.md) — the index counts, the name Explains. *(Provisional)*
 - [Constants](rules/constants.md) — descriptive files, explicit Environments.
 - [Anti-Patterns](rules/anti-patterns.md) — more than three Responsibilities.
 - [Scripts](rules/scripts.md) — build.sh and run.sh, Everywhere. *(Provisional)*

@@ -26,5 +26,5 @@ func CheckOrderRecord(o Order) bool {
 ```
 
 Three conditions, three names, one Return.  
-The chain in [store_gorm.go](https://github.com/cangrejometralleta/OneTwoThree/blob/f620c09da052d9a43484bef8a097f6406ec21f1d/examples/school/go/store/store_gorm.go)  
+The chain in [store_gorm.go](https://github.com/cangrejometralleta/OneTwoThree/blob/0f0c4ddc8b3e11e27e700fb2aba52911ac5ec049/examples/school/go/store/store_gorm.go)  
 Breaks at the dot for the same reason.

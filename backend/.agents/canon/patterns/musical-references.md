@@ -8,6 +8,10 @@
 - De La Soul, the group —
   the [Rotation](de-la-soul-rotation.md) with no fixed Center,
   and the name DeLaCase Echoes: De. La. Case.
+- De La Soul, *The Magic Number* —
+  Three is the magic number, and so Three is the Unit here.
+  It names [Magic Numbers](../rules/magic-numbers.md),
+  where a Number that means something Earns a Name.
 - David "Trugoy the Dove" Jolicoeur —
   the Name Dove Honors.
 - Floor, *Dove* —

@@ -40,3 +40,4 @@
 - [Branches Give Cooperation a Path](patterns/branches-give-cooperation-a-path.md)
 - [The Harness must Die](patterns/the-harness-must-die.md)
 - [The Release that never Shipped](patterns/the-release-that-never-shipped.md)
+- [The Path that Travels](patterns/the-path-that-travels.md)

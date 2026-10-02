@@ -65,11 +65,11 @@ func BuildOrderReceipt(id string, items []Item, percent int) string {
   on three beats.
 - Every name here Counts five syllables.
 
-Two whole Services Live in [examples/school](https://github.com/cangrejometralleta/OneTwoThree/blob/f620c09da052d9a43484bef8a097f6406ec21f1d/examples/school),
+Two whole Services Live in [examples/school](https://github.com/cangrejometralleta/OneTwoThree/blob/0f0c4ddc8b3e11e27e700fb2aba52911ac5ec049/examples/school),
 one in Go and one in TypeScript.
 Six Frameworks Serve them and return identical answers.
 
-[The Before](https://github.com/cangrejometralleta/OneTwoThree/blob/f620c09da052d9a43484bef8a097f6406ec21f1d/examples/school/BEFORE.md) Reads the original beside them.
+[The Before](https://github.com/cangrejometralleta/OneTwoThree/blob/0f0c4ddc8b3e11e27e700fb2aba52911ac5ec049/examples/school/BEFORE.md) Reads the original beside them.
 Every rule there was Broken, and each break names the rule it earned.
 
 - A Handler there names no Driver and no Query.
@@ -83,5 +83,5 @@ Every rule there was Broken, and each break names the rule it earned.
 *Talk is cheap. Show me the code.*
 Torvalds Answered a proposal that shipped no patch.
 A Manifesto Runs the same Risk, and this is the answer to it:
-every rule that governs code Runs in [examples](https://github.com/cangrejometralleta/OneTwoThree/blob/f620c09da052d9a43484bef8a097f6406ec21f1d/examples).
+every rule that governs code Runs in [examples](https://github.com/cangrejometralleta/OneTwoThree/blob/0f0c4ddc8b3e11e27e700fb2aba52911ac5ec049/examples).
 [Show me the Code](../patterns/show-me-the-code.md) Says why that matters.

@@ -1,4 +1,4 @@
-# Values
+# Magic Numbers
 
 > Provisional. Written from practice, not yet Weathered.
 
