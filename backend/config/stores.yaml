@@ -328,6 +328,49 @@ stores:
     timeout_seconds: 10
     allow_redirects: true
     enabled: false
+  rhysticbazaar.cl:
+    games: [magic]
+    name: "Rhystic Bazaar"
+    platform: woocommerce
+    unavailable_selectors:
+      - "div.product.outofstock"
+      - "p.stock.out-of-stock"
+    unavailable_text:
+      - "Sold out"
+      - "Agotado"
+    scope_selector: "div.product"
+    timeout_seconds: 10
+    allow_redirects: true
+    enabled: true
+  cardnexus.cl:
+    games: [magic]
+    name: "CardNexus"
+    platform: woocommerce
+    locations:
+      - country: Chile
+        region: Región Metropolitana
+        city: Santiago
+        district: Santiago Centro
+        street: Agustinas 1476, Oficina 703
+        latitude: -33.4416021
+        longitude: -70.6573088
+    unavailable_selectors:
+      - "div.product.outofstock"
+      - "p.stock.out-of-stock"
+    unavailable_text:
+      - "Sold out"
+      - "Agotado"
+    scope_selector: "div.product"
+    timeout_seconds: 10
+    allow_redirects: true
+    enabled: true
+  www.singleswinterland.cl:
+    games: [magic]
+    name: "Singles Winterland"
+    platform: shopify
+    timeout_seconds: 10
+    allow_redirects: true
+    enabled: true
   el-wombat-rabioso-tcg:
     games: [magic]
     name: "El Wombat Rabioso TCG"
