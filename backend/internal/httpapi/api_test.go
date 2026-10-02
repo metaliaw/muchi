@@ -648,3 +648,22 @@ func TestGetOrderReadsBackOnlyThroughItsOwnSearch(t *testing.T) {
 		t.Fatalf("missing order status = %d", missing.Code)
 	}
 }
+
+func TestListStoresCarriesStreetAndCoordinates(t *testing.T) {
+	latitude, longitude := -33.4090577, -70.55268
+	api := API{Token: "secret", Stores: []stores.ListedStore{{
+		ID: "www.paytowin.cl", Name: "Pay to Win", Platform: "shopify", Games: []string{"magic"},
+		Locations: []stores.ListedLocation{{City: "Las Condes", Street: "Av. Apoquindo 7331, Local 111", Latitude: &latitude, Longitude: &longitude}},
+	}}}
+	request := httptest.NewRequest(http.MethodGet, "/v1/stores", nil)
+	request.Header.Set("Authorization", "Bearer secret")
+	response := httptest.NewRecorder()
+
+	api.BuildHandler().ServeHTTP(response, request)
+
+	wanted := `{"stores":[{"id":"www.paytowin.cl","name":"Pay to Win","platform":"shopify","games":["magic"],` +
+		`"locations":[{"city":"Las Condes","street":"Av. Apoquindo 7331, Local 111","latitude":-33.4090577,"longitude":-70.55268}]}]}` + "\n"
+	if response.Code != http.StatusOK || response.Body.String() != wanted {
+		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
+	}
+}

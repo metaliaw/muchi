@@ -48,7 +48,7 @@ func serveAPI(ctx context.Context, config config.Config, logger *slog.Logger, ru
 	api := httpapi.API{
 		Searches: runtime.Service, Health: runtime.Store,
 		CardMetadata: runtime.CardMetadataProviders, Autocomplete: runtime.AutocompleteProviders,
-		SupportedGames: runtime.SupportedGames, Inventories: runtime.Inventories,
+		SupportedGames: runtime.SupportedGames, Stores: runtime.Stores, Inventories: runtime.Inventories,
 		Token: config.APIToken, Logger: logger,
 		HealthCheckTimeout: config.HealthCheckTimeout,
 	}

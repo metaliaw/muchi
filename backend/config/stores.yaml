@@ -162,6 +162,13 @@ stores:
     searched: false
     name: "Pay to Win"
     platform: shopify
+    locations:
+      - country: Chile
+        region: Región Metropolitana
+        city: Las Condes
+        street: Av. Apoquindo 7331, Local 111
+        latitude: -33.4090577
+        longitude: -70.55268
     timeout_seconds: 10
     allow_redirects: true
     enabled: true

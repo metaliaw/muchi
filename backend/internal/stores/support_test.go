@@ -85,3 +85,28 @@ func TestAStoreThatIsNotSearchedDoesNotSupportAGame(t *testing.T) {
 		t.Fatalf("games=%+v", games)
 	}
 }
+
+func TestListedStoresKeepStreetAndCoordinates(t *testing.T) {
+	config, err := LoadStoreConfig("../../config/stores.yaml", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, listed := range ListedStores(config) {
+		if listed.ID != "www.paytowin.cl" {
+			continue
+		}
+		location := listed.Locations[0]
+		if location.Street == "" || location.Latitude == nil || location.Longitude == nil {
+			t.Fatalf("location=%+v", location)
+		}
+		return
+	}
+	t.Fatal("Pay to Win not listed")
+}
+
+func TestHalfACoordinatePairIsRefused(t *testing.T) {
+	latitude := -33.4
+	if err := validateLocations([]StoreLocation{{City: "Las Condes", Latitude: &latitude}}); err == nil {
+		t.Fatal("a latitude without longitude was accepted")
+	}
+}

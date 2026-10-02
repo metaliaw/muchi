@@ -54,6 +54,24 @@ paths:
                   games:
                     type: array
                     items: {$ref: "#/components/schemas/SupportedGame"}
+  /stores:
+    get:
+      description: >-
+        Lists the enabled stores the offers come from, each with the games it
+        answers for and where it stands: street and coordinates when the store
+        publishes them, so a map can place an offer's `source` or `store`.
+      responses:
+        "200":
+          description: Enabled stores
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [stores]
+                properties:
+                  stores:
+                    type: array
+                    items: {$ref: "#/components/schemas/Store"}
   /stores/{store_id}/inventory/refresh:
     parameters:
       - name: store_id
@@ -785,6 +803,28 @@ components:
         edition: {type: string}
         image: {type: string, format: uri}
         url: {type: string, format: uri}
+    Store:
+      type: object
+      required: [id, platform, games, locations]
+      properties:
+        id: {type: string, description: The domain config/stores.yaml writes}
+        name: {type: string}
+        platform: {type: string}
+        games: {type: array, items: {type: string}}
+        locations:
+          type: array
+          items:
+            type: object
+            required: [city]
+            properties:
+              country: {type: string}
+              region: {type: string}
+              city: {type: string}
+              district: {type: string}
+              pickup: {type: string}
+              street: {type: string}
+              latitude: {type: number, minimum: -90, maximum: 90}
+              longitude: {type: number, minimum: -180, maximum: 180}
     SourceHealth:
       type: object
       required: [source, consecutive_failures, latency_ms]

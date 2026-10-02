@@ -59,6 +59,7 @@ type Runtime struct {
 	CardMetadataProviders map[model.Game]cardmetadata.Provider
 	AutocompleteProviders map[model.Game]cardmetadata.AutocompleteProvider
 	SupportedGames        []stores.GameSupport
+	Stores                []stores.ListedStore
 	Inventories           moxfield.Shelf
 }
 
@@ -104,6 +105,7 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		model.GameMitos:     tcgmatchMitos,
 	}
 	supportedGames := stores.SupportedGames(storeConfig)
+	listedStores := stores.ListedStores(storeConfig)
 	sourcesByGame := catalog.BuildSourcesByGame(fetcher, storeConfig, store, config.InventoryCacheTTL, logger)
 	inventories := catalog.CollectInventories(sourcesByGame)
 	// The Shelf Checks its own Stock: a List has no Product Page to Visit.
@@ -140,9 +142,9 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 			return Runtime{}, err
 		}
 		service.Tasks = queue
-		return Runtime{Service: service, Store: store, Queue: queue, CardMetadataProviders: cardMetadataProviders, AutocompleteProviders: autocompleteProviders, SupportedGames: supportedGames, Inventories: inventories}, nil
+		return Runtime{Service: service, Store: store, Queue: queue, CardMetadataProviders: cardMetadataProviders, AutocompleteProviders: autocompleteProviders, SupportedGames: supportedGames, Stores: listedStores, Inventories: inventories}, nil
 	}
-	return Runtime{Service: service, Store: store, CardMetadataProviders: cardMetadataProviders, AutocompleteProviders: autocompleteProviders, SupportedGames: supportedGames, Inventories: inventories}, nil
+	return Runtime{Service: service, Store: store, CardMetadataProviders: cardMetadataProviders, AutocompleteProviders: autocompleteProviders, SupportedGames: supportedGames, Stores: listedStores, Inventories: inventories}, nil
 }
 
 func buildSourceClient(config config.Config, gate source.TrafficGate, logger *slog.Logger) source.Client {

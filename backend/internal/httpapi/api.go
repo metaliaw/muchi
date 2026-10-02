@@ -26,6 +26,7 @@ type API struct {
 	CardMetadata       map[model.Game]cardmetadata.Provider
 	Autocomplete       map[model.Game]cardmetadata.AutocompleteProvider
 	SupportedGames     []stores.GameSupport
+	Stores             []stores.ListedStore
 	Token              string
 	Logger             *slog.Logger
 	HealthCheckTimeout time.Duration

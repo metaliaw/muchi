@@ -100,6 +100,11 @@ type StoreLocation struct {
 	City     string `yaml:"city"`
 	District string `yaml:"district"`
 	Pickup   string `yaml:"pickup"`
+	// Street Names the Door and Latitude with Longitude the Spot, both as
+	// the Store Publishes them. Coordinates Come as a Pair or not at all.
+	Street    string   `yaml:"street"`
+	Latitude  *float64 `yaml:"latitude"`
+	Longitude *float64 `yaml:"longitude"`
 }
 
 // MoxfieldList Prices a public https://moxfield.com deck as store inventory.
@@ -166,6 +171,12 @@ func ValidateConfig(config Config) error {
 func validateLocations(locations []StoreLocation) error {
 	for _, location := range locations {
 		if location.City == "" || location.District != "" && location.Pickup != "" {
+			return errors.New("invalid store location")
+		}
+		if (location.Latitude == nil) != (location.Longitude == nil) {
+			return errors.New("invalid store location")
+		}
+		if location.Latitude != nil && (*location.Latitude < -90 || *location.Latitude > 90 || *location.Longitude < -180 || *location.Longitude > 180) {
 			return errors.New("invalid store location")
 		}
 	}
