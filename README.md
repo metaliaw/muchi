@@ -396,6 +396,9 @@ Repository's translations cover the Documents maintained here.
   Fixes and remaining Questions. API-side Findings live in its Repository.
 - [Advertising, End to End](docs/advertising.md): Identifiers, the path
   to the first Ad, Google's Review requirements and troubleshooting.
+- [The Location That Never Leaves the Browser](docs/location-privacy.md): how
+  "Near me" Sorts Offers with a Point only the Browser holds, what that
+  guarantees and what it does not Cover.
 
 ### Getting Your Offers onto MUCHI
 
