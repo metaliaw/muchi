@@ -147,7 +147,7 @@ stores:
     estimated_response_seconds: 10
     allow_redirects: true
     enabled: true
-  # Estas dos Llegan por scry.cl y no se Buscan directo: la Entrada Existe para
+  # Ineko Llega por scry.cl y no se Busca directo: la Entrada Existe para
   # Comprobar su Stock, que su Página Cuenta y el Catálogo Ajax no.
   inekosingles.com:
     games: [magic]
@@ -159,7 +159,6 @@ stores:
     enabled: true
   www.paytowin.cl:
     games: [magic]
-    searched: false
     name: "Pay to Win"
     platform: shopify
     locations:

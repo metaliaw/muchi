@@ -46,7 +46,7 @@ func TestConfiguredSources(t *testing.T) {
 			catalogs++
 		}
 	}
-	if lists != 9 || catalogs != 5 || shopifyStores != 5 || jumpsellerStores != 5 || prestashopStores != 1 || len(sources) != 26 {
+	if lists != 9 || catalogs != 5 || shopifyStores != 6 || jumpsellerStores != 5 || prestashopStores != 1 || len(sources) != 27 {
 		t.Fatalf("sources=%d lists=%d catalogs=%d", len(sources), lists, catalogs)
 	}
 	for _, domain := range []string{"gameofmagicsingles.cl", "singles.collectorcenter.cl", "www.cardsouls.cl", "www.oasisgames.cl"} {
@@ -58,7 +58,7 @@ func TestConfiguredSources(t *testing.T) {
 	store := config.Stores["el-wombat-rabioso-tcg"]
 	store.Enabled = false
 	config.Stores["el-wombat-rabioso-tcg"] = store
-	if sources := buildOfferSources(nil, scrycl.Client{}, config, nil, time.Minute, nil); len(sources) != 17 {
+	if sources := buildOfferSources(nil, scrycl.Client{}, config, nil, time.Minute, nil); len(sources) != 18 {
 		t.Fatalf("disabled lists still active: %d", len(sources))
 	}
 	for domain, store := range config.Stores {
@@ -114,7 +114,7 @@ func TestSourcesWithoutScryCL(t *testing.T) {
 			t.Fatal("Scry.cl still active")
 		}
 	}
-	if len(sources) != 20 {
+	if len(sources) != 21 {
 		t.Fatalf("sources=%d", len(sources))
 	}
 }
@@ -131,7 +131,7 @@ func TestSlowCatalogsPausedWithScryCLAvailable(t *testing.T) {
 		}
 	}
 	sources := buildOfferSources(nil, scrycl.Client{}, config, nil, time.Minute, nil)
-	if len(sources) != 21 {
+	if len(sources) != 22 {
 		t.Fatalf("sources=%d", len(sources))
 	}
 	if _, ok := sources[0].(scrycl.Client); !ok {
