@@ -406,6 +406,9 @@ Cada Cosa se lee en un solo lugar, y por eso acá ya no hay Copias:
 - 📣 [La Publicidad, de Punta a Punta](docs/advertising.es.md): los Identificadores,
   el Flujo hasta el primer Anuncio, lo que la Revisión de Google mira y qué
   hacer cuando algo no anda.
+- 📍 [La Ubicación que no Sale del Navegador](docs/location-privacy.es.md): cómo
+  «Cerca mío» Ordena las Ofertas con un Punto que solo el Navegador Tiene, qué
+  Garantiza eso y qué no Cubre.
 
 ### Para quien quiera aparecer en MUCHI
 
