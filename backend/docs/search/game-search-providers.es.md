@@ -40,8 +40,8 @@ no solo en el nombre de la carta.
 
 ```mermaid
 flowchart LR
-    YAML[config/stores.yaml] --> Providers[BuildProviders]
-    YAML --> GameSources[BuildSourcesByGame]
+    YAML[config/stores.yaml] --> Providers[Builder.Providers]
+    YAML --> GameSources[Builder.SourcesByGame]
 
     Providers --> Service[search.Service]
     GameSources --> Service

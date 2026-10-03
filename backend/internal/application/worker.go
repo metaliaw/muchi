@@ -8,8 +8,9 @@ import (
 // BuildSearchWorker Gives every runtime the same search worker configuration.
 func BuildSearchWorker(runtime Runtime, settings config.Config) search.Worker {
 	return search.Worker{
-		Store:           runtime.Store,
-		Service:         runtime.Service,
+		Repository:      runtime.Vault,
+		Offers:          runtime.Service.OfferService,
+		Stocks:          runtime.Service.Stocks,
 		Owner:           settings.WorkerID,
 		LeaseDuration:   settings.LeaseDuration,
 		PollInterval:    settings.PollInterval,

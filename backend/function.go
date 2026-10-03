@@ -11,7 +11,7 @@ import (
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
 	"github.com/cangrejometralleta/muchi-api/internal/application"
 	"github.com/cangrejometralleta/muchi-api/internal/config"
-	"github.com/cangrejometralleta/muchi-api/internal/httpapi"
+	"github.com/cangrejometralleta/muchi-api/internal/handler"
 	"github.com/cangrejometralleta/muchi-api/internal/orders"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 	"github.com/cangrejometralleta/muchi-api/internal/sweep"
@@ -52,8 +52,8 @@ func ServeAPI(w http.ResponseWriter, r *http.Request) {
 			apiError = err
 			return
 		}
-		api := httpapi.API{
-			Searches: runtime.Service, Health: runtime.Store, Token: settings.APIToken, Logger: buildLogger(),
+		api := handler.Handler{
+			Searches: runtime.Service, Health: runtime.Vault, Token: settings.APIToken, Logger: buildLogger(),
 			CardMetadata: runtime.CardMetadataProviders, Autocomplete: runtime.AutocompleteProviders,
 			SupportedGames:     runtime.SupportedGames,
 			Inventories:        runtime.Inventories,
@@ -122,7 +122,7 @@ func SweepQueue(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		sweeper = sweep.Sweeper{
-			Items: runtime.Store, Queue: runtime.Queue,
+			Items: runtime.Vault, Queue: runtime.Queue,
 			Logger: buildLogger(), MaxWakes: settings.SweepMaxWakes,
 		}
 	})
@@ -159,7 +159,7 @@ func ReleaseOrders(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		releaser = orders.Releaser{
-			Orders: runtime.Store, Logger: buildLogger(),
+			Orders: runtime.Vault, Logger: buildLogger(),
 			MaxAge: settings.OrderPendingTTL, MaxReleases: settings.OrderReleaseMaxWakes,
 		}
 	})

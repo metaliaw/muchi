@@ -12,7 +12,7 @@ import (
 
 	"github.com/cangrejometralleta/muchi-api/internal/application"
 	"github.com/cangrejometralleta/muchi-api/internal/config"
-	"github.com/cangrejometralleta/muchi-api/internal/httpapi"
+	"github.com/cangrejometralleta/muchi-api/internal/handler"
 	"github.com/cangrejometralleta/muchi-api/internal/metrics"
 )
 
@@ -45,8 +45,8 @@ func runCommand(logger *slog.Logger, args []string) error {
 }
 
 func serveAPI(ctx context.Context, config config.Config, logger *slog.Logger, runtime application.Runtime) error {
-	api := httpapi.API{
-		Searches: runtime.Service, Health: runtime.Store,
+	api := handler.Handler{
+		Searches: runtime.Service, Health: runtime.Vault,
 		CardMetadata: runtime.CardMetadataProviders, Autocomplete: runtime.AutocompleteProviders,
 		SupportedGames: runtime.SupportedGames, Stores: runtime.Stores, Inventories: runtime.Inventories,
 		Token: config.APIToken, Logger: logger,

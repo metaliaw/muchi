@@ -9,9 +9,12 @@ import (
 	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
+// Worker Takes Card Items off the Queue, Finds their Offers and Completes them.
+// It Needs the Offers to Find, and Stock to Verify when the Item Asks for it.
 type Worker struct {
-	Store           SearchItemRepository
-	Service         Service
+	Repository      SearchRepository
+	Offers          OfferService
+	Stocks          StockChecker
 	Owner           string
 	LeaseDuration   time.Duration
 	PollInterval    time.Duration
@@ -36,7 +39,7 @@ func (w Worker) RunWorker(ctx context.Context) error {
 }
 
 func (w Worker) processNext(ctx context.Context) error {
-	item, err := w.Store.ClaimSearchItem(ctx, w.Owner, w.LeaseDuration)
+	item, err := w.Repository.ClaimSearchItem(ctx, w.Owner, w.LeaseDuration)
 	if err != nil {
 		return err
 	}
@@ -45,13 +48,13 @@ func (w Worker) processNext(ctx context.Context) error {
 	go w.renewLease(work, item.ID)
 
 	query := model.CardQuery{Name: item.NormalizedName, Match: item.Match, Kind: item.Kind}
-	items, faults, sourceErr := w.Service.FindCardOffers(work, item.Game, query)
+	items, faults, sourceErr := w.Offers.FindCardOffers(work, item.Game, query)
 	if item.VerifyStock {
 		items = w.verifyStocks(work, items)
 	}
 	item.Faults = faults
 	item = applyItemResult(item, items, sourceErr)
-	return w.Store.CompleteSearchItem(ctx, item, items)
+	return w.Repository.CompleteSearchItem(ctx, item, items)
 }
 
 // ProcessNext Handles one queued Card Task.
@@ -76,7 +79,7 @@ func (w Worker) renewLease(ctx context.Context, itemID string) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			if err := w.Store.RenewItemLease(ctx, itemID, w.Owner, w.LeaseDuration); err != nil {
+			if err := w.Repository.RenewItemLease(ctx, itemID, w.Owner, w.LeaseDuration); err != nil {
 				return
 			}
 		}
@@ -84,7 +87,7 @@ func (w Worker) renewLease(ctx context.Context, itemID string) {
 }
 
 func (w Worker) verifyStocks(ctx context.Context, items []model.Offer) []model.Offer {
-	if w.Service.Stocks == nil {
+	if w.Stocks == nil {
 		return items
 	}
 	targets := model.SelectStockOffers(items, w.StockCheckLimit)
@@ -105,7 +108,7 @@ func (w Worker) checkOffer(ctx context.Context, items []model.Offer, id string) 
 		if items[index].ID != id {
 			continue
 		}
-		reading, err := w.Service.Stocks.CheckStock(ctx, items[index])
+		reading, err := w.Stocks.CheckStock(ctx, items[index])
 		if err == nil {
 			items[index].StockStatus = reading.Status
 			items[index].StockQuantity = reading.Quantity

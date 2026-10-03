@@ -12,5 +12,6 @@ rutas de negocio requieren el Bearer Token configurado; la ruta básica de salud
 permanece pública para comprobaciones del servicio. El handler valida las
 peticiones de transporte y delega reglas de negocio al servicio de aplicación.
 
-El entrypoint se registra en [`function.go`](../../function.go) y se compone
-en [`internal/httpapi`](../../internal/httpapi).
+El entrypoint se registra en [`function.go`](../../function.go), que compone
+`handler.Handler` a partir del runtime de aplicación. Las formas HTTP y sus
+conversiones viven en ese límite del handler.

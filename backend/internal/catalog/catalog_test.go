@@ -3,10 +3,10 @@ package catalog
 import (
 	"slices"
 	"testing"
-	"time"
 
 	"github.com/cangrejometralleta/muchi-api/internal/aggregators/scrycl"
-	"github.com/cangrejometralleta/muchi-api/internal/stores"
+	"github.com/cangrejometralleta/muchi-api/internal/stores/commerce"
+	"github.com/cangrejometralleta/muchi-api/internal/stores/directory"
 	"github.com/cangrejometralleta/muchi-api/internal/stores/jumpseller"
 	"github.com/cangrejometralleta/muchi-api/internal/stores/moxfield"
 	"github.com/cangrejometralleta/muchi-api/internal/stores/prestashop"
@@ -15,7 +15,7 @@ import (
 )
 
 func TestConfiguredSources(t *testing.T) {
-	config, err := stores.LoadStoreConfig("../../config/stores.yaml", nil)
+	config, err := directory.LoadStoreConfig("../../config/stores.yaml", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -23,7 +23,7 @@ func TestConfiguredSources(t *testing.T) {
 		store.Enabled = true
 		config.Stores[domain] = store
 	}
-	sources := buildOfferSources(nil, scrycl.Client{}, config, nil, time.Minute, nil)
+	sources := Builder{Shops: commerce.Shops{Config: config}}.offerSources(scrycl.Client{})
 	lists := 0
 	catalogs := 0
 	shopifyStores := 0
@@ -58,7 +58,7 @@ func TestConfiguredSources(t *testing.T) {
 	store := config.Stores["el-wombat-rabioso-tcg"]
 	store.Enabled = false
 	config.Stores["el-wombat-rabioso-tcg"] = store
-	if sources := buildOfferSources(nil, scrycl.Client{}, config, nil, time.Minute, nil); len(sources) != 21 {
+	if sources := (Builder{Shops: commerce.Shops{Config: config}}).offerSources(scrycl.Client{}); len(sources) != 21 {
 		t.Fatalf("disabled lists still active: %d", len(sources))
 	}
 	for domain, store := range config.Stores {
@@ -67,7 +67,7 @@ func TestConfiguredSources(t *testing.T) {
 			config.Stores[domain] = store
 		}
 	}
-	if sources := buildOfferSources(nil, scrycl.Client{}, config, nil, time.Minute, nil); len(sources) != 14 {
+	if sources := (Builder{Shops: commerce.Shops{Config: config}}).offerSources(scrycl.Client{}); len(sources) != 14 {
 		t.Fatalf("disabled Shopify stores still active: %d", len(sources))
 	}
 	for domain, store := range config.Stores {
@@ -76,16 +76,16 @@ func TestConfiguredSources(t *testing.T) {
 			config.Stores[domain] = store
 		}
 	}
-	if sources := buildOfferSources(nil, scrycl.Client{}, config, nil, time.Minute, nil); len(sources) != 9 {
+	if sources := (Builder{Shops: commerce.Shops{Config: config}}).offerSources(scrycl.Client{}); len(sources) != 9 {
 		t.Fatalf("disabled Jumpseller stores still active: %d", len(sources))
 	}
 }
 
 func TestConfiguredLocationNamesItsStore(t *testing.T) {
-	config := stores.Config{Stores: map[string]stores.StoreConfig{
+	config := directory.Config{Stores: map[string]directory.StoreConfig{
 		"cards.test": {
 			Name: "Cards Test",
-			Locations: []stores.StoreLocation{
+			Locations: []directory.StoreLocation{
 				{Country: "Chile", Region: "Valparaíso", City: "Viña del Mar"},
 				{Country: "Chile", Region: "Valparaíso", City: "Quilpué", Pickup: "Mesa 1"},
 			},
@@ -93,7 +93,7 @@ func TestConfiguredLocationNamesItsStore(t *testing.T) {
 		"nowhere.test": {},
 	}}
 
-	locations := BuildStoreLocations(config)
+	locations := Builder{Shops: commerce.Shops{Config: config}}.StoreLocations()
 	wanted := []string{"Viña del Mar", "Quilpué - Mesa 1"}
 	if !slices.Equal(locations["cards.test"], wanted) || !slices.Equal(locations["Cards Test"], wanted) {
 		t.Fatalf("locations=%v", locations)
@@ -104,11 +104,11 @@ func TestConfiguredLocationNamesItsStore(t *testing.T) {
 }
 
 func TestSourcesWithoutScryCL(t *testing.T) {
-	config, err := stores.LoadStoreConfig("../../config/stores.yaml", nil)
+	config, err := directory.LoadStoreConfig("../../config/stores.yaml", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	sources := buildOfferSources(nil, nil, config, nil, time.Minute, nil)
+	sources := Builder{Shops: commerce.Shops{Config: config}}.offerSources(nil)
 	for _, source := range sources {
 		if _, found := source.(scrycl.Client); found {
 			t.Fatal("Scry.cl still active")
@@ -120,7 +120,7 @@ func TestSourcesWithoutScryCL(t *testing.T) {
 }
 
 func TestSlowCatalogsPausedWithScryCLAvailable(t *testing.T) {
-	config, err := stores.LoadStoreConfig("../../config/stores.yaml", nil)
+	config, err := directory.LoadStoreConfig("../../config/stores.yaml", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -130,7 +130,7 @@ func TestSlowCatalogsPausedWithScryCLAvailable(t *testing.T) {
 			t.Fatalf("slow catalog active or missing: %s", domain)
 		}
 	}
-	sources := buildOfferSources(nil, scrycl.Client{}, config, nil, time.Minute, nil)
+	sources := Builder{Shops: commerce.Shops{Config: config}}.offerSources(scrycl.Client{})
 	if len(sources) != 25 {
 		t.Fatalf("sources=%d", len(sources))
 	}

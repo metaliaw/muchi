@@ -13,7 +13,7 @@ import (
 
 // RunItemLeaseContract checks two pending items through the repository port.
 // Prepare must return a fresh repository containing exactly two pending items.
-func RunItemLeaseContract(t *testing.T, prepare func(*testing.T) search.SearchItemRepository) {
+func RunItemLeaseContract(t *testing.T, prepare func(*testing.T) search.SearchRepository) {
 	t.Helper()
 	repository := prepare(t)
 	ctx := context.Background()

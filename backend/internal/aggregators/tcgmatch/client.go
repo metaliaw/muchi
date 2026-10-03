@@ -2,19 +2,10 @@ package tcgmatch
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"net/url"
-	"strconv"
 	"strings"
-
-	"github.com/cangrejometralleta/muchi-api/internal/cardmetadata"
-	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
-
-const catalogLimit = 24
-const autocompleteLimit = 3
 
 type SourceFetcher interface {
 	FetchSource(context.Context, string, string) ([]byte, error)
@@ -27,126 +18,6 @@ type Client struct {
 	PokemonCatalogURL string
 }
 
-type catalogReply struct {
-	Products []catalogProduct `json:"products"`
-}
-
-type catalogProduct struct {
-	ID        int64    `json:"id"`
-	Name      string   `json:"name"`
-	TCG       string   `json:"tcg"`
-	Type      string   `json:"type"`
-	Image     string   `json:"image"`
-	SetID     string   `json:"setId"`
-	SetCode   string   `json:"setCode"`
-	SetName   string   `json:"setName"`
-	CardCode  string   `json:"cardCode"`
-	Languages []string `json:"languages"`
-	Function  string   `json:"-"`
-}
-
-type listingsReply struct {
-	Success bool      `json:"success"`
-	Data    []listing `json:"data"`
-}
-
-type listing struct {
-	ID            string `json:"_id"`
-	Name          string `json:"name"`
-	TCG           string `json:"tcg"`
-	Language      string `json:"language"`
-	Status        string `json:"status"`
-	Quantity      int    `json:"quantity"`
-	Price         int64  `json:"price"`
-	IsActive      bool   `json:"isActive"`
-	IsHolo        bool   `json:"isHolo"`
-	IsHoloReverse bool   `json:"isHoloReverse"`
-	User          struct {
-		Name     string `json:"name"`
-		Username string `json:"username"`
-	} `json:"user"`
-}
-
-func (c Client) Search(ctx context.Context, query model.CardQuery) ([]model.Offer, error) {
-	name := query.Name
-	base, err := url.Parse(c.BaseURL)
-	if err != nil || base.Host == "" || (base.Scheme != "https" && base.Scheme != "http") {
-		return nil, errors.New("invalid TCGMatch URL")
-	}
-	if strings.TrimSpace(name) == "" || c.Game == "" {
-		return nil, errors.New("invalid TCGMatch search")
-	}
-	products, err := c.searchCatalog(ctx, base, name, catalogType(query.Kind))
-	if err != nil {
-		return nil, err
-	}
-	if c.Game == "pokemon" && !query.Sealed() {
-		c.namePokemonFunctions(ctx, products)
-	}
-	items := make([]model.Offer, 0)
-	for _, product := range products {
-		if product.TCG != c.Game || product.Type != catalogType(query.Kind) || !query.AcceptsTitle(product.Name) {
-			continue
-		}
-		listings, err := c.readListings(ctx, base, product.ID)
-		if err != nil {
-			return nil, err
-		}
-		for _, entry := range listings {
-			if item, ok := buildOffer(entry, product, c.Game, query.Kind); ok {
-				items = append(items, item)
-			}
-		}
-	}
-	return model.DeduplicateOffers(items), nil
-}
-
-func (c Client) CardMetadata(ctx context.Context, request cardmetadata.Request) (cardmetadata.Metadata, error) {
-	base, err := c.validBase(request.Name)
-	if err != nil {
-		return cardmetadata.Metadata{}, err
-	}
-	products, err := c.searchCatalog(ctx, base, request.Name, "card")
-	if err != nil {
-		return cardmetadata.Metadata{}, err
-	}
-	for _, product := range products {
-		if !c.matches(product, request.Language) || request.Edition != "" && !strings.EqualFold(request.Edition, product.SetCode) && !strings.EqualFold(request.Edition, product.SetID) {
-			continue
-		}
-		edition := product.SetCode
-		if edition == "" {
-			edition = product.SetID
-		}
-		return cardmetadata.Metadata{Name: product.Name, Edition: edition, Image: product.Image}, nil
-	}
-	return cardmetadata.Metadata{}, nil
-}
-
-func (c Client) Autocomplete(ctx context.Context, text, language string) ([]string, error) {
-	base, err := c.validBase(text)
-	if err != nil {
-		return nil, err
-	}
-	products, err := c.searchCatalog(ctx, base, text, "card")
-	if err != nil {
-		return nil, err
-	}
-	names := make([]string, 0, autocompleteLimit)
-	seen := map[string]bool{}
-	for _, product := range products {
-		if !c.matches(product, language) || seen[product.Name] {
-			continue
-		}
-		names = append(names, product.Name)
-		seen[product.Name] = true
-		if len(names) == autocompleteLimit {
-			break
-		}
-	}
-	return names, nil
-}
-
 func (c Client) validBase(text string) (*url.URL, error) {
 	base, err := url.Parse(c.BaseURL)
 	if err != nil || base.Host == "" || (base.Scheme != "https" && base.Scheme != "http") {
@@ -156,85 +27,6 @@ func (c Client) validBase(text string) (*url.URL, error) {
 		return nil, errors.New("invalid TCGMatch search")
 	}
 	return base, nil
-}
-
-func (c Client) matches(product catalogProduct, language string) bool {
-	if product.TCG != c.Game || product.Type != "card" {
-		return false
-	}
-	if language == "" {
-		return true
-	}
-	for _, available := range product.Languages {
-		if strings.EqualFold(available, language) {
-			return true
-		}
-	}
-	return false
-}
-
-// catalogType Names the Catalog Type TCGMatch Files this Kind under. The Filter
-// Never Leaves: an Accessory Answers `tcg` as a List, and this Reader Wants a
-// String — Asking for everything Would Break the Decode.
-func catalogType(kind model.ProductKind) string {
-	if kind == model.KindSealed {
-		return "sealed"
-	}
-	return "card"
-}
-
-func (c Client) searchCatalog(ctx context.Context, base *url.URL, name, productType string) ([]catalogProduct, error) {
-	query := url.Values{"q": {name}, "tcg": {c.Game}, "type": {productType}, "inStock": {"true"}, "limit": {strconv.Itoa(catalogLimit)}, "page": {"1"}, "sortBy": {"listings"}}
-	target := strings.TrimRight(c.BaseURL, "/") + "/catalog/search?" + query.Encode()
-	data, err := c.Fetcher.FetchSource(ctx, base.Host, target)
-	if err != nil {
-		return nil, err
-	}
-	var reply catalogReply
-	if err := json.Unmarshal(data, &reply); err != nil {
-		return nil, fmt.Errorf("decode TCGMatch catalog: %w", err)
-	}
-	return reply.Products, nil
-}
-
-func (c Client) readListings(ctx context.Context, base *url.URL, catalogID int64) ([]listing, error) {
-	target := fmt.Sprintf("%s/products/catalog/%d?inStock=true", strings.TrimRight(c.BaseURL, "/"), catalogID)
-	data, err := c.Fetcher.FetchSource(ctx, base.Host, target)
-	if err != nil {
-		return nil, err
-	}
-	var reply listingsReply
-	if err := json.Unmarshal(data, &reply); err != nil {
-		return nil, fmt.Errorf("decode TCGMatch listings: %w", err)
-	}
-	if !reply.Success {
-		return nil, errors.New("invalid TCGMatch listings")
-	}
-	return reply.Data, nil
-}
-
-func buildOffer(entry listing, product catalogProduct, game string, kind model.ProductKind) (model.Offer, bool) {
-	if !entry.IsActive || entry.Quantity < 1 || entry.Price < 1 || entry.ID == "" || entry.User.Name == "" || entry.TCG != game {
-		return model.Offer{}, false
-	}
-	finish := "nonfoil"
-	if entry.IsHoloReverse {
-		finish = "reverse-holo"
-	} else if entry.IsHolo {
-		finish = "holo"
-	}
-	return model.Offer{
-		ID: "tcgmatch:" + entry.ID, VariantID: entry.ID, CardName: product.Name,
-		Store: entry.User.Name, PriceAmount: strconv.FormatInt(entry.Price, 10), PriceCurrency: "CLP",
-		URL: "https://tcgmatch.cl/producto/" + entry.ID, Image: product.Image, Source: "tcgmatch.cl", StockStatus: "available",
-		Language: entry.Language, Condition: entry.Status, Finish: finish, Edition: product.SetCode, Kind: kind,
-		Metadata: map[string]string{
-			"game": game, "quantity": strconv.Itoa(entry.Quantity), "seller": entry.User.Username,
-			"product_id": strconv.FormatInt(product.ID, 10), "set_id": product.SetID,
-			"set_code": product.SetCode, "card_code": product.CardCode, "image": product.Image,
-			"functional_key": product.Function,
-		},
-	}, true
 }
 
 // SourceName Identifies this Provider the Way the Health Report Names it.

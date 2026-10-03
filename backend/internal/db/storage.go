@@ -3,23 +3,15 @@ package db
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"log/slog"
-	"sort"
 	"time"
 
 	firestorelib "cloud.google.com/go/firestore"
 	"github.com/cangrejometralleta/muchi-api/internal/model"
-	"github.com/cangrejometralleta/muchi-api/internal/search"
-	"github.com/cangrejometralleta/muchi-api/internal/source"
-	"google.golang.org/api/iterator"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"github.com/cangrejometralleta/muchi-api/internal/repositories"
 )
 
 // maxRPCDeadline caps how far in the future a Firestore call's deadline can sit.
@@ -27,14 +19,8 @@ import (
 // (an HTTP handler, a Cloud Tasks-triggered function) may carry much longer ones.
 const maxRPCDeadline = 20 * time.Second
 
-// One Turn discards this many dead Items before its final Claim. The Bound
-// keeps a damaged Queue from holding one Function open without Limit.
-const maxClaimDiscards = 20
-
-// A finished Item is parked beyond its own Expiry. Parked exactly on it, it
-// became claimable at the very Instant a Claim starts refusing it, and every
-// Turn from then on wasted a Candidate Slot on a dead Document.
-const doneParking = 24 * time.Hour
+// maxBatchWrites Bounds one Firestore Batch, and the Group one Bulk Read Asks for.
+const maxBatchWrites = 500
 
 // boundContext shortens ctx's deadline to maxRPCDeadline when the caller's is longer,
 // while still honoring an earlier deadline or cancellation from the caller.
@@ -45,63 +31,9 @@ func boundContext(ctx context.Context) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(ctx, maxRPCDeadline)
 }
 
+// Store Holds the Firestore Client every Collection Reads and Writes through.
 type Store struct {
-	client    *firestorelib.Client
-	searchTTL time.Duration
-	logger    *slog.Logger
-	pacing    time.Duration
-	cooldown  time.Duration
-}
-
-// sourcePacing Spaces two Calls to one Domain. It is a Floor, not a Promise:
-// a Store that Asks for more Room Gets it through throttleCooldown.
-const sourcePacing = 250 * time.Millisecond
-
-// throttleCooldown Holds a Domain that Answered 429. The Store Said the Calls
-// Arrive too Fast, so the next one Waits — that is the Answer it Asked for,
-// and it is Kept per Domain, so one Store Slowing down Never Quiets another.
-const throttleCooldown = 30 * time.Second
-
-// circuitThreshold Counts the Falls in a row that Leave a Store unasked, and
-// circuitCooldown the first Wait. circuitCeiling Caps the Doubling.
-const (
-	circuitThreshold         = 5
-	circuitCooldown          = time.Minute
-	circuitCeiling           = time.Hour
-	maxOfferIndexBatchWrites = 500
-)
-
-// PaceSources Tunes both Waits. Zero Keeps the Default, so a Caller may Set
-// one and Leave the other alone.
-func (s *Store) PaceSources(pacing, cooldown time.Duration) {
-	s.pacing, s.cooldown = pacing, cooldown
-}
-
-func (s *Store) pace() time.Duration {
-	if s.pacing <= 0 {
-		return sourcePacing
-	}
-	return s.pacing
-}
-
-func (s *Store) cool() time.Duration {
-	if s.cooldown <= 0 {
-		return throttleCooldown
-	}
-	return s.cooldown
-}
-
-// TellStore Gives the Store a Voice. Without one it stays silent, which is
-// what every Test wants and what Production must never have.
-func (s *Store) TellStore(logger *slog.Logger) {
-	s.logger = logger
-}
-
-func (s *Store) say() *slog.Logger {
-	if s.logger == nil {
-		return slog.New(slog.DiscardHandler)
-	}
-	return s.logger
+	client *firestorelib.Client
 }
 
 type searchRecord struct {
@@ -154,862 +86,123 @@ type sourceRecord struct {
 }
 
 // OpenStore Connects the Search Store through https://cloud.google.com/firestore/docs/reference/libraries.
-func OpenStore(ctx context.Context, projectID string, searchTTL time.Duration) (*Store, error) {
+func OpenStore(ctx context.Context, projectID string) (*Store, error) {
 	client, err := firestorelib.NewClient(ctx, projectID)
 	if err != nil {
 		return nil, fmt.Errorf("open search store: %w", err)
 	}
-	return &Store{client: client, searchTTL: searchTTL}, nil
-}
-
-func (s *Store) CreateSearch(ctx context.Context, key, hash string, input model.CreateInput) (model.Job, error) {
-	ctx, cancel := boundContext(ctx)
-	defer cancel()
-	var job model.Job
-	var created bool
-	err := s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
-		stored, found, err := s.readRequest(ctx, tx, "create", key)
-		if err != nil {
-			return err
-		}
-		if found {
-			if stored.Hash != hash {
-				return search.ErrConflict
-			}
-			job, err = s.readSearch(ctx, tx, stored.ResourceID)
-			return err
-		}
-		job = buildSearch(input)
-		created = true
-		return s.createSearch(ctx, tx, key, hash, job)
-	})
-	if err != nil || !created {
-		return job, mapStoreError(err)
-	}
-	return job, s.createItems(ctx, job, input)
-}
-
-func (s *Store) GetSearch(ctx context.Context, id string) (model.Job, error) {
-	ctx, cancel := boundContext(ctx)
-	defer cancel()
-	document, err := s.client.Collection("searches").Doc(id).Get(ctx)
-	if err != nil {
-		return model.Job{}, mapStoreError(err)
-	}
-	return decodeSearch(document)
-}
-
-func (s *Store) ListResults(ctx context.Context, id string, page model.ResultPage) (model.Result, error) {
-	ctx, cancel := boundContext(ctx)
-	defer cancel()
-	document, err := s.client.Collection("searches").Doc(id).Get(ctx)
-	if err != nil {
-		return model.Result{}, mapStoreError(err)
-	}
-	var record searchRecord
-	if err := document.DataTo(&record); err != nil || record.ExpiresAt.Before(time.Now()) {
-		return model.Result{}, search.ErrNotFound
-	}
-	items, hasMore, err := s.loadResultPage(ctx, id, page)
-	cursor := page.After
-	if len(items) > 0 {
-		cursor = items[len(items)-1].Sequence
-	}
-	return model.Result{SearchID: id, Items: items, Cursor: cursor, HasMore: hasMore}, err
-}
-
-func (s *Store) CancelSearch(ctx context.Context, id, key, hash string) (model.Job, error) {
-	ctx, cancel := boundContext(ctx)
-	defer cancel()
-	var job model.Job
-	err := s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
-		stored, found, err := s.readRequest(ctx, tx, "cancel", key)
-		if err != nil {
-			return err
-		}
-		if found {
-			if stored.Hash != hash {
-				return search.ErrConflict
-			}
-			job, err = s.readSearch(ctx, tx, stored.ResourceID)
-			return err
-		}
-		job, err = s.readSearch(ctx, tx, id)
-		if err != nil {
-			return err
-		}
-		return s.cancelSearch(ctx, tx, key, hash, &job)
-	})
-	return job, mapStoreError(err)
-}
-
-func (s *Store) ClaimSearchItem(ctx context.Context, owner string, lease time.Duration) (model.Item, error) {
-	ctx, cancel := boundContext(ctx)
-	defer cancel()
-	for attempt := 0; attempt <= maxClaimDiscards; attempt++ {
-		claimed, discarded, err := s.claimSearchItem(ctx, owner, lease)
-		if err != nil || claimed.ID != "" {
-			return claimed, mapStoreError(err)
-		}
-		s.say().Warn("Claim Discarded Dead Item", "item", discarded)
-	}
-	return model.Item{}, search.ErrNotFound
-}
-
-func (s *Store) claimSearchItem(ctx context.Context, owner string, lease time.Duration) (model.Item, string, error) {
-	var claimed model.Item
-	var discarded string
-	err := s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
-		query := s.client.Collection("items").
-			Where("available_at", "<=", time.Now().UTC()).
-			OrderBy("available_at", firestorelib.Asc).
-			Limit(1)
-		documents := tx.Documents(query)
-		for {
-			document, err := documents.Next()
-			if errors.Is(err, iterator.Done) {
-				return search.ErrNotFound
-			}
-			if err != nil {
-				return err
-			}
-			// A Candidate that cannot be claimed is skipped, never fatal.
-			// claimItem refuses before it writes, so the Transaction stays
-			// clean until one of them is actually taken.
-			err = s.claimItem(ctx, tx, document, owner, lease, &claimed)
-			if errors.Is(err, search.ErrNotFound) {
-				discarded = document.Ref.ID
-				return tx.Delete(document.Ref)
-			}
-			return err
-		}
-	})
-	return claimed, discarded, err
-}
-
-// CountWaitingItems Says how many Items are ready for a Turn right now.
-//
-// A Task carries no Item: it means "wake up and take whatever is there", so
-// the only Bond between Work and Wake-ups is the Count. A Turn that ends
-// without working spends a Wake-up and nothing puts it back; the Sweeper
-// compares this Count with the Queue and repairs the Difference.
-func (s *Store) CountWaitingItems(ctx context.Context, limit int) (int, error) {
-	ctx, cancel := boundContext(ctx)
-	defer cancel()
-	now := time.Now().UTC()
-	documents := s.client.Collection("items").
-		Where("available_at", "<=", now).
-		OrderBy("available_at", firestorelib.Asc).
-		Limit(limit).
-		Documents(ctx)
-	defer documents.Stop()
-	waiting := 0
-	for {
-		document, err := documents.Next()
-		if errors.Is(err, iterator.Done) {
-			return waiting, nil
-		}
-		if err != nil {
-			return waiting, mapStoreError(err)
-		}
-		var record itemRecord
-		// A dead Document is not Work: counting it would ask for Turns that
-		// only ever skip it.
-		if err := document.DataTo(&record); err != nil || record.ExpiresAt.Before(now) {
-			continue
-		}
-		waiting++
-	}
-}
-
-func (s *Store) RenewItemLease(ctx context.Context, id, owner string, lease time.Duration) error {
-	ctx, cancel := boundContext(ctx)
-	defer cancel()
-	return s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
-		reference := s.client.Collection("items").Doc(id)
-		document, err := tx.Get(reference)
-		if err != nil {
-			return mapStoreError(err)
-		}
-		item, record, err := decodeItem(document)
-		if err != nil || item.LeaseOwner != owner || item.Status != model.ItemRunning {
-			return search.ErrNotFound
-		}
-		expires := time.Now().UTC().Add(lease)
-		item.LeaseUntil, record.AvailableAt = &expires, expires
-		record.LeaseUntil = &expires
-		record.Payload, _ = json.Marshal(renderItem(item))
-		return tx.Set(reference, record)
-	})
-}
-
-func (s *Store) CompleteSearchItem(ctx context.Context, item model.Item, offers []model.Offer) error {
-	ctx, cancel := boundContext(ctx)
-	defer cancel()
-	return s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
-		itemReference := s.client.Collection("items").Doc(item.ID)
-		document, err := tx.Get(itemReference)
-		if err != nil {
-			return mapStoreError(err)
-		}
-		current, record, err := decodeItem(document)
-		if err != nil || current.LeaseOwner != item.LeaseOwner || current.Status != model.ItemRunning {
-			return search.ErrNotFound
-		}
-		return s.completeItem(ctx, tx, itemReference, record, item, offers)
-	})
-}
-
-func (s *Store) LoadOffers(ctx context.Context, key string) ([]model.Offer, bool, error) {
-	ctx, cancel := boundContext(ctx)
-	defer cancel()
-	document, err := s.client.Collection("offer_cache").Doc(hashKey(key)).Get(ctx)
-	if status.Code(err) == codes.NotFound {
-		return nil, false, nil
-	}
-	if err != nil {
-		return nil, false, err
-	}
-	var record valueRecord
-	if err := document.DataTo(&record); err != nil {
-		return nil, false, err
-	}
-	if record.ExpiresAt.Before(time.Now().UTC()) {
-		return nil, false, nil
-	}
-	var items []offerPayload
-	err = json.Unmarshal(record.Payload, &items)
-	if err != nil {
-		return nil, false, err
-	}
-	offers := buildOfferList(items)
-	if !record.OfferIndexed {
-		if err := s.indexMissingOffers(ctx, offers, record.ExpiresAt); err != nil {
-			return nil, false, err
-		}
-		if _, err := document.Ref.Update(ctx, []firestorelib.Update{{Path: "offer_indexed", Value: true}}); err != nil {
-			return nil, false, err
-		}
-	}
-	return offers, true, nil
-}
-
-func (s *Store) SaveOffers(ctx context.Context, key string, items []model.Offer, ttl time.Duration) error {
-	ctx, cancel := boundContext(ctx)
-	defer cancel()
-	data, err := json.Marshal(renderOfferList(items))
-	if err != nil {
-		return err
-	}
-	expiresAt := time.Now().UTC().Add(ttl)
-	record := valueRecord{Payload: data, ExpiresAt: expiresAt}
-	_, err = s.client.Collection("offer_cache").Doc(hashKey(key)).Set(ctx, record)
-	if err != nil {
-		return err
-	}
-	if err := s.saveOfferIndex(ctx, items, expiresAt); err != nil {
-		return err
-	}
-	_, err = s.client.Collection("offer_cache").Doc(hashKey(key)).Update(ctx, []firestorelib.Update{{Path: "offer_indexed", Value: true}})
-	return err
-}
-
-func (s *Store) saveOfferIndex(ctx context.Context, items []model.Offer, expiresAt time.Time) error {
-	for start := 0; start < len(items); start += maxOfferIndexBatchWrites {
-		end := min(start+maxOfferIndexBatchWrites, len(items))
-		batch := s.client.Batch()
-		writes := 0
-		for _, item := range items[start:end] {
-			if item.ID == "" {
-				continue
-			}
-			payload, err := json.Marshal(renderOffer(item))
-			if err != nil {
-				return err
-			}
-			record := valueRecord{Payload: payload, ExpiresAt: expiresAt}
-			batch.Set(s.client.Collection("offers").Doc(hashKey(item.ID)), record)
-			writes++
-		}
-		if writes == 0 {
-			continue
-		}
-		if _, err := batch.Commit(ctx); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (s *Store) indexMissingOffers(ctx context.Context, items []model.Offer, expiresAt time.Time) error {
-	indexed := make([]model.Offer, 0, len(items))
-	for _, item := range items {
-		if item.ID != "" {
-			indexed = append(indexed, item)
-		}
-	}
-	for start := 0; start < len(indexed); start += maxOfferIndexBatchWrites {
-		end := min(start+maxOfferIndexBatchWrites, len(indexed))
-		group := indexed[start:end]
-		references := make([]*firestorelib.DocumentRef, len(group))
-		for index, item := range group {
-			references[index] = s.client.Collection("offers").Doc(hashKey(item.ID))
-		}
-		documents, err := s.client.GetAll(ctx, references)
-		if err != nil {
-			return err
-		}
-		batch := s.client.Batch()
-		writes := 0
-		for index, document := range documents {
-			if document.Exists() {
-				var record valueRecord
-				if err := document.DataTo(&record); err == nil && record.ExpiresAt.After(time.Now().UTC()) {
-					continue
-				}
-			}
-			payload, err := json.Marshal(renderOffer(group[index]))
-			if err != nil {
-				return err
-			}
-			record := valueRecord{Payload: payload, ExpiresAt: expiresAt}
-			batch.Set(references[index], record)
-			writes++
-		}
-		if writes == 0 {
-			continue
-		}
-		if _, err := batch.Commit(ctx); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// GetOffer Reads one Stable Offer Snapshot until the Cache Entry Expires.
-func (s *Store) GetOffer(ctx context.Context, id string) (model.Offer, error) {
-	ctx, cancel := boundContext(ctx)
-	defer cancel()
-	document, err := s.client.Collection("offers").Doc(hashKey(id)).Get(ctx)
-	if status.Code(err) == codes.NotFound {
-		return model.Offer{}, search.ErrNotFound
-	}
-	if err != nil {
-		return model.Offer{}, err
-	}
-	var record valueRecord
-	if err := document.DataTo(&record); err != nil {
-		return model.Offer{}, err
-	}
-	if !record.ExpiresAt.After(time.Now().UTC()) {
-		return model.Offer{}, search.ErrNotFound
-	}
-	var payload offerPayload
-	if err := json.Unmarshal(record.Payload, &payload); err != nil {
-		return model.Offer{}, err
-	}
-	offer := buildOffer(payload)
-	if offer.ID != id {
-		return model.Offer{}, search.ErrNotFound
-	}
-	return offer, nil
-}
-
-// DropOffers Forgets one Cached Entry; a Missing Entry is already Forgotten.
-func (s *Store) DropOffers(ctx context.Context, key string) error {
-	ctx, cancel := boundContext(ctx)
-	defer cancel()
-	_, err := s.client.Collection("offer_cache").Doc(hashKey(key)).Delete(ctx)
-	return err
-}
-
-// CreateOrder Reserves the Stock a Store's own Checkout just Committed. The
-// Caller Names the Status, since a Store that Redirects to Payment and one
-// that Waits for a Transfer both Start Pending, and nothing here Decides
-// which.
-//
-// A retried Call with the same Key and Payload Answers the Order it already
-// Placed, never a second one: a Buyer's double Tap must not become two
-// Orders at the same Store.
-func (s *Store) CreateOrder(ctx context.Context, key, hash string, order model.Order) (model.Order, error) {
-	ctx, cancel := boundContext(ctx)
-	defer cancel()
-	var result model.Order
-	err := s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
-		stored, found, err := s.readRequest(ctx, tx, "place-order", key)
-		if err != nil {
-			return err
-		}
-		if found {
-			if stored.Hash != hash {
-				return search.ErrConflict
-			}
-			result, err = s.readOrder(ctx, tx, stored.ResourceID)
-			return err
-		}
-		now := time.Now().UTC()
-		order.ID = buildID("order")
-		order.CreatedAt, order.UpdatedAt = now, now
-		result = order
-		record := orderRecord{Payload: mustJSON(renderOrder(order)), Status: string(order.Status), Domain: order.Domain, StoreOrder: order.StoreOrder, UpdatedAt: now}
-		if err := tx.Create(s.client.Collection("orders").Doc(order.ID), record); err != nil {
-			return err
-		}
-		expires := now.Add(s.searchTTL)
-		return tx.Set(s.client.Collection("idempotency").Doc(hashKey("place-order:"+key)), requestRecord{Hash: hash, ResourceID: order.ID, ExpiresAt: expires})
-	})
-	if err != nil {
-		return model.Order{}, mapStoreError(err)
-	}
-	return result, nil
-}
-
-func (s *Store) readOrder(ctx context.Context, tx *firestorelib.Transaction, id string) (model.Order, error) {
-	document, err := tx.Get(s.client.Collection("orders").Doc(id))
-	if status.Code(err) == codes.NotFound {
-		return model.Order{}, model.ErrOrderNotFound
-	}
-	if err != nil {
-		return model.Order{}, err
-	}
-	return decodeOrder(document)
-}
-
-// GetOrder Reads one Order back by its Id.
-func (s *Store) GetOrder(ctx context.Context, id string) (model.Order, error) {
-	ctx, cancel := boundContext(ctx)
-	defer cancel()
-	document, err := s.client.Collection("orders").Doc(id).Get(ctx)
-	if status.Code(err) == codes.NotFound {
-		return model.Order{}, model.ErrOrderNotFound
-	}
-	if err != nil {
-		return model.Order{}, err
-	}
-	return decodeOrder(document)
-}
-
-// FindOrderByStoreOrder Reads the Order a Store's own Webhook Names by its
-// own Order Id — the only Id a Store Payload Carries, never Muchi's.
-func (s *Store) FindOrderByStoreOrder(ctx context.Context, domain, storeOrder string) (model.Order, error) {
-	ctx, cancel := boundContext(ctx)
-	defer cancel()
-	documents := s.client.Collection("orders").
-		Where("domain", "==", domain).Where("store_order", "==", storeOrder).
-		Limit(1).Documents(ctx)
-	defer documents.Stop()
-	document, err := documents.Next()
-	if errors.Is(err, iterator.Done) {
-		return model.Order{}, model.ErrOrderNotFound
-	}
-	if err != nil {
-		return model.Order{}, err
-	}
-	return decodeOrder(document)
-}
-
-// MoveOrderStatus Advances an Order from one Status to the next, never past
-// where the Caller Believes it Stands: a Webhook Confirming an Order the
-// Sweeper already Released must Lose, not Overwrite the Release.
-func (s *Store) MoveOrderStatus(ctx context.Context, id string, from, to model.OrderStatus) (model.Order, error) {
-	ctx, cancel := boundContext(ctx)
-	defer cancel()
-	var order model.Order
-	err := s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
-		reference := s.client.Collection("orders").Doc(id)
-		document, err := tx.Get(reference)
-		if status.Code(err) == codes.NotFound {
-			return model.ErrOrderNotFound
-		}
-		if err != nil {
-			return err
-		}
-		order, err = decodeOrder(document)
-		if err != nil {
-			return err
-		}
-		if order.Status != from {
-			return model.ErrOrderConflict
-		}
-		order.Status, order.UpdatedAt = to, time.Now().UTC()
-		record := orderRecord{Payload: mustJSON(renderOrder(order)), Status: string(order.Status), Domain: order.Domain, StoreOrder: order.StoreOrder, UpdatedAt: order.UpdatedAt}
-		return tx.Set(reference, record)
-	})
-	return order, err
-}
-
-// ReportOrder Moves a `linked` Order to `reported` with the Number the Buyer
-// Read off the Store, in one Transaction: the Status and its Number Land
-// together or not at all.
-func (s *Store) ReportOrder(ctx context.Context, id, storeOrder string) (model.Order, error) {
-	ctx, cancel := boundContext(ctx)
-	defer cancel()
-	var order model.Order
-	err := s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
-		reference := s.client.Collection("orders").Doc(id)
-		document, err := tx.Get(reference)
-		if status.Code(err) == codes.NotFound {
-			return model.ErrOrderNotFound
-		}
-		if err != nil {
-			return err
-		}
-		order, err = decodeOrder(document)
-		if err != nil {
-			return err
-		}
-		if order.Status != model.OrderLinked {
-			return model.ErrOrderConflict
-		}
-		order.Status, order.StoreOrder, order.UpdatedAt = model.OrderReported, storeOrder, time.Now().UTC()
-		record := orderRecord{Payload: mustJSON(renderOrder(order)), Status: string(order.Status), Domain: order.Domain, StoreOrder: order.StoreOrder, UpdatedAt: order.UpdatedAt}
-		return tx.Set(reference, record)
-	})
-	return order, err
-}
-
-// ReleaseExpiredOrders Moves every `pending` Order whose own Cutoff already
-// Passed to `released`, and Answers how many it Moved. It Needs a Composite
-// Index on `orders` over `status` (equality) and `updated_at` (range),
-// declared in firestore.indexes.json and created by deploy-infra.sh.
-//
-// Each Move Repeats the same from-Pending Guard MoveOrderStatus Uses: a
-// Confirm that Landed between the Query and the Write must Win, never be
-// Overwritten by a Release that read a Moment too early.
-func (s *Store) ReleaseExpiredOrders(ctx context.Context, olderThan time.Duration, limit int) (int, error) {
-	ctx, cancel := boundContext(ctx)
-	defer cancel()
-	cutoff := time.Now().UTC().Add(-olderThan)
-	documents := s.client.Collection("orders").
-		Where("status", "==", string(model.OrderPending)).
-		Where("updated_at", "<=", cutoff).
-		OrderBy("updated_at", firestorelib.Asc).
-		Limit(limit).
-		Documents(ctx)
-	defer documents.Stop()
-	released := 0
-	for {
-		document, err := documents.Next()
-		if errors.Is(err, iterator.Done) {
-			return released, nil
-		}
-		if err != nil {
-			return released, err
-		}
-		if _, err := s.MoveOrderStatus(ctx, document.Ref.ID, model.OrderPending, model.OrderReleased); err != nil {
-			// A Conflict here means someone else already Moved it — not a
-			// Failure this Sweep needs to Stop for.
-			if errors.Is(err, model.ErrOrderConflict) {
-				continue
-			}
-			return released, err
-		}
-		released++
-	}
-}
-
-func (s *Store) AwaitSource(ctx context.Context, domain string) error {
-	boundCtx, cancel := boundContext(ctx)
-	defer cancel()
-	record, _ := s.loadSource(boundCtx, domain)
-	if record.CircuitOpenUntil != nil && record.CircuitOpenUntil.After(time.Now().UTC()) {
-		return fmt.Errorf("%w until %s", source.ErrCircuitOpen, record.CircuitOpenUntil.Format(time.RFC3339))
-	}
-	allowed, err := s.reserveTraffic(boundCtx, domain)
-	if err != nil {
-		return err
-	}
-	return waitUntil(ctx, allowed)
-}
-
-func (s *Store) RecordSource(ctx context.Context, domain string, latency time.Duration, sourceErr error) error {
-	ctx, cancel := boundContext(ctx)
-	defer cancel()
-	reference := s.client.Collection("source_health").Doc(hashKey(domain))
-	// Un Freno Cambia el Ritmo, no la Salud: la Tienda Pidio Espacio y aqui se
-	// le Da, antes de Anotar nada. Fallar al Espaciar no Pierde la Anotacion.
-	if source.Throttled(sourceErr) {
-		_ = s.delaySource(ctx, domain, s.cool())
-	}
-	return s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
-		record, _ := s.readSource(ctx, tx, reference, domain)
-		updateSource(&record, latency, sourceErr)
-		return tx.Set(reference, record)
-	})
-}
-
-// delaySource Pushes one Domain's next Turn away, never Closer: two Frenos
-// Arriving together must not Shorten the Wait the first one Won.
-func (s *Store) delaySource(ctx context.Context, domain string, wait time.Duration) error {
-	reference := s.client.Collection("traffic_leases").Doc(hashKey(domain))
-	return s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
-		allowed := time.Now().UTC().Add(wait)
-		if document, err := tx.Get(reference); err == nil {
-			if previous, err := document.DataAt("next_allowed_at"); err == nil {
-				if stored, ok := previous.(time.Time); ok && stored.After(allowed) {
-					allowed = stored
-				}
-			}
-		}
-		return tx.Set(reference, map[string]any{"next_allowed_at": allowed})
-	})
-}
-
-func (s *Store) CheckHealth(ctx context.Context) error {
-	ctx, cancel := boundContext(ctx)
-	defer cancel()
-	_, err := s.client.Collection("health").Doc("ping").Get(ctx)
-	if status.Code(err) == codes.NotFound {
-		return nil
-	}
-	return err
-}
-
-func (s *Store) ListSourceHealth(ctx context.Context) ([]model.SourceHealth, error) {
-	ctx, cancel := boundContext(ctx)
-	defer cancel()
-	documents := s.client.Collection("source_health").Documents(ctx)
-	defer documents.Stop()
-	result := make([]model.SourceHealth, 0)
-	for {
-		document, err := documents.Next()
-		if errors.Is(err, iterator.Done) {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-		var record sourceRecord
-		if err := document.DataTo(&record); err != nil {
-			return nil, err
-		}
-		result = append(result, mapSourceHealth(record))
-	}
-	sort.Slice(result, func(i, j int) bool { return result[i].Source < result[j].Source })
-	return result, nil
+	return &Store{client: client}, nil
 }
 
 func (s *Store) CloseStore() error {
 	return s.client.Close()
 }
 
-func (s *Store) createSearch(ctx context.Context, tx *firestorelib.Transaction, key, hash string, job model.Job) error {
-	itemIDs := make([]string, job.Total)
-	for index := range itemIDs {
-		itemIDs[index] = buildID("item")
-	}
-	expires := time.Now().UTC().Add(s.searchTTL)
-	data, _ := json.Marshal(renderJob(job))
-	if err := tx.Create(s.client.Collection("searches").Doc(job.ID), searchRecord{Payload: data, ItemIDs: itemIDs, ExpiresAt: expires}); err != nil {
-		return err
-	}
-	record := requestRecord{Hash: hash, ResourceID: job.ID, ExpiresAt: expires}
-	return tx.Set(s.client.Collection("idempotency").Doc(hashKey("create:"+key)), record)
+func packSearch(search repositories.Search) any {
+	return searchRecord{Payload: mustJSON(renderJob(search.Job)), ItemIDs: search.ItemIDs, ExpiresAt: search.ExpiresAt}
 }
 
-func (s *Store) createItems(ctx context.Context, job model.Job, input model.CreateInput) error {
-	document, err := s.client.Collection("searches").Doc(job.ID).Get(ctx)
-	if err != nil {
-		return err
-	}
-	var stored searchRecord
-	if err := document.DataTo(&stored); err != nil {
-		return err
-	}
-	batch := s.client.Batch()
-	for index, card := range input.Cards {
-		item := model.Item{
-			ID: stored.ItemIDs[index], SearchID: job.ID, Game: input.Game, Position: index,
-			OriginalName: card.Name, NormalizedName: model.NormalizeCard(card.Name),
-			Quantity: card.Quantity, Status: model.ItemPending, Offers: []model.Offer{},
-			VerifyStock: input.Options.VerifyStock, Match: input.Options.Match,
-			Kind: input.Options.Kind,
-		}
-		data, _ := json.Marshal(renderItem(item))
-		record := itemRecord{Payload: data, SearchID: job.ID, Position: index, AvailableAt: job.CreatedAt, ExpiresAt: stored.ExpiresAt}
-		batch.Set(s.client.Collection("items").Doc(item.ID), record)
-	}
-	_, err = batch.Commit(ctx)
-	return err
-}
-
-func (s *Store) readRequest(ctx context.Context, tx *firestorelib.Transaction, action, key string) (requestRecord, bool, error) {
-	document, err := tx.Get(s.client.Collection("idempotency").Doc(hashKey(action + ":" + key)))
-	if status.Code(err) == codes.NotFound {
-		return requestRecord{}, false, nil
-	}
-	if err != nil {
-		return requestRecord{}, false, err
-	}
-	var record requestRecord
-	if err := document.DataTo(&record); err != nil {
-		return requestRecord{}, false, err
-	}
-	return record, !record.ExpiresAt.Before(time.Now().UTC()), nil
-}
-
-func (s *Store) readSearch(ctx context.Context, tx *firestorelib.Transaction, id string) (model.Job, error) {
-	document, err := tx.Get(s.client.Collection("searches").Doc(id))
-	if err != nil {
-		return model.Job{}, mapStoreError(err)
-	}
-	return decodeSearch(document)
-}
-
-func (s *Store) cancelSearch(ctx context.Context, tx *firestorelib.Transaction, key, hash string, job *model.Job) error {
-	if job.Status != model.JobQueued && job.Status != model.JobRunning {
-		return search.ErrNotRunning
-	}
-	now := time.Now().UTC()
-	job.Status, job.FinishedAt, job.UpdatedAt = model.JobCancelled, &now, now
-	data, _ := json.Marshal(renderJob(*job))
-	reference := s.client.Collection("searches").Doc(job.ID)
-	if err := tx.Update(reference, []firestorelib.Update{{Path: "payload", Value: data}}); err != nil {
-		return err
-	}
-	record := requestRecord{Hash: hash, ResourceID: job.ID, ExpiresAt: now.Add(s.searchTTL)}
-	return tx.Set(s.client.Collection("idempotency").Doc(hashKey("cancel:"+key)), record)
-}
-
-func (s *Store) claimItem(ctx context.Context, tx *firestorelib.Transaction, document *firestorelib.DocumentSnapshot, owner string, lease time.Duration, claimed *model.Item) error {
-	item, record, err := decodeItem(document)
-	if err != nil || record.ExpiresAt.Before(time.Now().UTC()) {
-		return search.ErrNotFound
-	}
-	job, err := s.readSearch(ctx, tx, item.SearchID)
-	if status.Code(err) == codes.NotFound || errors.Is(err, search.ErrNotFound) || job.Status == model.JobCancelled {
-		return search.ErrNotFound
-	}
-	if err != nil {
-		return err
-	}
-	now := time.Now().UTC()
-	expires := now.Add(lease)
-	item.Status, item.Attempts, item.LeaseOwner, item.LeaseUntil = model.ItemRunning, item.Attempts+1, owner, &expires
-	record.Payload, record.AvailableAt = mustJSON(renderItem(item)), expires
-	record.LeaseOwner, record.LeaseUntil = owner, &expires
-	job.Status, job.CurrentCard, job.UpdatedAt = model.JobRunning, item.OriginalName, now
-	if job.StartedAt == nil {
-		job.StartedAt = &now
-	}
-	if err := tx.Set(document.Ref, record); err != nil {
-		return err
-	}
-	if err := tx.Update(s.client.Collection("searches").Doc(job.ID), []firestorelib.Update{{Path: "payload", Value: mustJSON(renderJob(job))}}); err != nil {
-		return err
-	}
-	*claimed = item
-	return nil
-}
-
-func (s *Store) completeItem(ctx context.Context, tx *firestorelib.Transaction, reference *firestorelib.DocumentRef, record itemRecord, item model.Item, offers []model.Offer) error {
-	job, err := s.readSearch(ctx, tx, item.SearchID)
-	if err != nil {
-		return err
-	}
-	item.Sequence = job.Processed + 1
-	item.LeaseOwner, item.LeaseUntil = "", nil
-	record.Payload, record.AvailableAt = mustJSON(renderItem(item)), record.ExpiresAt.Add(doneParking)
-	record.Sequence = item.Sequence
-	record.LeaseOwner, record.LeaseUntil = "", nil
-	if err := tx.Set(reference, record); err != nil {
-		return err
-	}
-	offerRecord := valueRecord{Payload: mustJSON(renderOfferList(offers)), ExpiresAt: record.ExpiresAt}
-	if err := tx.Set(s.client.Collection("item_offers").Doc(item.ID), offerRecord); err != nil {
-		return err
-	}
-	updateSearch(&job, item)
-	return tx.Update(s.client.Collection("searches").Doc(job.ID), []firestorelib.Update{{Path: "payload", Value: mustJSON(renderJob(job))}})
-}
-
-func (s *Store) loadResultPage(ctx context.Context, id string, page model.ResultPage) ([]model.Item, bool, error) {
-	documents := s.client.Collection("items").
-		Where("search_id", "==", id).
-		Where("completion_sequence", ">", page.After).
-		OrderBy("completion_sequence", firestorelib.Asc).
-		Limit(page.Limit + 1).
-		Documents(ctx)
-	defer documents.Stop()
-	items := make([]model.Item, 0, page.Limit)
-	for len(items) <= page.Limit {
-		document, err := documents.Next()
-		if errors.Is(err, iterator.Done) {
-			return items, false, nil
-		}
-		if err != nil {
-			return nil, false, mapStoreError(err)
-		}
-		item, _, err := decodeItem(document)
-		if err != nil {
-			return nil, false, err
-		}
-		if len(items) == page.Limit {
-			return items, true, nil
-		}
-		item.Offers = []model.Offer{}
-		if offers, err := s.client.Collection("item_offers").Doc(item.ID).Get(ctx); err == nil {
-			var record valueRecord
-			_ = offers.DataTo(&record)
-			var stored []offerPayload
-			_ = json.Unmarshal(record.Payload, &stored)
-			item.Offers = buildOfferList(stored)
-		}
-		items = append(items, item)
-	}
-	return items, false, nil
-}
-
-func (s *Store) loadSource(ctx context.Context, domain string) (sourceRecord, error) {
-	document, err := s.client.Collection("source_health").Doc(hashKey(domain)).Get(ctx)
-	if status.Code(err) == codes.NotFound {
-		return sourceRecord{Source: domain}, nil
-	}
-	if err != nil {
-		return sourceRecord{}, err
-	}
-	var record sourceRecord
-	err = document.DataTo(&record)
-	return record, err
-}
-
-func (s *Store) readSource(ctx context.Context, tx *firestorelib.Transaction, reference *firestorelib.DocumentRef, domain string) (sourceRecord, error) {
-	document, err := tx.Get(reference)
-	if status.Code(err) == codes.NotFound {
-		return sourceRecord{Source: domain}, nil
-	}
-	if err != nil {
-		return sourceRecord{}, err
-	}
-	var record sourceRecord
-	err = document.DataTo(&record)
-	return record, err
-}
-
-func (s *Store) reserveTraffic(ctx context.Context, domain string) (time.Time, error) {
-	reference := s.client.Collection("traffic_leases").Doc(hashKey(domain))
-	var allowed time.Time
-	err := s.client.RunTransaction(ctx, func(ctx context.Context, tx *firestorelib.Transaction) error {
-		now := time.Now().UTC()
-		allowed = now
-		if document, err := tx.Get(reference); err == nil {
-			if previous, err := document.DataAt("next_allowed_at"); err == nil && previous.(time.Time).After(now) {
-				allowed = previous.(time.Time)
-			}
-		}
-		return tx.Set(reference, map[string]any{"next_allowed_at": allowed.Add(s.pace())})
-	})
-	return allowed, err
-}
-
-func decodeSearch(document *firestorelib.DocumentSnapshot) (model.Job, error) {
+// unpackSearch Answers a Document it cannot Read as Missing: a Search nobody
+// can Read is a Search nobody Asked for.
+func unpackSearch(document *firestorelib.DocumentSnapshot) (repositories.Search, error) {
 	var record searchRecord
-	if err := document.DataTo(&record); err != nil || record.ExpiresAt.Before(time.Now().UTC()) {
-		return model.Job{}, search.ErrNotFound
+	if err := document.DataTo(&record); err != nil {
+		return repositories.Search{}, repositories.ErrMissing
 	}
 	var job jobPayload
 	err := json.Unmarshal(record.Payload, &job)
-	return buildJob(job), err
+	return repositories.Search{Job: buildJob(job), ItemIDs: record.ItemIDs, ExpiresAt: record.ExpiresAt}, err
+}
+
+func packItem(stored repositories.Item) any {
+	return itemRecord{
+		Payload: mustJSON(renderItem(stored.Item)), SearchID: stored.SearchID, Position: stored.Position,
+		Sequence: stored.Sequence, LeaseOwner: stored.LeaseOwner, LeaseUntil: stored.LeaseUntil,
+		AvailableAt: stored.AvailableAt, ExpiresAt: stored.ExpiresAt,
+	}
+}
+
+// unpackItem Marks a Document it cannot Read as Damaged instead of Failing:
+// a Queue that Stops at one bad Document Stops for every Search behind it.
+func unpackItem(document *firestorelib.DocumentSnapshot) (repositories.Item, error) {
+	var record itemRecord
+	if err := document.DataTo(&record); err != nil {
+		return repositories.Item{Item: model.Item{ID: document.Ref.ID}, Damaged: true}, nil
+	}
+	var payload itemPayload
+	err := json.Unmarshal(record.Payload, &payload)
+	item := buildItem(payload)
+	item.ID, item.LeaseOwner, item.LeaseUntil = document.Ref.ID, record.LeaseOwner, record.LeaseUntil
+	return repositories.Item{Item: item, AvailableAt: record.AvailableAt, ExpiresAt: record.ExpiresAt, Damaged: err != nil}, nil
+}
+
+func packEntry(entry repositories.Entry) any {
+	return valueRecord{Payload: mustJSON(renderOfferList(entry.Offers)), ExpiresAt: entry.ExpiresAt, OfferIndexed: entry.Indexed}
+}
+
+func unpackEntry(document *firestorelib.DocumentSnapshot) (repositories.Entry, error) {
+	var record valueRecord
+	if err := document.DataTo(&record); err != nil {
+		return repositories.Entry{}, err
+	}
+	var payloads []offerPayload
+	if err := json.Unmarshal(record.Payload, &payloads); err != nil {
+		return repositories.Entry{}, err
+	}
+	return repositories.Entry{Offers: buildOfferList(payloads), ExpiresAt: record.ExpiresAt, Indexed: record.OfferIndexed}, nil
+}
+
+func packSnapshot(snapshot repositories.Snapshot) any {
+	return valueRecord{Payload: mustJSON(renderOffer(snapshot.Offer)), ExpiresAt: snapshot.ExpiresAt}
+}
+
+func unpackSnapshot(document *firestorelib.DocumentSnapshot) (repositories.Snapshot, error) {
+	var record valueRecord
+	if err := document.DataTo(&record); err != nil {
+		return repositories.Snapshot{}, err
+	}
+	var payload offerPayload
+	if err := json.Unmarshal(record.Payload, &payload); err != nil {
+		return repositories.Snapshot{}, err
+	}
+	return repositories.Snapshot{Offer: buildOffer(payload), ExpiresAt: record.ExpiresAt}, nil
+}
+
+func packRequest(request repositories.Request) any {
+	return requestRecord{Hash: request.Hash, ResourceID: request.ResourceID, ExpiresAt: request.ExpiresAt}
+}
+
+func unpackRequest(document *firestorelib.DocumentSnapshot) (repositories.Request, error) {
+	var record requestRecord
+	err := document.DataTo(&record)
+	return repositories.Request{Hash: record.Hash, ResourceID: record.ResourceID, ExpiresAt: record.ExpiresAt}, err
+}
+
+func packLease(lease repositories.Lease) any {
+	return map[string]any{"next_allowed_at": lease.NextAllowedAt}
+}
+
+func unpackLease(document *firestorelib.DocumentSnapshot) (repositories.Lease, error) {
+	next, err := document.DataAt("next_allowed_at")
+	if err != nil {
+		return repositories.Lease{}, err
+	}
+	stored, _ := next.(time.Time)
+	return repositories.Lease{NextAllowedAt: stored}, nil
+}
+
+func packPing(repositories.Ping) any {
+	return map[string]any{}
+}
+
+func unpackPing(*firestorelib.DocumentSnapshot) (repositories.Ping, error) {
+	return repositories.Ping{}, nil
+}
+
+// packOrder Writes the Indexed Copies beside the Payload that the Store's
+// Queries Filter on.
+func packOrder(order model.Order) any {
+	return orderRecord{Payload: mustJSON(renderOrder(order)), Status: string(order.Status), Domain: order.Domain, StoreOrder: order.StoreOrder, UpdatedAt: order.UpdatedAt}
 }
 
 func decodeOrder(document *firestorelib.DocumentSnapshot) (model.Order, error) {
@@ -1022,109 +215,23 @@ func decodeOrder(document *firestorelib.DocumentSnapshot) (model.Order, error) {
 	return buildOrder(stored), err
 }
 
-func decodeItem(document *firestorelib.DocumentSnapshot) (model.Item, itemRecord, error) {
-	var record itemRecord
-	if err := document.DataTo(&record); err != nil {
-		return model.Item{}, record, err
-	}
-	var stored itemPayload
-	err := json.Unmarshal(record.Payload, &stored)
-	item := buildItem(stored)
-	item.LeaseOwner, item.LeaseUntil = record.LeaseOwner, record.LeaseUntil
-	return item, record, err
-}
-
-func updateSearch(job *model.Job, item model.Item) {
-	job.Processed++
-	switch item.Status {
-	case model.ItemFound:
-		job.Found++
-	case model.ItemNotFound:
-		job.NotFound++
-	case model.ItemSourceError:
-		job.Errors++
-	}
-	if job.Processed == job.Total && job.Status != model.JobCancelled {
-		now := time.Now().UTC()
-		job.Status, job.CurrentCard, job.FinishedAt = model.JobCompleted, "", &now
-		if job.Errors > 0 {
-			job.Status = model.JobCompletedWithErrors
-		}
-	}
-	job.UpdatedAt = time.Now().UTC()
-}
-
-func updateSource(record *sourceRecord, latency time.Duration, sourceErr error) {
-	now := time.Now().UTC()
-	record.LatencyMilliseconds = latency.Milliseconds()
-	if sourceErr == nil {
-		record.LastSuccess, record.ConsecutiveFailures, record.CircuitOpenUntil = &now, 0, nil
-		return
-	}
-	record.LastFailure = &now
-	// Un Freno Queda Anotado y no Avanza el Contador: cinco 429 seguidos son
-	// una Tienda sana Pidiendo Calma, y Abrirle el Circuito la Deja muda un
-	// Minuto por Portarse bien.
-	if source.Throttled(sourceErr) {
-		return
-	}
-	record.ConsecutiveFailures++
-	if record.ConsecutiveFailures >= circuitThreshold {
-		opened := now.Add(circuitWait(record.ConsecutiveFailures))
-		record.CircuitOpenUntil = &opened
+func packSourceHealth(health model.SourceHealth) any {
+	return sourceRecord{
+		Source: health.Source, LastSuccess: health.LastSuccess, LastFailure: health.LastFailure,
+		ConsecutiveFailures: health.ConsecutiveFailures, LatencyMilliseconds: health.LatencyMilliseconds,
+		CircuitOpenUntil: health.CircuitOpenUntil,
 	}
 }
 
-// circuitWait Says how long a Fallen Store Stays unasked, Doubling with each
-// further Fall.
-//
-// Un Minuto fijo Servia para una Caida de un rato y Fallaba para una de una
-// Semana: `v3.netdecker.cl` Llevaba 39 Fallas seguidas y ocho Dias sin
-// Contestar, y aun asi Recibia cinco Consultas por Minuto. Cada una le Costaba
-// su Timeout a la Busqueda que la Pedia, y a la Tienda caida un Golpe mas.
-//
-// Doblar Respeta las dos Puntas: una Caida corta se Perdona rapido, y una
-// larga se Consulta una vez por Hora hasta que Vuelva. El Tope Existe porque
-// una Tienda que Vuelve no Deberia Esperar mas que eso para que la Noten.
-func circuitWait(failures int) time.Duration {
-	wait := circuitCooldown << min(failures-circuitThreshold, 16)
-	return min(wait, circuitCeiling)
-}
-
-func mapSourceHealth(record sourceRecord) model.SourceHealth {
+func decodeSourceHealth(document *firestorelib.DocumentSnapshot) (model.SourceHealth, error) {
+	var record sourceRecord
+	err := document.DataTo(&record)
 	return model.SourceHealth{
 		Source: record.Source, LastSuccess: record.LastSuccess, LastFailure: record.LastFailure,
 		ConsecutiveFailures: record.ConsecutiveFailures,
 		LatencyMilliseconds: record.LatencyMilliseconds,
 		CircuitOpenUntil:    record.CircuitOpenUntil,
-	}
-}
-
-func waitUntil(ctx context.Context, target time.Time) error {
-	wait := time.Until(target)
-	if wait <= 0 {
-		return nil
-	}
-	timer := time.NewTimer(wait)
-	defer timer.Stop()
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-timer.C:
-		return nil
-	}
-}
-
-func mapStoreError(err error) error {
-	if status.Code(err) == codes.NotFound {
-		return search.ErrNotFound
-	}
-	return err
-}
-
-func buildSearch(input model.CreateInput) model.Job {
-	now := time.Now().UTC()
-	return model.Job{ID: buildID("search"), Game: input.Game, Status: model.JobQueued, Total: len(input.Cards), CreatedAt: now, UpdatedAt: now}
+	}, err
 }
 
 func mustJSON(value any) []byte {
@@ -1135,10 +242,4 @@ func mustJSON(value any) []byte {
 func hashKey(value string) string {
 	sum := sha256.Sum256([]byte(value))
 	return hex.EncodeToString(sum[:])
-}
-
-func buildID(prefix string) string {
-	data := make([]byte, 12)
-	_, _ = rand.Read(data)
-	return prefix + "_" + hex.EncodeToString(data)
 }

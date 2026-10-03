@@ -208,15 +208,14 @@ release that landed first, and the other way around.
 ```mermaid
 flowchart LR
     function[function.go<br/>Cloud Function Entry Points]
-    transport[internal/httpapi<br/>Handlers and HTTP DTOs]
+    transport[internal/handler<br/>Handlers and HTTP DTOs]
     application[internal/application<br/>Composition]
     catalog[internal/catalog<br/>Source Construction]
     domain[internal/search and model<br/>Search Service]
-    orderer[internal/stores<br/>Orderer and woocommerce.Client]
+    orderer[internal/stores/commerce<br/>Shops and platform clients]
     releaser[internal/orders<br/>Releaser]
     repository[SearchRepository<br/>Persistence Interface]
-    repositories[internal/repositories<br/>Repository Implementations]
-    datasources[internal/datasources<br/>Generic Database Contract]
+    repositories[internal/repositories<br/>Generic Repository and Stores]
     database[internal/db<br/>Firebase Adapter]
     worker[search.Worker<br/>Background Work]
     config[config/stores.yaml<br/>Games, Origins, and Stores]
@@ -228,8 +227,7 @@ flowchart LR
     worker --> domain
     domain --> repository
     repository --> repositories
-    repositories --> datasources
-    datasources --> database
+    repositories -->|Database| database
     application --> database
     application --> repositories
     config --> catalog
@@ -242,19 +240,37 @@ flowchart LR
     adapters --> domain
 ```
 
-The HTTP handlers decode request DTOs and pass business inputs to the search
-service. The worker calls the same service without HTTP. The service reaches
-persistence through `SearchRepository`, implemented by `internal/repositories`.
-Repositories use the provider-neutral `datasources.Database` contract; the
-Firebase-backed `internal/db` package supplies its current implementation.
+`internal/handler.Handler` is the HTTP composition boundary. Its route handlers
+decode request shapes and orchestrate `search.Service`; the worker calls that
+same service without HTTP. `wire_models.go` holds HTTP request and response
+types, while `model_dto.go` maps between those types and business models. The
+service reaches persistence through `SearchRepository`, implemented by
+`internal/repositories`.
+`internal/repositories` holds one generic `Repository[T]` primitive (create,
+save, get, update, delete, list) and the stores built on it, which carry the
+persistence logic. They reach storage through the provider-neutral
+`repositories.Database` contract; the Firebase-backed `internal/db` package
+supplies its current implementation, one `Collection[T]` per record kind.
+
+Controlled business failures pass to `internal/errorhandler`, the one place
+that maps them to HTTP statuses and safe public messages. Unknown failures
+remain server errors.
+
+`search.Service` joins five services, each holding only the ports and limits
+its own questions need: `SearchService` (create, read, list, cancel),
+`OfferService` (find, cache and shape offers), `StockService`,
+`CheckoutService` and `OrderService`. The worker takes the `OfferService` and a
+`StockChecker`. `WithRepository` hands the one repository to every service that
+reads a search.
 
 `internal/model` groups the domain types for offers, carts, searches, and source
-health. These types carry no JSON or Firestore tags. `internal/httpapi` owns
-request and response DTOs; `internal/db` owns database records and stored
-JSON payloads. `internal/application` selects the Firebase-backed adapter and
-passes it to repositories through `datasources.Database`. The Firebase SDK
-stays inside `internal/db`. Explicit mappings at each boundary preserve the API and persisted
-field names independently. Search idempotency uses its own stable fingerprint.
+health. These types carry no JSON or Firestore tags. `internal/handler` owns
+HTTP wire shapes and their conversions; `internal/db` owns database records
+and stored JSON payloads. `internal/application` selects the Firebase-backed
+adapter and passes it to the stores through `repositories.Database`. The
+Firebase SDK stays inside `internal/db`. Explicit mappings at each boundary
+preserve the API and persisted field names independently. Search idempotency
+uses its own stable fingerprint.
 
 The domain also declares needs such as `TaskQueue`, `Provider`,
 `OfferSource`, `StockChecker`, and `OfferCache`. `internal/catalog` builds the
@@ -265,9 +281,11 @@ and assembles the `Runtime` from those parts. Provider
 packages implement the ports, so search rules do not import Firestore, Cloud
 Tasks, or concrete HTTP client types.
 
-Store configuration and stock checking live in `internal/stores`. Its
-`jumpseller`, `shopify`, `prestashop`, `woocommerce`, and `moxfield` subpackages
-contain the platform-specific clients. Offer aggregators live separately in
+Store configuration lives in `internal/stores/directory`, and what the stores
+can do (stock, quotes, orders, checkout links) lives in
+`internal/stores/commerce`. The `jumpseller`, `shopify`, `prestashop`,
+`woocommerce`, and `moxfield` subpackages contain the platform-specific
+clients. Offer aggregators live separately in
 `internal/aggregators`.
 
 The [game provider flow](search/game-search-providers.md) details this composition. The
@@ -281,17 +299,16 @@ provider. Production packages outside it depend on repository ports and do not
 import `internal/db` or `internal/taskqueue`; the `Runtime` exposes ports, not
 concrete types.
 
-- `datasources.Database` is the provider-neutral contract implemented by the
-  Firebase adapter. `internal/repositories` implements search and worker ports
-  through that contract.
-- `Vault` gathers the five roles currently served by one repository: saving searches,
-  caching offers, reporting its health, counting waiting work, and pacing
-  traffic to each source. They are listed separately because they are
-  independent; one repository satisfying all five is a composition coincidence,
-  not a domain assumption.
+- `repositories.Database` is the provider-neutral contract implemented by the
+  Firebase adapter: it opens the collections and runs work across them in one
+  transaction. The stores in `internal/repositories` implement the search and
+  worker ports through that contract.
+- `Vault` gathers the six roles the persistence object plays: saving searches
+  and their items, caching offers, placing and moving orders, reporting its
+  health, counting waiting work, and pacing traffic to each source. They are
+  listed separately because they are independent; one object satisfying all six
+  is a composition coincidence, not a domain assumption.
 - `Dispatcher` gathers work dispatch and the wakeup that restores the sweeper.
-- `Teller` is optional: a store with something to say receives a logger, while
-  one that stays quiet simply does not implement it.
 
 The assertions in `internal/application/vault_test.go` hold this boundary at
 compile time.

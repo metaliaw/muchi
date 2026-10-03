@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cangrejometralleta/muchi-api/internal/repositories"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 )
 
@@ -161,7 +162,7 @@ func TestReleaseExpiredOrders(t *testing.T) {
 	store := openTestStore(t)
 	ctx := context.Background()
 	stale := model.Order{
-		ID: buildID("order"), Store: "Konoha Store", Domain: "konohastore.cl",
+		ID: "order_stale", Store: "Konoha Store", Domain: "konohastore.cl",
 		Status: model.OrderPending, CreatedAt: time.Now().UTC().Add(-48 * time.Hour),
 		UpdatedAt: time.Now().UTC().Add(-48 * time.Hour),
 	}
@@ -195,21 +196,28 @@ func TestReleaseExpiredOrders(t *testing.T) {
 	}
 }
 
-func openTestStore(t *testing.T) *Store {
+// testStore Joins the Firestore Store with the Stores that Serve its Ports,
+// so a Test Reads Raw Documents and Calls Ports through one Name.
+type testStore struct {
+	*Store
+	*repositories.SearchOffer
+}
+
+func openTestStore(t *testing.T) *testStore {
 	t.Helper()
 	if os.Getenv("FIRESTORE_EMULATOR_HOST") == "" {
 		t.Skip("FIRESTORE_EMULATOR_HOST is not set")
 	}
 	project := fmt.Sprintf("muchi-test-%d", time.Now().UnixNano())
-	store, err := OpenStore(context.Background(), project, testSearchTTL)
+	store, err := OpenStore(context.Background(), project)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = store.CloseStore() })
-	return store
+	return &testStore{Store: store, SearchOffer: repositories.New(store, testSearchTTL)}
 }
 
-func createTestSearch(t *testing.T, store *Store, suffix string) model.Job {
+func createTestSearch(t *testing.T, store *testStore, suffix string) model.Job {
 	t.Helper()
 	input := model.CreateInput{
 		Cards: []model.CardInput{
@@ -279,7 +287,7 @@ func TestOrphanItemsLeaveTheQueue(t *testing.T) {
 	ctx := context.Background()
 	createTestSearch(t, store, "after-orphans")
 
-	for position := range maxClaimDiscards {
+	for position := range 20 {
 		id := fmt.Sprintf("item_orphan_%02d", position)
 		record := itemRecord{
 			Payload: mustJSON(model.Item{
@@ -366,5 +374,55 @@ func TestCountWaitingItemsRespectsTheCap(t *testing.T) {
 	waiting, err := store.CountWaitingItems(context.Background(), 1)
 	if err != nil || waiting != 1 {
 		t.Fatalf("waiting=%d err=%v", waiting, err)
+	}
+}
+
+func TestARetriedCreateAnswersTheSearchItAlreadyMade(t *testing.T) {
+	store := openTestStore(t)
+	ctx := context.Background()
+	input := model.CreateInput{Cards: []model.CardInput{{Name: "Sol Ring", Quantity: 1}}}
+	first, err := store.CreateSearch(ctx, "create-key", "same-hash", input)
+	if err != nil || first.ID == "" {
+		t.Fatalf("first create=%#v err=%v", first, err)
+	}
+	again, err := store.CreateSearch(ctx, "create-key", "same-hash", input)
+	if err != nil || again.ID != first.ID {
+		t.Fatalf("retried create=%#v err=%v want id=%s", again, err, first.ID)
+	}
+	if _, err := store.CreateSearch(ctx, "create-key", "other-hash", input); !errors.Is(err, search.ErrConflict) {
+		t.Fatalf("conflicting create err=%v", err)
+	}
+	waiting, err := store.CountWaitingItems(ctx, 10)
+	if err != nil || waiting != 1 {
+		t.Fatalf("a retried create must not split twice: waiting=%d err=%v", waiting, err)
+	}
+}
+
+func TestAnEntryNobodyIndexedIsIndexedOnItsFirstLoad(t *testing.T) {
+	store := openTestStore(t)
+	ctx := context.Background()
+	offer := model.Offer{ID: "konohastore.cl:5", Source: "konohastore.cl"}
+	// Written the way an older Release did: no Snapshots, no Indexed flag.
+	legacy := valueRecord{Payload: mustJSON(renderOfferList([]model.Offer{offer})), ExpiresAt: time.Now().UTC().Add(time.Hour)}
+	if _, err := store.client.Collection("offer_cache").Doc(hashKey("legacy-key")).Set(ctx, legacy); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.GetOffer(ctx, offer.ID); !errors.Is(err, search.ErrNotFound) {
+		t.Fatalf("before the load err=%v", err)
+	}
+	offers, found, err := store.LoadOffers(ctx, "legacy-key")
+	if err != nil || !found || len(offers) != 1 {
+		t.Fatalf("load offers=%#v found=%v err=%v", offers, found, err)
+	}
+	if read, err := store.GetOffer(ctx, offer.ID); err != nil || read.ID != offer.ID {
+		t.Fatalf("after the load read=%#v err=%v", read, err)
+	}
+	document, err := store.client.Collection("offer_cache").Doc(hashKey("legacy-key")).Get(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var record valueRecord
+	if err := document.DataTo(&record); err != nil || !record.OfferIndexed {
+		t.Fatalf("indexed flag=%v err=%v", record.OfferIndexed, err)
 	}
 }

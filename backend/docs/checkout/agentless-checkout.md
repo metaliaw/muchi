@@ -63,7 +63,7 @@ the response carries `payment_result.redirect_url`, and a payment page begins.
 
 One caveat: some stores disable the Store API or use the classic checkout.
 For a single simple product, `/?add-to-cart=ID&quantity=N` adds it by link —
-`stores.CheckoutLink` uses it for a single-line WooCommerce cart, the one case
+`commerce.Shops.CheckoutLink` uses it for a single-line WooCommerce cart, the one case
 it can name without the Store API.
 
 ### Jumpseller: The MCP Hands Over the Link
@@ -152,7 +152,7 @@ variable products get no `quote`.
 ## Regions and Shopify
 
 The region is written by name, as in `stores.yaml`. A fixed table in
-`internal/stores/regions.go` turns it into the region's ISO code: WooCommerce
+`internal/stores/commerce/regions.go` turns it into the region's ISO code: WooCommerce
 receives `CL-RM` and Shopify `RM`. The code itself is accepted too.
 
 Shopify quotes through its AJAX API: `POST /cart/add.js` builds a cart in a

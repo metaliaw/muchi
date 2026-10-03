@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/cangrejometralleta/muchi-api/internal/source"
-	"github.com/cangrejometralleta/muchi-api/internal/stores"
+	"github.com/cangrejometralleta/muchi-api/internal/stores/directory"
 	"github.com/cangrejometralleta/muchi-api/internal/stores/moxfield"
 )
 
@@ -32,7 +32,7 @@ func TestPublicLists(t *testing.T) {
 	if os.Getenv("MUCHI_TEST_MOXFIELD_LIVE") != "1" {
 		t.Skip("set MUCHI_TEST_MOXFIELD_LIVE=1 to query public lists")
 	}
-	config, err := stores.LoadStoreConfig("../../../config/stores.yaml", nil)
+	config, err := directory.LoadStoreConfig("../../../config/stores.yaml", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

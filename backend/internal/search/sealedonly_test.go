@@ -15,8 +15,10 @@ func TestACardQuestionSkipsASealedOnlySource(t *testing.T) {
 	boxes := &countingSource{name: "casamyl.cl"}
 	cards := &countingSource{name: "cards.example.cl"}
 	service := Service{
-		SourcesByGame: map[model.Game][]OfferSource{model.GameMitos: {boxes, cards}},
-		SealedOnly:    map[string]bool{"casamyl.cl": true},
+		OfferService: OfferService{
+			SourcesByGame: map[model.Game][]OfferSource{model.GameMitos: {boxes, cards}},
+			SealedOnly:    map[string]bool{"casamyl.cl": true},
+		},
 	}
 
 	if _, _, err := service.FindCardOffers(context.Background(), model.GameMitos,

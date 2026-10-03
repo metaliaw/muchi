@@ -7,16 +7,13 @@ import (
 	"github.com/cangrejometralleta/muchi-api/internal/model"
 )
 
-// SearchRepository Stores searches for the service.
+// SearchRepository Keeps the searches and the card items they split into: the
+// service Creates and Reads them, the worker Claims and Completes them.
 type SearchRepository interface {
 	CreateSearch(context.Context, string, string, model.CreateInput) (model.Job, error)
 	GetSearch(context.Context, string) (model.Job, error)
 	ListResults(context.Context, string, model.ResultPage) (model.Result, error)
 	CancelSearch(context.Context, string, string, string) (model.Job, error)
-}
-
-// SearchItemRepository Claims and completes the worker's card items.
-type SearchItemRepository interface {
 	ClaimSearchItem(context.Context, string, time.Duration) (model.Item, error)
 	RenewItemLease(context.Context, string, string, time.Duration) error
 	CompleteSearchItem(context.Context, model.Item, []model.Offer) error

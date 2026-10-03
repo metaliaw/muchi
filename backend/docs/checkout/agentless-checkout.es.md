@@ -64,7 +64,7 @@ página de pago.
 
 Un aviso: algunas tiendas desactivan la Store API o usan el checkout clásico.
 Para un solo producto simple, `/?add-to-cart=ID&quantity=N` lo agrega por
-enlace — `stores.CheckoutLink` lo usa para un carro WooCommerce de una sola
+enlace — `commerce.Shops.CheckoutLink` lo usa para un carro WooCommerce de una sola
 línea, el único caso que puede nombrar sin la Store API.
 
 ### Jumpseller: el MCP entrega el enlace
@@ -154,7 +154,7 @@ de agregadores y los productos variables quedan sin `quote`.
 ## Regiones y Shopify
 
 La región se escribe por nombre, igual que en `stores.yaml`. Una tabla fija en
-`internal/stores/regions.go` la traduce al código ISO de cada región: WooCommerce
+`internal/stores/commerce/regions.go` la traduce al código ISO de cada región: WooCommerce
 recibe `CL-RM` y Shopify `RM`. También acepta el código directo.
 
 Shopify cotiza con su API AJAX: `POST /cart/add.js` arma un carro en una cookie

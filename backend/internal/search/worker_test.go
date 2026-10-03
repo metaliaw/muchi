@@ -52,9 +52,9 @@ func (c *countingChecker) CheckStock(context.Context, model.Offer) (model.StockR
 func workerFor(item model.Item, checker StockChecker) (Worker, *oneItemStore) {
 	store := &oneItemStore{item: item}
 	return Worker{
-		Store: store, Owner: "probe", LeaseDuration: time.Minute, StockCheckLimit: 5,
-		Service: Service{
-			Stocks: checker,
+		Repository: store, Owner: "probe", LeaseDuration: time.Minute, StockCheckLimit: 5,
+		Stocks: checker,
+		Offers: OfferService{
 			SourcesByGame: map[model.Game][]OfferSource{model.GameMagic: {stubSource{name: "store.cl", items: []model.Offer{
 				{ID: "one", CardName: "Sol Ring", Store: "store", URL: "https://store.test/one",
 					PriceAmount: "2800", PriceCurrency: "CLP", StockStatus: "available"},

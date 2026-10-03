@@ -40,7 +40,12 @@ func (c *stubCache) SaveOffers(_ context.Context, _ string, items []model.Offer,
 func TestFindProvider(t *testing.T) {
 	wanted := model.Offer{ID: "one", Store: "store", URL: "https://store.test", PriceAmount: "10.00", PriceCurrency: "USD"}
 	cache := &stubCache{}
-	service := Service{Providers: map[model.Game]Provider{model.GameMagic: stubProvider{items: []model.Offer{wanted}}}, Cache: cache}
+	service := Service{
+		OfferService: OfferService{
+			Providers: map[model.Game]Provider{model.GameMagic: stubProvider{items: []model.Offer{wanted}}},
+			Cache:     cache,
+		},
+	}
 	items, _, err := service.FindCardOffers(context.Background(), model.GameMagic, model.CardQuery{Name: "Sol Ring"})
 	if err != nil || len(items) != 1 || !cache.saved {
 		t.Fatalf("FindCardOffers() items=%v saved=%v err=%v", items, cache.saved, err)
@@ -53,8 +58,10 @@ func TestAnOfferCarriesItsConfiguredLocation(t *testing.T) {
 		URL: "https://v3.netdecker.cl/card", PriceAmount: "1000", PriceCurrency: "CLP",
 	}
 	service := Service{
-		Providers:      map[model.Game]Provider{model.GameYuGiOh: stubProvider{items: []model.Offer{wanted}}},
-		StoreLocations: map[string][]string{"v3.netdecker.cl": {"Viña del Mar", "Quilpué - Mesa 1"}},
+		OfferService: OfferService{
+			Providers:      map[model.Game]Provider{model.GameYuGiOh: stubProvider{items: []model.Offer{wanted}}},
+			StoreLocations: map[string][]string{"v3.netdecker.cl": {"Viña del Mar", "Quilpué - Mesa 1"}},
+		},
 	}
 
 	items, _, err := service.FindCardOffers(context.Background(), model.GameYuGiOh, model.CardQuery{Name: "Kuriboh"})
@@ -65,7 +72,11 @@ func TestAnOfferCarriesItsConfiguredLocation(t *testing.T) {
 }
 
 func TestFindProviderRejectsUnconfiguredGame(t *testing.T) {
-	service := Service{Providers: map[model.Game]Provider{}}
+	service := Service{
+		OfferService: OfferService{
+			Providers: map[model.Game]Provider{},
+		},
+	}
 	if _, _, err := service.FindCardOffers(context.Background(), model.GamePokemon, model.CardQuery{Name: "Charizard"}); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("FindCardOffers() error=%v", err)
 	}
@@ -105,8 +116,11 @@ func (r *keyRecorder) SaveOffers(context.Context, string, []model.Offer, time.Du
 func TestCacheSeparatesMatchModes(t *testing.T) {
 	recorder := &keyRecorder{}
 	service := Service{
-		Providers: map[model.Game]Provider{model.GameMagic: stubProvider{items: []model.Offer{}}},
-		Cache:     recorder, CacheNamespace: "ns:",
+		OfferService: OfferService{
+			Providers:      map[model.Game]Provider{model.GameMagic: stubProvider{items: []model.Offer{}}},
+			Cache:          recorder,
+			CacheNamespace: "ns:",
+		},
 	}
 	for _, mode := range []model.MatchMode{model.MatchExact, model.MatchIncludes} {
 		if _, _, err := service.FindCardOffers(context.Background(), model.GameMagic, model.CardQuery{Name: "Sol Ring", Match: mode}); err != nil {
@@ -134,10 +148,14 @@ func (s stubSource) SourceName() string { return s.name }
 // one Store Falls, another Answers, and the Reply Looks complete.
 func TestAPartialAnswerNamesWhatFell(t *testing.T) {
 	wanted := model.Offer{ID: "one", Store: "store", URL: "https://store.test", PriceAmount: "10", PriceCurrency: "CLP"}
-	service := Service{SourcesByGame: map[model.Game][]OfferSource{model.GameMagic: {
-		stubSource{name: "good.cl", items: []model.Offer{wanted}},
-		stubSource{name: "broken.cl", err: errors.New("pagination repeated products")},
-	}}}
+	service := Service{
+		OfferService: OfferService{
+			SourcesByGame: map[model.Game][]OfferSource{model.GameMagic: {
+				stubSource{name: "good.cl", items: []model.Offer{wanted}},
+				stubSource{name: "broken.cl", err: errors.New("pagination repeated products")},
+			}},
+		},
+	}
 	items, faults, err := service.FindCardOffers(context.Background(), model.GameMagic, model.CardQuery{Name: "Sol Ring"})
 	if err != nil || len(items) != 1 {
 		t.Fatalf("items=%d err=%v", len(items), err)
@@ -149,11 +167,15 @@ func TestAPartialAnswerNamesWhatFell(t *testing.T) {
 
 // TestAFullAnswerNamesNobody Keeps the Field from Crying Wolf.
 func TestAFullAnswerNamesNobody(t *testing.T) {
-	service := Service{SourcesByGame: map[model.Game][]OfferSource{model.GameMagic: {
-		stubSource{name: "good.cl", items: []model.Offer{{
-			ID: "one", Store: "store", URL: "https://store.test", PriceAmount: "10", PriceCurrency: "CLP",
-		}}},
-	}}}
+	service := Service{
+		OfferService: OfferService{
+			SourcesByGame: map[model.Game][]OfferSource{model.GameMagic: {
+				stubSource{name: "good.cl", items: []model.Offer{{
+					ID: "one", Store: "store", URL: "https://store.test", PriceAmount: "10", PriceCurrency: "CLP",
+				}}},
+			}},
+		},
+	}
 	_, faults, err := service.FindCardOffers(context.Background(), model.GameMagic, model.CardQuery{Name: "Sol Ring"})
 	if err != nil || len(faults) != 0 {
 		t.Fatalf("faults=%+v err=%v", faults, err)
@@ -168,10 +190,12 @@ func TestADirectStoreOverridesItsAggregator(t *testing.T) {
 	direct := aggregated
 	direct.ID, direct.Source, direct.PriceAmount = "direct", "www.oasisgames.cl", "1000"
 	service := Service{
-		Providers: map[model.Game]Provider{model.GameMagic: stubProvider{items: []model.Offer{aggregated}}},
-		SourcesByGame: map[model.Game][]OfferSource{model.GameMagic: {
-			stubSource{name: "www.oasisgames.cl", items: []model.Offer{direct}},
-		}},
+		OfferService: OfferService{
+			Providers: map[model.Game]Provider{model.GameMagic: stubProvider{items: []model.Offer{aggregated}}},
+			SourcesByGame: map[model.Game][]OfferSource{model.GameMagic: {
+				stubSource{name: "www.oasisgames.cl", items: []model.Offer{direct}},
+			}},
+		},
 	}
 
 	items, _, err := service.FindCardOffers(context.Background(), model.GameMagic, model.CardQuery{Name: "Sol Ring"})
@@ -186,10 +210,12 @@ func TestAnAggregatorBacksUpAFailedStore(t *testing.T) {
 		URL: "https://www.oasisgames.cl/products/sol-ring?variant=10", PriceAmount: "1200", PriceCurrency: "CLP",
 	}
 	service := Service{
-		Providers: map[model.Game]Provider{model.GameMagic: stubProvider{items: []model.Offer{aggregated}}},
-		SourcesByGame: map[model.Game][]OfferSource{model.GameMagic: {
-			stubSource{name: "www.oasisgames.cl", err: errors.New("store unavailable")},
-		}},
+		OfferService: OfferService{
+			Providers: map[model.Game]Provider{model.GameMagic: stubProvider{items: []model.Offer{aggregated}}},
+			SourcesByGame: map[model.Game][]OfferSource{model.GameMagic: {
+				stubSource{name: "www.oasisgames.cl", err: errors.New("store unavailable")},
+			}},
+		},
 	}
 
 	items, faults, err := service.FindCardOffers(context.Background(), model.GameMagic, model.CardQuery{Name: "Sol Ring"})
@@ -224,12 +250,14 @@ func TestAStoreOfferBorrowsThePrintImage(t *testing.T) {
 		{Edition: "c21", CollectorNumber: "263", Image: "https://images.test/c21-263.jpg"},
 	}}
 	service := Service{
-		SourcesByGame: map[model.Game][]OfferSource{model.GameMagic: {stubSource{name: "store.cl", items: []model.Offer{
-			storeOffer("one", "Sol Ring [C21] #263", ""),
-			storeOffer("two", "Sol Ring — Near Mint", ""),
-			storeOffer("three", "Sol Ring [C21] #263", "https://own.test/picture.jpg"),
-		}}}},
-		PrintsByGame: map[model.Game]PrintLibrary{model.GameMagic: library},
+		OfferService: OfferService{
+			SourcesByGame: map[model.Game][]OfferSource{model.GameMagic: {stubSource{name: "store.cl", items: []model.Offer{
+				storeOffer("one", "Sol Ring [C21] #263", ""),
+				storeOffer("two", "Sol Ring — Near Mint", ""),
+				storeOffer("three", "Sol Ring [C21] #263", "https://own.test/picture.jpg"),
+			}}}},
+			PrintsByGame: map[model.Game]PrintLibrary{model.GameMagic: library},
+		},
 	}
 	items, _, err := service.FindCardOffers(context.Background(), model.GameMagic, model.CardQuery{Name: "Sol Ring"})
 	if err != nil || len(items) != 3 {
@@ -257,10 +285,12 @@ func TestAStoreOfferBorrowsThePrintImage(t *testing.T) {
 func TestAGameWithoutAPrintListAsksNobody(t *testing.T) {
 	library := &stubLibrary{}
 	service := Service{
-		SourcesByGame: map[model.Game][]OfferSource{model.GameYuGiOh: {stubSource{name: "store.cl", items: []model.Offer{
-			storeOffer("one", "Kuriboh", ""),
-		}}}},
-		PrintsByGame: map[model.Game]PrintLibrary{model.GameMagic: library},
+		OfferService: OfferService{
+			SourcesByGame: map[model.Game][]OfferSource{model.GameYuGiOh: {stubSource{name: "store.cl", items: []model.Offer{
+				storeOffer("one", "Kuriboh", ""),
+			}}}},
+			PrintsByGame: map[model.Game]PrintLibrary{model.GameMagic: library},
+		},
 	}
 	if _, _, err := service.FindCardOffers(context.Background(), model.GameYuGiOh, model.CardQuery{Name: "Kuriboh"}); err != nil {
 		t.Fatal(err)
@@ -287,13 +317,15 @@ func (s *stubSets) GameSets(context.Context) ([]string, error) {
 func TestASealedAnswerKeepsItsOwnGame(t *testing.T) {
 	sets := &stubSets{names: []string{"Chaos Origins", "Rarity Collection 5"}}
 	service := Service{
-		Providers: map[model.Game]Provider{model.GameYuGiOh: stubProvider{items: []model.Offer{
-			{ID: "own", CardName: "Chaos Origins Booster Box Español", Store: "store",
-				URL: "https://store.test/own", PriceAmount: "104990", Source: "store"},
-			{ID: "other", CardName: "Cardfight!! Vanguard Booster Box: Destined Showdown", Store: "store",
-				URL: "https://store.test/other", PriceAmount: "59143", Source: "store"},
-		}}},
-		SetsByGame: map[model.Game]SetLibrary{model.GameYuGiOh: sets},
+		OfferService: OfferService{
+			Providers: map[model.Game]Provider{model.GameYuGiOh: stubProvider{items: []model.Offer{
+				{ID: "own", CardName: "Chaos Origins Booster Box Español", Store: "store",
+					URL: "https://store.test/own", PriceAmount: "104990", Source: "store"},
+				{ID: "other", CardName: "Cardfight!! Vanguard Booster Box: Destined Showdown", Store: "store",
+					URL: "https://store.test/other", PriceAmount: "59143", Source: "store"},
+			}}},
+			SetsByGame: map[model.Game]SetLibrary{model.GameYuGiOh: sets},
+		},
 	}
 	query := model.CardQuery{Name: "Booster Box", Kind: model.KindSealed}
 	items, _, err := service.FindCardOffers(context.Background(), model.GameYuGiOh, query)
@@ -307,11 +339,13 @@ func TestASealedAnswerKeepsItsOwnGame(t *testing.T) {
 func TestASingleAnswerNeverAsksForSets(t *testing.T) {
 	sets := &stubSets{names: []string{"Chaos Origins"}}
 	service := Service{
-		Providers: map[model.Game]Provider{model.GameYuGiOh: stubProvider{items: []model.Offer{
-			{ID: "card", CardName: "Kuriboh", Store: "store", URL: "https://store.test/card",
-				PriceAmount: "990", Source: "store"},
-		}}},
-		SetsByGame: map[model.Game]SetLibrary{model.GameYuGiOh: sets},
+		OfferService: OfferService{
+			Providers: map[model.Game]Provider{model.GameYuGiOh: stubProvider{items: []model.Offer{
+				{ID: "card", CardName: "Kuriboh", Store: "store", URL: "https://store.test/card",
+					PriceAmount: "990", Source: "store"},
+			}}},
+			SetsByGame: map[model.Game]SetLibrary{model.GameYuGiOh: sets},
+		},
 	}
 	items, _, err := service.FindCardOffers(context.Background(), model.GameYuGiOh, model.CardQuery{Name: "Kuriboh"})
 	if err != nil || len(items) != 1 || sets.calls != 0 {
@@ -323,11 +357,13 @@ func TestASingleAnswerNeverAsksForSets(t *testing.T) {
 // Caller more than a Stranger among them.
 func TestASealedAnswerSurvivesASetListThatFails(t *testing.T) {
 	service := Service{
-		Providers: map[model.Game]Provider{model.GameYuGiOh: stubProvider{items: []model.Offer{
-			{ID: "own", CardName: "Chaos Origins Booster Box", Store: "store",
-				URL: "https://store.test/own", PriceAmount: "104990", Source: "store"},
-		}}},
-		SetsByGame: map[model.Game]SetLibrary{model.GameYuGiOh: &stubSets{err: errors.New("catalog down")}},
+		OfferService: OfferService{
+			Providers: map[model.Game]Provider{model.GameYuGiOh: stubProvider{items: []model.Offer{
+				{ID: "own", CardName: "Chaos Origins Booster Box", Store: "store",
+					URL: "https://store.test/own", PriceAmount: "104990", Source: "store"},
+			}}},
+			SetsByGame: map[model.Game]SetLibrary{model.GameYuGiOh: &stubSets{err: errors.New("catalog down")}},
+		},
 	}
 	query := model.CardQuery{Name: "Booster Box", Kind: model.KindSealed}
 	items, _, err := service.FindCardOffers(context.Background(), model.GameYuGiOh, query)
@@ -353,11 +389,13 @@ func (c *keyCache) SaveOffers(_ context.Context, key string, _ []model.Offer, _ 
 func TestAnOldItemAsksTheQuestionOfANewOne(t *testing.T) {
 	cache := &keyCache{}
 	service := Service{
-		Providers: map[model.Game]Provider{model.GameYuGiOh: stubProvider{items: []model.Offer{
-			{ID: "card", CardName: "Kuriboh", Store: "store", URL: "https://store.test/card",
-				PriceAmount: "990", Source: "store"},
-		}}},
-		Cache: cache,
+		OfferService: OfferService{
+			Providers: map[model.Game]Provider{model.GameYuGiOh: stubProvider{items: []model.Offer{
+				{ID: "card", CardName: "Kuriboh", Store: "store", URL: "https://store.test/card",
+					PriceAmount: "990", Source: "store"},
+			}}},
+			Cache: cache,
+		},
 	}
 	stored := model.CardQuery{Name: "Kuriboh"}
 	items, _, err := service.collectOffers(context.Background(), model.GameYuGiOh, stored)
@@ -385,8 +423,10 @@ func TestASealedQuestionSkipsASinglesOnlySource(t *testing.T) {
 	singles := &countingSource{name: "singles.example.cl"}
 	boxes := &countingSource{name: "boxes.example.cl"}
 	service := Service{
-		SourcesByGame: map[model.Game][]OfferSource{model.GameMagic: {singles, boxes}},
-		SinglesOnly:   map[string]bool{"singles.example.cl": true},
+		OfferService: OfferService{
+			SourcesByGame: map[model.Game][]OfferSource{model.GameMagic: {singles, boxes}},
+			SinglesOnly:   map[string]bool{"singles.example.cl": true},
+		},
 	}
 
 	if _, _, err := service.FindCardOffers(context.Background(), model.GameMagic,
@@ -412,7 +452,11 @@ func TestASealedQuestionSkipsASinglesOnlySource(t *testing.T) {
 // TestAnUnmarkedSourceStaysAsked Covers the Fail-open Half of the same Mark.
 func TestAnUnmarkedSourceStaysAsked(t *testing.T) {
 	unmarked := &countingSource{name: "unknown.example.cl"}
-	service := Service{SourcesByGame: map[model.Game][]OfferSource{model.GameMagic: {unmarked}}}
+	service := Service{
+		OfferService: OfferService{
+			SourcesByGame: map[model.Game][]OfferSource{model.GameMagic: {unmarked}},
+		},
+	}
 
 	if _, _, err := service.FindCardOffers(context.Background(), model.GameMagic,
 		model.CardQuery{Name: "Play Booster", Kind: model.KindSealed}); err != nil {
@@ -447,8 +491,10 @@ func TestASealedOfferKeepsItsOwnPicture(t *testing.T) {
 		Source: "example.cl", StockStatus: "available",
 	}}}
 	service := Service{
-		SourcesByGame: map[model.Game][]OfferSource{model.GameMagic: {source}},
-		PrintsByGame:  map[model.Game]PrintLibrary{model.GameMagic: stubPrints{}},
+		OfferService: OfferService{
+			SourcesByGame: map[model.Game][]OfferSource{model.GameMagic: {source}},
+			PrintsByGame:  map[model.Game]PrintLibrary{model.GameMagic: stubPrints{}},
+		},
 	}
 
 	sealed, _, err := service.FindCardOffers(context.Background(), model.GameMagic,

@@ -208,15 +208,14 @@ pierde ante una liberación que llegó primero, y al revés.
 ```mermaid
 flowchart LR
     function[function.go<br/>Entradas Cloud Functions]
-    transport[internal/httpapi<br/>Handlers y DTO HTTP]
+    transport[internal/handler<br/>Handlers y DTO HTTP]
     application[internal/application<br/>Composición]
     catalog[internal/catalog<br/>Construcción de Fuentes]
     domain[internal/search y model<br/>Servicio de Búsqueda]
-    orderer[internal/stores<br/>Orderer y woocommerce.Client]
+    orderer[internal/stores/commerce<br/>Shops y clientes de plataforma]
     releaser[internal/orders<br/>Releaser]
     repository[SearchRepository<br/>Interfaz de Persistencia]
-    repositories[internal/repositories<br/>Implementaciones de Repositorios]
-    datasources[internal/datasources<br/>Contrato Genérico de Base de Datos]
+    repositories[internal/repositories<br/>Repositorio Genérico y Stores]
     database[internal/db<br/>Adaptador Firebase]
     worker[search.Worker<br/>Trabajo en segundo plano]
     config[config/stores.yaml<br/>Juegos, Orígenes y Tiendas]
@@ -228,8 +227,7 @@ flowchart LR
     worker --> domain
     domain --> repository
     repository --> repositories
-    repositories --> datasources
-    datasources --> database
+    repositories -->|Database| database
     application --> database
     application --> repositories
     config --> catalog
@@ -242,22 +240,38 @@ flowchart LR
     adapters --> domain
 ```
 
-Los handlers decodifican DTO HTTP y entregan solicitudes de negocio al servicio
-de búsqueda. El worker llama al mismo servicio sin pasar por HTTP. El servicio
-accede a la persistencia mediante `SearchRepository`, implementado en
-`internal/repositories`. Los repositorios usan el contrato neutral
-`datasources.Database`; `internal/db`, respaldado por Firebase, provee su
-implementación actual.
+`internal/handler.Handler` es el límite de composición HTTP. Sus handlers de
+ruta decodifican las formas HTTP y orquestan `search.Service`; el worker llama
+al mismo servicio sin HTTP. `wire_models.go` contiene los tipos HTTP de entrada
+y salida, mientras `model_dto.go` los convierte a modelos de negocio y viceversa.
+El servicio accede a la persistencia mediante `SearchRepository`, implementado
+en `internal/repositories`. Ese paquete tiene una primitiva genérica
+`Repository[T]` (crear, guardar, leer, actualizar, borrar, listar) y los stores
+construidos sobre ella, que llevan la lógica de persistencia. Llegan al
+almacenamiento por el contrato neutral `repositories.Database`; `internal/db`,
+respaldado por Firebase, provee su implementación actual, una `Collection[T]`
+por tipo de registro.
+
+Las fallas de negocio controladas llegan a `internal/errorhandler`, el único
+punto que las convierte en estados HTTP y mensajes públicos seguros. Las fallas
+desconocidas siguen siendo errores del servidor.
+
+`search.Service` reúne cinco servicios, cada uno con solo los puertos y límites
+que sus preguntas necesitan: `SearchService` (crear, leer, listar, cancelar),
+`OfferService` (buscar, cachear y dar forma a las ofertas), `StockService`,
+`CheckoutService` y `OrderService`. El worker recibe el `OfferService` y un
+`StockChecker`. `WithRepository` entrega el único repositorio a cada servicio
+que lee una búsqueda.
 
 `internal/model` reúne los tipos de dominio de ofertas, carritos, búsquedas y
 salud de fuentes. Estos tipos no llevan etiquetas JSON ni Firestore.
-`internal/httpapi` contiene los DTO de entrada y salida; `internal/db`
-contiene los registros y payloads JSON almacenados. `internal/application`
-selecciona el adaptador Firebase y se lo entrega a los repositorios mediante
-`datasources.Database`. El SDK de Firebase queda dentro de `internal/db`.
-Las conversiones explícitas
-en cada frontera conservan por separado los nombres de campos de la API y de
-los datos persistidos. La idempotencia usa su propia representación estable.
+`internal/handler` contiene las formas HTTP y sus conversiones;
+`internal/db` contiene los registros y payloads JSON almacenados.
+`internal/application` selecciona el adaptador Firebase y se lo entrega a los
+stores mediante `repositories.Database`. El SDK de Firebase queda dentro de
+`internal/db`. Las conversiones explícitas en cada frontera conservan por
+separado los nombres de campos de la API y de los datos persistidos. La
+idempotencia usa su propia representación estable.
 
 El dominio también declara necesidades como `TaskQueue`, `Provider`,
 `OfferSource`, `StockChecker` y `OfferCache`. `internal/catalog`
@@ -269,9 +283,11 @@ producto. `internal/application` abre las conexiones y arma el
 así, las reglas de búsqueda no importan tipos de Firestore, Cloud Tasks ni
 clientes HTTP concretos.
 
-La configuración y la verificación de stock viven en `internal/stores`. Sus
-subpaquetes `jumpseller`, `shopify`, `prestashop`, `woocommerce` y `moxfield`
-contienen los clientes de cada plataforma. Los agregadores de ofertas viven
+La configuración de las tiendas vive en `internal/stores/directory`, y lo que
+las tiendas pueden hacer (stock, cotizaciones, pedidos, enlaces de pago) vive en
+`internal/stores/commerce`. Los subpaquetes `jumpseller`, `shopify`,
+`prestashop`, `woocommerce` y `moxfield` contienen los clientes de cada
+plataforma. Los agregadores de ofertas viven
 aparte en `internal/aggregators`.
 
 El [flujo de búsqueda por juego](search/game-search-providers.es.md) detalla esa composición.
@@ -285,17 +301,17 @@ datos. Los paquetes de producción fuera de ella dependen de puertos de
 repositorio y no importan `internal/db` ni `internal/taskqueue`; el `Runtime`
 expone puertos, no tipos concretos.
 
-- `datasources.Database` es el contrato neutral implementado por el adaptador
-  Firebase. `internal/repositories` implementa los puertos de búsqueda y del
-  worker usando ese contrato.
-- `Vault` reúne los cinco papeles que hoy cumple un repositorio: guarda las
-  búsquedas, cachea las ofertas, responde por su salud, cuenta el trabajo que
-  espera y regula el tráfico hacia cada fuente. Están listados aparte porque son
-  independientes; que un repositorio los cumpla todos es una coincidencia de la
-  composición, no un supuesto del dominio.
+- `repositories.Database` es el contrato neutral implementado por el adaptador
+  Firebase: abre las colecciones y ejecuta trabajo entre ellas en una sola
+  transacción. Los stores de `internal/repositories` implementan los puertos de
+  búsqueda y del worker usando ese contrato.
+- `Vault` reúne los seis papeles que cumple el objeto de persistencia: guarda
+  las búsquedas y sus ítems, cachea las ofertas, coloca y mueve las órdenes,
+  responde por su salud, cuenta el trabajo que espera y regula el tráfico hacia
+  cada fuente. Están listados aparte porque son independientes; que un objeto
+  los cumpla todos es una coincidencia de la composición, no un supuesto del
+  dominio.
 - `Dispatcher` reúne el despacho de trabajo y el despertar que repone el barredor.
-- `Teller` es opcional: un almacén que tiene algo que decir recibe el logger, y
-  uno que no, simplemente no lo implementa.
 
 Las afirmaciones de `internal/application/vault_test.go` fijan esa frontera en
 tiempo de compilación.

@@ -1,6 +1,12 @@
 package search
 
-import "github.com/cangrejometralleta/muchi-api/internal/model"
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+
+	"github.com/cangrejometralleta/muchi-api/internal/model"
+)
 
 // searchFingerprint Preserves the idempotency representation across model changes.
 type searchFingerprint struct {
@@ -29,4 +35,13 @@ func renderFingerprint(input model.CreateInput) searchFingerprint {
 	return searchFingerprint{Game: input.Game, Cards: cards, Options: optionsFingerprint{
 		VerifyStock: input.Options.VerifyStock, Match: input.Options.Match, Kind: input.Options.Kind,
 	}}
+}
+
+func HashPayload(value any) string {
+	if input, ok := value.(model.CreateInput); ok {
+		value = renderFingerprint(input)
+	}
+	data, _ := json.Marshal(value)
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:])
 }

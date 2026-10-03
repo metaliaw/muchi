@@ -9,7 +9,8 @@ import (
 
 	"github.com/cangrejometralleta/muchi-api/internal/model"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
-	"github.com/cangrejometralleta/muchi-api/internal/stores"
+	"github.com/cangrejometralleta/muchi-api/internal/stores/commerce"
+	"github.com/cangrejometralleta/muchi-api/internal/stores/directory"
 )
 
 // TestImageCoverageProbe Counts how many real Offers Arrive with a Picture.
@@ -17,15 +18,18 @@ func TestImageCoverageProbe(t *testing.T) {
 	if os.Getenv("MUCHI_LIVE") == "" {
 		t.Skip("set MUCHI_LIVE=1")
 	}
-	config, err := stores.LoadStoreConfig("../../config/stores.yaml", nil)
+	config, err := directory.LoadStoreConfig("../../config/stores.yaml", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	fetcher := probeFetcher()
+	builder := Builder{Shops: commerce.Shops{Config: config, Fetcher: fetcher}, TTL: time.Hour}
 	service := search.Service{
-		Providers:     BuildProviders(fetcher, config),
-		SourcesByGame: BuildSourcesByGame(fetcher, config, nil, time.Hour, nil),
-		PrintsByGame:  BuildPrintLibraries(fetcher, config),
+		OfferService: search.OfferService{
+			Providers:     builder.Providers(),
+			SourcesByGame: builder.SourcesByGame(),
+			PrintsByGame:  builder.PrintLibraries(),
+		},
 	}
 	for _, card := range []string{"Sol Ring", "Lightning Bolt"} {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
