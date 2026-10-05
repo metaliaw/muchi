@@ -2,8 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   BY_EDITION, BY_PRICE, groupByCardType, hasStoreCatalog, limitOf, pickable, replacePositions,
-  spreadUnits, summarizeOffers, topOf, UNCOUNTED_UNITS,
-} from '../src/search.js'
+  spreadUnits, summarizeOffers, topOf, UNCOUNTED_UNITS, describeLanguages } from '../src/search.js'
 
 const offer = (position, card, price, store, amount = price) =>
   ({ position, card_name: card, price_clp: price, store, currency: 'CLP', amount })
@@ -154,5 +153,31 @@ describe('el Tope de una Oferta', () => {
     // Contar cero es Negar: esa Oferta ya no Lleva Selector.
     expect(topOf({ stock_quantity: 0 })).toBe(0)
     expect(pickable({ stock_status: 'available', stock_quantity: 0 })).toBe(false)
+  })
+})
+
+describe('el Campo anuncia los Idiomas del Juego', () => {
+  const spanish = { code: 'es', label: 'Español', example: 'Anillo solar' }
+  const english = { code: 'en', label: 'Inglés', example: 'Sol Ring' }
+  const german = { code: 'de', label: 'Alemán', example: 'Sonnenring' }
+
+  it('Junta Etiquetas y Ejemplos tal como el Juego los Declara', () => {
+    expect(describeLanguages([spanish, english])).toEqual({
+      names: 'español o inglés', examples: '«Anillo solar» o «Sol Ring»',
+    })
+  })
+
+  it('Separa con comas hasta la última', () => {
+    expect(describeLanguages([spanish, english, german]).names)
+      .toBe('español, inglés o alemán')
+  })
+
+  it('Un solo Idioma no lleva conjunción', () => {
+    expect(describeLanguages([english]).names).toBe('inglés')
+  })
+
+  it('Sin Idiomas no hay nada que Anunciar', () => {
+    expect(describeLanguages(undefined)).toBeNull()
+    expect(describeLanguages([])).toBeNull()
   })
 })
