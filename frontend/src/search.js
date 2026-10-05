@@ -153,6 +153,22 @@ export function completionFor(typed, suggestions) {
   return found || ''
 }
 
+/** Lo que el Campo Anuncia de los Idiomas que su Juego Declara.
+ *
+ * Los Idiomas, su Etiqueta y su Ejemplo los Dice muchi-api: aquí solo se
+ * Juntan en Frase. Sin Idiomas no hay Nada que Anunciar, y Vuelve nulo.
+ */
+export function describeLanguages(languages) {
+  const declared = (languages || []).filter((row) => row.label && row.example)
+  if (!declared.length) return null
+  const join = (words) => (words.length > 1
+    ? `${words.slice(0, -1).join(', ')} o ${words.at(-1)}` : words[0])
+  return {
+    names: join(declared.map((row) => row.label.toLowerCase())),
+    examples: join(declared.map((row) => `«${row.example}»`)),
+  }
+}
+
 /** Con qué Criterio se Reparte la Cantidad pedida. */
 export const BY_PRICE = 'precio'
 

@@ -2,6 +2,7 @@
 /** MUCHI Presenta Búsquedas y Resultados persistidos por la API. */
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import * as api from './api.js'
+import { createNameTranslator, translateNames } from './names.js'
 import { declaredStock, topOf, useSearch } from './search.js'
 import {
   confirmOffers, countReachable, readFreshChecks, rememberChecks, sayAge,
@@ -68,6 +69,11 @@ watch(dockOpen, (shown) => { if (shown) cartOpen.value = false })
 watch(cartOpen, (shown) => { if (shown) dockOpen.value = false })
 const error = ref('')
 const pending = ref(null)
+// Mientras se Leen los Nombres escritos en otro Idioma, el Botón Espera.
+const translating = ref(false)
+// El Idioma en que quien Busca Escribió los Nombres; vacío, Sin traducir.
+const language = ref('')
+const askName = createNameTranslator(api.readCard)
 // El Campo nace con lo último que se Buscó. Se Lee acá, antes de que el
 // Formulario Exista: con Texto propio, el Ejemplo no lo Pisa.
 const lookupText = ref(localStorage.getItem(TEXT_KEY) || '')
@@ -280,11 +286,28 @@ function selectSearch(id, initialState = null, initialItems = []) {
   refresh()
 }
 
+// Solo si quien Busca Eligió un Idioma, y solo para Cartas sueltas por Nombre
+// exacto: una Caja no se Traduce, y «Contiene» busca un Pedazo de Nombre.
+function readsNames() {
+  return Boolean(language.value) && kind.value === 'single' && match.value === 'exact'
+}
+
 async function submit(text) {
   // Se Guarda lo Escrito, no lo Enviado: en Modo ancho sale una Línea sola, y
   // quien Vuelve Quiere su Lista entera de vuelta.
   localStorage.setItem(TEXT_KEY, lookupText.value)
-  pending.value = { text, game: game.value, key: api.newKey(), match: match.value,
+  let sent = text
+  if (readsNames()) {
+    const [named, spoken] = [game.value, language.value]
+    translating.value = true
+    try {
+      sent = (await translateNames(text, (name) => askName(named, spoken, name))).text
+    } finally {
+      translating.value = false
+    }
+  }
+  // Lo Traducido se Guarda en el Envío pendiente: un Reintento no Vuelve a Preguntar.
+  pending.value = { text: sent, game: game.value, key: api.newKey(), match: match.value,
                     kind: kind.value }
   await send()
 }
@@ -544,8 +567,9 @@ onUnmounted(stopPolling)
         v-model:game="game"
         v-model:match="match"
         v-model:kind="kind"
+        v-model:language="language"
         :games="games"
-        :busy="busy" :pending="Boolean(pending)" :error="error"
+        :busy="busy || translating" :pending="Boolean(pending)" :error="error"
         :limits="config.limits"
         @search="submit" @retry="send" @resume="selectSearch"
       >

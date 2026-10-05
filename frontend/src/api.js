@@ -79,11 +79,11 @@ export const reportStoreOrder = (id, orderId, storeOrder) =>
   post(`/api/searches/${encodeURIComponent(id)}/orders/${encodeURIComponent(orderId)}/report`,
        { store_order: storeOrder })
 export const readSources = () => request('/api/sources')
-export const readLanguages = () => request('/api/languages')
-export const readCardArt = ({ name, language = '', edition = '', foil = false }) =>
-  request(`/api/card/art?name=${encodeURIComponent(name)}` +
-          `&language=${encodeURIComponent(language)}` +
-          `&edition=${encodeURIComponent(edition)}&foil=${foil}`)
+// El Nombre Canónico de lo que se Escribió en cualquier Idioma. Un 404 Dice que
+// el Catálogo no Conoce la Carta, y quien Pregunta decide qué Hacer con eso.
+export const readCard = (name, game = 'magic', language = '') =>
+  request(`/api/card?name=${encodeURIComponent(name)}&game=${encodeURIComponent(game)}` +
+          `&language=${encodeURIComponent(language)}`)
 export const readCardMetadata = ({ game, name, language = '', edition = '', foil = false }) =>
   request(`/api/card/metadata?game=${encodeURIComponent(game)}` +
           `&name=${encodeURIComponent(name)}&language=${encodeURIComponent(language)}` +
@@ -91,11 +91,6 @@ export const readCardMetadata = ({ game, name, language = '', edition = '', foil
 export const readCardAutocomplete = (game, name, language = '') =>
   request(`/api/card/autocomplete?game=${encodeURIComponent(game)}` +
           `&name=${encodeURIComponent(name)}&language=${encodeURIComponent(language)}`)
-export const readSuggestions = (name, language) =>
-  request(`/api/card/suggestions?name=${encodeURIComponent(name)}` +
-          `&language=${encodeURIComponent(language)}`)
-export const readCard = (name, language = '') =>
-  request(`/api/card?name=${encodeURIComponent(name)}&language=${encodeURIComponent(language)}`)
 
 export const newKey = () =>
   crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`

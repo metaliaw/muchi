@@ -2,7 +2,7 @@
 /** Una Carta o una Lista. El Envío pendiente conserva su Clave de Idempotencia. */
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import * as api from '../api.js'
-import { completionFor, lineAround, splitOrder } from '../search.js'
+import { completionFor, describeLanguages, lineAround, splitOrder } from '../search.js'
 
 const GAME_EXAMPLES = {
   magic: ['Sol Ring', '4 Lightning Bolt'],
@@ -46,6 +46,13 @@ const maxCards = computed(() => props.limits.max_cards || 0)
 const maxQuantity = computed(() => props.limits.max_quantity || 99)
 const selectedGame = computed(() =>
   props.games.find((item) => item.reference_key === game.value))
+// Los Idiomas los Declara el Juego en muchi-api: sin Declaración, sin Selector.
+const declaredLanguages = computed(() => selectedGame.value?.languages || [])
+const languages = computed(() => describeLanguages(declaredLanguages.value))
+// Un Idioma de otro Juego no Vale en este: sin Declaración vuelve a Sin traducir.
+watch(declaredLanguages, (declared) => {
+  if (!declared.some((row) => row.code === language.value)) language.value = ''
+})
 const examples = computed(() => (sealed.value
   ? SEALED_EXAMPLES[game.value] || ['Nombre de la caja', '2 Otra caja']
   : GAME_EXAMPLES[game.value] || ['Nombre de carta', '4 Otra carta']))
@@ -65,6 +72,9 @@ const text = defineModel('text', { type: String, default: '' })
 const game = defineModel('game', { type: String, default: '' })
 const match = defineModel('match', { type: String, default: 'exact' })
 const kind = defineModel('kind', { type: String, default: 'single' })
+// El Idioma en que se Escriben los Nombres. Vacío es Sin traducir: la Lista
+// se Busca como está, que es lo normal; elegir uno es para el Caso puntual.
+const language = defineModel('language', { type: String, default: '' })
 const identifier = ref('')
 
 // Buscar lo que Contiene el Nombre es Mirar una Familia, no Comprar una Lista:
@@ -266,6 +276,20 @@ const extraLines = computed(() => wide.value && written.value > 1)
         </button>
         <span class="mu-caption">Tab para completar</span>
       </p>
+      <!-- Traducir es Opcional y Explícito: leer cada Línea Cuesta una Consulta
+           por Nombre, y casi toda Lista llega ya en el Idioma de las Tiendas. -->
+      <label v-if="!sealed && languages" class="mu-juego">
+        Idioma de los nombres
+        <select v-model="language">
+          <option value="">Sin traducir</option>
+          <option v-for="item in declaredLanguages" :key="item.code"
+                  :value="item.code">{{ item.label }}</option>
+        </select>
+        <span class="mu-caption">
+          Para escribir las cartas en {{ languages.names }} — {{ languages.examples }} —
+          elige el idioma y MUCHI las traduce al buscar.
+        </span>
+      </label>
       <p v-if="sealed" class="mu-caption">
         Una caja lleva su set en el nombre — «Bloomburrow» sola trae toda caja
         de ese set, y un Booster Box no se confunde con un Booster Pack.
