@@ -1,2 +1,4 @@
+-r requirements.txt
+-r requirements-web.txt
 pytest>=8.0
 pillow>=10.0

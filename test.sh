@@ -6,6 +6,8 @@ cd -- "$(dirname -- "$0")"
 PYTHON=python3
 if [ -x .venv/bin/python ]; then PYTHON=.venv/bin/python; fi
 
+"$PYTHON" -m pip install -q -r requirements-dev.txt
+
 echo "== Python"
 PYTHONPATH=. "$PYTHON" -m pytest -q "$@"
 

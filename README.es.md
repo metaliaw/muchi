@@ -64,6 +64,9 @@ Carrito descarta esas Ofertas.
 volver a enviarlas. Guarda sus Enlaces para recuperarlas al abrir otra Sesión;
 la API debe conservar todavía esos Resultados.
 
+Los Agentes también pueden iniciar Búsquedas y leer Ofertas por MCP. Consulta
+[MCP para Agentes](docs/mcp.es.md) para conectar un Cliente compatible.
+
 El Estado y las Ofertas se consultan cada **3 segundos** mientras la Búsqueda
 está pendiente, y cada Consulta espera a lo más **10 segundos** antes de darse
 por perdida. Los dos Números viven en

@@ -15,13 +15,16 @@ the browser-facing boundary.
 ```mermaid
 flowchart LR
     person([Person])
+    agent([Agent])
     dns["muchitcg.cl<br/>NIC Chile and Cloud DNS"]
 
     subgraph front["metaliaw/muchi · this repository"]
         hosting["Firebase Hosting<br/>static Vue files"]
         bff["Cloud Run<br/>FastAPI BFF and SPA"]
+        mcp["MCP<br/>Streamable HTTP"]
         presenter["Presentation rules<br/>server/presenter.py"]
         hosting -->|"/api/* and rewrites"| bff
+        mcp --> bff
         bff --> presenter
     end
 
@@ -30,6 +33,7 @@ flowchart LR
     secret["Secret Manager<br/>API bearer token"]
 
     person --> dns --> hosting
+    agent --> dns --> mcp
     presenter -->|"authenticated server request"| api
     contract -.-> bff
     contract -.-> api
@@ -40,6 +44,9 @@ Cloud DNS resolves the public name. Firebase Hosting serves the compiled
 interface and sends `/api/*` requests to the BFF. The BFF validates public
 inputs, calls the Muchi domain, and uses the server-side API credential for
 requests across the repository boundary. Vue never receives that credential.
+The same service exposes MCP at `/mcp/` for agents. Its tools create Searches
+and read their Results through the Muchi domain, using the same token and API
+as the website.
 
 ## Why the BFF Exists
 
@@ -115,4 +122,4 @@ compatible with the OpenAPI contract owned by muchi-api.
 
 See [`deploy.sh`](../deploy.sh), [`cloudbuild.yaml`](../cloudbuild.yaml), and
 the [Frontend and its boundary](web-migration.md) for this repository's
-deployment details.
+deployment details. The [MCP guide](mcp.md) describes its tools and connection.
