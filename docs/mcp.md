@@ -29,6 +29,22 @@ tools appear.
 For local development, connect to `http://127.0.0.1:8000/mcp/` after starting
 the BFF as described in the [README](../README.md).
 
+## Test a Public Search
+
+Use a card to verify that the server starts a search and returns its offers.
+In any MCP client, call `search_cards` with these arguments:
+
+```json
+{"decklist":"1 Sol Ring","game":"magic","match":"exact","kind":"single"}
+```
+
+Save the `search_id` from the response. A search may start with status
+`queued`; call `get_search_results` with that ID, `after: 0`, `match: exact` and
+`sort_by: price_asc`. If `state.done` is still `false`, wait a few seconds and
+check again. When it finishes, confirm `items` contains Sol Ring and
+`state.done` is `true`. The summary reports how many offers and stores it
+found. Prices can change as stores update their catalogs.
+
 ## Request a Search
 
 Name MUCHI and the cards you want. If you omit options, the defaults are Magic,
@@ -135,6 +151,8 @@ each offer to its entry. Use the cursor to request the next page.
   token stay on the server.
 - The transport accepts the website hosts and local development addresses to
   reject requests with an unrelated Host header.
+- Firebase Hosting forwards Cloud Run's service host. If the service URL
+  changes, update that allowed host in `MCP_HOSTS` in `server/mcp.py` too.
 
 The API retains results and applies its own expiration. An agent should keep
 the returned ID while those results remain available.
