@@ -38,7 +38,8 @@ flowchart LR
 
 ## Undistilled Context
 
-2 of 9 filled.
+3 of 9 filled.
 
 - [The purchase flow in progress](stories/purchase-flow.md)
 - [Shopify orders need a browser](stories/shopify-orders.md) (SPECULATIVE)
+- [Infrastructure costs and support](stories/infrastructure-costs-and-support.md)
