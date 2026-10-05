@@ -32,6 +32,9 @@ VERIFY_STOCK = os.getenv("MUCHI_VERIFY_STOCK", "0").strip() in {
 MCP_HOSTS = [
     "muchitcg.cl", "muchitcg.cl:*",
     "www.muchitcg.cl", "www.muchitcg.cl:*",
+    # Firebase Hosting reescribe la Petición y Cloud Run recibe su Host de Servicio.
+    "muchi-web-c2ce6c7oga-rj.a.run.app",
+    "muchi-web-c2ce6c7oga-rj.a.run.app:*",
     "localhost:*", "127.0.0.1:*",
 ]
 MCP_ORIGINS = [

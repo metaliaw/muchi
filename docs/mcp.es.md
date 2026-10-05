@@ -30,6 +30,22 @@ Al conectar, confirma que aparezcan las herramientas `search_cards` y
 Para Desarrollo local, conecta a `http://127.0.0.1:8000/mcp/` después de
 iniciar el BFF según el [README](../README.es.md).
 
+## Probar una Búsqueda Pública
+
+Usa una carta para comprobar que el Servidor inicia la Búsqueda y devuelve sus
+Ofertas. En cualquier Cliente MCP, llama a `search_cards` con estos Argumentos:
+
+```json
+{"decklist":"1 Sol Ring","game":"magic","match":"exact","kind":"single"}
+```
+
+Guarda el `search_id` de la Respuesta. La Búsqueda puede empezar con Estado
+`queued`; consulta `get_search_results` con ese ID, `after: 0`, `match: exact` y
+`sort_by: price_asc`. Si `state.done` sigue en `false`, espera unos Segundos y
+vuelve a consultar. Al terminar, comprueba que `items` incluya Sol Ring y que
+`state.done` sea `true`. El Resumen informa cuántas Ofertas y Tiendas encontró.
+El Precio puede cambiar a medida que las Tiendas actualizan sus Catálogos.
+
 ## Pedir una Búsqueda
 
 Especifica MUCHI y las Cartas. Si no das más Opciones, se usa Magic, coincidencia
@@ -137,6 +153,9 @@ siguiente.
   su Token siguen del lado Servidor.
 - El Transporte acepta los Hosts del Sitio y las Direcciones locales de
   Desarrollo para frenar solicitudes con un Host ajeno.
+- Firebase Hosting reenvía el Host de Servicio de Cloud Run. Si cambia la URL
+  del Servicio, actualiza también ese Host permitido en `MCP_HOSTS` de
+  `server/mcp.py`.
 
 La API conserva los Resultados y aplica su propio Vencimiento. Un Agente debe
 guardar el Identificador recibido mientras los Resultados sigan disponibles.
