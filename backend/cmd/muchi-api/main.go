@@ -47,7 +47,6 @@ func runCommand(logger *slog.Logger, args []string) error {
 func serveAPI(ctx context.Context, config config.Config, logger *slog.Logger, runtime application.Runtime) error {
 	api := handler.Handler{
 		Searches: runtime.Service, Health: runtime.Vault,
-		CardMetadata: runtime.CardMetadataProviders, Autocomplete: runtime.AutocompleteProviders,
 		SupportedGames: runtime.SupportedGames, Stores: runtime.Stores, Inventories: runtime.Inventories,
 		Token: config.APIToken, Logger: logger,
 		HealthCheckTimeout: config.HealthCheckTimeout,

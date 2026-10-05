@@ -5,6 +5,7 @@ package search
 // Callers hold one Service; a Test builds only the Part it Asks.
 type Service struct {
 	SearchService
+	CardService
 	OfferService
 	StockService
 	CheckoutService

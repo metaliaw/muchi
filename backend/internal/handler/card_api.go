@@ -2,37 +2,23 @@ package handler
 
 import (
 	"github.com/cangrejometralleta/muchi-api/internal/cardmetadata"
-	"github.com/cangrejometralleta/muchi-api/internal/errorhandler"
 	"github.com/cangrejometralleta/muchi-api/internal/model"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 	"net/http"
-	"strings"
 )
 
 func (a Handler) registerCardRoutes(mux *http.ServeMux) {
 	mux.Handle("GET /v1/cards/metadata", a.authenticate(http.HandlerFunc(a.getCardMetadata)))
 	mux.Handle("GET /v1/cards/autocomplete", a.authenticate(http.HandlerFunc(a.autocompleteCards)))
+	mux.Handle("GET /v1/cards/canonical-name", a.authenticate(http.HandlerFunc(a.resolveCardName)))
 	mux.Handle("GET /v1/cards/offers", a.authenticate(http.HandlerFunc(a.findCardOffers)))
 }
 
 func (a Handler) getCardMetadata(w http.ResponseWriter, r *http.Request) {
-	game := model.Game(r.URL.Query().Get("game"))
-	if game == "" {
-		game = model.GameMagic
-	}
-	provider, ok := a.CardMetadata[game]
-	if !ok {
-		a.reportDescription(w, r, errorhandler.UnsupportedCardMetadata())
-		return
-	}
-	name := strings.TrimSpace(r.URL.Query().Get("name"))
-	if name == "" {
-		a.reportDescription(w, r, errorhandler.MissingCardName())
-		return
-	}
-	metadata, err := provider.CardMetadata(r.Context(), cardmetadata.Request{
-		Name: name, Language: r.URL.Query().Get("language"),
-		Edition: r.URL.Query().Get("edition"), Foil: r.URL.Query().Get("foil") == "true",
+	query := r.URL.Query()
+	metadata, err := a.Searches.ReadCardMetadata(r.Context(), readQueryGame(r), cardmetadata.Request{
+		Name: query.Get("name"), Language: query.Get("language"),
+		Edition: query.Get("edition"), Foil: query.Get("foil") == "true",
 	})
 	if err != nil {
 		a.reportError(w, r, err)
@@ -42,26 +28,32 @@ func (a Handler) getCardMetadata(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a Handler) autocompleteCards(w http.ResponseWriter, r *http.Request) {
-	game := model.Game(r.URL.Query().Get("game"))
-	if game == "" {
-		game = model.GameMagic
-	}
-	provider, ok := a.Autocomplete[game]
-	if !ok {
-		a.reportDescription(w, r, errorhandler.UnsupportedAutocomplete())
-		return
-	}
-	name := strings.TrimSpace(r.URL.Query().Get("name"))
-	if name == "" {
-		a.reportDescription(w, r, errorhandler.MissingCardName())
-		return
-	}
-	names, err := provider.Autocomplete(r.Context(), name, r.URL.Query().Get("language"))
+	query := r.URL.Query()
+	names, err := a.Searches.SuggestCardNames(r.Context(), readQueryGame(r), query.Get("name"), query.Get("language"))
 	if err != nil {
 		a.reportError(w, r, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"suggestions": names})
+}
+
+func (a Handler) resolveCardName(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	canonical, err := a.Searches.ResolveCardName(r.Context(), readQueryGame(r), query.Get("name"), query.Get("language"))
+	if err != nil {
+		a.reportError(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"canonical_name": canonical})
+}
+
+// readQueryGame Reads the Game a Request Asks about; Magic when it Names none.
+func readQueryGame(r *http.Request) model.Game {
+	game := model.Game(r.URL.Query().Get("game"))
+	if game == "" {
+		return model.GameMagic
+	}
+	return game
 }
 
 func (a Handler) findCardOffers(w http.ResponseWriter, r *http.Request) {

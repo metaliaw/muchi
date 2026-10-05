@@ -32,25 +32,25 @@ var (
 	unsupportedCardMetadata = Description{http.StatusNotFound, "not_found", "Card metadata is not supported for this game"}
 	unsupportedAutocomplete = Description{http.StatusNotFound, "not_found", "Card autocomplete is not supported for this game"}
 	missingCardName         = Description{http.StatusBadRequest, "invalid_request", "Card name is required"}
+	unsupportedCardNames    = Description{http.StatusNotFound, "not_found", "Card name resolution is not supported for this game"}
+	cardNotFound            = Description{http.StatusNotFound, "not_found", "Card was not found"}
+	unsupportedLanguage     = Description{http.StatusBadRequest, "invalid_request", "Language is not supported for this game"}
 	orderNotFound           = Description{http.StatusNotFound, "not_found", "Order was not found"}
 	orderNotSupported       = Description{http.StatusUnprocessableEntity, "order_not_supported", "This store cannot place an order yet"}
 	orderConflict           = Description{http.StatusConflict, "order_conflict", "Order already moved past that status"}
 )
 
-func Unauthorized() Description            { return unauthorized }
-func MissingIdempotencyKey() Description   { return missingIdempotencyKey }
-func InvalidRequest() Description          { return invalidRequest }
-func NotFound() Description                { return notFound }
-func MissingStoreList() Description        { return missingStoreList }
-func IdempotencyConflict() Description     { return idempotencyConflict }
-func InvalidState() Description            { return invalidState }
-func Internal() Description                { return internal }
-func UnsupportedCardMetadata() Description { return unsupportedCardMetadata }
-func UnsupportedAutocomplete() Description { return unsupportedAutocomplete }
-func MissingCardName() Description         { return missingCardName }
-func OrderNotFound() Description           { return orderNotFound }
-func OrderNotSupported() Description       { return orderNotSupported }
-func OrderConflict() Description           { return orderConflict }
+func Unauthorized() Description          { return unauthorized }
+func MissingIdempotencyKey() Description { return missingIdempotencyKey }
+func InvalidRequest() Description        { return invalidRequest }
+func NotFound() Description              { return notFound }
+func MissingStoreList() Description      { return missingStoreList }
+func IdempotencyConflict() Description   { return idempotencyConflict }
+func InvalidState() Description          { return invalidState }
+func Internal() Description              { return internal }
+func OrderNotFound() Description         { return orderNotFound }
+func OrderNotSupported() Description     { return orderNotSupported }
+func OrderConflict() Description         { return orderConflict }
 
 type reply struct {
 	Code       string `json:"code"`
@@ -100,6 +100,18 @@ func Describe(failure error) Description {
 		return idempotencyConflict
 	case errors.Is(failure, search.ErrNotRunning):
 		return invalidState
+	case errors.Is(failure, search.ErrNoCardMetadata):
+		return unsupportedCardMetadata
+	case errors.Is(failure, search.ErrNoAutocomplete):
+		return unsupportedAutocomplete
+	case errors.Is(failure, search.ErrNoCardName):
+		return missingCardName
+	case errors.Is(failure, search.ErrNoCardNames):
+		return unsupportedCardNames
+	case errors.Is(failure, search.ErrCardNotFound):
+		return cardNotFound
+	case errors.Is(failure, search.ErrUnsupportedLanguage):
+		return unsupportedLanguage
 	case errors.Is(failure, model.ErrOrderNotFound):
 		return orderNotFound
 	case errors.Is(failure, model.ErrOrderNotSupported):

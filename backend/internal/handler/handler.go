@@ -12,9 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cangrejometralleta/muchi-api/internal/cardmetadata"
 	"github.com/cangrejometralleta/muchi-api/internal/errorhandler"
-	"github.com/cangrejometralleta/muchi-api/internal/model"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 	"github.com/cangrejometralleta/muchi-api/internal/stores/directory"
 )
@@ -23,8 +21,6 @@ type Handler struct {
 	Searches           search.Service
 	Health             search.HealthStore
 	Inventories        InventoryShelf
-	CardMetadata       map[model.Game]cardmetadata.Provider
-	Autocomplete       map[model.Game]cardmetadata.AutocompleteProvider
 	SupportedGames     []directory.GameSupport
 	Stores             []directory.ListedStore
 	Token              string

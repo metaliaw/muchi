@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/cangrejometralleta/muchi-api/internal/cardmetadata"
 	"github.com/cangrejometralleta/muchi-api/internal/catalog"
 	"github.com/cangrejometralleta/muchi-api/internal/config"
 	"github.com/cangrejometralleta/muchi-api/internal/constants"
@@ -48,14 +47,12 @@ type Dispatcher interface {
 }
 
 type Runtime struct {
-	Service               search.Service
-	Vault                 Vault
-	Queue                 Dispatcher
-	CardMetadataProviders map[model.Game]cardmetadata.Provider
-	AutocompleteProviders map[model.Game]cardmetadata.AutocompleteProvider
-	SupportedGames        []directory.GameSupport
-	Stores                []directory.ListedStore
-	Inventories           moxfield.Shelf
+	Service        search.Service
+	Vault          Vault
+	Queue          Dispatcher
+	SupportedGames []directory.GameSupport
+	Stores         []directory.ListedStore
+	Inventories    moxfield.Shelf
 }
 
 // BuildRuntime Casts the Search Providers for one Function Instance.
@@ -89,6 +86,12 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 			MaxCards:    config.MaxCardsPerSearch,
 			MaxQuantity: config.MaxQuantityPerCard,
 		},
+		CardService: search.CardService{
+			Metadata:     builder.MetadataProviders(),
+			Autocomplete: builder.AutocompleteProviders(),
+			Names:        builder.NameProviders(),
+			Languages:    gameLanguages(directory.SupportedLanguages(storeConfig)),
+		},
 		OfferService: search.OfferService{
 			Providers:         builder.Providers(),
 			PrintsByGame:      builder.PrintLibraries(),
@@ -117,9 +120,18 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 			return Runtime{}, err
 		}
 		service.Tasks = queue
-		return Runtime{Service: service, Vault: vault, Queue: queue, CardMetadataProviders: builder.MetadataProviders(), AutocompleteProviders: builder.AutocompleteProviders(), SupportedGames: supportedGames, Stores: listedStores, Inventories: inventories}, nil
+		return Runtime{Service: service, Vault: vault, Queue: queue, SupportedGames: supportedGames, Stores: listedStores, Inventories: inventories}, nil
 	}
-	return Runtime{Service: service, Vault: vault, CardMetadataProviders: builder.MetadataProviders(), AutocompleteProviders: builder.AutocompleteProviders(), SupportedGames: supportedGames, Stores: listedStores, Inventories: inventories}, nil
+	return Runtime{Service: service, Vault: vault, SupportedGames: supportedGames, Stores: listedStores, Inventories: inventories}, nil
+}
+
+// gameLanguages Types the Keys the Directory Reads as Text.
+func gameLanguages(declared map[string][]string) map[model.Game][]string {
+	languages := make(map[model.Game][]string, len(declared))
+	for key, codes := range declared {
+		languages[model.Game(key)] = codes
+	}
+	return languages
 }
 
 func buildSourceClient(config config.Config, gate source.TrafficGate, logger *slog.Logger) source.Client {

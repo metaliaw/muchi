@@ -200,8 +200,10 @@ func TestListSupportedGamesRefusesAnUnknownKind(t *testing.T) {
 
 func TestGetCardMetadataUsesSelectedGame(t *testing.T) {
 	handler := Handler{
-		CardMetadata: map[model.Game]cardmetadata.Provider{model.GamePokemon: fakeMetadata{}},
-		Token:        "secret",
+		Searches: search.Service{CardService: search.CardService{
+			Metadata: map[model.Game]cardmetadata.Provider{model.GamePokemon: fakeMetadata{}},
+		}},
+		Token: "secret",
 	}
 	request := httptest.NewRequest(http.MethodGet, "/v1/cards/metadata?game=pokemon&name=Pikachu", nil)
 	request.Header.Set("Authorization", "Bearer secret")
@@ -216,8 +218,10 @@ func TestGetCardMetadataUsesSelectedGame(t *testing.T) {
 
 func TestAutocompleteCardsUsesSelectedGame(t *testing.T) {
 	handler := Handler{
-		Autocomplete: map[model.Game]cardmetadata.AutocompleteProvider{model.GamePokemon: fakeMetadata{}},
-		Token:        "secret",
+		Searches: search.Service{CardService: search.CardService{
+			Autocomplete: map[model.Game]cardmetadata.AutocompleteProvider{model.GamePokemon: fakeMetadata{}},
+		}},
+		Token: "secret",
 	}
 	request := httptest.NewRequest(http.MethodGet, "/v1/cards/autocomplete?game=pokemon&name=Pikachu", nil)
 	request.Header.Set("Authorization", "Bearer secret")
@@ -227,6 +231,95 @@ func TestAutocompleteCardsUsesSelectedGame(t *testing.T) {
 
 	if response.Code != http.StatusOK || response.Body.String() != `{"suggestions":["Pikachu","Pikachu VMAX"]}`+"\n" {
 		t.Fatalf("GET /v1/cards/autocomplete status=%d body=%s", response.Code, response.Body.String())
+	}
+}
+
+func TestAutocompleteCardsRefusesALanguageTheGameDoesNotDeclare(t *testing.T) {
+	handler := Handler{
+		Searches: search.Service{CardService: search.CardService{
+			Autocomplete: map[model.Game]cardmetadata.AutocompleteProvider{model.GameMagic: fakeMetadata{}},
+			Languages:    map[model.Game][]string{model.GameMagic: {"es", "en"}},
+		}},
+		Token: "secret",
+	}
+	request := httptest.NewRequest(http.MethodGet, "/v1/cards/autocomplete?game=magic&name=Sol&language=ja", nil)
+	request.Header.Set("Authorization", "Bearer secret")
+	response := httptest.NewRecorder()
+
+	handler.BuildHandler().ServeHTTP(response, request)
+
+	if response.Code != http.StatusBadRequest || !strings.Contains(response.Body.String(), "Language is not supported for this game") {
+		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
+	}
+}
+
+func TestSupportedGamesCarryTheirLanguages(t *testing.T) {
+	handler := Handler{
+		Token: "secret",
+		SupportedGames: []directory.GameSupport{{
+			Key: "magic", Name: "Magic: The Gathering", Singles: true,
+			Languages: []directory.Language{{Code: "es", Label: "Español", Example: "Anillo solar"}},
+		}},
+	}
+	request := httptest.NewRequest(http.MethodGet, "/v1/supported-games", nil)
+	request.Header.Set("Authorization", "Bearer secret")
+	response := httptest.NewRecorder()
+
+	handler.BuildHandler().ServeHTTP(response, request)
+
+	wanted := `{"games":[{"reference_key":"magic","name":"Magic: The Gathering","singles":true,"sealed":false,` +
+		`"languages":[{"code":"es","label":"Español","example":"Anillo solar"}]}]}` + "\n"
+	if response.Body.String() != wanted {
+		t.Fatalf("body=%s", response.Body.String())
+	}
+}
+
+type fakeNames struct{ failure error }
+
+func (f fakeNames) CanonicalName(_ context.Context, name, _ string) (string, error) {
+	if f.failure != nil {
+		return "", f.failure
+	}
+	return "Sol Ring", nil
+}
+
+func askCanonicalName(t *testing.T, names cardmetadata.NameProvider, query string) *httptest.ResponseRecorder {
+	t.Helper()
+	handler := Handler{
+		Searches: search.Service{CardService: search.CardService{
+			Names:     map[model.Game]cardmetadata.NameProvider{model.GameMagic: names},
+			Languages: map[model.Game][]string{model.GameMagic: {"es", "en"}},
+		}},
+		Token: "secret",
+	}
+	request := httptest.NewRequest(http.MethodGet, "/v1/cards/canonical-name"+query, nil)
+	request.Header.Set("Authorization", "Bearer secret")
+	response := httptest.NewRecorder()
+	handler.BuildHandler().ServeHTTP(response, request)
+	return response
+}
+
+func TestCanonicalNameAnswersTheNameTheShopsIndex(t *testing.T) {
+	response := askCanonicalName(t, fakeNames{}, "?name=Anillo+Solar&language=es")
+
+	if response.Code != http.StatusOK || response.Body.String() != `{"canonical_name":"Sol Ring"}`+"\n" {
+		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
+	}
+}
+
+func TestCanonicalNameAnswersNotFoundForAnUnknownCard(t *testing.T) {
+	response := askCanonicalName(t, fakeNames{cardmetadata.ErrCardNotFound}, "?name=zzzz")
+
+	if response.Code != http.StatusNotFound || !strings.Contains(response.Body.String(), "Card was not found") {
+		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
+	}
+}
+
+func TestCanonicalNameRefusesALanguageTheGameDoesNotDeclare(t *testing.T) {
+	response := askCanonicalName(t, fakeNames{}, "?name=Sol+Ring&language=ja")
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 
@@ -703,5 +796,36 @@ func TestListStoresCarriesStreetAndCoordinates(t *testing.T) {
 		`"locations":[{"city":"Las Condes","street":"Av. Apoquindo 7331, Local 111","latitude":-33.4090577,"longitude":-70.55268}]}]}` + "\n"
 	if response.Code != http.StatusOK || response.Body.String() != wanted {
 		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
+	}
+}
+
+func TestCardRoutesKeepTheirFailureAnswers(t *testing.T) {
+	handler := Handler{
+		Searches: search.Service{CardService: search.CardService{
+			Metadata:     map[model.Game]cardmetadata.Provider{model.GameMagic: fakeMetadata{}},
+			Autocomplete: map[model.Game]cardmetadata.AutocompleteProvider{model.GameMagic: fakeMetadata{}},
+		}},
+		Token: "secret",
+	}
+	cases := []struct {
+		path    string
+		status  int
+		message string
+	}{
+		{"/v1/cards/metadata?game=pokemon&name=Pikachu", http.StatusNotFound, "Card metadata is not supported for this game"},
+		{"/v1/cards/autocomplete?game=pokemon&name=Pikachu", http.StatusNotFound, "Card autocomplete is not supported for this game"},
+		{"/v1/cards/metadata?name=%20", http.StatusBadRequest, "Card name is required"},
+		{"/v1/cards/autocomplete", http.StatusBadRequest, "Card name is required"},
+	}
+	for _, c := range cases {
+		request := httptest.NewRequest(http.MethodGet, c.path, nil)
+		request.Header.Set("Authorization", "Bearer secret")
+		response := httptest.NewRecorder()
+
+		handler.BuildHandler().ServeHTTP(response, request)
+
+		if response.Code != c.status || !strings.Contains(response.Body.String(), c.message) {
+			t.Fatalf("GET %s status=%d body=%s", c.path, response.Code, response.Body.String())
+		}
 	}
 }

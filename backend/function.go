@@ -54,7 +54,6 @@ func ServeAPI(w http.ResponseWriter, r *http.Request) {
 		}
 		api := handler.Handler{
 			Searches: runtime.Service, Health: runtime.Vault, Token: settings.APIToken, Logger: buildLogger(),
-			CardMetadata: runtime.CardMetadataProviders, Autocomplete: runtime.AutocompleteProviders,
 			SupportedGames:     runtime.SupportedGames,
 			Inventories:        runtime.Inventories,
 			HealthCheckTimeout: settings.HealthCheckTimeout,

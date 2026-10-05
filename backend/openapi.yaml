@@ -527,6 +527,37 @@ paths:
                 required: [suggestions]
                 properties:
                   suggestions: {type: array, items: {type: string}}
+  /cards/canonical-name:
+    get:
+      description: >-
+        Reads a card name written in any language as the name the shops index
+        it under. With a `language` the provider narrows to it, because a name
+        can exist in several and a guess picks wrong; without one it guesses.
+        A card the catalog does not know answers 404, apart from a catalog that
+        did not answer, which is a failure and may be retried.
+      parameters:
+        - name: game
+          in: query
+          schema:
+            allOf: [{$ref: "#/components/schemas/Game"}]
+            default: magic
+        - {name: name, in: query, required: true, schema: {type: string, minLength: 1}}
+        - name: language
+          in: query
+          description: A language the game declares in `/supported-games`; any other answers 400
+          schema: {type: string}
+      responses:
+        "200":
+          description: The canonical name
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [canonical_name]
+                properties:
+                  canonical_name: {type: string}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "404": {$ref: "#/components/responses/NotFound"}
 components:
   securitySchemes:
     bearerAuth: {type: http, scheme: bearer}
@@ -794,6 +825,21 @@ components:
         sealed:
           type: boolean
           description: Some source of this game sells unopened product
+        languages:
+          type: array
+          description: >-
+            The languages this game's card names read in, as config/stores.yaml
+            declares them, in that order. Absent when the game declares none:
+            its names are asked as written, and any `language` a caller names
+            is passed to the provider untouched. When present, `/cards/metadata`
+            and `/cards/autocomplete` answer 400 to a `language` outside it.
+          items:
+            type: object
+            required: [code, label, example]
+            properties:
+              code: {type: string, description: The code the provider understands}
+              label: {type: string, description: How a person reads the language}
+              example: {type: string, description: How Sol Ring is written in it}
     CardMetadata:
       type: object
       required: [name]
