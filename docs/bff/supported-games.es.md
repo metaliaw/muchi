@@ -4,4 +4,6 @@
 
 `GET /api/supported-games` devuelve los juegos disponibles en las tiendas configuradas, con un filtro `kind` opcional para cartas sueltas o productos sellados. La Interfaz ofrece capacidades que la composición activa puede atender.
 
+Los juegos que declaran idiomas los traen en `languages`, con `code`, `label` y `example` por idioma. Los declara `config/stores.yaml` de muchi-api, que también valida el idioma de cada consulta y elige el proveedor que lee los nombres. La Interfaz solo anuncia lo que llega: un juego sin `languages` no muestra nota.
+
 La ruta está implementada por [`read_supported_games`](../../server/main.py).

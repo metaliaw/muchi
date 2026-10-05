@@ -72,6 +72,23 @@ def test_autocompletes_cards_for_the_selected_game():
     assert kwargs["params"]["game"] == "pokemon"
 
 
+def test_resolves_a_card_name_in_the_chosen_language():
+    provider = make_provider({"canonical_name": "Sol Ring"})
+
+    assert provider.resolve_card_name("magic", "Anillo Solar", "es") == "Sol Ring"
+
+    args, kwargs = provider.session.request.call_args
+    assert args == ("GET", "https://example.com/v1/cards/canonical-name")
+    assert kwargs["params"] == {"game": "magic", "name": "Anillo Solar", "language": "es"}
+
+
+def test_an_unknown_card_is_an_answer_not_a_failure():
+    """Nulo es «no Existe»; un Catálogo caído, en cambio, Viaja como Fallo."""
+    assert make_provider({}, 404).resolve_card_name("magic", "zzzz") is None
+    with pytest.raises(QueryFailed):
+        make_provider({}, 503).resolve_card_name("magic", "Anillo Solar")
+
+
 def test_offer_keeps_embedded_card_metadata():
     reply = result_reply()
     reply["items"][0]["offers"][0]["metadata"] = {

@@ -24,8 +24,6 @@ reason to exist. The API's own entry points and queue are documented in its
   interface presents.
 - [`GET /api/sources`](sources.md) reports which offer sources the current
   search composition can use.
-- [`GET /api/languages`](languages.md) exposes the translator's supported
-  languages.
 - [`GET /api/supported-games`](supported-games.md) exposes games offered by
   configured stores.
 
@@ -34,12 +32,9 @@ reason to exist. The API's own entry points and queue are documented in its
 - [`POST /api/decklist`](decklist.md) previews how pasted text parses before a
   paid or slow search is created.
 - [`GET /api/card`](card-names.md) translates an entered card name.
-- [`GET /api/card/suggestions`](card-suggestions.md) corrects a name prefix.
 - [`GET /api/card/autocomplete`](card-autocomplete.md) supplies game-specific
   catalog matches.
 - [`GET /api/card/metadata`](card-metadata.md) resolves printing metadata.
-- [`GET /api/card/art`](card-art.md) resolves the selected printing's artwork
-  without making the browser depend on translator internals.
 
 ## Run and Present Searches
 

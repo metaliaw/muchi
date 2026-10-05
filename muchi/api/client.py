@@ -307,6 +307,19 @@ class SearchProvider:
             "edition": edition, "foil": str(foil).lower(),
         })
 
+    def resolve_card_name(self, game: str, name: str, language: str = "") -> str | None:
+        """El Nombre Canónico de una Carta escrita en cualquier Idioma.
+
+        Nulo cuando el Catálogo no Conoce la Carta: es una Respuesta, no un
+        Fallo. Un Catálogo que no Contestó sí Viaja como Fallo, y se Reintenta.
+        """
+        reply = self.request_reply("GET", "/cards/canonical-name", params={
+            "game": game, "name": name, "language": language,
+        }, allow_not_found=True)
+        if reply is None:
+            return None
+        return self.parse_reply(lambda value: str(value["canonical_name"]), reply)
+
     def autocomplete_cards(self, game: str, name: str, language: str = "") -> list[str]:
         reply = self.request_reply("GET", "/cards/autocomplete", params={
             "game": game, "name": name, "language": language,

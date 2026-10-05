@@ -19,10 +19,3 @@ class QueryFailed(RuntimeError):
 class SearchRejected(QueryFailed):
     """El Servicio rechazó el Pedido; corregirlo permite un nuevo Envío."""
 
-
-class CardNotFound(Exception):
-    """El Nombre no existe en Ningún Idioma."""
-
-
-class TranslationFailed(Exception):
-    """El Invitado no Respondió. Reintentar tiene Sentido."""
