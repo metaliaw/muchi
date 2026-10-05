@@ -1,3 +1,4 @@
 # Front nuevo: BFF en FastAPI. Se instala junto a requirements.txt.
 fastapi>=0.115
 uvicorn[standard]>=0.30
+mcp>=2.3,<3

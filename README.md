@@ -63,6 +63,9 @@ The Cart excludes those Offers.
 the Session without submitting them again. Save their Links to recover
 them in another Session; the API must still retain those Results.
 
+Agents can also start Searches and read Offers through MCP. See
+[MCP for Agents](docs/mcp.md) to connect a compatible Client.
+
 While a Search is pending, State and Offers are polled every 3 seconds.
 Each Request waits at most 10 seconds before timing out. Both Numbers live in
 [`config/api.defaults.yaml`](config/api.defaults.yaml), adjustable through
@@ -335,6 +338,7 @@ index, see [Diarios de desarrollo](README.es.md#diarios-de-desarrollo).
 | Document | What You Learn |
 | --- | --- |
 | [MUCHI BFF Architecture](docs/architecture.md) | The Frontend/BFF boundary, request flow, security, presentation rules and deployment. |
+| [MCP for Agents](docs/mcp.md) | Connect an agent to start searches and read offers. |
 | [BFF Entry Points](docs/bff/README.md) | One explanation and reason for every public BFF route. |
 | [The Frontend and Its Boundary](docs/web-migration.md) | What the Frontend renders and how it is deployed with the BFF. |
 | [How Muchi Speaks](docs/how-muchi-speaks.md) | Phrase Catalog, Bubble precedence, three Notice channels, Sprite sheet and reduced Motion. |

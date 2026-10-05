@@ -29,6 +29,7 @@ from muchi.mtg.settings import load_offer_settings, load_rate_settings
 from muchi.paths import ROOT
 
 from server import links, presenter
+from server.mcp import mcp_app, mcp_lifespan
 
 # La Re-verificación pega una segunda Vez por Oferta: nace Apagada, y
 # MUCHI_VERIFY_STOCK=1 la Enciende el Día que la Certeza pese más que la Carga.
@@ -66,7 +67,9 @@ def write_index(page: str, client: str) -> str:
         return page
     return page.replace("</head>", ADSENSE_HEAD.format(client=client) + "</head>", 1)
 
-app = FastAPI(title="Muchi Front", docs_url="/api/docs", openapi_url="/api/openapi.json")
+app = FastAPI(title="Muchi Front", docs_url="/api/docs",
+              openapi_url="/api/openapi.json", lifespan=mcp_lifespan)
+app.mount("/mcp", mcp_app, name="mcp")
 
 
 class SearchRequest(BaseModel):
