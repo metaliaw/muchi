@@ -76,7 +76,7 @@ nerd:
 # el Número que Vino. Una Frase sin Ranura igual Sirve.
 fault:
   client:
-    - text: "ERROR 400, qué hice mal? lo siento solo soy un gasto"
+    - text: "ERROR 400, qué hice mal? lo siento solo soy un gato"
       state: angry
   server:
     - text: "AGHHH UNA TIENDA ME MIRÓ FEO ERROR 500: {detalle}"
