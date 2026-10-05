@@ -16,6 +16,16 @@ type GameSupport struct {
 	Name    string `json:"name"`
 	Singles bool   `json:"singles"`
 	Sealed  bool   `json:"sealed"`
+	// Languages Lists the Languages the Game's Card Names Read in, in the
+	// Order the Config Declares them. A Game that Declares none Omits the Field.
+	Languages []Language `json:"languages,omitempty"`
+}
+
+// Language Is a Code with what a Box needs to Draw it.
+type Language struct {
+	Code    string `json:"code"`
+	Label   string `json:"label"`
+	Example string `json:"example"`
 }
 
 // Asked Answers whether this Game can be Asked for that Kind at all.
@@ -36,7 +46,7 @@ func SupportedGames(config Config) []GameSupport {
 		if !game.Enabled {
 			continue
 		}
-		found := GameSupport{Key: key, Name: game.Name}
+		found := GameSupport{Key: key, Name: game.Name, Languages: languagesOf(config, game)}
 		for _, provider := range config.SearchProviders {
 			if !provider.Enabled || !slices.Contains(provider.Games, key) {
 				continue
@@ -73,4 +83,27 @@ func storeAnswers(store StoreConfig, game GameConfig, key string) bool {
 		return true
 	}
 	return slices.Contains(game.Origins, store.Platform)
+}
+
+// languagesOf Reads a Game's Declared Languages against the Catalog. Validation
+// Already Refused a Code the Catalog does not Know.
+func languagesOf(config Config, game GameConfig) []Language {
+	var languages []Language
+	for _, code := range game.Languages.Supported {
+		entry := config.Languages[code]
+		languages = append(languages, Language{Code: code, Label: entry.Label, Example: entry.Example})
+	}
+	return languages
+}
+
+// SupportedLanguages Maps each Game that Declares Languages to their Codes.
+// A Game Missing from the Map Declared none, and a Caller may Name any.
+func SupportedLanguages(config Config) map[string][]string {
+	supported := map[string][]string{}
+	for key, game := range config.Games {
+		if game.Enabled && game.Languages.Declared() {
+			supported[key] = append([]string{}, game.Languages.Supported...)
+		}
+	}
+	return supported
 }

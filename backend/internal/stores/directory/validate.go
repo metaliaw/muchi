@@ -4,12 +4,16 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"slices"
 
 	"github.com/cangrejometralleta/muchi-api/internal/stores/moxfield"
 )
 
 func ValidateConfig(config Config) error {
 	if err := validateGames(config.Games); err != nil {
+		return err
+	}
+	if err := validateLanguages(config.Languages, config.Games); err != nil {
 		return err
 	}
 	if err := validateSearchProviders(config.SearchProviders, config.Games, config.Stores); err != nil {
@@ -112,6 +116,33 @@ func validateLists(lists []MoxfieldList) error {
 		}
 		if list.Label == "" || list.URL == "" || list.CLPPerCKUSD < 1 {
 			return errors.New("invalid store configuration")
+		}
+	}
+	return nil
+}
+
+// LanguageProviders Lists the Catalogs that can Answer a Game's Card Names. A
+// Name Outside it Reaches no Adapter, so the Config Refuses it at Load.
+var LanguageProviders = []string{"scryfall"}
+
+func validateLanguages(catalog map[string]LanguageConfig, games map[string]GameConfig) error {
+	for code, language := range catalog {
+		if code == "" || language.Label == "" || language.Example == "" {
+			return errors.New("invalid language catalog")
+		}
+	}
+	for game, config := range games {
+		declared := config.Languages
+		if !declared.Declared() {
+			continue
+		}
+		if !slices.Contains(LanguageProviders, declared.Provider) || len(declared.Supported) == 0 {
+			return fmt.Errorf("invalid languages for game %q", game)
+		}
+		for _, code := range declared.Supported {
+			if _, known := catalog[code]; !known {
+				return fmt.Errorf("unknown language %q for game %q", code, game)
+			}
 		}
 	}
 	return nil

@@ -110,3 +110,56 @@ func TestHalfACoordinatePairIsRefused(t *testing.T) {
 		t.Fatal("a latitude without longitude was accepted")
 	}
 }
+
+// Los Idiomas se Declaran en la Configuración y viajan con el Juego: quien
+// Dibuja el Campo no Adivina qué Nombres entiende el Catálogo.
+func TestTheGameCarriesTheLanguagesItDeclares(t *testing.T) {
+	config, err := LoadStoreConfig("../../../config/stores.yaml", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	games := SupportedGames(config)
+
+	magic := supportOf(t, games, "magic")
+	if len(magic.Languages) != 2 || magic.Languages[0].Code != "es" || magic.Languages[1].Code != "en" {
+		t.Fatalf("magic languages=%+v", magic.Languages)
+	}
+	if magic.Languages[0].Label != "Español" || magic.Languages[1].Example != "Sol Ring" {
+		t.Fatalf("magic languages=%+v", magic.Languages)
+	}
+	if pokemon := supportOf(t, games, "pokemon"); len(pokemon.Languages) != 0 {
+		t.Fatalf("a game with no declaration announced languages: %+v", pokemon.Languages)
+	}
+	if declared := SupportedLanguages(config); len(declared["magic"]) != 2 || declared["pokemon"] != nil {
+		t.Fatalf("declared=%v", declared)
+	}
+}
+
+func TestTheConfigRefusesLanguagesItCannotServe(t *testing.T) {
+	catalog := map[string]LanguageConfig{"es": {Label: "Español", Example: "Anillo solar"}}
+	base := func(languages GameLanguages) Config {
+		config, err := LoadStoreConfig("../../../config/stores.yaml", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		config.Languages = catalog
+		magic := config.Games["magic"]
+		magic.Languages = languages
+		config.Games["magic"] = magic
+		return config
+	}
+	for name, languages := range map[string]GameLanguages{
+		"a language the catalog does not know": {Provider: "scryfall", Supported: []string{"es", "ja"}},
+		"a provider with no adapter":           {Provider: "inventado", Supported: []string{"es"}},
+		"a provider with no language":          {Provider: "scryfall"},
+		"languages with no provider":           {Supported: []string{"es"}},
+	} {
+		if err := ValidateConfig(base(languages)); err == nil {
+			t.Errorf("%s was accepted", name)
+		}
+	}
+	if err := ValidateConfig(base(GameLanguages{Provider: "scryfall", Supported: []string{"es"}})); err != nil {
+		t.Errorf("a declared language was refused: %v", err)
+	}
+}

@@ -1,8 +1,25 @@
+# Los Idiomas en que un Juego Puede Leer el Nombre de una Carta. El Código es el
+# que entiende el Catálogo; la Etiqueta y el Ejemplo son para quien Dibuja el
+# Campo, y el Ejemplo es cómo se Escribe Sol Ring en ese Idioma. Los Nombres
+# salen del propio Catálogo, no de una Traducción inventada.
+languages:
+  es: {label: Español, example: Anillo solar}
+  pt: {label: Portugués, example: Anel Solar}
+  en: {label: Inglés, example: Sol Ring}
+  fr: {label: Francés, example: Anneau solaire}
+  de: {label: Alemán, example: Sonnenring}
+  it: {label: Italiano, example: Anello Solare}
+  ja: {label: Japonés, example: 太陽の指輪}
 games:
   magic:
     name: "Magic: The Gathering"
     reference_key: magic
     enabled: true
+    # Quién Lee los Nombres y en qué Idiomas se Anuncia. Un Juego sin este
+    # Bloque no Declara ninguno: sus Nombres se Piden como vienen.
+    languages:
+      provider: scryfall
+      supported: [es, en]
     origins:
       - scrycl
       - moxfield

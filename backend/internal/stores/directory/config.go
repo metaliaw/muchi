@@ -4,16 +4,42 @@
 package directory
 
 type Config struct {
+	// Languages Names every Language a Game may Declare: how a Person Reads it
+	// and how a Card Name Looks written in it. The Provider Knows the Code; the
+	// Label and the Example are for whoever Draws the Box.
+	Languages       map[string]LanguageConfig       `yaml:"languages"`
 	Games           map[string]GameConfig           `yaml:"games"`
 	SearchProviders map[string]SearchProviderConfig `yaml:"search_providers"`
 	Stores          map[string]StoreConfig          `yaml:"stores"`
 }
 
 type GameConfig struct {
-	Name         string   `yaml:"name"`
-	ReferenceKey string   `yaml:"reference_key"`
-	Enabled      bool     `yaml:"enabled"`
-	Origins      []string `yaml:"origins"`
+	Name         string        `yaml:"name"`
+	ReferenceKey string        `yaml:"reference_key"`
+	Enabled      bool          `yaml:"enabled"`
+	Origins      []string      `yaml:"origins"`
+	Languages    GameLanguages `yaml:"languages"`
+}
+
+// LanguageConfig Is one Entry of the Language Catalog.
+type LanguageConfig struct {
+	Label   string `yaml:"label"`
+	Example string `yaml:"example"`
+}
+
+// GameLanguages Says who Reads Card Names for a Game and in which Languages.
+// Absent Means the Game Declares none: its Names are Asked as Written, and any
+// Language a Caller Names is Passed along untouched.
+type GameLanguages struct {
+	// Provider Names the Catalog that Answers the Game's Card Names, one of
+	// LanguageProviders.
+	Provider  string   `yaml:"provider"`
+	Supported []string `yaml:"supported"`
+}
+
+// Declared Answers whether the Game Names its Languages at all.
+func (g GameLanguages) Declared() bool {
+	return g.Provider != "" || len(g.Supported) > 0
 }
 
 type SearchProviderConfig struct {
