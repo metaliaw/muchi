@@ -24,8 +24,6 @@ tiene una razón de ser. Los entrypoints y la Cola de la API están en su
   muestra la Interfaz.
 - [`GET /api/sources`](sources.es.md) informa qué fuentes de ofertas puede
   usar la composición de búsqueda actual.
-- [`GET /api/languages`](languages.es.md) expone los idiomas admitidos por el
-  traductor.
 - [`GET /api/supported-games`](supported-games.es.md) expone juegos ofrecidos
   por tiendas configuradas.
 
@@ -34,12 +32,9 @@ tiene una razón de ser. Los entrypoints y la Cola de la API están en su
 - [`POST /api/decklist`](decklist.es.md) anticipa cómo se interpreta el texto
   pegado antes de crear una búsqueda costosa o lenta.
 - [`GET /api/card`](card-names.es.md) traduce el nombre ingresado.
-- [`GET /api/card/suggestions`](card-suggestions.es.md) corrige un prefijo.
 - [`GET /api/card/autocomplete`](card-autocomplete.es.md) entrega coincidencias
   del catálogo del juego.
 - [`GET /api/card/metadata`](card-metadata.es.md) resuelve metadata de edición.
-- [`GET /api/card/art`](card-art.es.md) resuelve el arte de la impresión sin
-  acoplar el Navegador a los detalles del traductor.
 
 ## Ejecutar y Presentar Búsquedas
 

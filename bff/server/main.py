@@ -23,7 +23,7 @@ load_dotenv()
 from muchi.api.settings import load_api_settings
 from muchi.mtg import cast as muchi_cast
 from muchi.mtg import decklist, phrases
-from muchi.mtg.ports import CardNotFound, QueryFailed, SearchRejected, TranslationFailed
+from muchi.mtg.ports import QueryFailed, SearchRejected
 from muchi.mtg.search import StockCheck
 from muchi.mtg.settings import load_offer_settings, load_rate_settings
 from muchi.paths import ROOT
@@ -193,37 +193,16 @@ def read_decklist(request: SearchRequest) -> dict:
     }
 
 
-@app.get("/api/languages")
-def read_languages() -> dict:
-    """Los Idiomas que el Selector ofrece los nombra la Fuente, no el Front."""
-    return {"languages": [{"code": code, "label": label, "example": example}
-                          for code, label, example
-                          in build_muchi().translator.languages]}
-
-
 @app.get("/api/supported-games")
 def read_supported_games(kind: Literal["", "single", "sealed"] = "") -> dict:
     """Los Juegos disponibles los nombra muchi-api, no el Front.
 
     Cada uno Dice si se Puede pedir en Cartas sueltas, en Sellado o en ambas.
     Nadie lo Declara por Juego: lo Declara cada Tienda y el Juego lo Hereda.
+    Los que Declaran Idiomas los Traen, con su Etiqueta y su Ejemplo: quien
+    los Lee es muchi-api, y el Front solo Anuncia lo que ella Dice.
     """
     return {"games": build_muchi().searches.read_supported_games(kind)}
-
-
-@app.get("/api/card/art")
-def read_card_art(name: str = Query(min_length=1, max_length=200),
-                  language: str = Query("", max_length=5),
-                  edition: str = Query("", max_length=10),
-                  foil: bool = Query(False)) -> dict:
-    """La Imagen de una Carta, servida por Scryfall directo al Navegador."""
-    translator = build_muchi().translator
-    if language and language not in translator.codes:
-        raise HTTPException(400, f"El idioma «{language}» no está en la lista.")
-    art = translator.find_art(name, language, edition, foil)
-    if not art:
-        raise HTTPException(404, f"No hay imagen de «{name}».")
-    return art
 
 
 @app.get("/api/card/metadata")
@@ -244,31 +223,16 @@ def autocomplete_cards(game: str = Query(min_length=1, max_length=50),
     return {"suggestions": build_muchi().searches.autocomplete_cards(game, name, language)}
 
 
-@app.get("/api/card/suggestions")
-def read_suggestions(name: str = Query(min_length=1, max_length=200),
-                     language: str = Query(min_length=2, max_length=5)) -> dict:
-    """Nombres que empiezan como lo escrito, para quien dudó en el Campo."""
-    translator = build_muchi().translator
-    if language not in translator.codes:
-        raise HTTPException(400, f"El idioma «{language}» no está en la lista.")
-    return {"suggestions": list(translator.suggest_names(name, language))}
-
-
 @app.get("/api/card")
 def read_card(name: str = Query(min_length=1, max_length=200),
-              language: str = Query("", max_length=5)) -> dict:
-    """Busca una Carta: el Front escribe en su Idioma, Scryfall traduce."""
-    translator = build_muchi().translator
-    if language and language not in translator.codes:
-        raise HTTPException(400, f"El idioma «{language}» no está en la lista.")
-    try:
-        canonical = translator.translate_name(name, language)
-    except CardNotFound:
+              game: str = Query("magic", min_length=1, max_length=50),
+              language: str = Query("", max_length=20)) -> dict:
+    """El Nombre Canónico: el Front escribe en su Idioma, muchi-api lo Traduce."""
+    canonical = build_muchi().searches.resolve_card_name(game, name, language)
+    if canonical is None:
         # El Fracaso se Nombra sin Voz: la Frase que Muchi Dice al no encontrar
         # una Carta la Elige el Front con el Catálogo que ya Tiene.
         raise HTTPException(404, f"No encontramos «{name}».")
-    except TranslationFailed as error:
-        raise HTTPException(502, str(error))
     return {"name": name, "canonical_name": canonical, "language": language}
 
 

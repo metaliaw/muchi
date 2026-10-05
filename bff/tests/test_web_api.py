@@ -5,7 +5,7 @@ from decimal import Decimal
 import pytest
 from fastapi.testclient import TestClient
 
-from muchi.mtg.ports import CardNotFound, QueryFailed, SearchRejected, TranslationFailed
+from muchi.mtg.ports import QueryFailed, SearchRejected
 from muchi.mtg.search import (SearchItem, SearchOffer, SearchResults, SearchState,
                               StockCheck, StoreOrder)
 from server import links, main, presenter
@@ -72,7 +72,10 @@ class FakeSearches:
         self.asked_kind = kind
         games = [
             {"name": "Magic: The Gathering", "reference_key": "magic",
-             "singles": True, "sealed": True},
+             "singles": True, "sealed": True,
+             "languages": [
+                 {"code": "es", "label": "Español", "example": "Anillo solar"},
+                 {"code": "en", "label": "Inglés", "example": "Sol Ring"}]},
             {"name": "Mitos y Leyendas", "reference_key": "mitos-y-leyendas",
              "singles": True, "sealed": False},
         ]
@@ -85,6 +88,10 @@ class FakeSearches:
             "name": name, "edition": edition or "SVP",
             "image": f"https://images.example/{game}/{name}.jpg",
         }
+
+    def resolve_card_name(self, game, name, language=""):
+        self.resolved = (game, name, language)
+        return "Sol Ring" if name == "Anillo Solar" else None
 
     def autocomplete_cards(self, game, name, language=""):
         return [name, f"{name} VMAX"]
@@ -201,10 +208,23 @@ def test_supported_games_come_from_the_api(client):
     http, _ = client
     assert http.get("/api/supported-games").json() == {"games": [
         {"name": "Magic: The Gathering", "reference_key": "magic",
-         "singles": True, "sealed": True},
+         "singles": True, "sealed": True,
+         "languages": [
+             {"code": "es", "label": "Español", "example": "Anillo solar"},
+             {"code": "en", "label": "Inglés", "example": "Sol Ring"}]},
         {"name": "Mitos y Leyendas", "reference_key": "mitos-y-leyendas",
          "singles": True, "sealed": False},
     ]}
+
+
+def test_a_game_without_languages_announces_none(client):
+    """Quien no Declara Idiomas no los Recibe de este Lado: el Front no inventa."""
+    http, _ = client
+
+    games = {game["reference_key"]: game
+             for game in http.get("/api/supported-games").json()["games"]}
+
+    assert "languages" not in games["mitos-y-leyendas"]
 
 
 def test_supported_games_answer_by_kind(client):
@@ -223,6 +243,29 @@ def test_card_metadata_uses_the_selected_game(client):
         "name": "Pikachu", "edition": "SVP",
         "image": "https://images.example/pokemon/Pikachu.jpg",
     }
+
+
+def test_card_translates_the_name_the_front_wrote(client):
+    http, searches = client
+    reply = http.get("/api/card", params={"name": "Anillo Solar", "language": "es"})
+    assert reply.status_code == 200
+    assert reply.json() == {"name": "Anillo Solar", "canonical_name": "Sol Ring",
+                            "language": "es"}
+    # Sin Juego, Magic: el Nombre se Lee donde Vive el Catálogo.
+    assert searches.resolved == ("magic", "Anillo Solar", "es")
+
+
+def test_card_not_found_answers_with_muchis_voice(client):
+    http, _ = client
+    reply = http.get("/api/card", params={"name": "zzzz"})
+    assert reply.status_code == 404
+    assert reply.json()["detail"].strip()
+
+
+def test_card_refuses_an_empty_name(client):
+    http, searches = client
+    assert http.get("/api/card", params={"name": ""}).status_code == 422
+    assert not hasattr(searches, "resolved")
 
 
 def test_card_autocomplete_uses_the_selected_game(client):
@@ -303,159 +346,6 @@ def test_ads_txt_authorizes_configured_publisher(monkeypatch):
     assert content == "google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0\n"
 
 
-# ------------------------------------------------------------- la Traducción
-class FakeTranslator:
-    """Traduce sin Red: anota lo que le piden y responde lo que se le dijo."""
-
-    languages = (("es", "Español", "Anillo solar"), ("ja", "Japonés", "太陽の指輪"))
-    codes = frozenset({"es", "ja"})
-
-    ART = {"name": "Sol Ring", "printed_name": "",
-           "image": "https://cards.scryfall.io/normal/sol.jpg",
-           "url": "https://scryfall.com/card/x"}
-
-    def __init__(self, answer="Sol Ring", explodes=None,
-                 suggestions=("Anillo solar", "Anillo brillante"), art=None):
-        self.answer = answer
-        self.explodes = explodes
-        self.suggestions = suggestions
-        self.art = self.ART if art is None else art
-        self.asked = []
-        self.suggested = []
-        self.looked = []
-
-    def find_art(self, name, language="", edition="", foil=False):
-        self.looked.append((name, language, edition, foil))
-        return self.art
-
-    def suggest_names(self, text, language, limit=3):
-        self.suggested.append((text, language))
-        return self.suggestions
-
-    def translate_name(self, name, language=""):
-        self.asked.append((name, language))
-        if self.explodes:
-            raise self.explodes
-        return self.answer
-
-
-@pytest.fixture
-def translating(monkeypatch):
-    def install(translator):
-        monkeypatch.setattr(
-            main, "build_muchi",
-            lambda: type("Cast", (), {"translator": translator})())
-        return TestClient(main.app), translator
-    return install
-
-
-def test_card_translates_the_name_the_front_wrote(translating):
-    client, translator = translating(FakeTranslator())
-    reply = client.get("/api/card", params={"name": "Anillo Solar", "language": "es"})
-    assert reply.status_code == 200
-    assert reply.json() == {"name": "Anillo Solar", "canonical_name": "Sol Ring",
-                            "language": "es"}
-    assert translator.asked == [("Anillo Solar", "es")]
-
-
-def test_card_without_language_lets_the_source_guess(translating):
-    client, translator = translating(FakeTranslator())
-    client.get("/api/card", params={"name": "Anillo Solar"})
-    assert translator.asked == [("Anillo Solar", "")]
-
-
-def test_card_rejects_a_language_that_is_not_offered(translating):
-    """El Código inventado se corta aquí: Scryfall ni se entera."""
-    client, translator = translating(FakeTranslator())
-    reply = client.get("/api/card", params={"name": "Anillo Solar", "language": "xx"})
-    assert reply.status_code == 400
-    assert "xx" in reply.json()["detail"]
-    assert translator.asked == []
-
-
-def test_card_not_found_answers_with_muchis_voice(translating):
-    client, _ = translating(FakeTranslator(explodes=CardNotFound("Anillo Solar")))
-    reply = client.get("/api/card", params={"name": "Anillo Solar"})
-    assert reply.status_code == 404
-    assert reply.json()["detail"].strip()
-
-
-def test_a_broken_source_is_a_bad_gateway(translating):
-    client, _ = translating(FakeTranslator(explodes=TranslationFailed("scryfall 503")))
-    reply = client.get("/api/card", params={"name": "Anillo Solar"})
-    assert reply.status_code == 502
-    assert "503" in reply.json()["detail"]
-
-
-def test_card_refuses_an_empty_name(translating):
-    client, translator = translating(FakeTranslator())
-    assert client.get("/api/card", params={"name": ""}).status_code == 422
-    assert translator.asked == []
-
-
-def test_languages_come_from_the_translator_not_the_front(translating):
-    client, _ = translating(FakeTranslator())
-    rows = client.get("/api/languages").json()["languages"]
-    assert rows[0] == {"code": "es", "label": "Español", "example": "Anillo solar"}
-    # El Ejemplo viaja con el Idioma: el Front no escribe ningun Nombre.
-    assert {"code": "ja", "label": "Japonés", "example": "太陽の指輪"} in rows
-
-
-def test_suggestions_reach_the_front_with_the_language_chosen(translating):
-    client, translator = translating(FakeTranslator())
-    reply = client.get("/api/card/suggestions",
-                       params={"name": "Anillo", "language": "es"})
-    assert reply.status_code == 200
-    assert reply.json() == {"suggestions": ["Anillo solar", "Anillo brillante"]}
-    assert translator.suggested == [("Anillo", "es")]
-
-
-def test_suggestions_refuse_a_language_that_is_not_offered(translating):
-    client, translator = translating(FakeTranslator())
-    reply = client.get("/api/card/suggestions",
-                       params={"name": "Anillo", "language": "xx"})
-    assert reply.status_code == 400
-    assert translator.suggested == []
-
-
-def test_suggestions_need_a_language_to_look_in(translating):
-    """Sin Idioma no hay Sugerencia: el Campo siempre tiene uno elegido."""
-    client, translator = translating(FakeTranslator())
-    reply = client.get("/api/card/suggestions", params={"name": "Anillo"})
-    assert reply.status_code == 422
-    assert translator.suggested == []
-
-
-def test_no_suggestion_is_an_empty_answer_not_a_failure(translating):
-    client, _ = translating(FakeTranslator(suggestions=()))
-    reply = client.get("/api/card/suggestions",
-                       params={"name": "zzzz", "language": "es"})
-    assert reply.status_code == 200
-    assert reply.json() == {"suggestions": []}
-
-
-def test_art_answers_with_the_address_not_the_bytes(translating):
-    """La Imagen la sirve Scryfall al Navegador; el BFF solo pasa la Dirección."""
-    client, translator = translating(FakeTranslator())
-    reply = client.get("/api/card/art", params={"name": "Sol Ring"})
-    assert reply.status_code == 200
-    assert reply.json()["image"].startswith("https://cards.scryfall.io/")
-    assert translator.looked == [("Sol Ring", "", "", False)]
-
-
-def test_a_card_without_art_is_a_not_found(translating):
-    client, _ = translating(FakeTranslator(art={}))
-    reply = client.get("/api/card/art", params={"name": "zzzz"})
-    assert reply.status_code == 404
-
-
-def test_art_refuses_a_language_that_is_not_offered(translating):
-    client, translator = translating(FakeTranslator())
-    reply = client.get("/api/card/art", params={"name": "Sol Ring", "language": "xx"})
-    assert reply.status_code == 400
-    assert translator.looked == []
-
-
 # -------------------------------------------------------------- el Carrito
 def test_the_cart_warns_until_the_purchase_is_ready(client):
     """La Compra todavía no Está: el Carrito se Muestra, pero Avisando."""
@@ -521,13 +411,6 @@ def test_configured_networks_reach_the_bar(client):
 
     assert rows == [dict(red) for red in links.load_socials() if red["url"]]
     assert all(row["url"].startswith("https://") for row in rows)
-
-
-def test_art_carries_the_edition_of_the_offer_that_was_clicked(translating):
-    client, translator = translating(FakeTranslator())
-    client.get("/api/card/art",
-               params={"name": "Sol Ring", "edition": "c21", "foil": "true"})
-    assert translator.looked == [("Sol Ring", "", "c21", True)]
 
 
 def test_an_offer_publishes_what_identifies_its_printing(client):
