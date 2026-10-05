@@ -496,7 +496,7 @@ onUnmounted(stopPolling)
 </script>
 
 <template>
-  <GoogleAdsense :client="config.adsense_client" />
+  <GoogleAdsense v-if="config.adsense_client" :client="config.adsense_client" />
 
   <header class="mu-hero">
     <div class="mu-hero__nombre">
