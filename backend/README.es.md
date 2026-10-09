@@ -20,6 +20,8 @@ documentan la API y las decisiones de desarrollo.
 ### General
 
 - [Arquitectura](docs/architecture.es.md)
+- [Propuesta de nodo Muchi en AWS](docs/operations/aws-node-proposal.es.md)
+- [Propuesta del front Muchi en AWS](docs/operations/aws-front-proposal.es.md)
 - [Entrypoints de la API](docs/entrypoints.es.md)
 
 ### Búsqueda

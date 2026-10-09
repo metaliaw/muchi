@@ -18,6 +18,8 @@ and development decisions.
 ### Overview
 
 - [Architecture](docs/architecture.md)
+- [AWS Muchi Node Proposal](docs/operations/aws-node-proposal.md)
+- [AWS Muchi Frontend Proposal](docs/operations/aws-front-proposal.md)
 - [API Entry Points](docs/entrypoints.md)
 
 ### Search
