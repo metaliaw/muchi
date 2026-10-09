@@ -160,6 +160,9 @@ MUCHI_TEST_MOXFIELD_LIVE=1 go test ./internal/stores/moxfield -run TestPublicLis
 
 - `muchi-api serve`: sirve HTTP y métricas.
 - `muchi-api work`: procesa elementos pendientes con leases renovables.
+- `muchi-api process`: procesa un turno y termina; no tener trabajo es éxito.
+- `muchi-api sweep`: repone despertares pendientes de forma acotada.
+- `muchi-api release`: libera pedidos internos pendientes vencidos.
 
 Ruta del worker: `work` local entra por
 [`cmd/muchi-api/main.go`](cmd/muchi-api/main.go); Cloud Tasks entra por

@@ -1,24 +1,21 @@
 package application
 
 import (
-	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 
 	"github.com/cangrejometralleta/muchi-api/internal/catalog"
 	"github.com/cangrejometralleta/muchi-api/internal/config"
 	"github.com/cangrejometralleta/muchi-api/internal/constants"
-	"github.com/cangrejometralleta/muchi-api/internal/db"
 	"github.com/cangrejometralleta/muchi-api/internal/model"
 	"github.com/cangrejometralleta/muchi-api/internal/orders"
-	"github.com/cangrejometralleta/muchi-api/internal/repositories"
 	"github.com/cangrejometralleta/muchi-api/internal/search"
 	"github.com/cangrejometralleta/muchi-api/internal/source"
 	"github.com/cangrejometralleta/muchi-api/internal/stores/commerce"
 	"github.com/cangrejometralleta/muchi-api/internal/stores/directory"
 	"github.com/cangrejometralleta/muchi-api/internal/stores/moxfield"
 	"github.com/cangrejometralleta/muchi-api/internal/sweep"
-	"github.com/cangrejometralleta/muchi-api/internal/taskqueue"
 )
 
 // Vault Names every Role the one persistence Object Plays for a Runtime: it
@@ -31,6 +28,7 @@ import (
 type Vault interface {
 	search.SearchRepository
 	search.OfferCache
+	moxfield.InventoryCache
 	search.OfferReader
 	search.HealthStore
 	search.OrderRepository
@@ -55,16 +53,18 @@ type Runtime struct {
 	Inventories    moxfield.Shelf
 }
 
-// BuildRuntime Casts the Search Providers for one Function Instance.
-func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger, dispatch bool) (Runtime, error) {
-	database, err := db.OpenStore(ctx, config.ProjectID)
-	if err != nil {
-		return Runtime{}, err
+// Dependencies Supplies the Ports every host Composes before entering the application.
+type Dependencies struct {
+	Vault Vault
+	Queue Dispatcher
+}
+
+// BuildRuntime Composes the same application with the host's chosen Ports.
+func BuildRuntime(config config.Config, logger *slog.Logger, dependencies Dependencies) (Runtime, error) {
+	vault := dependencies.Vault
+	if vault == nil {
+		return Runtime{}, errors.New("runtime needs persistence")
 	}
-	vault := repositories.New(database, config.SearchTTL)
-	// The Vault Warns when a Claim steps over dead Items; silent, that Warning
-	// is the one that took two Hours to notice.
-	vault.TellStore(logger)
 	storeConfig, err := directory.LoadStoreConfig(config.StoresPath, logger)
 	if err != nil {
 		return Runtime{}, err
@@ -111,18 +111,11 @@ func BuildRuntime(ctx context.Context, config config.Config, logger *slog.Logger
 		CheckoutService: search.CheckoutService{Checkouts: shops, Quotes: shops},
 		OrderService:    search.OrderService{Orders: vault, Orderer: shops, Checkouts: shops},
 	}.WithRepository(vault)
-	if dispatch && config.TaskURL != "" {
-		queue, err := taskqueue.OpenQueue(
-			ctx, config.ProjectID, config.TaskRegion, config.TaskQueue,
-			config.TaskURL, config.TaskAccount, config.TaskDeadline,
-		)
-		if err != nil {
-			return Runtime{}, err
-		}
-		service.Tasks = queue
-		return Runtime{Service: service, Vault: vault, Queue: queue, SupportedGames: supportedGames, Stores: listedStores, Inventories: inventories}, nil
-	}
-	return Runtime{Service: service, Vault: vault, SupportedGames: supportedGames, Stores: listedStores, Inventories: inventories}, nil
+	service.Tasks = dependencies.Queue
+	return Runtime{
+		Service: service, Vault: vault, Queue: dependencies.Queue,
+		SupportedGames: supportedGames, Stores: listedStores, Inventories: inventories,
+	}, nil
 }
 
 // gameLanguages Types the Keys the Directory Reads as Text.

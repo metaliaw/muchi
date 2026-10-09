@@ -11,12 +11,6 @@ import (
 
 type Config struct {
 	Address                 string
-	ProjectID               string
-	TaskRegion              string
-	TaskQueue               string
-	TaskURL                 string
-	TaskAccount             string
-	TaskDeadline            time.Duration
 	APIToken                string
 	StoresPath              string
 	WorkerID                string
@@ -61,18 +55,8 @@ func LoadConfig() (Config, error) {
 		return Config{}, err
 	}
 
-	deadline, err := readTaskDeadline()
-	if err != nil {
-		return Config{}, err
-	}
 	config := Config{
 		Address:                 readValueOr("MUCHI_API_ADDRESS", ":8080"),
-		ProjectID:               os.Getenv("GOOGLE_CLOUD_PROJECT"),
-		TaskRegion:              readValueOr("MUCHI_TASK_REGION", "us-central1"),
-		TaskQueue:               readValueOr("MUCHI_TASK_QUEUE", "muchi-searches"),
-		TaskURL:                 os.Getenv("MUCHI_TASK_URL"),
-		TaskAccount:             os.Getenv("MUCHI_TASK_SERVICE_ACCOUNT"),
-		TaskDeadline:            deadline,
 		APIToken:                os.Getenv("MUCHI_API_TOKEN"),
 		StoresPath:              readValueOr("MUCHI_STORES_CONFIG", "config/stores.yaml"),
 		WorkerID:                readValueOr("MUCHI_WORKER_ID", readHostname()),
@@ -162,16 +146,4 @@ func readHostname() string {
 		return "worker-local"
 	}
 	return value
-}
-
-func readTaskDeadline() (time.Duration, error) {
-	value := os.Getenv("MUCHI_TASK_DEADLINE_SECONDS")
-	if value == "" {
-		return 30 * time.Minute, nil
-	}
-	seconds, err := strconv.Atoi(value)
-	if err != nil || seconds < 15 || seconds > 1800 {
-		return 0, errors.New("MUCHI_TASK_DEADLINE_SECONDS must be between 15 and 1800")
-	}
-	return time.Duration(seconds) * time.Second, nil
 }

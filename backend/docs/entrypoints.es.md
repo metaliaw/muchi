@@ -2,7 +2,7 @@
 
 # Entrypoints de la API
 
-La API declara tres entrypoints de Cloud Functions en [`function.go`](../function.go).
+La API declara cuatro entrypoints de Cloud Functions en [`function.go`](../function.go).
 Cada uno es una puerta operativa distinta hacia la misma aplicación compuesta.
 
 - [`ServeAPI`](entrypoints/serve-api.es.md) sirve rutas del contrato público.
@@ -18,3 +18,11 @@ Cada uno es una puerta operativa distinta hacia la misma aplicación compuesta.
 Los entrypoints comparten configuración y composición de aplicación, pero
 tienen fronteras de confianza distintas: autenticación pública de API, OIDC de
 tareas y OIDC del Scheduler. Cada página explica su contrato y razón de ser.
+
+- `ReleaseOrders` mueve pedidos internos `pending` vencidos a `released`.
+  Su entrada privada conserva autenticación OIDC del Scheduler.
+
+La CLI ofrece `serve`, `work`, `process`, `sweep` y `release`. GCP y CLI llaman
+`internal/application.Operations`; `internal/gcp` compone adaptadores y
+`internal/hosting` controla inicio y reutilización. Los errores de arranque se
+reintentan en la siguiente invocación sin conservar una falla para siempre.

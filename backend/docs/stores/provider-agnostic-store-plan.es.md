@@ -63,9 +63,9 @@ debe quedar en el camino por defecto del desarrollo local, no en un rincón.
 
 ### Tres. La elección del almacén en la composición
 
-`BuildRuntime` elige adaptador según configuración, y sigue siendo el único
-lugar del código que nombra un proveedor. El resto del programa ya recibe
-puertos y no cambia.
+`internal/gcp` selecciona los adaptadores actuales y los inyecta en
+`BuildRuntime` mediante `Dependencies`. Un nuevo host compone sus propios
+adaptadores; el flujo de aplicación recibe los mismos Ports y no cambia.
 
 ## Lo que hay que resolver por el camino
 

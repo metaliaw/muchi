@@ -1,35 +1,20 @@
 package muchiapi
 
 import (
-	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
-	"sync"
 
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
-	"github.com/cangrejometralleta/muchi-api/internal/application"
-	"github.com/cangrejometralleta/muchi-api/internal/config"
-	"github.com/cangrejometralleta/muchi-api/internal/handler"
-	"github.com/cangrejometralleta/muchi-api/internal/orders"
-	"github.com/cangrejometralleta/muchi-api/internal/search"
-	"github.com/cangrejometralleta/muchi-api/internal/sweep"
+	"github.com/cangrejometralleta/muchi-api/internal/gcp"
 )
 
 var (
-	apiOnce      sync.Once
-	apiHandler   http.Handler
-	apiError     error
-	taskOnce     sync.Once
-	taskWorker   search.Worker
-	taskError    error
-	sweepOnce    sync.Once
-	sweeper      sweep.Sweeper
-	sweepError   error
-	releaseOnce  sync.Once
-	releaser     orders.Releaser
-	releaseError error
+	logger      = slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	apiHost     = gcp.BuildLoader(logger, true)
+	taskHost    = gcp.BuildLoader(logger, false)
+	sweepHost   = gcp.BuildLoader(logger, true)
+	releaseHost = gcp.BuildLoader(logger, false)
 )
 
 func init() {
@@ -41,141 +26,20 @@ func init() {
 
 // ServeAPI Serves the public Muchi HTTP contract.
 func ServeAPI(w http.ResponseWriter, r *http.Request) {
-	apiOnce.Do(func() {
-		settings, err := config.LoadConfig()
-		if err != nil {
-			apiError = err
-			return
-		}
-		runtime, err := application.BuildRuntime(r.Context(), settings, buildLogger(), true)
-		if err != nil {
-			apiError = err
-			return
-		}
-		api := handler.Handler{
-			Searches: runtime.Service, Health: runtime.Vault, Token: settings.APIToken, Logger: buildLogger(),
-			SupportedGames:     runtime.SupportedGames,
-			Inventories:        runtime.Inventories,
-			HealthCheckTimeout: settings.HealthCheckTimeout,
-			OrderWebhookSecret: settings.OrderWebhookSecret,
-		}
-		apiHandler = api.BuildHandler()
-	})
-	if apiError != nil {
-		buildLogger().Error("ServeAPI Startup Failed", "error", apiError)
-		http.Error(w, "Service unavailable", http.StatusServiceUnavailable)
-		return
-	}
-	apiHandler.ServeHTTP(w, r)
+	apiHost.ServeAPI(w, r)
 }
 
-// ProcessSearch Handles one private Cloud Task.
+// ProcessSearch Translates a private Cloud Task into one shared worker turn.
 func ProcessSearch(w http.ResponseWriter, r *http.Request) {
-	taskOnce.Do(func() {
-		settings, err := config.LoadConfig()
-		if err != nil {
-			taskError = err
-			return
-		}
-		runtime, err := application.BuildRuntime(r.Context(), settings, buildLogger(), false)
-		if err != nil {
-			taskError = err
-			return
-		}
-		taskWorker = application.BuildSearchWorker(runtime, settings)
-	})
-	if taskError != nil {
-		buildLogger().Error("ProcessSearch Startup Failed", "error", taskError)
-		http.Error(w, "Service unavailable", http.StatusServiceUnavailable)
-		return
-	}
-	worker := taskWorker
-	worker.Owner = r.Header.Get("X-CloudTasks-TaskName")
-	err := worker.ProcessNext(r.Context())
-	if err != nil && !errors.Is(err, search.ErrNotFound) {
-		http.Error(w, "Task failed", http.StatusInternalServerError)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
+	taskHost.ServeSearch(w, r, r.Header.Get("X-CloudTasks-TaskName"))
 }
 
-// SweepQueue Puts back the Wake-ups that silent Turns spent.
-//
-// A Task carries no Item, so a Turn that ends without working spends a
-// Wake-up that nothing replaces. Run on a Schedule, this notices the Drift
-// and repairs it; without it, an Item whose Task was spent waits forever.
+// SweepQueue Restores bounded execution opportunities for waiting work.
 func SweepQueue(w http.ResponseWriter, r *http.Request) {
-	sweepOnce.Do(func() {
-		settings, err := config.LoadConfig()
-		if err != nil {
-			sweepError = err
-			return
-		}
-		runtime, err := application.BuildRuntime(r.Context(), settings, buildLogger(), true)
-		if err != nil {
-			sweepError = err
-			return
-		}
-		if runtime.Queue == nil {
-			sweepError = errors.New("sweep needs a Task Queue: MUCHI_TASK_URL is empty")
-			return
-		}
-		sweeper = sweep.Sweeper{
-			Items: runtime.Vault, Queue: runtime.Queue,
-			Logger: buildLogger(), MaxWakes: settings.SweepMaxWakes,
-		}
-	})
-	if sweepError != nil {
-		buildLogger().Error("SweepQueue Startup Failed", "error", sweepError)
-		http.Error(w, "Service unavailable", http.StatusServiceUnavailable)
-		return
-	}
-	woken, err := sweeper.SweepQueue(r.Context())
-	if err != nil {
-		http.Error(w, "Sweep failed", http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, `{"woken":%d}`, woken)
+	sweepHost.ServeSweep(w, r)
 }
 
-// ReleaseOrders Frees the Stock a `pending` Order held past its own Patience.
-//
-// A WooCommerce Store's own Draft Order Expires on its own after a few
-// Minutes; Muchi's Copy does not Notice unless something Asks. Run on a
-// Schedule of its own — Orders and Searches Expire at different Paces — this
-// Moves every Order whose Transfer never Arrived to `released`.
+// ReleaseOrders Moves expired pending orders through the shared operation.
 func ReleaseOrders(w http.ResponseWriter, r *http.Request) {
-	releaseOnce.Do(func() {
-		settings, err := config.LoadConfig()
-		if err != nil {
-			releaseError = err
-			return
-		}
-		runtime, err := application.BuildRuntime(r.Context(), settings, buildLogger(), false)
-		if err != nil {
-			releaseError = err
-			return
-		}
-		releaser = orders.Releaser{
-			Orders: runtime.Vault, Logger: buildLogger(),
-			MaxAge: settings.OrderPendingTTL, MaxReleases: settings.OrderReleaseMaxWakes,
-		}
-	})
-	if releaseError != nil {
-		buildLogger().Error("ReleaseOrders Startup Failed", "error", releaseError)
-		http.Error(w, "Service unavailable", http.StatusServiceUnavailable)
-		return
-	}
-	released, err := releaser.ReleaseOrders(r.Context())
-	if err != nil {
-		http.Error(w, "Release failed", http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, `{"released":%d}`, released)
-}
-
-func buildLogger() *slog.Logger {
-	return slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	releaseHost.ServeRelease(w, r)
 }

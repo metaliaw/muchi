@@ -219,23 +219,28 @@ flowchart LR
     database[internal/db<br/>Adaptador Firebase]
     worker[search.Worker<br/>Trabajo en segundo plano]
     config[config/stores.yaml<br/>Juegos, Orígenes y Tiendas]
-    adapters[Adaptadores<br/>Firestore, Tasks y Fuentes]
+    adapters[Adaptadores de Fuentes]
 
-    function --> transport
-    function --> application
+    tasks[internal/taskqueue<br/>Cloud Tasks Adapter]
+    host[internal/gcp] --> tasks
+    host --> database
+    host --> repositories
+    host --> application
+    hosting[internal/hosting] --> application
+    function --> host
+    function --> hosting
+    application --> transport
     transport --> domain
     worker --> domain
     domain --> repository
     repository --> repositories
     repositories -->|Database| database
-    application --> database
-    application --> repositories
     config --> catalog
     catalog --> application
     application --> domain
     application --> adapters
     domain -->|OrderPlacer| orderer
-    function --> releaser
+    application --> releaser
     releaser -->|Expirer| repositories
     adapters --> domain
 ```
@@ -267,8 +272,9 @@ que lee una búsqueda.
 salud de fuentes. Estos tipos no llevan etiquetas JSON ni Firestore.
 `internal/handler` contiene las formas HTTP y sus conversiones;
 `internal/db` contiene los registros y payloads JSON almacenados.
-`internal/application` selecciona el adaptador Firebase y se lo entrega a los
-stores mediante `repositories.Database`. El SDK de Firebase queda dentro de
+`internal/gcp` selecciona el adaptador Firebase y se lo entrega a los
+stores mediante `repositories.Database`. `internal/application` recibe los
+Ports de persistencia y despacho mediante `Dependencies`. El SDK de Firebase queda dentro de
 `internal/db`. Las conversiones explícitas en cada frontera conservan por
 separado los nombres de campos de la API y de los datos persistidos. La
 idempotencia usa su propia representación estable.
@@ -278,8 +284,8 @@ El dominio también declara necesidades como `TaskQueue`, `Provider`,
 construye los agregadores en `Providers` y agrupa las tiendas en `SourcesByGame`
 usando los juegos, orígenes, plataformas y estados del YAML. El paquete también
 reúne los catálogos de impresiones y ediciones, además de los límites por tipo de
-producto. `internal/application` abre las conexiones y arma el
-`Runtime` con esas piezas. Los paquetes de proveedores implementan los puertos;
+producto. `internal/gcp` abre las conexiones y controla su cierre;
+`internal/application` arma el `Runtime` con esas piezas y los Ports inyectados. Los paquetes de proveedores implementan los puertos;
 así, las reglas de búsqueda no importan tipos de Firestore, Cloud Tasks ni
 clientes HTTP concretos.
 
@@ -294,12 +300,26 @@ El [flujo de búsqueda por juego](search/game-search-providers.es.md) detalla es
 La [identidad de cartas](search/card-identity-games-sets.es.md) separa búsqueda,
 impresión y variante comercial.
 
+### Un Flujo entre Hosts
+
+`BuildOperations` construye una sola superficie: Handler HTTP, turno de worker,
+loop de trabajo, barrido y liberación de pedidos. `function.go` traduce las
+entradas GCP; `cmd/muchi-api` ofrece `serve`, `work`, `process`, `sweep` y `release`.
+Ambos usan la misma composición HTTP, incluyendo tiendas y firma de webhooks.
+
+`internal/hosting.Loader` reutiliza sólo arranques exitosos, con un contexto propio
+acotado a 30 segundos; una falla se reintenta en la siguiente invocación.
+La petición conserva su contexto para la operación. La CLI drena HTTP antes de
+cerrar conexiones; GCP conserva clientes durante la vida de su instancia.
+Configuración de aplicación vive en `internal/config`; variables GCP y plazo de
+Cloud Tasks se resuelven en `internal/gcp`, conservando sus nombres actuales.
+Los adaptadores AWS y la coordinación de Secretos siguen pendientes.
+
 ### La Frontera del Almacén
 
-`internal/application` es la raíz de composición que selecciona la base de
-datos. Los paquetes de producción fuera de ella dependen de puertos de
-repositorio y no importan `internal/db` ni `internal/taskqueue`; el `Runtime`
-expone puertos, no tipos concretos.
+`internal/gcp` es la composición del proveedor actual y selecciona la base de
+datos y el despacho. `internal/application` depende de Ports y no importa
+`internal/db` ni `internal/taskqueue`; el `Runtime` expone puertos, no tipos concretos.
 
 - `repositories.Database` es el contrato neutral implementado por el adaptador
   Firebase: abre las colecciones y ejecuta trabajo entre ellas en una sola
@@ -313,8 +333,8 @@ expone puertos, no tipos concretos.
   dominio.
 - `Dispatcher` reúne el despacho de trabajo y el despertar que repone el barredor.
 
-Las afirmaciones de `internal/application/vault_test.go` fijan esa frontera en
-tiempo de compilación.
+Las afirmaciones de `internal/application/vault_test.go` y
+`internal/gcp/runtime.go` fijan esa frontera en tiempo de compilación.
 
 Un supuesto no se lee en ninguna interfaz y conviene decirlo: **la caducidad se
 delega al proveedor**. Firestore aplica TTL sobre `expires_at` según

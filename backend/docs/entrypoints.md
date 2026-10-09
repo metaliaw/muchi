@@ -2,7 +2,7 @@
 
 # API Entry Points
 
-The API declares three Cloud Functions entry points in [`function.go`](../function.go).
+The API declares four Cloud Functions entry points in [`function.go`](../function.go).
 Each is a separate operational door into the same composed application.
 
 - [`ServeAPI`](entrypoints/serve-api.md) serves public contract routes. It
@@ -15,3 +15,11 @@ Each is a separate operational door into the same composed application.
 The entry points share configuration and application composition, but have
 different trust boundaries: public API authentication, task OIDC, and scheduler
 OIDC respectively. Read each page for its contract and reason to exist.
+
+- `ReleaseOrders` moves expired internal `pending` orders to `released`.
+  Its private entry retains Scheduler OIDC authentication.
+
+The CLI offers `serve`, `work`, `process`, `sweep` and `release`. GCP and CLI call
+`internal/application.Operations`; `internal/gcp` composes adapters and
+`internal/hosting` controls startup and reuse. Startup failures retry on the
+next invocation rather than remaining cached forever.

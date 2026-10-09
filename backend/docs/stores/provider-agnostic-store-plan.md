@@ -61,9 +61,9 @@ should be part of the default local development path, not left in a corner.
 
 ### Three. Choose the Store during Composition
 
-`BuildRuntime` selects the adapter from configuration and remains the only place
-in the code that names a provider. The rest of the program already receives
-ports and does not change.
+`internal/gcp` selects current adapters and injects them into `BuildRuntime`
+through `Dependencies`. A new host composes its own adapters; application flow
+receives the same Ports without changing.
 
 ## Questions to Resolve Along the Way
 

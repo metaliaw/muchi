@@ -219,23 +219,28 @@ flowchart LR
     database[internal/db<br/>Firebase Adapter]
     worker[search.Worker<br/>Background Work]
     config[config/stores.yaml<br/>Games, Origins, and Stores]
-    adapters[Adapters<br/>Firestore, Tasks, and Sources]
+    adapters[Source Adapters]
 
-    function --> transport
-    function --> application
+    tasks[internal/taskqueue<br/>Cloud Tasks Adapter]
+    host[internal/gcp] --> tasks
+    host --> database
+    host --> repositories
+    host --> application
+    hosting[internal/hosting] --> application
+    function --> host
+    function --> hosting
+    application --> transport
     transport --> domain
     worker --> domain
     domain --> repository
     repository --> repositories
     repositories -->|Database| database
-    application --> database
-    application --> repositories
     config --> catalog
     catalog --> application
     application --> domain
     application --> adapters
     domain -->|OrderPlacer| orderer
-    function --> releaser
+    application --> releaser
     releaser -->|Expirer| repositories
     adapters --> domain
 ```
@@ -266,8 +271,9 @@ reads a search.
 `internal/model` groups the domain types for offers, carts, searches, and source
 health. These types carry no JSON or Firestore tags. `internal/handler` owns
 HTTP wire shapes and their conversions; `internal/db` owns database records
-and stored JSON payloads. `internal/application` selects the Firebase-backed
-adapter and passes it to the stores through `repositories.Database`. The
+and stored JSON payloads. `internal/gcp` selects the Firebase-backed adapter
+and passes it to stores through `repositories.Database`. `internal/application`
+receives persistence and dispatch Ports through `Dependencies`. The
 Firebase SDK stays inside `internal/db`. Explicit mappings at each boundary
 preserve the API and persisted field names independently. Search idempotency
 uses its own stable fingerprint.
@@ -276,8 +282,9 @@ The domain also declares needs such as `TaskQueue`, `Provider`,
 `OfferSource`, `StockChecker`, and `OfferCache`. `internal/catalog` builds the
 aggregators in `Providers` and groups stores in `SourcesByGame` from the games,
 origins, platforms, and enabled states in YAML. It also gathers print and set
-catalogs, plus the product-kind limits. `internal/application` opens connections
-and assembles the `Runtime` from those parts. Provider
+catalogs, plus the product-kind limits. `internal/gcp` opens connections and
+owns their cleanup; `internal/application` assembles the `Runtime` from those
+parts and injected Ports. Provider
 packages implement the ports, so search rules do not import Firestore, Cloud
 Tasks, or concrete HTTP client types.
 
@@ -292,12 +299,26 @@ The [game provider flow](search/game-search-providers.md) details this compositi
 [card identity guide](search/card-identity-games-sets.md) separates searches,
 printings, and commercial variants.
 
+### One Flow across Hosts
+
+`BuildOperations` constructs one application surface: HTTP Handler, worker turn,
+work loop, sweep and order release. `function.go` translates GCP entries;
+`cmd/muchi-api` exposes `serve`, `work`, `process`, `sweep` and `release`.
+Both use the same HTTP composition, including stores and webhook signatures.
+
+`internal/hosting.Loader` reuses only successful startup with its own 30-second
+bounded context; failures retry on the next invocation. Requests retain their
+context for operations. The CLI drains HTTP before closing connections; GCP
+retains clients for its instance lifetime. Application configuration lives in
+`internal/config`; GCP variables and Cloud Tasks deadlines resolve in
+`internal/gcp`, preserving current environment names. AWS adapters and shared
+Secret coordination remain pending.
+
 ### The Store Boundary
 
-`internal/application` is the composition root that selects the database
-provider. Production packages outside it depend on repository ports and do not
-import `internal/db` or `internal/taskqueue`; the `Runtime` exposes ports, not
-concrete types.
+`internal/gcp` composes the current provider and selects database and dispatch.
+`internal/application` depends on Ports and imports neither `internal/db` nor
+`internal/taskqueue`; `Runtime` exposes Ports rather than concrete types.
 
 - `repositories.Database` is the provider-neutral contract implemented by the
   Firebase adapter: it opens the collections and runs work across them in one
@@ -310,8 +331,8 @@ concrete types.
   is a composition coincidence, not a domain assumption.
 - `Dispatcher` gathers work dispatch and the wakeup that restores the sweeper.
 
-The assertions in `internal/application/vault_test.go` hold this boundary at
-compile time.
+Assertions in `internal/application/vault_test.go` and `internal/gcp/runtime.go`
+hold this boundary at compile time.
 
 One assumption is absent from the interfaces and should be explicit: **expiration
 is delegated to the provider**. Firestore applies TTL to `expires_at` according

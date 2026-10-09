@@ -11,6 +11,6 @@ Business routes require the configured Bearer token; the basic health route
 remains public for service checks. The handler validates wire requests and
 delegates business behavior to the application service.
 
-The entry point is registered in [`function.go`](../../function.go), which
-composes `handler.Handler` from the application runtime. HTTP wire shapes and
+The entry point is registered in [`function.go`](../../function.go) and delegates
+to the Handler composed by `application.BuildOperations`, also used by the CLI. HTTP wire shapes and
 their mappings live at that handler boundary.

@@ -10,10 +10,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/cangrejometralleta/muchi-api/internal/application"
 	"github.com/cangrejometralleta/muchi-api/internal/config"
-	"github.com/cangrejometralleta/muchi-api/internal/handler"
+	"github.com/cangrejometralleta/muchi-api/internal/gcp"
+	"github.com/cangrejometralleta/muchi-api/internal/hosting"
 	"github.com/cangrejometralleta/muchi-api/internal/metrics"
+	"github.com/cangrejometralleta/muchi-api/internal/search"
 )
 
 func main() {
@@ -24,45 +25,82 @@ func main() {
 	}
 }
 
-func runCommand(logger *slog.Logger, args []string) error {
-	if len(args) != 1 || (args[0] != "serve" && args[0] != "work") {
-		return errors.New("usage: muchi-api serve|work")
-	}
-	config, err := config.LoadConfig()
-	if err != nil {
-		return err
-	}
-	runtime, err := application.BuildRuntime(context.Background(), config, logger, args[0] == "serve")
-	if err != nil {
-		return err
+func runCommand(logger *slog.Logger, args []string) (result error) {
+	if len(args) != 1 || !validCommand(args[0]) {
+		return errors.New("usage: muchi-api serve|work|process|sweep|release")
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
-	if args[0] == "serve" {
-		return serveAPI(ctx, config, logger, runtime)
+	loader := gcp.BuildLoader(logger, args[0] == "serve" || args[0] == "sweep")
+	instance, err := loader.LoadInstance()
+	if err != nil {
+		return err
 	}
-	return workSearches(ctx, config, runtime)
+	defer func() {
+		if result == context.Canceled {
+			result = nil
+		}
+		result = errors.Join(result, loader.CloseInstance())
+	}()
+	return executeCommand(ctx, logger, args[0], instance)
 }
 
-func serveAPI(ctx context.Context, config config.Config, logger *slog.Logger, runtime application.Runtime) error {
-	api := handler.Handler{
-		Searches: runtime.Service, Health: runtime.Vault,
-		SupportedGames: runtime.SupportedGames, Stores: runtime.Stores, Inventories: runtime.Inventories,
-		Token: config.APIToken, Logger: logger,
-		HealthCheckTimeout: config.HealthCheckTimeout,
+func validCommand(command string) bool {
+	switch command {
+	case "serve", "work", "process", "sweep", "release":
+		return true
+	default:
+		return false
 	}
-	observed := metrics.NewMetrics().MeasureRequests(api.BuildHandler())
+}
+
+func executeCommand(ctx context.Context, logger *slog.Logger, command string, instance hosting.Instance) error {
+	switch command {
+	case "serve":
+		return serveAPI(ctx, instance.Settings, logger, instance)
+	case "work":
+		return instance.Operations.WorkSearches(ctx)
+	case "process":
+		err := instance.Operations.ProcessSearch(ctx, instance.Settings.WorkerID)
+		if errors.Is(err, search.ErrNotFound) {
+			return nil
+		}
+		return err
+	case "sweep":
+		count, err := instance.Operations.SweepQueue(ctx)
+		if err == nil {
+			logger.Info("Queue Swept", "woken", count)
+		}
+		return err
+	case "release":
+		count, err := instance.Operations.ReleaseOrders(ctx)
+		if err == nil {
+			logger.Info("Orders Released", "released", count)
+		}
+		return err
+	default:
+		return errors.New("unknown command")
+	}
+}
+
+func serveAPI(ctx context.Context, config config.Config, logger *slog.Logger, instance hosting.Instance) error {
+	observed := metrics.NewMetrics().MeasureRequests(instance.Operations.API)
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", metrics.BuildHandler())
 	mux.Handle("/", observed)
 	server := buildAPIServer(config, mux)
-	go stopServer(ctx, server, config.ServerShutdownTimeout)
+	lifecycle, cancel := context.WithCancel(ctx)
+	defer cancel()
+	stopped := make(chan error, 1)
+	go func() { stopped <- stopServer(lifecycle, server, config.ServerShutdownTimeout) }()
 	logger.Info("API Started", "address", config.Address)
 	err := server.ListenAndServe()
+	cancel()
+	shutdownError := <-stopped
 	if errors.Is(err, http.ErrServerClosed) {
-		return nil
+		err = nil
 	}
-	return err
+	return errors.Join(err, shutdownError)
 }
 
 func buildAPIServer(config config.Config, handler http.Handler) *http.Server {
@@ -76,14 +114,12 @@ func buildAPIServer(config config.Config, handler http.Handler) *http.Server {
 	}
 }
 
-func workSearches(ctx context.Context, config config.Config, runtime application.Runtime) error {
-	worker := application.BuildSearchWorker(runtime, config)
-	return worker.RunWorker(ctx)
-}
-
-func stopServer(ctx context.Context, server *http.Server, timeout time.Duration) {
+func stopServer(ctx context.Context, server *http.Server, timeout time.Duration) error {
 	<-ctx.Done()
 	shutdown, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	_ = server.Shutdown(shutdown)
+	if err := server.Shutdown(shutdown); err != nil {
+		return errors.Join(err, server.Close())
+	}
+	return nil
 }
