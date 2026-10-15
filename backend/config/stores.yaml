@@ -132,6 +132,7 @@ stores:
       - country: Chile
         region: Valparaíso
         city: Viña del Mar
+        street: "Alvarez 88, Local 13"
     timeout_seconds: 10
     estimated_response_seconds: 10
     allow_redirects: true
@@ -171,6 +172,11 @@ stores:
     searched: false
     name: "Ineko Card Shop"
     platform: shopify
+    locations:
+      - country: Chile
+        region: Tarapacá
+        city: Iquique
+        street: Cerro Dragón 3182
     timeout_seconds: 10
     allow_redirects: true
     enabled: true
@@ -222,6 +228,7 @@ stores:
         region: Región Metropolitana
         city: Santiago
         district: Santiago Centro
+        street: "Merced 832, Local 54, Galería Casa Colorada"
     unavailable_selectors:
       - "div.product.outofstock"
       - "p.stock.out-of-stock"
@@ -241,6 +248,8 @@ stores:
       - country: Chile
         region: Biobío
         city: Concepción
+        street: "O'Higgins 1395, Oficina 1, 2do Piso"
+        pickup: "Entregas en O'Higgins 1397"
     timeout_seconds: 10
     allow_redirects: true
     enabled: true
@@ -420,3 +429,61 @@ stores:
       - label: Japo/Foil
         url: https://moxfield.com/decks/J51lBPRD30yWZ6b_XSnBXA
         clp_per_ck_usd: 500
+  # These stores publish a physical location, but their catalogs do not yet
+  # have a verified reader in Muchi API. They appear in /v1/stores as metadata.
+  cartasmagicsur.cl:
+    games: [magic]
+    name: "Magicsur Chile"
+    searched: false
+    locations:
+      - country: Chile
+        region: Región Metropolitana
+        city: Providencia
+        street: Seminario 507
+      - country: Chile
+        region: Región Metropolitana
+        city: La Reina
+        street: Avenida Ossa 1149
+    enabled: true
+  www.shadowless.cl:
+    games: [pokemon]
+    name: "Shadowless"
+    searched: false
+    locations:
+      - country: Chile
+        region: Región Metropolitana
+        city: Providencia
+        street: "Av. Pedro de Valdivia 1783, Local 186"
+    enabled: true
+  www.juegomania.cl:
+    games: [pokemon, magic, yugioh, one-piece, mitos-y-leyendas]
+    name: "Juegomania"
+    searched: false
+    locations:
+      - country: Chile
+        region: Región Metropolitana
+        city: Santiago
+        district: Santiago Centro
+        street: "Galería Eurocentro, Paseo Ahumada 85, Local 206"
+    enabled: true
+  www.hellstoresing.cl:
+    games: [magic, pokemon, mitos-y-leyendas, digimon, yugioh, one-piece]
+    name: "Hell Store Sing"
+    searched: false
+    locations:
+      - country: Chile
+        region: Valparaíso
+        city: Valparaíso
+        district: Placilla/Curauma
+        street: "Avenida Obispo Valdés Subercaseaux 519, Local 15, 2do Piso, Galería Celeste"
+    enabled: true
+  deckswap.cl:
+    games: [pokemon, magic, one-piece, riftbound]
+    name: "DeckSwap"
+    searched: false
+    locations:
+      - country: Chile
+        region: Región Metropolitana
+        city: Providencia
+        street: "Av. Gral. Bustamante 130-136, Local 138A"
+    enabled: true
