@@ -13,5 +13,5 @@ resultados persistidos en la API. El Navegador puede dejar de sondear al llegar
 a un estado terminal y conservar la última respuesta válida ante un fallo
 posterior.
 
-La ruta está implementada por [`read_search`](../../server/main.py) y
-[`presenter.py`](../../server/presenter.py).
+La ruta está implementada por [`read_search`](../../bff/server/main.py) y
+[`presenter.py`](../../bff/server/presenter.py).

@@ -47,9 +47,9 @@ Ronda de Revisión.
 
 - **La Portada responde 200 por https.** Si la Revisión no entra, no aprueba.
 - **El `ads.txt` en la Raíz del Dominio** declara al Editor. Lo sirve el BFF en
-  [`server/main.py`](../server/main.py); el Dominio tiene que derivar ahí.
+  [`server/main.py`](../bff/server/main.py); el Dominio tiene que derivar ahí.
 - **La Etiqueta `google-adsense-account`** en el `<head>`, en
-  [`web/index.html`](../web/index.html).
+  [`frontend/index.html`](../frontend/index.html).
 - **El Cargador `adsbygoogle.js`** apuntando al mismo Editor, en el mismo
   Archivo.
 
@@ -118,15 +118,15 @@ Cuando el Sitio esté en `READY`:
 
 El Código que Google muestra trae `data-ad-slot="1234567890"`. Esos diez
 Dígitos son el Valor. No copies el `<script>` ni el `<ins>`: los arma
-[`GoogleAd.vue`](../web/src/components/GoogleAd.vue).
+[`GoogleAd.vue`](../frontend/src/components/GoogleAd.vue).
 
 El mismo Número se puede leer por API, y es el `reportingDimensionId` del
 Bloque. `check-ads.sh` lo imprime y cierra con la Línea lista para copiar.
 
 ## Cómo decide el Front qué dibujar
 
-Tres Condiciones, en [`App.vue`](../web/src/App.vue) y
-[`AdSpot.vue`](../web/src/components/AdSpot.vue):
+Tres Condiciones, en [`App.vue`](../frontend/src/App.vue) y
+[`AdSpot.vue`](../frontend/src/components/AdSpot.vue):
 
 1. **`environment === 'production'`.** Fuera de Producción el Algoritmo decide
    igual, pero se dibuja un Placeholder: así se prueba la Elección sin

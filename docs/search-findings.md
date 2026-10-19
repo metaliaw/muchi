@@ -14,13 +14,13 @@ The fifth Finding was discovered along the way.
 
 Defects across the Boundary — in the Sources doing the searching — live in
 `docs/search-findings.es.md` in the
-[muchi-api Repository](https://github.com/cangrejometralleta/muchi-api).
+[`backend/`](../backend/).
 Each Repository keeps its own Findings: copying the other Document would
 age like the copied Contract did, which is precisely F5.
 
 ## Where Each Decision Lives
 
-`server/presenter.py` decides, and `web/src/search.js` is its Twin across
+`server/presenter.py` decides, and `frontend/src/search.js` is its Twin across
 the Boundary. The BFF sends one Page per Cycle and the Frontend accumulates
 them, so the same Decision is written twice. Four of these five Findings
 touched both Twins.
@@ -32,7 +32,7 @@ API response            card_key · faults · offers
 server/presenter.py      groups by Card type, crowns, builds the Cart
         │  one Page per Cycle
         ▼
-web/src/search.js        accumulates Pages and rebuilds the Summary
+frontend/src/search.js        accumulates Pages and rebuilds the Summary
         │
         ▼
 components/OfferList     renders, does not decide
@@ -140,7 +140,7 @@ copied here.
 
 ## What Remains Open
 
-1. The Frontend has no JS test runner. `web/src/search.js` is the Twin of
+1. The Frontend has no JS test runner. `frontend/src/search.js` is the Twin of
    `server/presenter.py`, but only Python is tested. Nothing prevents the
    Twins from drifting; three Copies of the Matching rule drifted that
    way in the API without a Test noticing.

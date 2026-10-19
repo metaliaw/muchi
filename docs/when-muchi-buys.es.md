@@ -18,7 +18,7 @@ juntas. Estamos trabajando en eso, y este Documento cuenta hasta dónde llegamos
 
 El [Muchi Dólar](../README.es.md#el-muchi-dólar) no es el Dólar del Mercado. Es un
 Cambio comercial, y lo que trae adentro está escrito desde el principio en
-[`config/rates.defaults.yaml`](../config/rates.defaults.yaml):
+[`config/rates.defaults.yaml`](../bff/config/rates.defaults.yaml):
 
 > el Costo de traer la Carta, y el Margen para los Intermediarios que harán la
 > Compra **cuando Muchi compre**.

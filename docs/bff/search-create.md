@@ -12,6 +12,6 @@ source queries continue behind the API boundary, so the browser can begin
 polling without holding an HTTP request open. Rejected lines and invalid list
 sizes are returned before any search is created.
 
-The route is implemented by [`create_search`](../../server/main.py); the API's
+The route is implemented by [`create_search`](../../bff/server/main.py); the API's
 queue and worker behavior belongs to its
-[architecture guide](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/architecture.md).
+[architecture guide](../../backend/docs/architecture.md).

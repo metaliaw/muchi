@@ -25,7 +25,7 @@ sequenceDiagram
     participant P as Persona
     participant W as Carrito (Vue)
     participant B as BFF
-    participant A as muchi-api
+    participant A as backend (API)
     participant S as Tienda
 
     P->>W: Comprar en Tienda X
@@ -72,14 +72,14 @@ stateDiagram-v2
 
 | Pieza | Lugar | Contiene |
 | --- | --- | --- |
-| Botones, formulario del número | [`CartPanel.vue`](../web/src/components/CartPanel.vue) | estado por tienda, un clic abre la pestaña |
-| Líneas, limpieza, memoria | [`purchase.js`](../web/src/purchase.js) | qué líneas van, el número recortado a 64 caracteres, `sessionStorage` por búsqueda |
-| Llamadas | [`api.js`](../web/src/api.js) | `linkStoreOrder`, `reportStoreOrder` |
-| Rutas del BFF | [`server/main.py`](../server/main.py) | `/api/searches/{id}/orders/links`, `/api/searches/{id}/orders/{order_id}/report` |
-| Cliente de la API | [`muchi/api/client.py`](../muchi/api/client.py) | `link_order`, `report_order`, `StoreOrder` |
+| Botones, formulario del número | [`CartPanel.vue`](../frontend/src/components/CartPanel.vue) | estado por tienda, un clic abre la pestaña |
+| Líneas, limpieza, memoria | [`purchase.js`](../frontend/src/purchase.js) | qué líneas van, el número recortado a 64 caracteres, `sessionStorage` por búsqueda |
+| Llamadas | [`api.js`](../frontend/src/api.js) | `linkStoreOrder`, `reportStoreOrder` |
+| Rutas del BFF | [`server/main.py`](../bff/server/main.py) | `/api/searches/{id}/orders/links`, `/api/searches/{id}/orders/{order_id}/report` |
+| Cliente de la API | [`muchi/api/client.py`](../bff/muchi/api/client.py) | `link_order`, `report_order`, `StoreOrder` |
 
 `sessionStorage` solo evita que una recarga olvide que ya saliste a una
-tienda. El pedido vive en muchi-api; el token nunca llega al navegador.
+tienda. El pedido vive en `backend/`; el token nunca llega al navegador.
 
 ## Qué No Hace
 
@@ -88,7 +88,7 @@ tienda. El pedido vive en muchi-api; el token nunca llega al navegador.
 - **No verifica.** Un número mal escrito o inventado se guarda tal cual.
 - **No libera nada.** Un pedido `linked` que nadie informa simplemente queda
   `linked`.
-- **No reemplaza los pedidos reales.** Donde muchi-api puede hacer el pedido
+- **No reemplaza los pedidos reales.** Donde la API puede hacer el pedido
   por su cuenta (tiendas WooCommerce, todavía en piloto), ese camino se
   confirma con el webhook de la propia tienda. Este flujo es para todas las
   demás.
@@ -101,5 +101,5 @@ Muchi. También le da a [Cuando Muchi Compre](when-muchi-buys.es.md) su primer
 número real: cuánta gente llega al carrito de una tienda, y cuántos vuelven
 diciendo que compraron.
 
-El lado de la API se describe en muchi-api,
-[Checkout Sin Agentes](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/checkout/agentless-checkout.es.md).
+El lado de la API se describe en `backend/`,
+[Checkout Sin Agentes](../backend/docs/checkout/agentless-checkout.es.md).

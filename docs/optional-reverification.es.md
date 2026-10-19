@@ -122,7 +122,7 @@ no Cruzó la Frontera, y no Debe: el Front no Recomienda.
 Lo Confirmado Sobrevive a la Recarga, pero no como un Sí a secas: se Guarda con
 la Hora en que la Tienda lo Dijo, y Vuelve solo mientras esa Hora Aguante
 —`stock_fresh_seconds`, hoy **600** en
-[`config/offers.defaults.yaml`](../config/offers.defaults.yaml)—. Pasado el
+[`config/offers.defaults.yaml`](../bff/config/offers.defaults.yaml)—. Pasado el
 Tope no Vuelve nada y el Botón Reaparece.
 
 Diez Minutos es lo que Dura armar un Carrito y Volver, y Cabe entero en una

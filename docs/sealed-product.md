@@ -12,7 +12,7 @@ hidden by the fact that a single Card has a Catalog to query and a Box does not.
 
 Defects across the Boundary — in the Contract and Sources — live in
 `docs/sealed-product.es.md` in the
-[muchi-api Repository](https://github.com/cangrejometralleta/muchi-api).
+[`backend/`](../backend/).
 Each Repository keeps its own Findings for the same reason described in
 [Search Findings](search-findings.md): copied Documents age poorly.
 
@@ -105,7 +105,7 @@ in Pokémon. Yet it never reached the Browser, getting lost four times:
 | `muchi/api/client.py` | `build_offer` read twenty JSON fields, excluding `image` |
 | `muchi/mtg/search.py` | `SearchOffer` had nowhere to store it |
 | `server/presenter.py` | The Row sent to the Browser did not carry it either |
-| `web/src/components/OfferList.vue` | The Frontend looked in `offer.metadata.image`, where the API never puts it |
+| `frontend/src/components/OfferList.vue` | The Frontend looked in `offer.metadata.image`, where the API never puts it |
 
 None had been noticed because single Cards did not need that Field:
 `CardArt` fetched their Images independently from the Catalog. The Gap
@@ -155,7 +155,7 @@ The response does not satisfy the API contract: missing field “sequence”.
 That was the information needed to fix it, and the Message had hidden it.
 
 > `omitempty` was also fixed on the side violating the Contract. That change
-> is described in muchi-api's counterpart Document.
+> is described in the counterpart Document in `backend/`.
 
 ## What Remains Open
 

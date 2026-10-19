@@ -15,13 +15,13 @@ El quinto Hallazgo no Viene de ahí. Salió al Pasar por al lado.
 
 Los Defectos del otro Lado de la Frontera —los de las Fuentes que Buscan— Viven
 en `docs/search-findings.es.md` del
-[Repositorio muchi-api](https://github.com/cangrejometralleta/muchi-api).
+[`backend/`](../backend/).
 Cada Repositorio Guarda los suyos: una Copia del Documento Ajeno Envejecería igual
 que Envejeció la Copia del Contrato, que es justamente F5.
 
 ## Dónde Decide Cada Cosa
 
-`server/presenter.py` Decide y `web/src/search.js` es su **Gemelo** del otro Lado
+`server/presenter.py` Decide y `frontend/src/search.js` es su **Gemelo** del otro Lado
 de la Frontera. El BFF Manda una Página por Ciclo y el Front Acumula, así que la
 misma Decisión está Escrita dos veces. Cuatro de estos cinco Hallazgos Tocaron a
 los dos Gemelos.
@@ -33,7 +33,7 @@ La API Responde          card_key · faults · ofertas
 server/presenter.py      agrupa por Tipo de Carta, corona, arma el Carrito
         │  una Página por Ciclo
         ▼
-web/src/search.js        acumula las Páginas y rehace el Resumen
+frontend/src/search.js        acumula las Páginas y rehace el Resumen
         │
         ▼
 components/OfferList     dibuja, no decide
@@ -143,7 +143,7 @@ Copian acá.
 
 ## Lo que Queda Abierto
 
-1. **El Front no Tiene Runner de JS.** `web/src/search.js` es el Gemelo de
+1. **El Front no Tiene Runner de JS.** `frontend/src/search.js` es el Gemelo de
    `server/presenter.py` y sólo el Lado Python está Probado. Nada Impide que los
    Gemelos Deriven — en la API, tres Copias de la misma Regla de Calce Derivaron
    exactamente así, y ninguna Prueba lo Notó.

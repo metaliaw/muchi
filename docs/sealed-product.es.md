@@ -13,7 +13,7 @@ Carta suelta Tiene un Catálogo al que Preguntarle y una Caja no.
 
 Los Defectos del otro Lado —los del Contrato y las Fuentes— Viven en
 `docs/sealed-product.es.md` del
-[Repositorio muchi-api](https://github.com/cangrejometralleta/muchi-api). Cada
+[`backend/`](../backend/). Cada
 Repositorio Guarda los suyos, por la misma Razón que en los
 [Hallazgos en los Buscadores](search-findings.es.md): una Copia del Documento
 Ajeno Envejece mal.
@@ -108,7 +108,7 @@ Pokémon. Pero no Llegaba al Navegador, y se Perdía cuatro veces seguidas:
 | `muchi/api/client.py` | `build_offer` Leía veinte Campos del JSON y `image` no era ninguno |
 | `muchi/mtg/search.py` | `SearchOffer` no Tenía dónde Guardarla |
 | `server/presenter.py` | La Fila que Viaja al Navegador tampoco la Llevaba |
-| `web/src/components/OfferList.vue` | Y el Front la Buscaba en `offer.metadata.image` — un Lugar donde la API nunca la Pone |
+| `frontend/src/components/OfferList.vue` | Y el Front la Buscaba en `offer.metadata.image` — un Lugar donde la API nunca la Pone |
 
 Ninguna de las cuatro se Había notado, y la Razón es la misma que Vuelve
 interesante al Sellado entero: **para una Carta suelta nadie Necesita ese Campo.**
@@ -159,7 +159,7 @@ La Respuesta no cumple el Contrato de la API: falta el Campo «sequence».
 Eso era lo único que Servía para Arreglarlo, y el Mensaje se lo Callaba.
 
 > El `omitempty` se Corrigió también del lado que Mentía. Está contado en el
-> Documento gemelo de muchi-api.
+> Documento gemelo del de `backend/`.
 
 ## Qué Queda Abierto
 

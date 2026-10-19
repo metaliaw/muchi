@@ -1,6 +1,6 @@
 /** Leer lo que se Escribió en otro Idioma como el Nombre que las Tiendas Indexan.
  *
- * La Traducción la Hace muchi-api; esto solo Decide qué Líneas Preguntarle y
+ * La Traducción la Hace la API; esto solo Decide qué Líneas Preguntarle y
  * Rearma la Lista. Traducir no Bloquea nunca la Búsqueda: una Carta que no
  * Existe, o un Catálogo que no Contestó, Dejan la Línea como la Escribió quien
  * Buscó — y de lo que no Existe ya se Encarga la Búsqueda, que Informa.

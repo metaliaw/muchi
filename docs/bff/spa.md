@@ -6,4 +6,4 @@ When a compiled Frontend is present, `/assets/*` serves its hashed assets and `G
 
 Serving the interface and `/api/*` from one Cloud Run service gives the browser one origin and avoids a separate CORS boundary. The path is resolved under the build directory so a requested file cannot escape it.
 
-The mount and fallback are implemented in [`server/main.py`](../../server/main.py).
+The mount and fallback are implemented in [`server/main.py`](../../bff/server/main.py).

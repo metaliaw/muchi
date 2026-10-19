@@ -11,4 +11,4 @@ product configuration to render consistently, while the BFF alone needs the
 credential to cross the service boundary. Limits are returned by the server so
 the interface can guide input without becoming their authority.
 
-The route is implemented by [`read_config`](../../server/main.py).
+The route is implemented by [`read_config`](../../bff/server/main.py).

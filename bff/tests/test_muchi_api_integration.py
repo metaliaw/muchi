@@ -1,6 +1,6 @@
-"""Prueba de integración opt-in contra muchi-api local.
+"""Prueba de integración opt-in contra la API local.
 
-Ejecutar con muchi-api levantada y:
+Ejecutar con la API levantada (backend/start.sh) y:
 MUCHI_API_INTEGRATION=1 pytest tests/test_muchi_api_integration.py
 """
 from __future__ import annotations
@@ -16,7 +16,7 @@ load_dotenv()
 
 pytestmark = pytest.mark.skipif(
     os.getenv("MUCHI_API_INTEGRATION") != "1",
-    reason="requiere muchi-api local y MUCHI_API_INTEGRATION=1",
+    reason="requiere la API local y MUCHI_API_INTEGRATION=1",
 )
 
 

@@ -11,4 +11,4 @@ necesita configuración del producto para dibujar la experiencia; solo el BFF
 necesita la credencial para cruzar la frontera entre servicios. El servidor
 entrega los límites para orientar la entrada, pero conserva su autoridad.
 
-La ruta está implementada por [`read_config`](../../server/main.py).
+La ruta está implementada por [`read_config`](../../bff/server/main.py).

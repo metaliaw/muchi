@@ -155,7 +155,7 @@ export function completionFor(typed, suggestions) {
 
 /** Lo que el Campo Anuncia de los Idiomas que su Juego Declara.
  *
- * Los Idiomas, su Etiqueta y su Ejemplo los Dice muchi-api: aquí solo se
+ * Los Idiomas, su Etiqueta y su Ejemplo los Dice la API: aquí solo se
  * Juntan en Frase. Sin Idiomas no hay Nada que Anunciar, y Vuelve nulo.
  */
 export function describeLanguages(languages) {

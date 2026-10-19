@@ -59,7 +59,7 @@ when nobody Confirms; a Card whose Stores all said no receives no Crown.
 type travels in one Request, and only types without Confirmation proceed to
 the next Round. Cost grows with Uncertainty, rather than List length.
 `stock_check_limit` — currently 3, in
-[`config/offers.defaults.yaml`](../../config/offers.defaults.yaml) — caps it.
+[`config/offers.defaults.yaml`](../../bff/config/offers.defaults.yaml) — caps it.
 
 We do not ask about an already sold-out Offer, one without conversion to
 Pesos — it cannot compete for the Crown — or one the API did not give an

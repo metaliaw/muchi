@@ -18,7 +18,7 @@ sounds — and what remains unresolved.
 
 The [Muchi Dollar](../README.md#the-muchi-dollar) is not the market exchange
 rate. It is a commercial Rate, and its components have been written into
-[`config/rates.defaults.yaml`](../config/rates.defaults.yaml) from the start:
+[`config/rates.defaults.yaml`](../bff/config/rates.defaults.yaml) from the start:
 
 > the Cost of bringing in the Card, and the Margin for the Intermediaries who
 > will make the Purchase **when Muchi buys**.

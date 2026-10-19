@@ -47,9 +47,9 @@ Review round.
 - The Homepage responds with 200 over HTTPS. Review cannot approve a Site
   it cannot enter.
 - `ads.txt` at the Domain root declares the Publisher. The BFF serves it in
-  [`server/main.py`](../server/main.py); the Domain must route there.
+  [`server/main.py`](../bff/server/main.py); the Domain must route there.
 - The `google-adsense-account` Tag appears in `<head>`, in
-  [`web/index.html`](../web/index.html).
+  [`frontend/index.html`](../frontend/index.html).
 - The `adsbygoogle.js` Loader points to the same Publisher in that File.
 
 The Identifier appears in three places that do not read one another:
@@ -116,15 +116,15 @@ Once the Site is `READY`, choose:
 
 Google's Code contains `data-ad-slot="1234567890"`. Those ten Digits are
 the Value. Do not copy the `<script>` or `<ins>`: those are built by
-[`GoogleAd.vue`](../web/src/components/GoogleAd.vue).
+[`GoogleAd.vue`](../frontend/src/components/GoogleAd.vue).
 
 The same Number is available through the API as the unit's
 `reportingDimensionId`. `check-ads.sh` prints it and ends with a ready-to-copy Command.
 
 ## How the Frontend Chooses What to Render
 
-Three conditions live in [`App.vue`](../web/src/App.vue) and
-[`AdSpot.vue`](../web/src/components/AdSpot.vue):
+Three conditions live in [`App.vue`](../frontend/src/App.vue) and
+[`AdSpot.vue`](../frontend/src/components/AdSpot.vue):
 
 1. `environment === 'production'`. Outside Production, the same Algorithm
    chooses a placement but renders a Placeholder, letting you test the

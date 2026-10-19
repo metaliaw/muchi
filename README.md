@@ -80,7 +80,7 @@ Agents can also start Searches and read Offers through MCP. See
 
 While a Search is pending, State and Offers are polled every 3 seconds.
 Each Request waits at most 10 seconds before timing out. Both Numbers live in
-[`config/api.defaults.yaml`](config/api.defaults.yaml), adjustable through
+[`config/api.defaults.yaml`](bff/config/api.defaults.yaml), adjustable through
 `MUCHI_API_POLL_SECONDS` and `MUCHI_API_TIMEOUT_SECONDS`. The Frontend reads
 them from `/api/config` at startup, so the Interval displayed matches the
 one used by its Timer.
@@ -225,7 +225,7 @@ Total is built and which component would be added.
 ## Run the Project
 
 You need Python with `venv` and access to a MUCHI API instance. Copy
-[.env.example](.env.example) to `.env` and configure:
+[bff/.env.example](bff/.env.example) to `bff/.env` and configure:
 
 ```dotenv
 MUCHI_ENV=development
@@ -235,18 +235,17 @@ MUCHI_API_TOKEN=your-security-token
 
 `MUCHI_API_URL` accepts the base URL with or without `/v1`. The Security
 token is required and sent as `Authorization: Bearer <MUCHI_API_TOKEN>`,
-following the [API Specification](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml).
+following the [API Specification](backend/openapi.yaml).
 Configure it on the Frontend Server; never publish it in the Repository or Links.
 
 On Linux or macOS:
 
 ```bash
-./start-web.sh   # BFF on :8000, Frontend at http://127.0.0.1:5173
+./run.sh   # BFF on :8000, Frontend at http://127.0.0.1:5173
 ```
 
-The local API needs two Processes. From the
-[muchi-api Repository](https://github.com/cangrejometralleta/muchi-api),
-run `./run.sh serve` and `./run.sh work`: the former receives Requests,
+The local API needs two Processes. From [`backend/`](backend/),
+run `./start.sh serve` and `./start.sh work`: the former receives Requests,
 the latter processes them. The Frontend Token must match the API's Token.
 A Search stuck in `queued` needs an available Worker.
 
@@ -256,11 +255,10 @@ Token in the Deployment environment.
 ### The Token
 
 `./get-secret.sh` downloads the current Token from Secret Manager and
-writes it to `.env`. It is for local Development; Cloud Run mounts it
+writes it to `bff/.env`. It is for local Development; Cloud Run mounts it
 automatically in the Cloud.
 
-Rotate it using `./rotate-secret.sh` from the
-[muchi-api Repository](https://github.com/cangrejometralleta/muchi-api).
+Rotate it using `./rotate-secret.sh` from [`backend/`](backend/).
 The Secret is created and versioned there, and Rotation reaches all
 three Consumers: Worker, API and this Frontend. A second Rotator here
 would silently become stale.
@@ -275,18 +273,20 @@ Firebase Hosting publishes static Files and forwards dynamic Routes to
 the same Service. One Script deploys both in that Order:
 
 ```bash
-./deploy.sh
+./deploy.sh web
 ```
 
+`./deploy.sh` alone publishes the API first and the Web after it.
+
 The [Migration note](docs/web-migration.md) explains the Boundary
-between `web/` and `server/` and the BFF Routes.
+between `frontend/` and `bff/server/` and the BFF Routes.
 
 ## Configuration and Architecture
 
 The Frontend loads Configuration in this Order:
 
-1. [Connection defaults](config/api.defaults.yaml).
-2. `config/api.development.yaml` or `config/api.production.yaml`, according
+1. [Connection defaults](bff/config/api.defaults.yaml).
+2. `bff/config/api.development.yaml` or `bff/config/api.production.yaml`, according
    to `MUCHI_ENV`.
 3. `MUCHI_API_TIMEOUT_SECONDS` and `MUCHI_API_POLL_SECONDS`, if defined.
 
@@ -298,7 +298,7 @@ the Number in one place. Configuration files use YAML; Credentials are
 injected separately.
 
 MUCHI's Phrases, including Greetings and Help, live in
-[constants/phrases.yaml](constants/phrases.yaml). `muchi/mtg/phrases.py`
+[constants/phrases.yaml](bff/constants/phrases.yaml). `muchi/mtg/phrases.py`
 loads that Content and generates Bubbles and Hearts; `messaging.py`
 only decides Message priority.
 
@@ -314,20 +314,31 @@ Flow. Existing SQLite files are neither deleted nor imported.
 
 ## Tests
 
-With your virtual Environment active:
+Everything at once, or one Component:
 
 ```bash
-pip install -r requirements-dev.txt
+./build.sh          # API, BFF and Frontend
+./build.sh api      # backend/ only
+./build.sh web      # bff/ and frontend/
+```
+
+The BFF tests read `MUCHI_API_URL` and `MUCHI_API_TOKEN` from `bff/.env`.
+To run only them, with your virtual Environment active:
+
+```bash
+cd bff && pip install -r requirements-dev.txt
 python -m pytest -q
 ```
 
 The regular Suite tests the HTTP client and Interface with mocked Services,
 without connecting to the API. For real Integration, start the API,
-configure `.env` and run:
+configure `bff/.env` and run:
 
 ```bash
 MUCHI_API_INTEGRATION=1 python -m pytest tests/test_muchi_api_integration.py
 ```
+
+(from `bff/`)
 
 To test Sol Ring from the Frontend through real Offers, with the Worker
 running — this may take several minutes:
@@ -356,25 +367,26 @@ index, see [Diarios de desarrollo](README.es.md#diarios-de-desarrollo).
 | [How Muchi Speaks](docs/how-muchi-speaks.md) | Phrase Catalog, Bubble precedence, three Notice channels, Sprite sheet and reduced Motion. |
 | [Sprite Lab](docs/muchi-sprite-lab.html) | Interactive Sprite previews, States, Sheets and animation examples. Open the HTML in a Browser. |
 | [Sealed Products](docs/sealed-product.md) | Catalog selection, measured Defaults, Box photos and misleading empty Results. |
-| [MUCHI API Contract](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml) | Consumed Routes and their Input/Output shapes. Owned by muchi-api. |
+| [MUCHI API Contract](backend/openapi.yaml) | Consumed Routes and their Input/Output shapes. Owned by `backend/`. |
 
-### The API Has Its Own Repository
+### The API Lives in `backend/`
 
-MUCHI spans two public Repositories. This one renders the Experience and
-holds the BFF. [muchi-api](https://github.com/cangrejometralleta/muchi-api)
-queries Stores, orders Offers and retains Results.
+MUCHI is one Repository with three Components. [`frontend/`](frontend/) renders
+the Experience and [`bff/`](bff/) keeps the Token. [`backend/`](backend/)
+queries Stores, orders Offers and retains Results. It was a separate Repository,
+`muchi-api`, now archived: its history lives here.
 
-Each subject is documented in its owning location:
+Each subject is documented in its owning directory:
 
-- The [OpenAPI Contract](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml)
-  lives there. A Copy here aged silently while Readers thought it was current.
-- The [Bruno collections](https://github.com/cangrejometralleta/muchi-api/tree/main/bruno)
-  live there. They call the API without the BFF, helping distinguish
+- The [OpenAPI Contract](backend/openapi.yaml)
+  lives in `backend/`. A Copy elsewhere would age silently while Readers thought it was current.
+- The [Bruno collections](backend/collections)
+  live in `backend/`. They call the API without the BFF, helping distinguish
   Frontend failures from Service failures.
-- [Backend Architecture](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/architecture.md)
-  covers Queue, Worker, Persistence and Expiration there. The Frontend
+- [Backend Architecture](backend/docs/architecture.md)
+  covers Queue, Worker, Persistence and Expiration. The Frontend
   and its Boundary are described [here](docs/architecture.md).
-- [Source Pacing](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/source-pacing.md)
+- [Source Pacing](backend/docs/search/source-pacing.md)
   explains how the API treats Stores that fail, run slowly or request
   a pause. That Policy informs MUCHI's Notices: a Source that did not
   answer must never be mistaken for a nonexistent Card.
@@ -453,13 +465,12 @@ You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 ```
 
-[muchi-api](https://github.com/cangrejometralleta/muchi-api) uses the same
-License. Two Repositories, one Rule.
+[`backend/`](backend/) uses the same
+License. Three Components, one Rule.
 
 ## The Harness and Manifesto
 
-Both Repositories—the [MUCHI Front](https://github.com/metaliaw/muchi/blob/main/README.es.md)
-and [muchi-api](https://github.com/cangrejometralleta/muchi-api)—use
+This Repository—[`backend/`](backend/), [`bff/`](bff/) and [`frontend/`](frontend/)—uses
 [OneTwoThree](https://github.com/cangrejometralleta/OneTwoThree), my shared
 Development Harness and Manifesto, introduced in its
 [English presentation](https://github.com/cangrejometralleta/OneTwoThree/blob/main/docs/presentation.en.md).

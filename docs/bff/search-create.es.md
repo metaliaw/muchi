@@ -12,6 +12,6 @@ consultas lentas a tiendas siguen detrás de la frontera de la API, así que el
 Navegador puede empezar a sondear sin dejar una petición HTTP abierta. Las
 líneas rechazadas y listas inválidas se informan antes de crear la búsqueda.
 
-La ruta está implementada por [`create_search`](../../server/main.py); la Cola
+La ruta está implementada por [`create_search`](../../bff/server/main.py); la Cola
 y los Workers pertenecen a la
-[arquitectura de la API](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/architecture.es.md).
+[arquitectura de la API](../../backend/docs/architecture.es.md).

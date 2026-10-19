@@ -55,13 +55,13 @@ continues working across Sessions and Machines.
 
 ## What the Frontend Does
 
-`web/src/App.vue` orchestrates: it loads Configuration, polls every
+`frontend/src/App.vue` orchestrates: it loads Configuration, polls every
 `poll_seconds` while the Search is pending and stops on a terminal State.
 Search history and Theme selection live in `localStorage`; previously they
 lived in the Server session and were lost when it closed.
 
 The Palette is the same one from `muchi/mtg/style.py`, now in
-`web/src/styles.css`. Dark mode changes CSS variable Values without rewriting Rules.
+`frontend/src/styles.css`. Dark mode changes CSS variable Values without rewriting Rules.
 
 ## Development
 
@@ -76,7 +76,7 @@ CORS configuration is needed in Development or Production.
 ## Deployment on GCP
 
 One Cloud Run Service serves the compiled Frontend and the BFF. The
-`Dockerfile` builds `web/` with Node and copies `dist` into the Python Image.
+`Dockerfile` builds `frontend/` with Node and copies `dist` into the Python Image.
 
 ```bash
 gcloud builds submit --config cloudbuild.yaml \

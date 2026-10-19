@@ -9,5 +9,5 @@ The BFF owns candidate ranking and the recommendation. Checks proceed in price
 order and stop when the cheapest confirmed candidate for each card type is
 known or the configured visit limit is reached.
 
-The route is implemented by [`check_stock`](../../server/main.py) and
+The route is implemented by [`check_stock`](../../bff/server/main.py) and
 `answer_stock`.

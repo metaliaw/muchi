@@ -11,4 +11,4 @@ productos sellados. No crea una búsqueda, no reserva trabajo ni consulta
 tiendas. Las líneas inválidas quedan visibles para la Persona en vez de
 convertirse silenciosamente en otra lista.
 
-La ruta está implementada por [`read_decklist`](../../server/main.py).
+La ruta está implementada por [`read_decklist`](../../bff/server/main.py).

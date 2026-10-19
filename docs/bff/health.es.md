@@ -11,4 +11,4 @@ barata y distingue una caída del proceso BFF de una caída de la API. No promet
 que las búsquedas estén disponibles; esas dependencias se observan mediante
 fallos de petición y monitoreo.
 
-La ruta está implementada por [`read_health`](../../server/main.py).
+La ruta está implementada por [`read_health`](../../bff/server/main.py).

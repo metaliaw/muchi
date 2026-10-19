@@ -375,7 +375,7 @@ def test_config_names_both_repositories_because_muchi_is_open_source(client):
     reply, _ = client
     config = reply.get("/api/config").json()
     assert config["repository_url"] == "https://github.com/metaliaw/muchi"
-    assert config["api_repository_url"] == "https://github.com/cangrejometralleta/muchi-api"
+    assert config["api_repository_url"] == "https://github.com/metaliaw/muchi/tree/main/backend"
 
 
 def test_a_network_without_an_address_does_not_exist():

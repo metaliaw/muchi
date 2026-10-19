@@ -23,8 +23,8 @@
 #
 # Un .env se exporta entero con `set -a; . ./.env; set +a` antes de llamar.
 #
-# El Token lo comparte muchi-api, que lo guarda en Secret Manager. Rotarlo es
-# Asunto suyo: ./rotate-secret.sh de ese Repositorio alcanza a este Servicio.
+# El Token lo comparte backend/, que lo guarda en Secret Manager. Rotarlo es
+# Asunto suyo: ./backend/rotate-secret.sh alcanza a este Servicio.
 #
 set -euo pipefail
 

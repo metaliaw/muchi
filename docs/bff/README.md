@@ -5,7 +5,7 @@
 The BFF has two jobs: keep the API credential on the server, and translate the
 API's contract into the public shapes the Frontend needs. Each door below has a
 reason to exist. The API's own entry points and queue are documented in its
-[architecture guide](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/architecture.md).
+[architecture guide](../../backend/docs/architecture.md).
 
 ## Serve the Application
 

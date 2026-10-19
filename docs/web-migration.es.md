@@ -56,12 +56,12 @@ sigue funcionando entre Sesiones y entre Máquinas.
 
 ## Qué hace el Front
 
-`web/src/App.vue` orquesta: pide la Configuración, arranca la Consulta cada
+`frontend/src/App.vue` orquesta: pide la Configuración, arranca la Consulta cada
 `poll_seconds` mientras la Búsqueda está pendiente y la detiene al recibir un
 Estado terminal. El Historial de Búsquedas y la Elección de Tema viven en
 `localStorage`; antes vivían en la Sesión del Servidor y se perdían al cerrar.
 
-La Paleta es la misma de `muchi/mtg/style.py`, ahora en `web/src/styles.css`.
+La Paleta es la misma de `muchi/mtg/style.py`, ahora en `frontend/src/styles.css`.
 El Modo Oscuro no reescribe Reglas: cambia el Valor de las Variables CSS.
 
 ## Desarrollo
@@ -77,7 +77,7 @@ que configurar, ni en Desarrollo ni en Producción.
 ## Despliegue en GCP
 
 Un solo Servicio en Cloud Run sirve el Front compilado y el BFF. El
-`Dockerfile` compila `web/` con Node y copia el `dist` a la Imagen de Python.
+`Dockerfile` compila `frontend/` con Node y copia el `dist` a la Imagen de Python.
 
 ```bash
 gcloud builds submit --config cloudbuild.yaml \

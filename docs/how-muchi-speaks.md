@@ -9,9 +9,9 @@ and why they are separate.
 
 | Part | Question It Answers | Location |
 | --- | --- | --- |
-| Catalog | What Muchi can say | [`constants/phrases.yaml`](../constants/phrases.yaml) on the Server |
-| Bubble | What she says now, and who took the turn | [`MuchiPanel.vue`](../web/src/components/MuchiPanel.vue) |
-| Sheet | What she looks like while saying it | [`MuchiSprite.vue`](../web/src/components/MuchiSprite.vue) |
+| Catalog | What Muchi can say | [`constants/phrases.yaml`](../bff/constants/phrases.yaml) on the Server |
+| Bubble | What she says now, and who took the turn | [`MuchiPanel.vue`](../frontend/src/components/MuchiPanel.vue) |
+| Sheet | What she looks like while saying it | [`MuchiSprite.vue`](../frontend/src/components/MuchiSprite.vue) |
 
 All three share one Vocabulary: five States. Text says `happy`, and the
 Sheet already knows which Row that means.
@@ -19,7 +19,7 @@ Sheet already knows which Row that means.
 ## The Five States
 
 State is the visual Protocol. The Server declares it in
-[`muchi/mtg/phrases.py`](../muchi/mtg/phrases.py) as
+[`muchi/mtg/phrases.py`](../bff/muchi/mtg/phrases.py) as
 `STATES = frozenset({"idle", "talk", "happy", "alert", "angry"})`;
 the Sprite sheet draws one Row per State.
 
@@ -31,7 +31,7 @@ the Sprite sheet draws one Row per State.
 | `alert` | Catalog nerves, Light mode | 3 | 6 | 100 ms | Ends and signals |
 | `angry` | Any Failure Muchi reports | 4 | 6 | 90 ms | Ends and signals |
 
-Numbers live in [`web/src/assets/muchi-sheets.json`](../web/src/assets/muchi-sheets.json).
+Numbers live in [`frontend/src/assets/muchi-sheets.json`](../frontend/src/assets/muchi-sheets.json).
 Changing `talk` timing means editing an `ms` value. The
 [Sprite lab](muchi-sprite-lab.html) lets you inspect Frames before editing the Sheet.
 
@@ -74,7 +74,7 @@ stays quiet. Messages decorate the Product; they are not its Function.
 
 One Group has two uses. Muchi says `rayozz no la encontré` when petted;
 the Server also uses it as the `404` detail when a Card does not exist.
-[`server/main.py`](../server/main.py) finds it by Text so the Failure
+[`server/main.py`](../bff/server/main.py) finds it by Text so the Failure
 sounds like the Cat instead of the Framework.
 
 ## Who Speaks and When
@@ -94,7 +94,7 @@ flowchart TD
     message -.->|"clears it on arrival"| said
 ```
 
-`message` comes from [`App.vue`](../web/src/App.vue), set by
+`message` comes from [`App.vue`](../frontend/src/App.vue), set by
 `say(text, mood)`. `said` starts inside the Panel after Petting or toggling
 the Light. The Greeting is chosen once per Session and remembered;
 choosing on every Render would change it whenever Vue repaints the Panel.
@@ -253,12 +253,12 @@ Row was drawn to work while still.
 
 ## Where to Look
 
-1. [`constants/phrases.yaml`](../constants/phrases.yaml): everything Muchi can say.
-2. [`muchi/mtg/phrases.py`](../muchi/mtg/phrases.py): Validation and invalid
+1. [`constants/phrases.yaml`](../bff/constants/phrases.yaml): everything Muchi can say.
+2. [`muchi/mtg/phrases.py`](../bff/muchi/mtg/phrases.py): Validation and invalid
    Catalog behavior.
-3. [`web/src/components/MuchiPanel.vue`](../web/src/components/MuchiPanel.vue):
+3. [`frontend/src/components/MuchiPanel.vue`](../frontend/src/components/MuchiPanel.vue):
    Bubble precedence, Petting and Hearts.
-4. [`web/src/components/MuchiSprite.vue`](../web/src/components/MuchiSprite.vue):
+4. [`frontend/src/components/MuchiSprite.vue`](../frontend/src/components/MuchiSprite.vue):
    Film, `steps()` and the rest Signal.
-5. [`web/src/App.vue`](../web/src/App.vue): callers of `say` and the one
+5. [`frontend/src/App.vue`](../frontend/src/App.vue): callers of `say` and the one
    line that opens the Dock.

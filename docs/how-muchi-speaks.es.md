@@ -9,9 +9,9 @@ hacen eso y por qué están separadas.
 
 | Pieza | Responde | Dónde vive |
 | --- | --- | --- |
-| El Catálogo | Qué puede decir Muchi | [`constants/phrases.yaml`](../constants/phrases.yaml) en el Servidor |
-| La Burbuja | Qué dice ahora, y quién le ganó el turno | [`MuchiPanel.vue`](../web/src/components/MuchiPanel.vue) |
-| La Hoja | Cómo se ve mientras lo dice | [`MuchiSprite.vue`](../web/src/components/MuchiSprite.vue) |
+| El Catálogo | Qué puede decir Muchi | [`constants/phrases.yaml`](../bff/constants/phrases.yaml) en el Servidor |
+| La Burbuja | Qué dice ahora, y quién le ganó el turno | [`MuchiPanel.vue`](../frontend/src/components/MuchiPanel.vue) |
+| La Hoja | Cómo se ve mientras lo dice | [`MuchiSprite.vue`](../frontend/src/components/MuchiSprite.vue) |
 
 Las tres se hablan con un solo Vocabulario: cinco Estados. Un Texto no dice
 «ponte contenta», dice `happy`, y la Hoja ya sabe qué Fila es esa.
@@ -19,7 +19,7 @@ Las tres se hablan con un solo Vocabulario: cinco Estados. Un Texto no dice
 ## Los cinco Estados
 
 El Estado es el Protocolo visual. Lo declara el Servidor en
-[`muchi/mtg/phrases.py`](../muchi/mtg/phrases.py) como
+[`muchi/mtg/phrases.py`](../bff/muchi/mtg/phrases.py) como
 `STATES = frozenset({"idle", "talk", "happy", "alert", "angry"})`, y lo dibuja
 la Hoja de Sprites con una Fila por cada uno.
 
@@ -31,7 +31,7 @@ la Hoja de Sprites con una Fila por cada uno.
 | `alert` | Nervios del Catálogo, Modo Claro | 3 | 6 | 100 ms | Termina y avisa |
 | `angry` | Cualquier Fallo que Muchi cuenta | 4 | 6 | 90 ms | Termina y avisa |
 
-Los Números viven en [`web/src/assets/muchi-sheets.json`](../web/src/assets/muchi-sheets.json),
+Los Números viven en [`frontend/src/assets/muchi-sheets.json`](../frontend/src/assets/muchi-sheets.json),
 no en el Código. Cambiar el Ritmo de `talk` es editar un `ms`, y
 [`docs/muchi-sprite-lab.es.html`](muchi-sprite-lab.es.html) permite mirarlos cuadro a
 cuadro antes de tocar la Hoja.
@@ -75,7 +75,7 @@ Función.
 
 Hay un Grupo con Doble Uso. La Frase `rayozz no la encontré` la dice Muchi al
 acariciarla, y también la usa el Servidor como Detalle del `404` cuando una
-Carta no existe: [`server/main.py`](../server/main.py) la busca por su Texto
+Carta no existe: [`server/main.py`](../bff/server/main.py) la busca por su Texto
 para que el Fracaso tenga la Voz del Gato y no la del Framework.
 
 ## Quién Habla y Cuándo
@@ -95,7 +95,7 @@ flowchart TD
     message -.->|"lo borra al llegar"| said
 ```
 
-`message` baja desde [`App.vue`](../web/src/App.vue), que lo escribe con
+`message` baja desde [`App.vue`](../frontend/src/App.vue), que lo escribe con
 `say(text, mood)`. `said` nace dentro del Panel, de una Caricia o del
 Interruptor de la Luz. El Saludo se elige una sola vez por Sesión y se
 memoriza: si se sorteara en cada Pintado, Muchi cambiaría de Saludo cada vez
@@ -262,13 +262,13 @@ quieto.
 
 ## Dónde Mirar
 
-1. [`constants/phrases.yaml`](../constants/phrases.yaml) — todo lo que Muchi
+1. [`constants/phrases.yaml`](../bff/constants/phrases.yaml) — todo lo que Muchi
    puede decir.
-2. [`muchi/mtg/phrases.py`](../muchi/mtg/phrases.py) — la Validación, y qué
+2. [`muchi/mtg/phrases.py`](../bff/muchi/mtg/phrases.py) — la Validación, y qué
    pasa si el Catálogo está mal.
-3. [`web/src/components/MuchiPanel.vue`](../web/src/components/MuchiPanel.vue) —
+3. [`frontend/src/components/MuchiPanel.vue`](../frontend/src/components/MuchiPanel.vue) —
    la Precedencia de la Burbuja, las Caricias y los Corazones.
-4. [`web/src/components/MuchiSprite.vue`](../web/src/components/MuchiSprite.vue) —
+4. [`frontend/src/components/MuchiSprite.vue`](../frontend/src/components/MuchiSprite.vue) —
    el Film, los `steps()` y el Aviso de reposo.
-5. [`web/src/App.vue`](../web/src/App.vue) — quién llama a `say`, y la única
+5. [`frontend/src/App.vue`](../frontend/src/App.vue) — quién llama a `say`, y la única
    Línea que abre el Muelle.

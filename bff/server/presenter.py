@@ -130,7 +130,7 @@ MATCH_EXACT = "exact"
 MATCH_INCLUDES = "includes"
 
 
-# El Gemelo de `offer.MatchesCard` de muchi-api. La API ya filtró con ella; el
+# El Gemelo de `offer.MatchesCard` de la API (backend/). La API ya filtró con ella; el
 # Carrito la repite para volver a la Carta pedida cuando la Búsqueda fue ancha.
 EDITION_BRACKETS = (" | ", " (", " [")
 EDITION_DASHES = (" - ", " \u2013 ", " \u2014 ")

@@ -10,4 +10,4 @@ El identificador se configura en tiempo de ejecución. El BFF puede cambiarlo
 sin recompilar Vue, y el identificador de autoridad del vendedor permanece
 como parte del formato publicado.
 
-La ruta está implementada por [`read_ads_txt`](../../server/main.py).
+La ruta está implementada por [`read_ads_txt`](../../bff/server/main.py).

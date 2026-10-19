@@ -12,5 +12,5 @@ the presenter how to group related card names; it does not alter persisted API
 results. The browser can stop polling on terminal states and retain its last
 valid response when a later read fails.
 
-The route is implemented by [`read_search`](../../server/main.py) and
-[`presenter.py`](../../server/presenter.py).
+The route is implemented by [`read_search`](../../bff/server/main.py) and
+[`presenter.py`](../../bff/server/presenter.py).

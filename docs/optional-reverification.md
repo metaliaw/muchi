@@ -118,7 +118,7 @@ Server; the Frontend does not recommend.
 
 Confirmation survives a Reload with the Time the Store supplied it.
 It returns only while fresh under `stock_fresh_seconds`, currently 600 in
-[`config/offers.defaults.yaml`](../config/offers.defaults.yaml).
+[`config/offers.defaults.yaml`](../bff/config/offers.defaults.yaml).
 After that Limit, nothing returns and the Button reappears.
 
 Ten minutes covers building a Cart and returning within a Shopping session;

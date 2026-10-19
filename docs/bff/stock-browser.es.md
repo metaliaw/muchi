@@ -6,4 +6,4 @@
 
 Esta ruta existe para tiendas cuyos catálogos públicos puede leer el Navegador. Evita repetir desde el servidor una visita que ya ocurrió, y conserva en el servidor las decisiones de orden y recomendación.
 
-La ruta está implementada por [`check_stock_with_browser`](../../server/main.py) y `answer_stock`.
+La ruta está implementada por [`check_stock_with_browser`](../../bff/server/main.py) y `answer_stock`.

@@ -10,4 +10,4 @@ The publisher ID is runtime configuration. The BFF can change it without
 rebuilding Vue, and the seller authority identifier remains part of the
 published format.
 
-The route is implemented by [`read_ads_txt`](../../server/main.py).
+The route is implemented by [`read_ads_txt`](../../bff/server/main.py).

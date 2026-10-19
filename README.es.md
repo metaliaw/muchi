@@ -82,7 +82,7 @@ Los Agentes también pueden iniciar Búsquedas y leer Ofertas por MCP. Consulta
 El Estado y las Ofertas se consultan cada **3 segundos** mientras la Búsqueda
 está pendiente, y cada Consulta espera a lo más **10 segundos** antes de darse
 por perdida. Los dos Números viven en
-[`config/api.defaults.yaml`](config/api.defaults.yaml) y se ajustan con
+[`config/api.defaults.yaml`](bff/config/api.defaults.yaml) y se ajustan con
 `MUCHI_API_POLL_SECONDS` y `MUCHI_API_TIMEOUT_SECONDS`. El Front no los adivina:
 los lee de `/api/config` al arrancar, así que el Intervalo que escribe en
 Pantalla es el mismo que usa el Reloj.
@@ -236,7 +236,7 @@ se arma el Total hoy y qué Parte se le agregaría.
 ## Ejecutar el Proyecto
 
 Necesitas Python con `venv` y acceso a una instancia de MUCHI API. Copia
-[.env.example](.env.example) a `.env` y configura estas Variables:
+[bff/.env.example](bff/.env.example) a `bff/.env` y configura estas Variables:
 
 ```dotenv
 MUCHI_ENV=development
@@ -246,19 +246,18 @@ MUCHI_API_TOKEN=tu-codigo-de-seguridad
 
 `MUCHI_API_URL` acepta la URL base con o sin `/v1`. El Código de Seguridad es
 obligatorio y se envía como `Authorization: Bearer <MUCHI_API_TOKEN>`, según
-la [Especificación de la API](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml).
+la [Especificación de la API](backend/openapi.yaml).
 Se configura en el
 Servidor del Front; no debe publicarse en el Repositorio ni en enlaces.
 
 En Linux o macOS:
 
 ```bash
-./start-web.sh   # BFF en :8000, Front en http://127.0.0.1:5173
+./run.sh   # BFF en :8000, Front en http://127.0.0.1:5173
 ```
 
-La API local requiere dos Procesos. Desde el
-[Repositorio muchi-api](https://github.com/cangrejometralleta/muchi-api), ejecuta
-`./run.sh serve` y `./run.sh work`: el primero recibe los Pedidos y el segundo
+La API local requiere dos Procesos. Desde [`backend/`](backend/), ejecuta
+`./start.sh serve` y `./start.sh work`: el primero recibe los Pedidos y el segundo
 los procesa. El Token del Front debe coincidir con el configurado en la API.
 Una Búsqueda que permanece en `queued` necesita un Worker disponible.
 
@@ -268,10 +267,10 @@ en el Entorno de Despliegue.
 ### El Token
 
 `./get-secret.sh` baja el Token vigente de Secret Manager y lo escribe en tu
-`.env`. Es para el Desarrollo local: en la Nube, Cloud Run lo monta solo.
+`bff/.env`. Es para el Desarrollo local: en la Nube, Cloud Run lo monta solo.
 
-Para **rotarlo**, usa `./rotate-secret.sh` del
-[Repositorio muchi-api](https://github.com/cangrejometralleta/muchi-api). Ahí se
+Para **rotarlo**, usa `./rotate-secret.sh` de
+[`backend/`](backend/). Ahí se
 crea el Secreto y ahí se versiona, y esa Rotación alcanza a los tres Servicios
 que lo consumen —el Worker, la API y este Front—. Un segundo Rotador de este
 lado solo se volvería viejo sin que nadie lo notara.
@@ -286,18 +285,20 @@ Hosting publica los Archivos estáticos y deriva las Rutas dinámicas al mismo
 Servicio. Un solo Script despliega ambos en ese orden:
 
 ```bash
-./deploy.sh
+./deploy.sh web
 ```
 
+`./deploy.sh` a secas publica primero la API y después la Web.
+
 La [Nota de Migración](docs/web-migration.es.md) explica la Frontera entre
-`web/` y `server/` y las Rutas del BFF.
+`frontend/` y `bff/server/` y las Rutas del BFF.
 
 ## Configuración y Arquitectura
 
 El Front carga su Configuración en este orden:
 
-1. [Defaults de conexión](config/api.defaults.yaml).
-2. `config/api.development.yaml` o `config/api.production.yaml`, según `MUCHI_ENV`.
+1. [Defaults de conexión](bff/config/api.defaults.yaml).
+2. `bff/config/api.development.yaml` o `bff/config/api.production.yaml`, según `MUCHI_ENV`.
 3. `MUCHI_API_TIMEOUT_SECONDS` y `MUCHI_API_POLL_SECONDS`, si están definidas.
 
 Los Tiempos deben ser positivos y finitos; hoy son 3 segundos de Intervalo y 10
@@ -306,7 +307,7 @@ Entradas, noventa y nueve copias— no se configuran: salen del Formato, un Mazo
 de Commander de cien Cartas. El Front los lee de `/api/config` y los escribe
 junto al Formulario, así que el Número vive en un solo lugar. Los Archivos de Configuración usan
 YAML; las Credenciales se inyectan por separado. Las Frases de MUCHI están en
-[constants/phrases.yaml](constants/phrases.yaml), incluidos los Saludos y la Ayuda.
+[constants/phrases.yaml](bff/constants/phrases.yaml), incluidos los Saludos y la Ayuda.
 `muchi/mtg/phrases.py` carga ese Contenido y genera las Burbujas y los Corazones;
 `messaging.py` sólo decide la prioridad de los Mensajes.
 
@@ -322,20 +323,31 @@ actual. Los archivos de SQLite existentes no se eliminan ni se importan.
 
 ## Pruebas
 
-Con el Entorno virtual activo:
+Todo junto, o un Componente:
 
 ```bash
-pip install -r requirements-dev.txt
+./build.sh          # API, BFF y Front
+./build.sh api      # solo backend/
+./build.sh web      # bff/ y frontend/
+```
+
+Las pruebas del BFF leen `MUCHI_API_URL` y `MUCHI_API_TOKEN` de `bff/.env`.
+Para correr solo ellas, con el Entorno virtual activo:
+
+```bash
+cd bff && pip install -r requirements-dev.txt
 python -m pytest -q
 ```
 
 La suite habitual prueba el Cliente HTTP y la Interfaz con Servicios simulados,
 sin conectarse a la API. Para comprobar la Integración real, inicia la API,
-configura `.env` y ejecuta:
+configura `bff/.env` y ejecuta:
 
 ```bash
 MUCHI_API_INTEGRATION=1 python -m pytest tests/test_muchi_api_integration.py
 ```
+
+(desde `bff/`)
 
 Para probar **Sol Ring desde el Front hasta las Ofertas reales**, con el Worker
 levantado (puede tardar varios minutos):
@@ -364,26 +376,27 @@ los Documentos de `docs/` en español. El Índice equivalente está en
 | 🐱 [Cómo Habla MUCHI](docs/how-muchi-speaks.es.md) | El Catálogo de Frases, quién le gana el turno a la Burbuja, los tres Canales de Aviso, la Hoja de Sprites y qué queda con Movimiento reducido. |
 | 🧩 [Laboratorio de Sprites](docs/muchi-sprite-lab.es.html) | Vista interactiva de los Estados, las Hojas y los ejemplos de Animación. Abre el HTML en un Navegador. |
 | 📦 [Producto Sellado](docs/sealed-product.es.md) | Cómo se elige el Catálogo, los Valores por Defecto medidos contra las Tiendas, por qué la Caja no Tiene a quién pedirle su Foto y por qué decir «No hay Ofertas» puede ser Mentira. |
-| 📜 [Contrato de MUCHI API](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml) | Todas las Rutas que MUCHI consume, con sus Formas de Entrada y Salida. Vive en muchi-api. |
+| 📜 [Contrato de MUCHI API](backend/openapi.yaml) | Todas las Rutas que MUCHI consume, con sus Formas de Entrada y Salida. Vive en `backend/`. |
 
-### La API vive en su propio Repositorio
+### La API vive en `backend/`
 
-MUCHI son dos Repositorios públicos. Éste dibuja la Experiencia y guarda el BFF
-que habla con la API. [muchi-api](https://github.com/cangrejometralleta/muchi-api)
-consulta las Tiendas, ordena las Ofertas y conserva los Resultados.
+MUCHI es un solo Repositorio con tres Componentes. [`frontend/`](frontend/)
+dibuja la Experiencia y [`bff/`](bff/) guarda el Token. [`backend/`](backend/)
+consulta las Tiendas, ordena las Ofertas y conserva los Resultados. Antes era
+un Repositorio aparte, `muchi-api`, hoy archivado: su historia vive acá.
 
-Cada Cosa se lee en un solo lugar, y por eso acá ya no hay Copias:
+Cada Cosa se lee en un solo lugar, y por eso no hay Copias:
 
-- 📜 El [Contrato OpenAPI](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml)
-  vive allá. Una Copia acá envejecía en silencio, y quien la leía creía estar
+- 📜 El [Contrato OpenAPI](backend/openapi.yaml)
+  vive en `backend/`. Una Copia en otro lado envejecería en silencio, y quien la leía creía estar
   mirando el Contrato.
-- 🧪 Las [Colecciones de Bruno](https://github.com/cangrejometralleta/muchi-api/tree/main/bruno)
-  viven allá. Sirven para pegarle a la API sin pasar por el BFF, que es como se
+- 🧪 Las [Colecciones de Bruno](backend/collections)
+  viven en `backend/`. Sirven para pegarle a la API sin pasar por el BFF, que es como se
   separa un Fallo del Front de uno del Servicio.
-- 🏛️ La [Arquitectura del Backend](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/architecture.es.md)
-  —Cola, Worker, Persistencia y Caducidad— se cuenta allá.
+- 🏛️ La [Arquitectura del Backend](backend/docs/architecture.es.md)
+  —Cola, Worker, Persistencia y Caducidad— se cuenta en `backend/`.
   [Acá](docs/architecture.es.md) se cuenta la del Front y su Frontera.
-- ⚖️ El [Castigo y Perdón](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/castigo-y-perdon.md)
+- ⚖️ El [Castigo y Perdón](backend/docs/search/source-pacing.es.md)
   explica cómo la API trata a una Tienda que se cae, que tarda o que pide calma.
   Importa acá porque de esa Política salen los Avisos que MUCHI muestra: una
   Fuente que no contestó nunca debe leerse como una Carta que no existe.
@@ -462,13 +475,12 @@ Deberías haber recibido una copia de la GNU Affero General Public License
 junto a este Programa. Si no, mira <https://www.gnu.org/licenses/>.
 ```
 
-[muchi-api](https://github.com/cangrejometralleta/muchi-api) lleva la misma
-Licencia. Son dos Repositorios, una sola Regla.
+[`backend/`](backend/) lleva la misma
+Licencia. Son tres Componentes, una sola Regla.
 
 ## El Harness y el Manifiesto
 
-Ambos Repositorios —el [Front de MUCHI](https://github.com/metaliaw/muchi/blob/main/README.es.md)
-y [muchi-api](https://github.com/cangrejometralleta/muchi-api)— usan
+Este Repositorio —[`backend/`](backend/), [`bff/`](bff/) y [`frontend/`](frontend/)— usa
 [OneTwoThree](https://github.com/cangrejometralleta/OneTwoThree), mi Harness
 compartido de Desarrollo y Manifiesto, presentado en
 [español](https://github.com/cangrejometralleta/OneTwoThree/blob/main/docs/presentation.es.md).

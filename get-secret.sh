@@ -6,7 +6,7 @@
 #   ./get-secret.sh --version 3          -> una Version anterior
 #   ./get-secret.sh --secret otro-token  -> otro Secreto
 #
-# El Token lo guarda muchi-api en Secret Manager; los Servicios lo montan
+# El Token lo guarda backend/ en Secret Manager; los Servicios lo montan
 # desde ahi. Este script existe para el Desarrollo local, donde no hay
 # Cloud Run que monte nada y el .env es la unica via.
 #
