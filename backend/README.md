@@ -250,5 +250,5 @@ You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 ```
 
-The [Muchi Front](https://github.com/metaliaw/muchi) uses the same license.
-Two repositories, one rule.
+The [`bff/`](../bff/) and [`frontend/`](../frontend/) uses the same license.
+Three components, one rule.

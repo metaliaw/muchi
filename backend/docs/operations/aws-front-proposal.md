@@ -8,8 +8,8 @@ Status: Proposal for review. Date: 2026-10-08.
 
 Deploy Vue and its FastAPI BFF on AWS so the complete journey can operate without
 GCP infrastructure. This complements the [API Node proposal](aws-node-proposal.md).
-This document records integration from muchi-api; frontend implementation and
-architecture belong to `metaliaw/muchi`.
+This document records integration from the API; frontend implementation and
+architecture belong to `bff/` and `frontend/`.
 
 Inspection of that repository's local checkout shows Firebase Hosting for static
 publication, Cloud Run for the BFF, Cloud Build and Artifact Registry for images,

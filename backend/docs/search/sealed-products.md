@@ -15,8 +15,8 @@ code assumes about a source versus what the source actually does**. An aggregato
 that indexes singles, a store that rate-limits, a printing catalog that knows
 nothing about boxes. Each wrong assumption produced a different defect.
 
-This document covers the API. Front defects live in `docs/sealed-products.es.md` in
-[metaliaw/muchi](https://github.com/metaliaw/muchi), where the code they explain
+This document covers the API. Front defects live in [`docs/sealed-product.es.md`](../../../docs/sealed-product.es.md) in
+[`bff/`](../../../bff/) and [`frontend/`](../../../frontend/), where the code they explain
 lives.
 
 ## What Identifies a Box
@@ -195,3 +195,5 @@ never by a missing field.
 - **No autocomplete or metadata for sealed products.** `/cards/autocomplete` and
   `/cards/metadata` know only about cards, so the Front hides its assisted search
   when a buyer asks for boxes.
+
+**See also:** [Sealed Products (front side)](../../../docs/sealed-product.md).

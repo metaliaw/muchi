@@ -4,11 +4,11 @@
 
 Muchi es Software Libre entero, y son dos Repositorios. La recolección,
 persistencia y procesamiento de las búsquedas viven acá, en
-[cangrejometralleta/muchi-api](https://github.com/cangrejometralleta/muchi-api),
+[`backend/`](../../backend/),
 junto al [contrato OpenAPI](../openapi.yaml). La interfaz, sus criterios de
 presentación y el BFF que consume ese contrato viven en
-[metaliaw/muchi](https://github.com/metaliaw/muchi), y su
-[arquitectura](https://github.com/metaliaw/muchi/blob/main/docs/architecture.es.md)
+[`bff/`](../../bff/) y [`frontend/`](../../frontend/), y su
+[arquitectura](../../docs/architecture.es.md)
 se cuenta allá.
 
 Este documento cuenta el lado de la API: entrada HTTP, cola, worker,

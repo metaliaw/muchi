@@ -259,9 +259,9 @@ primero.
 `reported` es la palabra de quien compra. Ninguna señal de una tienda
 enlazada llega a Muchi, así que en este camino nada mueve un pedido a
 `confirmed`, y `ReleaseOrders` no toca los pedidos `linked`. El front
-(metaliaw/muchi) muestra un botón "Comprar en esta tienda" por tienda y un
+(`bff/` y `frontend/`) muestra un botón "Comprar en esta tienda" por tienda y un
 campo para el número de pedido; su página
-[Compras Informadas](https://github.com/metaliaw/muchi/blob/main/docs/reported-purchases.es.md)
+[Compras Informadas](../../../docs/reported-purchases.es.md)
 describe ese lado.
 
 ## Siguiente paso sugerido

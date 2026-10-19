@@ -27,7 +27,7 @@ separados. La [arquitectura actual](../architecture.es.md) es la referencia.
 
 Se asume que «otro muchi-nodo» significa una instancia autónoma de la API.
 No existe todavía un protocolo de Federación o replicación entre nodos.
-La interfaz y su BFF viven en `metaliaw/muchi`; conectarlos requiere trabajo
+La interfaz y su BFF viven en `bff/` y `frontend/`; conectarlos requiere trabajo
 allá. Una réplica no implica por sí sola recuperación de búsquedas de GCP.
 
 ## Arquitectura Recomendada

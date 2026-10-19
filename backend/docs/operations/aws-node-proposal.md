@@ -27,7 +27,7 @@ The [current architecture](../architecture.md) provides the reference.
 
 This proposal interprets “another muchi-node” as an autonomous API instance.
 There is currently no Federation or replication protocol. The frontend and BFF
-live in `metaliaw/muchi`; connecting them requires changes there. Another
+live in `bff/` and `frontend/`; connecting them requires changes there. Another
 instance does not automatically recover searches created in GCP.
 
 ## Recommended Architecture

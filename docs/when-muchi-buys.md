@@ -96,3 +96,5 @@ Meanwhile, Muchi compares and you still make the Purchase. What you see in
 the Cart is what you pay at the Stores.
 
 [Back to the README](../README.md).
+
+**See also:** [Checkout Without Agents](../backend/docs/checkout/agentless-checkout.md).

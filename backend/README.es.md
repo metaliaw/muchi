@@ -261,5 +261,5 @@ Deberías haber recibido una copia de la GNU Affero General Public License
 junto a este programa. Si no, mira <https://www.gnu.org/licenses/>.
 ```
 
-El [Front](https://github.com/metaliaw/muchi) lleva la misma licencia. Son dos
-repositorios, una sola regla.
+El [`bff/`](../bff/) y [`frontend/`](../frontend/) lleva la misma licencia. Son tres
+componentes, una sola regla.

@@ -16,8 +16,8 @@ entre sí.
 
 Este documento cubre la API. Los hallazgos del front viven en su propio
 repositorio, porque allá está el código que los explica y allá envejecerían mal
-si se copiaran acá: `docs/search-findings.es.md` de
-[metaliaw/muchi](https://github.com/metaliaw/muchi). Los cinco nacen de un cambio
+si se copiaran acá: [`docs/search-findings.es.md`](../../../docs/search-findings.es.md) de
+[`bff/`](../../../bff/) y [`frontend/`](../../../frontend/). Los cinco nacen de un cambio
 de esta API —`match=includes` trae cartas distintas, no variantes de una— y esa
 sección los enumera.
 
@@ -275,5 +275,5 @@ Ordenado por lo que destraba a lo demás.
 ## Ver También
 
 Los hallazgos del front —cómo se ordenan, coronan y compran las ofertas que esta
-API devuelve— están en `docs/search-findings.es.md` de
-[metaliaw/muchi](https://github.com/metaliaw/muchi).
+API devuelve— están en [`docs/search-findings.es.md`](../../../docs/search-findings.es.md) de
+[`bff/`](../../../bff/) y [`frontend/`](../../../frontend/).

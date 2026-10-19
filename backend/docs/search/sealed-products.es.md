@@ -17,7 +17,7 @@ tienda que limita por frecuencia, un catálogo de impresiones que no conoce caja
 Cada supuesto equivocado produjo un defecto distinto.
 
 Este documento cubre la API. Los defectos del front viven en
-`docs/sealed-products.es.md` de [metaliaw/muchi](https://github.com/metaliaw/muchi),
+[`docs/sealed-product.es.md`](../../../docs/sealed-product.es.md) de [`bff/`](../../../bff/) y [`frontend/`](../../../frontend/),
 porque allá está el código que los explica.
 
 ## Qué Identifica una Caja

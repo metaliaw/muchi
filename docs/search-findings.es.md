@@ -167,3 +167,5 @@ Copian acá.
   Front Dejó de Mandarla y se Desplegó **primero**: la API Usa
   `DisallowUnknownFields` y el Orden inverso Habría Devuelto `400` a cada
   Búsqueda.
+
+**Ver también:** [Hallazgos de Búsqueda (lado de la API)](../backend/docs/search/search-findings.es.md).

@@ -171,3 +171,5 @@ Eso era lo único que Servía para Arreglarlo, y el Mensaje se lo Callaba.
   sin `image`, no Dibuja nada.
 - **El Carrito nunca se Probó con Cajas.** Debería Funcionar igual —las
   Cantidades son Cantidades— pero es un Supuesto, no una Medición.
+
+**Ver también:** [Productos Sellados (lado de la API)](../backend/docs/search/sealed-products.es.md).

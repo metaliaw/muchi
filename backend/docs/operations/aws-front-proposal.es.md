@@ -9,7 +9,7 @@ Estado: Propuesta para revisión. Fecha: 2026-10-08.
 Desplegar Vue y su BFF FastAPI en AWS para que el recorrido completo pueda operar
 sin infraestructura GCP. Complementa la [propuesta del Nodo API](aws-node-proposal.es.md).
 Este documento registra la integración desde muchi-api; los cambios del Front
-pertenecen a `metaliaw/muchi`, dueño de su código y arquitectura.
+pertenecen a `bff/` y `frontend/`, dueño de su código y arquitectura.
 
 La inspección del checkout local de ese repositorio muestra Firebase Hosting
 para publicación estática, Cloud Run para el BFF, Cloud Build y Artifact Registry

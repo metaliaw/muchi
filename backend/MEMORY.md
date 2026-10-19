@@ -21,9 +21,8 @@ Work not yet distilled into them lives in [STORY.md](STORY.md).
 These repositories are commonly worked on locally together. Paths are
 relative to this repository:
 
-- `.` — `cangrejometralleta/muchi-api`, API contract and Firestore data (this
-  repository).
-- `../../metaliaw/muchi` — browser interface and BFF.
+- `.` — `backend/`, API contract and Firestore data (this directory).
+- `../bff` and `../frontend` — the BFF and the browser interface.
 - `../OneTwoThree` — the manifesto: Rules, Values and
   Patterns that govern how this repository is read and written. A Pattern or
   Rule that belongs to every project is written there, not here.

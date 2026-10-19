@@ -163,3 +163,5 @@ copied here.
   the Frontend stopped sending it and was deployed first. The API uses
   `DisallowUnknownFields`; reversing the order would return `400` for
   every Search.
+
+**See also:** [Search Findings (API side)](../backend/docs/search/search-findings.md).

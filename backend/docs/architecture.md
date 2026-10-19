@@ -4,11 +4,11 @@
 
 Muchi is free software across two repositories. Search collection, persistence,
 and processing live here in
-[cangrejometralleta/muchi-api](https://github.com/cangrejometralleta/muchi-api),
+[`backend/`](../../backend/),
 alongside the [OpenAPI contract](../openapi.yaml). The interface, its
 presentation rules, and the BFF that consumes that contract live in
-[metaliaw/muchi](https://github.com/metaliaw/muchi); its
-[architecture](https://github.com/metaliaw/muchi/blob/main/docs/architecture.es.md)
+[`bff/`](../../bff/) and [`frontend/`](../../frontend/); its
+[architecture](../../docs/architecture.es.md)
 is documented there.
 
 This document covers the API side: HTTP entry points, queue, worker, persistence,

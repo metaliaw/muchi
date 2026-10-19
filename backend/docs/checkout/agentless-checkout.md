@@ -248,9 +248,9 @@ different one answers `409`, so a second tap cannot overwrite the first.
 
 `reported` is the buyer's word. No store signal reaches Muchi from a linked
 store, so nothing moves an order to `confirmed` on this path, and
-`ReleaseOrders` does not touch `linked` orders. The front (metaliaw/muchi)
+`ReleaseOrders` does not touch `linked` orders. The front (`bff/` and `frontend/`)
 shows one "Buy at this store" button per store and a field for the order
-number; its [Reported Purchases](https://github.com/metaliaw/muchi/blob/main/docs/reported-purchases.md)
+number; its [Reported Purchases](../../../docs/reported-purchases.md)
 page describes that side.
 
 ## Suggested Next Step

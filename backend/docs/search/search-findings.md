@@ -16,8 +16,8 @@ creates a different defect, and several defects hid one another.
 
 This document covers the API. Front findings live in their own repository,
 because that is where the code they explain lives, and copying them here would
-make them stale: see `docs/search-findings.es.md` in
-[metaliaw/muchi](https://github.com/metaliaw/muchi). All five came from an API
+make them stale: see [`docs/search-findings.es.md`](../../../docs/search-findings.es.md) in
+[`bff/`](../../../bff/) and [`frontend/`](../../../frontend/). All five came from an API
 change—`match=includes` returns different cards, not variants of one card—and
 that section lists them.
 
@@ -271,5 +271,7 @@ Ordered by what unlocks the rest:
 ## See Also
 
 Front findings—how offers from this API are sorted, ranked, and purchased—live in
-`docs/search-findings.es.md` in
-[metaliaw/muchi](https://github.com/metaliaw/muchi).
+[`docs/search-findings.es.md`](../../../docs/search-findings.es.md) in
+[`bff/`](../../../bff/) and [`frontend/`](../../../frontend/).
+
+**See also:** [Search Findings (front side)](../../../docs/search-findings.md).

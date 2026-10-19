@@ -167,3 +167,5 @@ That was the information needed to fix it, and the Message had hidden it.
   already handles it: without `image`, it renders nothing.
 - The Cart has never been tested with Boxes. It should work the same way —
   Quantities are Quantities — but that remains an Assumption, not a Measurement.
+
+**See also:** [Sealed Products (API side)](../backend/docs/search/sealed-products.md).
