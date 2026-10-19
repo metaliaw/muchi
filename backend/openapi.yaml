@@ -1,0 +1,891 @@
+openapi: 3.1.0
+info:
+  title: Muchi API
+  version: 1.0.0
+servers:
+  - url: /v1
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      security: []
+      responses:
+        "200": {description: Healthy}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /health/sources:
+    get:
+      responses:
+        "200":
+          description: Provider health
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [sources]
+                properties:
+                  sources: {type: array, items: {$ref: "#/components/schemas/SourceHealth"}}
+  /supported-games:
+    get:
+      description: >-
+        Lists the games that can be searched and what each one can be asked
+        for. Nobody declares that per game: every source declares what it
+        sells, and the game inherits the sum, so a game reaches loose cards
+        and sealed boxes from different shops without either one knowing.
+        A game no source sells is left out.
+      parameters:
+        - name: kind
+          in: query
+          description: >-
+            Narrows the list to the games that answer this kind of question.
+            A caller drawing a selector for boxes asks for `sealed` and draws
+            only what exists. Without it every game comes back carrying both
+            marks, so one call is enough to draw a selector that switches kind.
+          schema: {type: string, enum: [single, sealed]}
+      responses:
+        "200":
+          description: Games currently supported by the API
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [games]
+                properties:
+                  games:
+                    type: array
+                    items: {$ref: "#/components/schemas/SupportedGame"}
+  /stores:
+    get:
+      description: >-
+        Lists the enabled stores the offers come from, each with the games it
+        answers for and where it stands: street and coordinates when the store
+        publishes them, so a map can place an offer's `source` or `store`.
+      responses:
+        "200":
+          description: Enabled stores
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [stores]
+                properties:
+                  stores:
+                    type: array
+                    items: {$ref: "#/components/schemas/Store"}
+  /stores/{store_id}/inventory/refresh:
+    parameters:
+      - name: store_id
+        in: path
+        required: true
+        description: Store identifier or store name, as config/stores.yaml writes it
+        schema: {type: string}
+    post:
+      summary: Forget the cached published inventory of a store
+      parameters:
+        - name: list
+          in: query
+          description: Refresh only the list carrying this label
+          schema: {type: string}
+      responses:
+        "200":
+          description: Lists forgotten; the next search reads them again
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [store_id, refreshed]
+                properties:
+                  store_id: {type: string}
+                  list: {type: string}
+                  refreshed: {type: integer, minimum: 1}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /offers/{offer_id}:
+    parameters:
+      - name: offer_id
+        in: path
+        required: true
+        description: Stable id assigned by the source that publishes this offer
+        schema: {type: string, minLength: 1}
+    get:
+      description: >-
+        Reads the latest offer snapshot indexed by id. The snapshot is shared
+        across searches and expires with the cache entry that last refreshed it;
+        it is not a live stock check. Use the search stock route to ask the store
+        about current availability.
+      responses:
+        "200":
+          description: Cached offer snapshot
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Offer"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /searches:
+    post:
+      parameters:
+        - {$ref: "#/components/parameters/IdempotencyKey"}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/CreateSearch"}
+      responses:
+        "202":
+          description: Search queued
+          content: {application/json: {schema: {$ref: "#/components/schemas/Search"}}}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /searches/{search_id}:
+    parameters:
+      - {$ref: "#/components/parameters/SearchID"}
+    get:
+      responses:
+        "200":
+          description: Search state
+          content: {application/json: {schema: {$ref: "#/components/schemas/Search"}}}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /searches/{search_id}/results:
+    parameters:
+      - {$ref: "#/components/parameters/SearchID"}
+    get:
+      parameters:
+        - name: after
+          in: query
+          description: Return results completed after this cursor
+          schema: {type: integer, minimum: 0, default: 0}
+        - name: limit
+          in: query
+          description: Maximum results returned per page
+          schema: {type: integer, minimum: 1, maximum: 100, default: 50}
+      responses:
+        "200":
+          description: Partial or final results
+          content: {application/json: {schema: {$ref: "#/components/schemas/SearchResults"}}}
+  /searches/{search_id}/stock:
+    parameters:
+      - {$ref: "#/components/parameters/SearchID"}
+    post:
+      description: >-
+        Visits the stores again for offers this search already found, and
+        answers what each one says about its stock right now. A price outlives
+        a search; stock does not, so a caller crowning the cheapest offer asks
+        here before trusting it. Offers are named by the id the search gave
+        them: a url of the caller's choosing is refused, so this is never a
+        proxy. Readings come back in the order asked, one per offer, at most
+        fifty per request. A store that publishes lists instead of a storefront
+        is asked by reading its list again, past the inventory cache: every one
+        of its offers shares a single url, so the host names no store.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [offers]
+              properties:
+                offers:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items: {type: string}
+      responses:
+        "200":
+          description: One stock reading per offer asked
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [offers]
+                properties:
+                  offers: {type: array, items: {$ref: "#/components/schemas/OfferStock"}}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /searches/{search_id}/checkout:
+    parameters:
+      - {$ref: "#/components/parameters/SearchID"}
+    post:
+      description: >-
+        Hands the buyer one way into each store's checkout for offers this
+        search already found. Nothing is bought and no cart is touched: stores
+        whose platform has a cart link (Shopify today) answer mode `cart` with
+        a url that fills the cart and opens checkout; every other store answers
+        mode `product_pages` with the page of each line. Stores come back in
+        the order first asked. Offers are named by the id the search gave them,
+        at most fifty lines of at most 99 units each. With a `shipping`
+        address, each WooCommerce and Shopify store fills a fresh cart of its
+        own and answers `quote`: items, shipping and total, shipping rates, and
+        (WooCommerce only) payment methods. Shopify has no selected rate yet,
+        so its shipping total is the cheapest rate. The quote creates no order and holds no
+        stock. A store that fails answers `quote_error` and keeps its links.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [offer_id, quantity]
+                    properties:
+                      offer_id: {type: string}
+                      quantity: {type: integer, minimum: 1, maximum: 99}
+                shipping:
+                  type: object
+                  additionalProperties: false
+                  required: [country]
+                  properties:
+                    country: {type: string, examples: [Chile, CL]}
+                    region:
+                      type: string
+                      description: >-
+                        A Chilean region by name, as store locations write it,
+                        or by its ISO 3166-2 code. Each platform receives its own
+                        code.
+                      examples: [Región Metropolitana, CL-RM]
+                    city: {type: string}
+                    postcode: {type: string}
+      responses:
+        "200":
+          description: One checkout per store
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [stores]
+                properties:
+                  stores: {type: array, items: {$ref: "#/components/schemas/StoreCheckout"}}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /searches/{search_id}/orders:
+    parameters:
+      - {$ref: "#/components/parameters/SearchID"}
+      - {$ref: "#/components/parameters/IdempotencyKey"}
+    post:
+      description: >-
+        Places a real order at one store, for offers this search already
+        found. Every line must belong to the same store; a cart spanning more
+        than one is rejected, since paying happens one store at a time. Only
+        WooCommerce stores support this today (`422 order_not_supported`
+        otherwise); it fills the store's own cart, picks its own selected
+        shipping rate, and checks out by bank transfer. The order lands
+        `pending`; nothing here waits for the transfer to arrive. A retried
+        call with the same idempotency key and cart answers the order already
+        placed, never a second one.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [items, shipping]
+              properties:
+                items:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [offer_id, quantity]
+                    properties:
+                      offer_id: {type: string}
+                      quantity: {type: integer, minimum: 1, maximum: 99}
+                shipping:
+                  type: object
+                  additionalProperties: false
+                  required: [country]
+                  properties:
+                    country: {type: string, examples: [Chile, CL]}
+                    region: {type: string, examples: [Región Metropolitana, CL-RM]}
+                    city: {type: string}
+                    postcode: {type: string}
+      responses:
+        "201":
+          description: Order placed
+          content: {application/json: {schema: {$ref: "#/components/schemas/Order"}}}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+        "422":
+          description: This store cannot place an order yet
+          content: {application/json: {schema: {$ref: "#/components/schemas/Error"}}}
+  /searches/{search_id}/orders/links:
+    parameters:
+      - {$ref: "#/components/parameters/SearchID"}
+      - {$ref: "#/components/parameters/IdempotencyKey"}
+    post:
+      description: >-
+        Records that the buyer is about to follow a store's own cart link, for
+        a store where Muchi cannot place the order itself (Shopify, Jumpseller,
+        and any other). Every line must belong to the same store. The order
+        starts `linked`; `payment_url` carries the cart link when the store
+        has one, otherwise each line's `url` is its product page.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [offer_id, quantity]
+                    properties:
+                      offer_id: {type: string}
+                      quantity: {type: integer, minimum: 1, maximum: 99}
+      responses:
+        "201":
+          description: Link recorded
+          content: {application/json: {schema: {$ref: "#/components/schemas/Order"}}}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /searches/{search_id}/orders/{order_id}/report:
+    parameters:
+      - {$ref: "#/components/parameters/SearchID"}
+      - name: order_id
+        in: path
+        required: true
+        schema: {type: string}
+    post:
+      description: >-
+        The buyer says the store took the order and gives the number it
+        showed. Moves a `linked` order to `reported`. Repeating the same
+        number answers the same order; a different one answers 409. Nothing
+        here verifies the number with the store.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [store_order]
+              properties:
+                store_order: {type: string, maxLength: 64, examples: ["#1042"]}
+      responses:
+        "200":
+          description: Order reported
+          content: {application/json: {schema: {$ref: "#/components/schemas/Order"}}}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /searches/{search_id}/orders/{order_id}:
+    parameters:
+      - {$ref: "#/components/parameters/SearchID"}
+      - name: order_id
+        in: path
+        required: true
+        schema: {type: string}
+    get:
+      description: >-
+        Reads back an order this search placed, with its current status
+        (`pending`, `confirmed` or `released`). An order id asked under a
+        different search answers 404.
+      responses:
+        "200":
+          description: Order
+          content: {application/json: {schema: {$ref: "#/components/schemas/Order"}}}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /searches/{search_id}/cancel:
+    parameters:
+      - {$ref: "#/components/parameters/SearchID"}
+      - {$ref: "#/components/parameters/IdempotencyKey"}
+    post:
+      responses:
+        "200":
+          description: Search cancelled
+          content: {application/json: {schema: {$ref: "#/components/schemas/Search"}}}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /webhooks/woocommerce/{domain}/orders:
+    parameters:
+      - name: domain
+        in: path
+        required: true
+        schema: {type: string}
+    post:
+      security: []
+      description: >-
+        Where a WooCommerce store's own admin sends its `order.updated`
+        webhook, configured by hand per store. Not part of the public
+        contract: authenticated by the `X-WC-Webhook-Signature` header
+        (HMAC-SHA256 of the raw body, base64-encoded, under
+        MUCHI_ORDER_WEBHOOK_SECRET) instead of a bearer token, since the
+        store calls it, not a Muchi client. `processing` and `completed`
+        move the order to `confirmed`; `cancelled`, `failed` and `refunded`
+        move it to `released`. Any other status, an unknown order, or one
+        already past the target status answers `200` without moving
+        anything, so the store never retries or disables the webhook over a
+        delivery that was never a failure.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, status]
+              properties:
+                id: {type: integer, description: The store's own order id}
+                status: {type: string}
+      responses:
+        "200": {description: Acknowledged, whether or not anything moved}
+        "400": {description: Malformed delivery}
+        "401": {description: Signature missing or invalid}
+        "500": {$ref: "#/components/responses/InternalError"}
+        "503": {description: MUCHI_ORDER_WEBHOOK_SECRET is not configured}
+  /cards/offers:
+    get:
+      parameters:
+        - name: game
+          in: query
+          description: Game catalog; defaults to Magic when omitted
+          schema:
+            allOf: [{$ref: "#/components/schemas/Game"}]
+            default: magic
+        - name: name
+          in: query
+          required: true
+          schema: {type: string, minLength: 1}
+        - name: match
+          in: query
+          description: How wide a store title may stray from the card name
+          schema:
+            allOf: [{$ref: "#/components/schemas/MatchMode"}]
+            default: exact
+        - name: kind
+          in: query
+          description: Whether to look for single cards or sealed product
+          schema:
+            allOf: [{$ref: "#/components/schemas/ProductKind"}]
+            default: single
+      responses:
+        "200":
+          description: Offers for one card
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [name, match, kind, offers, faults]
+                properties:
+                  name: {type: string}
+                  match: {$ref: "#/components/schemas/MatchMode"}
+                  kind: {$ref: "#/components/schemas/ProductKind"}
+                  offers: {type: array, items: {$ref: "#/components/schemas/Offer"}}
+                  faults:
+                    type: array
+                    description: >-
+                      Sources that failed while others answered. Empty on a full
+                      answer; never absent, so a caller cannot forget to read it.
+                      A non-empty list means the offers are incomplete, and the
+                      answer is not cached.
+                    items: {$ref: "#/components/schemas/SourceFault"}
+  /cards/metadata:
+    get:
+      parameters:
+        - name: game
+          in: query
+          schema:
+            allOf: [{$ref: "#/components/schemas/Game"}]
+            default: magic
+        - {name: name, in: query, required: true, schema: {type: string, minLength: 1}}
+        - {name: language, in: query, schema: {type: string}}
+        - {name: edition, in: query, schema: {type: string}}
+        - {name: foil, in: query, schema: {type: boolean, default: false}}
+      responses:
+        "200":
+          description: Presentation metadata for one card in the selected game
+          content: {application/json: {schema: {$ref: "#/components/schemas/CardMetadata"}}}
+  /cards/autocomplete:
+    get:
+      parameters:
+        - name: game
+          in: query
+          schema:
+            allOf: [{$ref: "#/components/schemas/Game"}]
+            default: magic
+        - {name: name, in: query, required: true, schema: {type: string, minLength: 1}}
+        - {name: language, in: query, schema: {type: string}}
+      responses:
+        "200":
+          description: Card names matching text in the selected game
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [suggestions]
+                properties:
+                  suggestions: {type: array, items: {type: string}}
+  /cards/canonical-name:
+    get:
+      description: >-
+        Reads a card name written in any language as the name the shops index
+        it under. With a `language` the provider narrows to it, because a name
+        can exist in several and a guess picks wrong; without one it guesses.
+        A card the catalog does not know answers 404, apart from a catalog that
+        did not answer, which is a failure and may be retried.
+      parameters:
+        - name: game
+          in: query
+          schema:
+            allOf: [{$ref: "#/components/schemas/Game"}]
+            default: magic
+        - {name: name, in: query, required: true, schema: {type: string, minLength: 1}}
+        - name: language
+          in: query
+          description: A language the game declares in `/supported-games`; any other answers 400
+          schema: {type: string}
+      responses:
+        "200":
+          description: The canonical name
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [canonical_name]
+                properties:
+                  canonical_name: {type: string}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "404": {$ref: "#/components/responses/NotFound"}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer}
+  parameters:
+    SearchID: {name: search_id, in: path, required: true, schema: {type: string}}
+    IdempotencyKey: {name: Idempotency-Key, in: header, required: true, schema: {type: string, maxLength: 128}}
+  responses:
+    BadRequest: {description: Invalid request, content: {application/json: {schema: {$ref: "#/components/schemas/Error"}}}}
+    Conflict: {description: Idempotency or state conflict, content: {application/json: {schema: {$ref: "#/components/schemas/Error"}}}}
+    NotFound: {description: Resource not found or its snapshot expired, content: {application/json: {schema: {$ref: "#/components/schemas/Error"}}}}
+    InternalError: {description: Internal error, content: {application/json: {schema: {$ref: "#/components/schemas/Error"}}}}
+  schemas:
+    CreateSearch:
+      type: object
+      additionalProperties: false
+      required: [cards, options]
+      properties:
+        game:
+          allOf: [{$ref: "#/components/schemas/Game"}]
+          description: Game catalog; defaults to Magic when omitted
+          default: magic
+        cards:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items:
+            type: object
+            additionalProperties: false
+            required: [name, quantity]
+            properties:
+              name: {type: string, minLength: 1}
+              quantity: {type: integer, minimum: 1, maximum: 99}
+        options:
+          type: object
+          additionalProperties: false
+          required: [verify_stock]
+          properties:
+            verify_stock: {type: boolean}
+            match:
+              allOf: [{$ref: "#/components/schemas/MatchMode"}]
+              default: exact
+            kind:
+              allOf: [{$ref: "#/components/schemas/ProductKind"}]
+              default: single
+    SourceFault:
+      type: object
+      required: [source, reason]
+      properties:
+        source: {type: string, description: The source as /v1/health/sources names it}
+        reason: {type: string}
+    MatchMode:
+      type: string
+      enum: [exact, includes]
+      description: >-
+        exact keeps the card and its printings (Kuriboh, Kuriboh (C));
+        includes keeps any title carrying the name (Winged Kuriboh, Linkuriboh).
+    ProductKind:
+      type: string
+      enum: [single, sealed]
+      description: >-
+        single keeps the cards a store sells one by one; sealed keeps the boxes
+        it sells unopened (Booster Box, Elite Trainer Box, Bundle, Display).
+        A sealed answer groups by the whole product title and its set, because a
+        Booster Pack and a Booster Display share every word but one and differ
+        by ten times the price.
+    Search:
+      type: object
+      required: [id, status, total, processed, found, not_found, errors, created_at, updated_at]
+      properties:
+        id: {type: string}
+        status: {type: string, enum: [queued, running, completed, completed_with_errors, failed, cancelled]}
+        total: {type: integer}
+        processed: {type: integer}
+        current_card: {type: string}
+        found: {type: integer}
+        not_found: {type: integer}
+        errors: {type: integer}
+        created_at: {type: string, format: date-time}
+        started_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+        finished_at: {type: string, format: date-time}
+        incident_id: {type: string}
+    SearchResults:
+      type: object
+      required: [search_id, items, cursor, has_more]
+      properties:
+        search_id: {type: string}
+        items: {type: array, items: {$ref: "#/components/schemas/SearchItem"}}
+        cursor: {type: integer, minimum: 0}
+        has_more: {type: boolean}
+    SearchItem:
+      type: object
+      required: [id, search_id, game, position, sequence, original_name, normalized_name, quantity, status, attempts, offers]
+      properties:
+        id: {type: string}
+        search_id: {type: string}
+        game: {$ref: "#/components/schemas/Game"}
+        position: {type: integer}
+        sequence:
+          type: integer
+          minimum: 0
+          description: >-
+            The order in which the item finished, counting from one. An item
+            still pending or running has not earned one and reads zero, so a
+            caller sorts the finished ones by this and tells the rest apart by
+            status, never by a missing field.
+        original_name: {type: string}
+        normalized_name: {type: string}
+        quantity: {type: integer}
+        status: {type: string, enum: [pending, running, found, not_found, source_error]}
+        attempts: {type: integer}
+        source: {type: string}
+        error_code: {type: string}
+        error_message: {type: string}
+        offers: {type: array, items: {$ref: "#/components/schemas/Offer"}}
+    StoreCheckout:
+      type: object
+      required: [store, domain, mode, lines]
+      properties:
+        store: {type: string}
+        domain: {type: string}
+        mode: {type: string, enum: [cart, product_pages]}
+        url: {type: string, format: uri, description: Present only in mode `cart`}
+        lines:
+          type: array
+          items:
+            type: object
+            required: [offer_id, quantity, url]
+            properties:
+              offer_id: {type: string}
+              quantity: {type: integer}
+              url: {type: string, format: uri}
+        quote: {$ref: "#/components/schemas/CartQuote"}
+        quote_error: {type: string}
+    Order:
+      type: object
+      required: [id, search_id, store, domain, lines, status, created_at, updated_at]
+      properties:
+        id: {type: string}
+        search_id: {type: string}
+        store: {type: string}
+        domain: {type: string}
+        lines:
+          type: array
+          items:
+            type: object
+            required: [offer_id, quantity, url]
+            properties:
+              offer_id: {type: string}
+              quantity: {type: integer}
+              url: {type: string, format: uri}
+        status:
+          type: string
+          enum: [pending, confirmed, released, linked, reported]
+          description: >-
+            `pending`, `confirmed` and `released` belong to orders Muchi placed.
+            `linked` and `reported` belong to orders the buyer placed through
+            the store's own cart link; `reported` is the buyer's word, never
+            verified.
+        store_order: {type: string, description: The order id the store itself assigned}
+        payment_url: {type: string, format: uri, description: Present when the payment method redirects to a payment page}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    CartQuote:
+      type: object
+      description: What the store's own cart answered. Nothing is reserved.
+      required: [currency, items_total, shipping_total, total, lines, shipping_rates, payment_methods]
+      properties:
+        currency: {type: string}
+        items_total: {type: string}
+        shipping_total: {type: string}
+        total: {type: string}
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              offer_id: {type: string}
+              quantity: {type: integer}
+              unit_price: {type: string}
+        shipping_rates:
+          type: array
+          items:
+            type: object
+            properties:
+              id: {type: string}
+              name: {type: string}
+              price: {type: string}
+              selected: {type: boolean}
+        payment_methods: {type: array, items: {type: string}}
+        notices:
+          type: array
+          items: {type: string}
+          description: Lines the cart trimmed or dropped, and store messages
+    OfferStock:
+      type: object
+      required: [id, stock_status]
+      properties:
+        id: {type: string}
+        stock_status: {type: string, enum: [available, unavailable, unknown]}
+        stock_quantity:
+          type: integer
+          minimum: 0
+          description: >-
+            Units the store declares. Absent means the store never said; zero
+            means it said none. A store that would not answer reads `unknown`
+            and no count, so the caller moves to the next cheapest offer.
+    Offer:
+      type: object
+      required: [id, card_name, store, price_amount, price_currency, url, source, stock_status, suspicious]
+      properties:
+        id: {type: string}
+        card_name: {type: string}
+        card_key:
+          type: string
+          description: >-
+            The card this offer is for, with the printing dropped and lowercased.
+            `Winged Kuriboh`, `LDS3-EN100 "Winged Kuriboh" Common` and
+            `Winged Kuriboh (PUR)` all answer `winged kuriboh`, so one card sold
+            by three sources groups as one. Group by this; show `card_name`.
+        store: {type: string}
+        price_amount: {type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$"}
+        price_currency: {type: string, pattern: "^[A-Z]{3}$"}
+        url: {type: string, format: uri}
+        image: {type: string, format: uri}
+        variant_id: {type: string}
+        language: {type: string}
+        condition: {type: string}
+        finish: {type: string}
+        kind: {$ref: "#/components/schemas/ProductKind"}
+        locations:
+          type: array
+          description: Verified pickup locations, formatted for display.
+          items: {type: string}
+        source: {type: string}
+        stock_status: {type: string, enum: [available, unavailable, unknown]}
+        stock_quantity:
+          type: integer
+          minimum: 0
+          description: >-
+            Units the store declares. Absent means the store never said; zero
+            means it said none. Only some platforms publish a count: shopify
+            says whether a variant sells, not how many remain.
+        suspicious:
+          type: boolean
+          description: >-
+            Priced far below the median of its peers. Peers are the offers of
+            the same card in the same currency, so a wide `includes` search
+            never judges one card by another card's prices.
+        suspicious_reason: {type: string}
+        metadata: {type: object, additionalProperties: {type: string}}
+    Game:
+      type: string
+      enum: [magic, pokemon, yugioh, one-piece, digimon, riftbound, mitos-y-leyendas]
+      example: magic
+    SupportedGame:
+      type: object
+      required: [name, reference_key, singles, sealed]
+      properties:
+        name: {type: string}
+        reference_key: {$ref: "#/components/schemas/Game"}
+        singles:
+          type: boolean
+          description: Some source of this game sells loose cards
+        sealed:
+          type: boolean
+          description: Some source of this game sells unopened product
+        languages:
+          type: array
+          description: >-
+            The languages this game's card names read in, as config/stores.yaml
+            declares them, in that order. Absent when the game declares none:
+            its names are asked as written, and any `language` a caller names
+            is passed to the provider untouched. When present, `/cards/metadata`
+            and `/cards/autocomplete` answer 400 to a `language` outside it.
+          items:
+            type: object
+            required: [code, label, example]
+            properties:
+              code: {type: string, description: The code the provider understands}
+              label: {type: string, description: How a person reads the language}
+              example: {type: string, description: How Sol Ring is written in it}
+    CardMetadata:
+      type: object
+      required: [name]
+      properties:
+        name: {type: string}
+        printed_name: {type: string}
+        edition: {type: string}
+        image: {type: string, format: uri}
+        url: {type: string, format: uri}
+    Store:
+      type: object
+      required: [id, platform, games, locations]
+      properties:
+        id: {type: string, description: The domain config/stores.yaml writes}
+        name: {type: string}
+        platform: {type: string}
+        games: {type: array, items: {type: string}}
+        locations:
+          type: array
+          items:
+            type: object
+            required: [city]
+            properties:
+              country: {type: string}
+              region: {type: string}
+              city: {type: string}
+              district: {type: string}
+              pickup: {type: string}
+              street: {type: string}
+              latitude: {type: number, minimum: -90, maximum: 90}
+              longitude: {type: number, minimum: -180, maximum: 180}
+    SourceHealth:
+      type: object
+      required: [source, consecutive_failures, latency_ms]
+      properties:
+        source: {type: string}
+        last_success: {type: string, format: date-time}
+        last_failure: {type: string, format: date-time}
+        consecutive_failures: {type: integer}
+        latency_ms: {type: integer}
+        circuit_open_until: {type: string, format: date-time}
+    Error:
+      type: object
+      required: [code, message, request_id]
+      properties:
+        code: {type: string}
+        message: {type: string}
+        request_id: {type: string}
+        incident_id: {type: string}

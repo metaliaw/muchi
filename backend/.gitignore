@@ -1,0 +1,14 @@
+/muchi-api
+/coverage.out
+.env
+__pycache__/
+*.pyc
+vendor/
+
+# One Repository Holds one active Handoff, and never Commits it.
+# See .agents/skills/bye-bye-bye/SKILL.md — Never Commit or Push the Handoff.
+/.handoff.md
+/.canonignore
+
+# Caos: Vida sin podar. Nunca Entra al Repositorio; ver STORY.md.
+/chaos/

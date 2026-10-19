@@ -1,0 +1,38 @@
+# What the Canon does not Govern.
+#
+# Same Syntax as .gitignore, and git itself Reads it:
+#   git ls-files --cached  --ignored --exclude-from=.canonignore
+#   git ls-files --others  --ignored --exclude-from=.canonignore
+#
+# .gitignore Says what the Repository does not Carry.
+# This Says what the Repository Carries but does not Teach.
+# An Agent may Read every Path here. It must never Copy one.
+#
+# Everything below this Line did not Happen.
+#
+# It Happened. git Remembers all of it, every Byte, and so does
+# anyone who Scrolls. It simply does not Get a Vote.
+
+# Hand-Written Humour, each one in the Language it was Born in.
+# Read it to Hear the Voice; never Quote it, never Translate it,
+# and never Add to it. A Model Learning Humour from a Model
+# Learns its own Echo.
+jokes/**
+!jokes/README.md
+
+# Raw Context, not yet Distilled. Notes in Progress, never Instructions.
+STORY.md
+stories/**
+chaos/**
+CHAOS.md
+
+# Vendored and Generated. Present on Disk, Written by no one here.
+**/node_modules/**
+**/dist/**
+**/target/**
+**/bin/**
+**/.mvn/**
+mvnw
+mvnw.cmd
+**/go.sum
+**/package-lock.json

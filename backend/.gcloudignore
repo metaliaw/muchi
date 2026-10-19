@@ -1,0 +1,26 @@
+.git/
+.gitignore
+.env
+.env.example
+vendor/
+collections/
+*.md
+compose.yaml
+Dockerfile
+.dockerignore
+*.sh
+*.cmd
+muchi-api
+.env.*
+*.exe
+.agents/
+.codex/
+.claude/
+.github/
+
+# El Canon es una Cache local, no Fuente que se Compile.
+.canonignore
+rules
+values
+patterns
+config/deploy.*

@@ -1,0 +1,82 @@
+{
+  "boards": {
+    "mainboard": {
+      "cards": {
+        "EWNXV": {
+          "quantity": 5,
+          "finish": "nonFoil",
+          "isFoil": false,
+          "card": {
+            "id": "kyw9D",
+            "set": "plst",
+            "name": "Caged Sun",
+            "lang": "en",
+            "prices": {
+              "ck": 3.99
+            }
+          },
+          "printingData": [
+            {
+              "id": "kXzq1",
+              "quantity": 1,
+              "finish": "nonFoil",
+              "isFoil": false,
+              "prices": {
+                "ck": 5.49,
+                "ck_foil": 9.99
+              },
+              "card": {
+                "id": "kXzq1",
+                "set": "nph",
+                "name": "Caged Sun",
+                "lang": "en",
+                "prices": {
+                  "ck": 5.49,
+                  "ck_foil": 9.99
+                }
+              }
+            },
+            {
+              "id": "kyw9D",
+              "quantity": 3,
+              "finish": "nonFoil",
+              "isFoil": false,
+              "prices": {
+                "ck": 3.99
+              },
+              "card": {
+                "id": "kyw9D",
+                "set": "plst",
+                "name": "Caged Sun",
+                "lang": "en",
+                "prices": {
+                  "ck": 3.99
+                }
+              }
+            },
+            {
+              "id": "J95Zp",
+              "quantity": 1,
+              "finish": "nonFoil",
+              "isFoil": false,
+              "prices": {
+                "ck": 4.49,
+                "ck_foil": 7.99
+              },
+              "card": {
+                "id": "J95Zp",
+                "set": "brr",
+                "name": "Caged Sun",
+                "lang": "en",
+                "prices": {
+                  "ck": 4.49,
+                  "ck_foil": 7.99
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

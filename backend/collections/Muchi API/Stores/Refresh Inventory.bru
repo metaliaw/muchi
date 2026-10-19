@@ -1,0 +1,27 @@
+meta {
+  name: Refresh Inventory
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/stores/el-wombat-rabioso-tcg/inventory/refresh?list=Negro
+  body: none
+  auth: inherit
+}
+
+params:query {
+  list: Negro
+}
+
+docs {
+  Olvida el Inventario publicado que la Tienda mantiene en Moxfield, para que
+  la siguiente Búsqueda lo lea de nuevo. Sin `list` olvida todas sus Listas.
+}
+
+tests {
+  test("cuenta las Listas olvidadas", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().refreshed).to.be.at.least(1);
+  });
+}

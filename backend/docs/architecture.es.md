@@ -1,0 +1,385 @@
+# Arquitectura de Muchi API
+
+[English](architecture.md) | **Español**
+
+Muchi es Software Libre entero, y son dos Repositorios. La recolección,
+persistencia y procesamiento de las búsquedas viven acá, en
+[cangrejometralleta/muchi-api](https://github.com/cangrejometralleta/muchi-api),
+junto al [contrato OpenAPI](../openapi.yaml). La interfaz, sus criterios de
+presentación y el BFF que consume ese contrato viven en
+[metaliaw/muchi](https://github.com/metaliaw/muchi), y su
+[arquitectura](https://github.com/metaliaw/muchi/blob/main/docs/architecture.es.md)
+se cuenta allá.
+
+Este documento cuenta el lado de la API: entrada HTTP, cola, worker,
+persistencia y caducidad. Ningún diagrama se copia de un lado al otro: una copia
+envejece sin que nadie lo note.
+
+Las tres puertas ejecutables están explicadas por separado en la
+[guía de entrypoints](entrypoints.es.md): `ServeAPI`, `ProcessSearch` y
+`SweepQueue`. La [guía del barredor](queue/sweeper.es.md) cuenta por qué se pueden
+gastar despertares, cómo los repone la reconciliación acotada y qué cosas no le
+corresponde hacer.
+
+## Vista General
+
+Muchi API separa la recepción de búsquedas del trabajo lento de consultar
+fuentes. La API persiste cada pedido y responde sin esperar sus resultados;
+Cloud Tasks despierta workers privados que reclaman una carta a la vez. Un
+barredor periódico repone oportunidades de ejecución cuando se pierde la
+correspondencia entre trabajo pendiente y despertares. Cuenta trabajo listo y
+agrega despertares; no procesa ítems ni borra datos vencidos.
+
+```mermaid
+flowchart TB
+    user[Cliente Web o Integración]
+
+    subgraph edge[Entrada HTTP]
+        api[ServeAPI<br/>Cloud Function pública]
+        auth[Bearer Token<br/>Idempotency Key]
+        health[Salud pública]
+      cards[Consultas de Juegos,<br/>Metadata y Ofertas]
+      purchase[Rutas de Checkout,<br/>Cotización y Pedidos]
+        hook[Webhook WooCommerce<br/>Firma HMAC]
+        auth --> api
+        health --> api
+      cards --> api
+      purchase --> api
+        hook --> api
+    end
+
+    subgraph control[Plano de Control]
+        tasks[Cloud Tasks<br/>1 despacho por segundo<br/>2 concurrentes]
+        scheduler[Cloud Scheduler<br/>cada 5 minutos]
+        sweeper[SweepQueue<br/>reconciliación acotada]
+        scheduler -->|OIDC| sweeper
+        sweeper -->|repone despertares| tasks
+        hourly[Cloud Scheduler<br/>cada hora]
+        releaser[ReleaseOrders<br/>libera pedidos pendientes vencidos]
+        hourly -->|OIDC| releaser
+    end
+
+    subgraph work[Plano de Trabajo]
+        worker[ProcessSearch<br/>Cloud Function privada]
+        claim[Reclamo con Lease<br/>y limpieza transaccional]
+      search[Servicio de Búsqueda<br/>por Juego]
+      compose[Providers + SourcesByGame<br/>desde stores.yaml]
+        worker --> claim --> search
+      compose --> search
+    end
+
+    subgraph data[Persistencia]
+        firestore[(Firestore)]
+        searches[(searches)]
+        items[(items)]
+        itemOffers[(item_offers)]
+        offerIndex[(offers)]
+        cache[(offer_cache)]
+        healthStore[(source_health)]
+        ordersStore[(orders)]
+        firestore --- searches
+        firestore --- items
+        firestore --- itemOffers
+        firestore --- offerIndex
+        firestore --- cache
+        firestore --- healthStore
+        firestore --- ordersStore
+    end
+
+    subgraph providers[Fuentes Externas]
+      aggregators[scry.cl y TCGMatch<br/>Agregadores]
+      stores[WooCommerce, Shopify,<br/>Jumpseller y PrestaShop]
+        lists[Listas Moxfield]
+    end
+
+    subgraph security[Identidad y Secretos]
+        secret[Secret Manager<br/>muchi-api-token latest]
+        taskIdentity[Cuenta de Cloud Tasks]
+        apiIdentity[Cuenta de API]
+        workerIdentity[Cuenta de Worker]
+    end
+
+    user -->|HTTPS| auth
+    user -->|GET health| health
+    api -->|guarda Búsqueda e Ítems| firestore
+    api -->|un despertar por Carta| tasks
+    api -->|lee Estado y Resultados| firestore
+    tasks -->|POST con OIDC| worker
+    claim <-->|transacción y lease| firestore
+    search <-->|caché y salud| firestore
+    search --> aggregators
+    search --> stores
+    search --> lists
+    secret -.-> api
+    secret -.-> worker
+    taskIdentity -.-> tasks
+    taskIdentity -.-> worker
+    apiIdentity -.-> api
+    api -->|carro, cotización, checkout bacs| stores
+    stores -.->|order.updated| hook
+    api -->|pedidos: crea, confirma, libera| firestore
+    releaser -->|pending a released| firestore
+    workerIdentity -.-> worker
+```
+
+## Responsabilidades
+
+| Componente | Responsabilidad | Límite de Confianza |
+| --- | --- | --- |
+| `ServeAPI` | Valida el contrato, la autenticación y la idempotencia; persiste y despacha. | Entrada pública; las rutas de negocio requieren Bearer Token. |
+| Cloud Tasks | Entrega despertares con control de ritmo y reintentos. | Invoca al worker mediante identidad OIDC. |
+| `ProcessSearch` | Reclama una carta, consulta ofertas, verifica stock y guarda el resultado. | Función privada; no admite invocación anónima. |
+| `SweepQueue` | Cuenta trabajo listo y repone despertares perdidos con un tope. | Función privada invocada por Cloud Scheduler. |
+| `ReleaseOrders` | Mueve a `released` los pedidos `pending` vencidos, con un tope por ejecución. | Función privada invocada cada hora por Cloud Scheduler. |
+| Firestore | Conserva búsquedas, ítems, ofertas, pedidos, idempotencia, caché y salud. | Acceso exclusivo de las cuentas de servicio autorizadas. |
+| Secret Manager | Entrega la versión vigente del token al arrancar una instancia. | El secreto nunca se incluye en imágenes ni respuestas. |
+| Fuentes | Proveen catálogos y disponibilidad con formatos independientes. | Red externa no confiable; usa timeouts, reintentos y límites de cuerpo. |
+
+## Flujo de una Búsqueda
+
+1. El cliente envía una lista y una clave de idempotencia.
+2. La API valida límites, crea la búsqueda y sus ítems en Firestore.
+3. La API agrega un despertar a Cloud Tasks por cada carta y responde `202`.
+4. Cloud Tasks invoca al worker privado usando OIDC.
+5. El worker reclama el siguiente ítem disponible mediante una transacción.
+6. El servicio resuelve el agregador y las tiendas del juego desde
+  `config/stores.yaml`; consulta las tiendas con hasta cuatro fuentes
+  simultáneas y combina todas las ofertas.
+7. El worker guarda ofertas y progreso dentro del estado persistido.
+8. El cliente consulta estado y resultados hasta alcanzar un estado terminal.
+
+La tarea transporta una señal, no el identificador del ítem. Esta decisión
+permite consumidores competidores y recuperación de leases, pero exige que el
+reclamo retire trabajo muerto para conservar el progreso FIFO. El
+[incidente de ítems huérfanos](queue/orphaned-queue-items.es.md) explica ese invariante.
+
+## Flujo de una Compra
+
+La compra está en curso: WooCommerce es la única plataforma que llega a un
+pedido real, y todavía ningún pedido corrió contra una tienda en vivo. La
+[guía de checkout sin agentes](checkout/agentless-checkout.es.md) tiene el
+detalle y la lista de verificación del piloto manual.
+
+```mermaid
+sequenceDiagram
+    participant C as Cliente
+    participant A as ServeAPI
+    participant S as search.Service
+    participant W as Tienda WooCommerce
+    participant F as Firestore
+    participant R as ReleaseOrders
+
+    C->>A: POST /searches/{id}/checkout
+    A->>S: CheckoutLinks
+    S-->>C: enlace de carro o páginas de producto por tienda
+    C->>A: POST /searches/{id}/checkout con shipping
+    S->>W: carro por Store API, sin pedido
+    W-->>C: cotización con envío y medios de pago
+    C->>A: POST /searches/{id}/orders + Idempotency-Key
+    S->>W: llena el carro, checkout por bacs
+    W-->>S: id del pedido en la tienda
+    S->>F: CreateOrder, estado pending
+    A-->>C: 201 Order
+    W->>A: webhook order.updated, firmado con HMAC
+    A->>F: pending a confirmed o released
+    R->>F: pending vencido a released
+    C->>A: GET /searches/{id}/orders/{order_id}
+    A-->>C: estado actual
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> pending: PlaceOrder
+    pending --> confirmed: webhook processing o completed
+    pending --> released: webhook cancelled, failed, refunded
+    pending --> released: ReleaseOrders tras el TTL
+    [*] --> linked: quien compra sigue el enlace al carrito
+    linked --> reported: quien compra da el número de pedido
+    reported --> [*]
+    confirmed --> [*]
+    released --> [*]
+```
+
+Cada movimiento nombra el estado que espera dejar, así que un webhook tardío
+pierde ante una liberación que llegó primero, y al revés.
+
+## Capas del Código
+
+```mermaid
+flowchart LR
+    function[function.go<br/>Entradas Cloud Functions]
+    transport[internal/handler<br/>Handlers y DTO HTTP]
+    application[internal/application<br/>Composición]
+    catalog[internal/catalog<br/>Construcción de Fuentes]
+    domain[internal/search y model<br/>Servicio de Búsqueda]
+    orderer[internal/stores/commerce<br/>Shops y clientes de plataforma]
+    releaser[internal/orders<br/>Releaser]
+    repository[SearchRepository<br/>Interfaz de Persistencia]
+    repositories[internal/repositories<br/>Repositorio Genérico y Stores]
+    database[internal/db<br/>Adaptador Firebase]
+    worker[search.Worker<br/>Trabajo en segundo plano]
+    config[config/stores.yaml<br/>Juegos, Orígenes y Tiendas]
+    adapters[Adaptadores de Fuentes]
+
+    tasks[internal/taskqueue<br/>Cloud Tasks Adapter]
+    host[internal/gcp] --> tasks
+    host --> database
+    host --> repositories
+    host --> application
+    hosting[internal/hosting] --> application
+    function --> host
+    function --> hosting
+    application --> transport
+    transport --> domain
+    worker --> domain
+    domain --> repository
+    repository --> repositories
+    repositories -->|Database| database
+    config --> catalog
+    catalog --> application
+    application --> domain
+    application --> adapters
+    domain -->|OrderPlacer| orderer
+    application --> releaser
+    releaser -->|Expirer| repositories
+    adapters --> domain
+```
+
+`internal/handler.Handler` es el límite de composición HTTP. Sus handlers de
+ruta decodifican las formas HTTP y orquestan `search.Service`; el worker llama
+al mismo servicio sin HTTP. `wire_models.go` contiene los tipos HTTP de entrada
+y salida, mientras `model_dto.go` los convierte a modelos de negocio y viceversa.
+El servicio accede a la persistencia mediante `SearchRepository`, implementado
+en `internal/repositories`. Ese paquete tiene una primitiva genérica
+`Repository[T]` (crear, guardar, leer, actualizar, borrar, listar) y los stores
+construidos sobre ella, que llevan la lógica de persistencia. Llegan al
+almacenamiento por el contrato neutral `repositories.Database`; `internal/db`,
+respaldado por Firebase, provee su implementación actual, una `Collection[T]`
+por tipo de registro.
+
+Las fallas de negocio controladas llegan a `internal/errorhandler`, el único
+punto que las convierte en estados HTTP y mensajes públicos seguros. Las fallas
+desconocidas siguen siendo errores del servidor.
+
+`search.Service` reúne cinco servicios, cada uno con solo los puertos y límites
+que sus preguntas necesitan: `SearchService` (crear, leer, listar, cancelar),
+`OfferService` (buscar, cachear y dar forma a las ofertas), `StockService`,
+`CheckoutService` y `OrderService`. El worker recibe el `OfferService` y un
+`StockChecker`. `WithRepository` entrega el único repositorio a cada servicio
+que lee una búsqueda.
+
+`internal/model` reúne los tipos de dominio de ofertas, carritos, búsquedas y
+salud de fuentes. Estos tipos no llevan etiquetas JSON ni Firestore.
+`internal/handler` contiene las formas HTTP y sus conversiones;
+`internal/db` contiene los registros y payloads JSON almacenados.
+`internal/gcp` selecciona el adaptador Firebase y se lo entrega a los
+stores mediante `repositories.Database`. `internal/application` recibe los
+Ports de persistencia y despacho mediante `Dependencies`. El SDK de Firebase queda dentro de
+`internal/db`. Las conversiones explícitas en cada frontera conservan por
+separado los nombres de campos de la API y de los datos persistidos. La
+idempotencia usa su propia representación estable.
+
+El dominio también declara necesidades como `TaskQueue`, `Provider`,
+`OfferSource`, `StockChecker` y `OfferCache`. `internal/catalog`
+construye los agregadores en `Providers` y agrupa las tiendas en `SourcesByGame`
+usando los juegos, orígenes, plataformas y estados del YAML. El paquete también
+reúne los catálogos de impresiones y ediciones, además de los límites por tipo de
+producto. `internal/gcp` abre las conexiones y controla su cierre;
+`internal/application` arma el `Runtime` con esas piezas y los Ports inyectados. Los paquetes de proveedores implementan los puertos;
+así, las reglas de búsqueda no importan tipos de Firestore, Cloud Tasks ni
+clientes HTTP concretos.
+
+La configuración de las tiendas vive en `internal/stores/directory`, y lo que
+las tiendas pueden hacer (stock, cotizaciones, pedidos, enlaces de pago) vive en
+`internal/stores/commerce`. Los subpaquetes `jumpseller`, `shopify`,
+`prestashop`, `woocommerce` y `moxfield` contienen los clientes de cada
+plataforma. Los agregadores de ofertas viven
+aparte en `internal/aggregators`.
+
+El [flujo de búsqueda por juego](search/game-search-providers.es.md) detalla esa composición.
+La [identidad de cartas](search/card-identity-games-sets.es.md) separa búsqueda,
+impresión y variante comercial.
+
+### Un Flujo entre Hosts
+
+`BuildOperations` construye una sola superficie: Handler HTTP, turno de worker,
+loop de trabajo, barrido y liberación de pedidos. `function.go` traduce las
+entradas GCP; `cmd/muchi-api` ofrece `serve`, `work`, `process`, `sweep` y `release`.
+Ambos usan la misma composición HTTP, incluyendo tiendas y firma de webhooks.
+
+`internal/hosting.Loader` reutiliza sólo arranques exitosos, con un contexto propio
+acotado a 30 segundos; una falla se reintenta en la siguiente invocación.
+La petición conserva su contexto para la operación. La CLI drena HTTP antes de
+cerrar conexiones; GCP conserva clientes durante la vida de su instancia.
+Configuración de aplicación vive en `internal/config`; variables GCP y plazo de
+Cloud Tasks se resuelven en `internal/gcp`, conservando sus nombres actuales.
+Los adaptadores AWS y la coordinación de Secretos siguen pendientes.
+
+### La Frontera del Almacén
+
+`internal/gcp` es la composición del proveedor actual y selecciona la base de
+datos y el despacho. `internal/application` depende de Ports y no importa
+`internal/db` ni `internal/taskqueue`; el `Runtime` expone puertos, no tipos concretos.
+
+- `repositories.Database` es el contrato neutral implementado por el adaptador
+  Firebase: abre las colecciones y ejecuta trabajo entre ellas en una sola
+  transacción. Los stores de `internal/repositories` implementan los puertos de
+  búsqueda y del worker usando ese contrato.
+- `Vault` reúne los seis papeles que cumple el objeto de persistencia: guarda
+  las búsquedas y sus ítems, cachea las ofertas, coloca y mueve las órdenes,
+  responde por su salud, cuenta el trabajo que espera y regula el tráfico hacia
+  cada fuente. Están listados aparte porque son independientes; que un objeto
+  los cumpla todos es una coincidencia de la composición, no un supuesto del
+  dominio.
+- `Dispatcher` reúne el despacho de trabajo y el despertar que repone el barredor.
+
+Las afirmaciones de `internal/application/vault_test.go` y
+`internal/gcp/runtime.go` fijan esa frontera en tiempo de compilación.
+
+Un supuesto no se lee en ninguna interfaz y conviene decirlo: **la caducidad se
+delega al proveedor**. Firestore aplica TTL sobre `expires_at` según
+`firestore.indexes.json`, y el código solo rechaza lo vencido porque el borrado
+es eventual. Un almacén sin TTL nativo debe barrer por su cuenta; esa es la
+pieza más cara de portar, no las consultas.
+
+El [plan de almacén agnóstico](stores/provider-agnostic-store-plan.es.md) describe cómo se
+probaría esa frontera con un segundo adaptador.
+
+## Disponibilidad y Recuperación
+
+- Los leases permiten recuperar un ítem cuando un worker muere a mitad del trabajo.
+- Cloud Tasks reintenta fallas transitorias y limita presión sobre las fuentes.
+- La caché reduce consultas repetidas y separa TTL positivos y negativos.
+- El barredor reconcilia trabajo listo con despertares, limitado a 50 por ciclo.
+- El reclamo elimina huérfanos transaccionalmente, con un máximo de 20 descartes
+  y un reclamo final por turno.
+- Firestore aplica TTL a búsquedas, ítems, ofertas, idempotencia y caché; el
+  código también rechaza documentos vencidos porque la eliminación es eventual.
+
+## Seguridad
+
+- La función API permite acceso de red público, pero autentica las rutas de
+  negocio con comparación constante del Bearer Token.
+- El endpoint de salud básico permanece público para operación y balanceo.
+- El worker y el barredor requieren invocación autenticada.
+- Cloud Tasks y Cloud Scheduler usan una cuenta específica y tokens OIDC con
+  audiencia igual a la URL de destino.
+- API y worker usan cuentas distintas con permisos mínimos sobre Firestore,
+  Cloud Tasks y Secret Manager.
+- `muchi-api-token:latest` permite rotación sin almacenar el valor en archivos,
+  argumentos de despliegue o imágenes.
+
+## Despliegue
+
+La topología se crea en orden de dependencias:
+
+1. `deploy-infra.sh`: servicios, identidades, IAM, Firestore, TTL y cola.
+2. `deploy-worker.sh`: worker privado y permiso de invocación OIDC.
+3. `deploy-sweeper.sh`: barredor privado y programación periódica.
+4. `deploy-api.sh`: API pública conectada a la URL real del worker.
+
+`deploy-order-release.sh` despliega `ReleaseOrders` y su tarea horaria.
+`deploy-infra.sh` también crea el índice de `orders` que su consulta necesita.
+
+`deploy.sh` orquesta los cinco pasos, el liberador después del barredor. Cada componente puede desplegarse por
+separado para reducir tiempo y superficie de cambio durante una corrección.
