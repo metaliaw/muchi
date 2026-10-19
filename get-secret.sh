@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Imprime el Token de Muchi en stdout y lo sincroniza en .env.
+# Imprime el Token de Muchi en stdout y lo sincroniza en bff/.env.
 #
 #   ./get-secret.sh                      -> la Version vigente
 #   ./get-secret.sh --version 3          -> una Version anterior
@@ -28,7 +28,7 @@ cloud() { gcloud "$@" --project="$PROJECT" --quiet; }
 
 usage() {
     printf '%s\n' '🐱 get-secret.sh [--project ID] [--secret NOMBRE] [--version NUMERO]' \
-        'Imprime el Valor del Secreto en stdout y lo Escribe en .env.'
+        'Imprime el Valor del Secreto en stdout y lo Escribe en bff/.env.'
 }
 
 # El Directorio temporal guarda el Token un instante. Se borra pase lo que
@@ -79,7 +79,7 @@ check_arguments() {
 # `sed -i` sobre un Token con barras o ampersands lo corrompe en silencio.
 sync_env_token() {
     local token=$1
-    local env_file="$ROOT/.env"
+    local env_file="$ROOT/bff/.env"
     local tmp
 
     if [[ ! -f "$env_file" ]]; then
@@ -111,7 +111,7 @@ show_token() {
     printf '%s\n' "$token"
     sync_env_token "$token"
 
-    printf '✅ %s:%s Escrito en .env\n' "$SECRET_NAME" "$VERSION" >&2
+    printf '✅ %s:%s Escrito en bff/.env\n' "$SECRET_NAME" "$VERSION" >&2
 }
 
 

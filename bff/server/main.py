@@ -39,7 +39,9 @@ VERIFY_STOCK = os.getenv("MUCHI_VERIFY_STOCK", "0").strip() in {"1", "true", "si
 # anda. MUCHI_CART_READY=1 Retira ese Aviso el Día que la Compra esté: Apagar
 # una Frase no Debería Costar un Deploy de la Interfaz.
 CART_READY = os.getenv("MUCHI_CART_READY", "0").strip() in {"1", "true", "si", "yes"}
-WEB_DIST = ROOT / "web" / "dist"
+# El Front compilado Vive al lado del BFF, en frontend/dist: igual en el
+# Repositorio que en la Imagen.
+WEB_DIST = ROOT.parent / "frontend" / "dist"
 # El Identificador de Google en ads.txt: el mismo para toda Publicación, parte
 # del Formato de la Línea y no un Valor de este Despliegue.
 ADSENSE_AUTHORITY = "f08c47fec0942fa0"

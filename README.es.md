@@ -9,6 +9,18 @@ de Compra en CLP que considere también el costo de los Envíos.
 La API de MUCHI realiza las Búsquedas y conserva sus Resultados. Este Front,
 construido con Vue 3, muestra el Avance, las Ofertas y el Carrito.
 
+## Un Repositorio, tres Componentes
+
+| Directorio | Qué contiene | Dónde corre |
+| --- | --- | --- |
+| [`backend/`](backend/) | La API de MUCHI en Go: Búsquedas, Tiendas, Stock y Pedidos | Cloud Functions |
+| [`bff/`](bff/) | El BFF en Python: el único que guarda el Token de la API | Cloud Run |
+| [`frontend/`](frontend/) | La Interfaz en Vue 3 que el BFF sirve | Cloud Run + Firebase Hosting |
+
+`./run.sh` levanta el BFF y el Front, `./build.sh [api|web|all]` verifica, y
+`./deploy.sh [api|web|all]` publica primero la API y después la Web. El BFF lee
+su configuración de `bff/.env`; copia `bff/.env.example`.
+
 Quienes quieran mirar detrás de la Pantalla pueden recorrer la
 [Arquitectura de MUCHI](docs/architecture.es.md), sus Decisiones públicas y las
 formas de colaborar.

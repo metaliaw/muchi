@@ -17,7 +17,7 @@
       ]
     }
   },
-  "updateContentCommand": "[ -f packages.txt ] && sudo apt update && sudo apt upgrade -y && sudo xargs apt install -y <packages.txt; [ -f requirements.txt ] && pip3 install --user -r requirements.txt; pip3 install --user -r requirements-web.txt; echo '✅ Packages installed and Requirements met'",
+  "updateContentCommand": "[ -f packages.txt ] && sudo apt update && sudo apt upgrade -y && sudo xargs apt install -y <packages.txt; [ -f bff/requirements.txt ] && pip3 install --user -r bff/requirements.txt; pip3 install --user -r bff/requirements-web.txt; echo '✅ Packages installed and Requirements met'",
   "postAttachCommand": {
     "server": "uvicorn server.main:app --reload --port 8000"
   },

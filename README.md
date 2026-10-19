@@ -9,6 +9,18 @@ including Shipping costs.
 The MUCHI API performs Searches and retains their Results. This Vue 3
 Frontend displays Progress, Offers and the Cart.
 
+## One Repository, three Components
+
+| Directory | What it holds | Where it runs |
+| --- | --- | --- |
+| [`backend/`](backend/) | The MUCHI API in Go: Searches, Stores, Stock and Orders | Cloud Functions |
+| [`bff/`](bff/) | The BFF in Python: the only one holding the API Token | Cloud Run |
+| [`frontend/`](frontend/) | The Vue 3 interface the BFF serves | Cloud Run + Firebase Hosting |
+
+`./run.sh` starts the BFF and the Front, `./build.sh [api|web|all]` verifies,
+and `./deploy.sh [api|web|all]` publishes the API first and the Web after it.
+The BFF reads its settings from `bff/.env`; copy `bff/.env.example`.
+
 To look behind the Screen, explore
 [MUCHI's Architecture](docs/architecture.md), its public Decisions and
 ways to contribute.

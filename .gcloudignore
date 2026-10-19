@@ -15,24 +15,28 @@ __pycache__/
 # El Front se compila dentro de la Imagen. Subir node_modules pesa 41 MB y es
 # peor que inutil: el COPY del Dockerfile pisaria los Binarios del Contenedor
 # con los de esta maquina.
-web/node_modules/
-web/dist/
-web/.vite/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
 
 # Los Secretos viajan por Secret Manager, nunca en la Imagen.
 .env
+**/.env
 
 # Herramientas de Desarrollo: no corren en Produccion.
-tests/
+bff/tests/
 tools/
 docs/
-requirements-dev.txt
+bff/requirements-dev.txt
 get-secret.sh
 get-secret.cmd
 
 # Base de Precios local. El Disco de Cloud Run es efimero: lo que se escriba
 # ahi se pierde al apagarse la Instancia.
 data/
+
+# La API Despliega por su cuenta, desde backend/, a Cloud Functions.
+backend/
 
 .DS_Store
 
