@@ -2,13 +2,10 @@
 
 # Muchi BFF Architecture
 
-Muchi has two public repositories with different responsibilities. This
-repository owns the Vue experience, its presentation rules and the FastAPI
-Backend-for-Frontend (BFF). The
-[muchi-api repository](https://github.com/cangrejometralleta/muchi-api)
-owns search collection, queueing, workers, persistence, expiration and
-recovery. Each repository documents its own architecture; this page describes
-the browser-facing boundary.
+Muchi's Vue experience, FastAPI Backend-for-Frontend (BFF), and API
+implementation live in this repository. The API can run as a separate service
+for search collection, queueing, workers, persistence, expiration and recovery.
+This page describes the browser-facing boundary and service flow.
 
 ## The Public Request Path
 
@@ -28,7 +25,7 @@ flowchart LR
         bff --> presenter
     end
 
-    api["muchi-api<br/>searches and results"]
+    api["Muchi API<br/>searches and results"]
     contract["OpenAPI contract"]
     secret["Secret Manager<br/>API bearer token"]
 
@@ -58,10 +55,10 @@ These rules are visible in [`server/main.py`](../server/main.py) and
 compiled client bundle.
 
 The BFF is not the search engine. It delegates search, stock and result
-operations to the Muchi domain, which calls the separate API. Queue dispatch,
-workers, persistence, TTL and queue recovery belong to that API and are
-described in its
-[architecture document](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/architecture.md).
+operations to the Muchi domain, which calls the API service. Queue dispatch,
+workers, persistence, TTL and queue recovery sit behind that service boundary
+in this codebase. The [API integration guide](api/README.md) documents the
+client, service roles and response shapes.
 
 ## A Search Through the BFF
 
@@ -71,7 +68,7 @@ sequenceDiagram
     participant Web as Vue
     participant BFF as FastAPI BFF
     participant Domain as Muchi domain
-    participant API as muchi-api
+    participant API as Muchi API
 
     Person->>Web: Submit a list
     Web->>BFF: POST /api/searches + idempotency key
@@ -106,7 +103,8 @@ presenting searches.
 The browser calls the BFF from the same public origin as the application. The
 BFF validates request shapes and keeps the bearer token in its server runtime.
 The API authenticates protected calls. Worker and scheduler identities are
-outside this repository's boundary and are described by the API architecture.
+outside the BFF process and are described in the
+[API integration guide](api/README.md).
 
 Cloud Run can scale the BFF to zero, trading idle cost for a cold start on the
 first request. Monitor BFF latency, errors, downstream API failures, secret
@@ -117,8 +115,9 @@ belong to the API's operational guide.
 
 The deployment script builds and deploys the BFF before publishing the new
 static Frontend. This order lets a new interface call routes the live BFF
-already understands. The API deploys separately; both repositories must remain
-compatible with the OpenAPI contract owned by muchi-api.
+already understands. The API service may deploy separately; its compatibility
+with the local client is described in the
+[API integration guide](api/README.md).
 
 See [`deploy.sh`](../deploy.sh), [`cloudbuild.yaml`](../cloudbuild.yaml), and
 the [Frontend and its boundary](web-migration.md) for this repository's

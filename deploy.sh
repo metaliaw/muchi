@@ -23,8 +23,8 @@
 #
 # Un .env se exporta entero con `set -a; . ./.env; set +a` antes de llamar.
 #
-# El Token lo comparte muchi-api, que lo guarda en Secret Manager. Rotarlo es
-# Asunto suyo: ./rotate-secret.sh de ese Repositorio alcanza a este Servicio.
+# El Token de API se comparte por Secret Manager. Al Rotarlo, el despliegue
+# debe conservar la misma Versión para este Servicio y para sus Workers.
 #
 set -euo pipefail
 
@@ -119,7 +119,7 @@ check_ads() {
 
 check_secret() {
     gcloud secrets describe "$TOKEN_SECRET" >/dev/null 2>&1 \
-        || die "Falta el Secreto '$TOKEN_SECRET'. Lo Crea el deploy.sh de muchi-api"
+        || die "Falta el Secreto '$TOKEN_SECRET'. Lo Crea el despliegue de la API"
 }
 
 

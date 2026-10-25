@@ -12,11 +12,9 @@ Four unwritten Assumptions fell apart; until then, they had been true.
 
 The fifth Finding was discovered along the way.
 
-Defects across the Boundary — in the Sources doing the searching — live in
-`docs/search-findings.es.md` in the
-[muchi-api Repository](https://github.com/cangrejometralleta/muchi-api).
-Each Repository keeps its own Findings: copying the other Document would
-age like the copied Contract did, which is precisely F5.
+This note records findings at the browser and BFF boundary. The
+[API integration guide](api/README.md) points to the client code and response
+shapes maintained here, so findings can be kept beside the code they affect.
 
 ## Where Each Decision Lives
 
@@ -125,18 +123,15 @@ in visible Text.
 
 ### F5. The Copied Contract Was 130 Lines Behind
 
-`docs/api/openapi.yaml` stated on its first line that it was a Copy synced
-from `muchi-api`. It lacked `/supported-games`, Results pagination, `match`,
+`docs/api/openapi.yaml` stated on its first line that it was a synchronized
+copy of the API contract. It lacked `/supported-games`, Results pagination, `match`,
 `card_key`, `faults` and `SourceFault`, and still required `stores_only`
 after that field had disappeared.
 
 A Copy aging silently misleads its Reader into believing it is the Contract.
-First, the full source was copied. Then `muchi-api` became public and the
-Copy was deleted along with the Bruno copy. Now the Contract is linked
-where it lives, a synchronization that cannot be forgotten.
-
-This Document exists for the same reason in reverse: API Findings are not
-copied here.
+The full source was once copied, then that copy and the Bruno collection were
+removed. The local API client and its consumed shapes are now documented in
+[API Integration](api/README.md).
 
 ## What Remains Open
 

@@ -233,22 +233,24 @@ MUCHI_API_TOKEN=tu-codigo-de-seguridad
 ```
 
 `MUCHI_API_URL` acepta la URL base con o sin `/v1`. El Código de Seguridad es
-obligatorio y se envía como `Authorization: Bearer <MUCHI_API_TOKEN>`, según
-la [Especificación de la API](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml).
+obligatorio y se envía como `Authorization: Bearer <MUCHI_API_TOKEN>`. El
+cliente local y las formas de respuesta se documentan en la
+[guía de integración con la API](docs/api/README.es.md).
 Se configura en el
 Servidor del Front; no debe publicarse en el Repositorio ni en enlaces.
 
 En Linux o macOS:
 
 ```bash
-./start-web.sh   # BFF en :8000, Front en http://127.0.0.1:5173
+./start-web.sh   # BFF en :8000, Front en http://127.0.0.1:5174
 ```
 
-La API local requiere dos Procesos. Desde el
-[Repositorio muchi-api](https://github.com/cangrejometralleta/muchi-api), ejecuta
-`./run.sh serve` y `./run.sh work`: el primero recibe los Pedidos y el segundo
-los procesa. El Token del Front debe coincidir con el configurado en la API.
-Una Búsqueda que permanece en `queued` necesita un Worker disponible.
+La API usa dos Procesos en un entorno local: `serve` recibe los Pedidos y
+`work` los procesa. Ambos son parte de este repositorio. El Token del Front
+debe coincidir con el de la API. Una Búsqueda que permanece en `queued`
+necesita un Worker disponible. La
+[nota sobre la evolución de los repositorios](docs/repository-evolution.es.md)
+cuenta la historia de este código.
 
 Para Producción, selecciona `MUCHI_ENV=production` y configura la URL y el Token
 en el Entorno de Despliegue.
@@ -258,11 +260,10 @@ en el Entorno de Despliegue.
 `./get-secret.sh` baja el Token vigente de Secret Manager y lo escribe en tu
 `.env`. Es para el Desarrollo local: en la Nube, Cloud Run lo monta solo.
 
-Para **rotarlo**, usa `./rotate-secret.sh` del
-[Repositorio muchi-api](https://github.com/cangrejometralleta/muchi-api). Ahí se
-crea el Secreto y ahí se versiona, y esa Rotación alcanza a los tres Servicios
-que lo consumen —el Worker, la API y este Front—. Un segundo Rotador de este
-lado solo se volvería viejo sin que nadie lo notara.
+El despliegue de la API es dueño de la creación y el versionado de este
+Secreto. La Rotación alcanza al Worker, la API y este Front; un segundo
+Rotador aquí podría quedar desactualizado. La integración local se describe
+en la [guía de la API](docs/api/README.es.md).
 
 ## El Front Vue
 
@@ -347,34 +348,13 @@ los Documentos de `docs/` en español. El Índice equivalente está en
 | Documento | Qué aprendes |
 | --- | --- |
 | 🏛️ [Arquitectura del BFF de MUCHI](docs/architecture.es.md) | Frontera del Front, recorrido de peticiones, seguridad, reglas de presentación y despliegue. |
+| 🧭 [Evolución de los Repositorios](docs/repository-evolution.es.md) | De dos repositorios, uno privado, a una sola fuente de trabajo. |
 | 🪟 [Entrypoints del BFF](docs/bff/README.es.md) | Una explicación y razón de ser para cada ruta pública del BFF. |
 | 🪟 [El Front y su Frontera](docs/web-migration.es.md) | Qué dibuja el Front y cómo se despliega junto al BFF. |
 | 🐱 [Cómo Habla MUCHI](docs/how-muchi-speaks.es.md) | El Catálogo de Frases, quién le gana el turno a la Burbuja, los tres Canales de Aviso, la Hoja de Sprites y qué queda con Movimiento reducido. |
 | 🧩 [Laboratorio de Sprites](docs/muchi-sprite-lab.es.html) | Vista interactiva de los Estados, las Hojas y los ejemplos de Animación. Abre el HTML en un Navegador. |
 | 📦 [Producto Sellado](docs/sealed-product.es.md) | Cómo se elige el Catálogo, los Valores por Defecto medidos contra las Tiendas, por qué la Caja no Tiene a quién pedirle su Foto y por qué decir «No hay Ofertas» puede ser Mentira. |
-| 📜 [Contrato de MUCHI API](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml) | Todas las Rutas que MUCHI consume, con sus Formas de Entrada y Salida. Vive en muchi-api. |
-
-### La API vive en su propio Repositorio
-
-MUCHI son dos Repositorios públicos. Éste dibuja la Experiencia y guarda el BFF
-que habla con la API. [muchi-api](https://github.com/cangrejometralleta/muchi-api)
-consulta las Tiendas, ordena las Ofertas y conserva los Resultados.
-
-Cada Cosa se lee en un solo lugar, y por eso acá ya no hay Copias:
-
-- 📜 El [Contrato OpenAPI](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml)
-  vive allá. Una Copia acá envejecía en silencio, y quien la leía creía estar
-  mirando el Contrato.
-- 🧪 Las [Colecciones de Bruno](https://github.com/cangrejometralleta/muchi-api/tree/main/bruno)
-  viven allá. Sirven para pegarle a la API sin pasar por el BFF, que es como se
-  separa un Fallo del Front de uno del Servicio.
-- 🏛️ La [Arquitectura del Backend](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/architecture.es.md)
-  —Cola, Worker, Persistencia y Caducidad— se cuenta allá.
-  [Acá](docs/architecture.es.md) se cuenta la del Front y su Frontera.
-- ⚖️ El [Castigo y Perdón](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/castigo-y-perdon.md)
-  explica cómo la API trata a una Tienda que se cae, que tarda o que pide calma.
-  Importa acá porque de esa Política salen los Avisos que MUCHI muestra: una
-  Fuente que no contestó nunca debe leerse como una Carta que no existe.
+| 📜 [Integración con la API](docs/api/README.es.md) | Cliente, formas de respuesta, configuración de ejecución y frontera de la API. |
 
 ### Decisiones aún abiertas
 
@@ -404,8 +384,7 @@ Cada Cosa se lee en un solo lugar, y por eso acá ya no hay Copias:
   la Raya entre aprovechar una Puerta abierta y usar Visitantes de Flota.
 - 🔍 [Hallazgos en los Buscadores](docs/search-findings.es.md): los Supuestos
   que se cayeron cuando una Búsqueda empezó a traer Cartas distintas y no
-  Variantes de una, qué los cerró y qué queda abierto. Los del otro lado de la
-  Frontera viven en el Repositorio de la API.
+  Variantes de una, qué los cerró y qué queda abierto a ambos lados del BFF.
 - 📣 [La Publicidad, de Punta a Punta](docs/advertising.es.md): los Identificadores,
   el Flujo hasta el primer Anuncio, lo que la Revisión de Google mira y qué
   hacer cuando algo no anda.
@@ -450,13 +429,11 @@ Deberías haber recibido una copia de la GNU Affero General Public License
 junto a este Programa. Si no, mira <https://www.gnu.org/licenses/>.
 ```
 
-[muchi-api](https://github.com/cangrejometralleta/muchi-api) lleva la misma
-Licencia. Son dos Repositorios, una sola Regla.
+Este repositorio usa la GNU Affero General Public License.
 
 ## El Harness y el Manifiesto
 
-Ambos Repositorios —el [Front de MUCHI](https://github.com/metaliaw/muchi/blob/main/README.es.md)
-y [muchi-api](https://github.com/cangrejometralleta/muchi-api)— usan
+Este repositorio usa
 [OneTwoThree](https://github.com/cangrejometralleta/OneTwoThree), mi Harness
 compartido de Desarrollo y Manifiesto, presentado en
 [español](https://github.com/cangrejometralleta/OneTwoThree/blob/main/docs/presentation.es.md).

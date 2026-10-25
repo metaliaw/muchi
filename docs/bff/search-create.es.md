@@ -15,5 +15,5 @@ Si el estado de la API incluye `expires_at`, el BFF lo conserva para que el
 Navegador pueda omitir la lectura de una búsqueda que ya venció.
 
 La ruta está implementada por [`create_search`](../../server/main.py); la Cola
-y los Workers pertenecen a la
-[arquitectura de la API](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/architecture.es.md).
+y los Workers se describen en la
+[guía de arquitectura local](../architecture.es.md).

@@ -4,8 +4,8 @@
 
 El BFF tiene dos tareas: conservar la credencial de la API en el servidor y
 traducir su contrato a las formas públicas que necesita el Front. Cada puerta
-tiene una razón de ser. Los entrypoints y la Cola de la API están en su
-[guía de arquitectura](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/architecture.es.md).
+tiene una razón de ser. La frontera y la Cola de la API se describen en la
+[guía de arquitectura local](../architecture.es.md).
 
 ## Servir la Aplicación
 

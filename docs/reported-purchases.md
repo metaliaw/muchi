@@ -25,7 +25,7 @@ sequenceDiagram
     participant P as Person
     participant W as Cart (Vue)
     participant B as BFF
-    participant A as muchi-api
+    participant A as Muchi API
     participant S as Store
 
     P->>W: Buy at Store X
@@ -78,8 +78,8 @@ stateDiagram-v2
 | API client | [`muchi/api/client.py`](../muchi/api/client.py) | `link_order`, `report_order`, `StoreOrder` |
 
 `sessionStorage` only saves a reload from forgetting that you already left for
-a store. The order itself lives in muchi-api; the token never reaches the
-browser.
+a store. The order itself lives in the API service; the token never reaches
+the browser.
 
 ## What It Does Not Do
 
@@ -88,7 +88,7 @@ browser.
 - **It does not verify.** A mistyped or invented number is stored as given.
 - **It does not release anything.** A `linked` order that nobody reports
   simply stays `linked`.
-- **It does not replace real orders.** Where muchi-api can place the order
+- **It does not replace real orders.** Where the API can place the order
   itself (WooCommerce stores, still in pilot), that path confirms with the
   store's own webhook. This flow is for every other store.
 
@@ -99,5 +99,5 @@ no bot protection to fight and no money moving through Muchi. It also gives
 [When Muchi Buys](when-muchi-buys.md) its first real number: how many people
 reach a store's cart, and how many come back saying they bought.
 
-The API side is described in muchi-api,
-[Checkout Without Agents](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/checkout/agentless-checkout.md).
+The API client and the BFF routes for this flow are listed in
+[API Integration](api/README.md).

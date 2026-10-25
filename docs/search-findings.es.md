@@ -13,11 +13,10 @@ hasta ese Día eran ciertos.
 
 El quinto Hallazgo no Viene de ahí. Salió al Pasar por al lado.
 
-Los Defectos del otro Lado de la Frontera —los de las Fuentes que Buscan— Viven
-en `docs/search-findings.es.md` del
-[Repositorio muchi-api](https://github.com/cangrejometralleta/muchi-api).
-Cada Repositorio Guarda los suyos: una Copia del Documento Ajeno Envejecería igual
-que Envejeció la Copia del Contrato, que es justamente F5.
+Este documento registra hallazgos en la frontera del Navegador y el BFF. La
+[guía de integración con la API](api/README.es.md) señala el cliente y las
+formas de respuesta que se mantienen aquí, para guardar cada hallazgo junto al
+código afectado.
 
 ## Dónde Decide Cada Cosa
 
@@ -128,18 +127,15 @@ el Texto visible.
 
 ### F5. La Copia del Contrato Llevaba 130 Líneas de Atraso
 
-`docs/api/openapi.yaml` Declaraba en su primera Línea que era una Copia y que se
-Sincronizaba desde `muchi-api`. Le Faltaban `/supported-games`, la Paginación de
+`docs/api/openapi.yaml` Declaraba en su primera Línea que era una Copia
+Sincronizada del Contrato de la API. Le Faltaban `/supported-games`, la Paginación de
 Resultados, `match`, `card_key`, `faults` y `SourceFault`, y Seguía Declarando
 `stores_only` como requerida cuando ya no Existía.
 
 Una Copia que Envejece en Silencio es peor que no Tenerla: quien la Lee Cree que
-está Mirando el Contrato. Primero se Copió entera desde la Fuente. Después
-`muchi-api` se Hizo público y la Copia se Borró junto con la de Bruno: ahora se
-Enlaza el Contrato donde Vive, que es la única Sincronización que no se Olvida.
-
-Este Documento Existe por la misma Razón, al revés: los Hallazgos de la API no se
-Copian acá.
+está Mirando el Contrato. Primero se Copió entera desde la Fuente; después se
+Borró junto con la Colección de Bruno. El cliente local y las formas que consume
+se documentan ahora en la [Integración con la API](api/README.es.md).
 
 ## Lo que Queda Abierto
 

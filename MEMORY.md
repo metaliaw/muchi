@@ -2,11 +2,10 @@
 
 ## Paired Repositories
 
-These repositories are commonly worked on locally together. Paths are
-relative to this repository:
+This repository and its shared manifesto are commonly worked on locally
+together. Paths are relative to this repository:
 
-- `.` — `metaliaw/muchi`, browser interface and BFF (this repository).
-- `../../cangrejometralleta/muchi-api` — API contract and Firestore data.
+- `.` — `metaliaw/muchi`, Muchi application, API and BFF (this repository).
 - `../../cangrejometralleta/OneTwoThree` — the manifesto: Rules, Values and
   Patterns that govern how this repository is read and written. A Pattern or
   Rule that belongs to every project is written there, not here.

@@ -10,11 +10,9 @@ side of the Boundary and, especially, what broke during Testing. Almost
 none of those Failures belonged to sealed Products. They already existed,
 hidden by the fact that a single Card has a Catalog to query and a Box does not.
 
-Defects across the Boundary — in the Contract and Sources — live in
-`docs/sealed-product.es.md` in the
-[muchi-api Repository](https://github.com/cangrejometralleta/muchi-api).
-Each Repository keeps its own Findings for the same reason described in
-[Search Findings](search-findings.md): copied Documents age poorly.
+This note records the browser-side changes and failures. The
+[API integration guide](api/README.md) points to the local client and the
+response shapes these features depend on.
 
 ## The Catalog Is Chosen
 
@@ -154,8 +152,8 @@ The response does not satisfy the API contract: missing field “sequence”.
 
 That was the information needed to fix it, and the Message had hidden it.
 
-> `omitempty` was also fixed on the side violating the Contract. That change
-> is described in muchi-api's counterpart Document.
+> The API response was also corrected to preserve these required fields. The
+> client-side contract handling is documented in [API Integration](api/README.md).
 
 ## What Remains Open
 

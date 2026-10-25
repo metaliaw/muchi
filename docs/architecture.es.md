@@ -2,13 +2,11 @@
 
 # Arquitectura del BFF de Muchi
 
-Muchi tiene dos repositorios públicos con responsabilidades distintas. Este
-repositorio posee la experiencia Vue, sus reglas de presentación y el
-Backend-for-Frontend (BFF) en FastAPI. El
-[repositorio muchi-api](https://github.com/cangrejometralleta/muchi-api)
-posee la recepción de búsquedas, la Cola, los Workers, la Persistencia, la
-Caducidad y la recuperación. Cada repositorio documenta su propia arquitectura;
-esta página describe la frontera con el Navegador.
+La experiencia Vue de Muchi, el Backend-for-Frontend (BFF) en FastAPI y la
+implementación de la API viven en este repositorio. La API puede correr como
+un servicio separado para recibir búsquedas, procesar la Cola con Workers,
+persistir resultados, aplicar caducidad y recuperarse de fallos. Esta página
+describe la frontera con el Navegador y el recorrido entre servicios.
 
 ## El Recorrido Público
 
@@ -28,7 +26,7 @@ flowchart LR
         bff --> presenter
     end
 
-    api["muchi-api<br/>búsquedas y resultados"]
+    api["API de Muchi<br/>búsquedas y resultados"]
     contract["Contrato OpenAPI"]
     secret["Secret Manager<br/>token Bearer de API"]
 
@@ -60,9 +58,11 @@ contenido del carrito. Estas reglas se pueden leer en
 paquete compilado del cliente.
 
 El BFF no es el buscador. Delega las operaciones de búsqueda, stock y
-resultados al dominio Muchi, que llama a la API separada. La Cola, los Workers,
-la Persistencia, el TTL y la recuperación pertenecen a esa API y se describen
-en su [documento de arquitectura](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/architecture.es.md).
+resultados al dominio Muchi, que llama al servicio de API. La Cola, los
+Workers, la Persistencia, el TTL y la recuperación quedan detrás de esa
+frontera de servicio en este código. La
+[guía de integración con la API](api/README.es.md) documenta el cliente, los
+roles de servicio y las formas de respuesta.
 
 ## Una Búsqueda a Través del BFF
 
@@ -72,7 +72,7 @@ sequenceDiagram
     participant Web as Vue
     participant BFF as BFF FastAPI
     participant Domain as Dominio Muchi
-    participant API as muchi-api
+    participant API as API de Muchi
 
     Person->>Web: Envía una lista
     Web->>BFF: POST /api/searches + clave de idempotencia
@@ -119,8 +119,9 @@ pertenecen a la operación de la API.
 
 El script compila y despliega el BFF antes de publicar el Front estático nuevo.
 Ese orden permite que la nueva Interfaz llame rutas que el BFF activo ya
-conoce. La API se despliega por separado; ambos repositorios deben mantenerse
-compatibles con el contrato OpenAPI que posee muchi-api.
+conoce. El servicio de API puede desplegarse por separado; la
+[guía de integración con la API](api/README.es.md) describe su compatibilidad
+con el cliente local.
 
 Consulta [`deploy.sh`](../deploy.sh), [`cloudbuild.yaml`](../cloudbuild.yaml)
 y [El Front y su frontera](web-migration.es.md) para los detalles de despliegue

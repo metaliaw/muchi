@@ -4,7 +4,6 @@ import { computed } from 'vue'
 // Las Direcciones las sirve el Servidor: escritas aqui tambien, se despegarian.
 const props = defineProps({
   repositoryUrl: { type: String, default: '' },
-  apiRepositoryUrl: { type: String, default: '' },
 })
 
 // MUCHI comenta su propia Licencia cuando alguien Toca algo del Aviso, y
@@ -17,13 +16,6 @@ function sayLibre() {
 }
 
 const newIssueUrl = computed(() => `${props.repositoryUrl}/issues/new`)
-
-// MUCHI son dos Repositorios y una sola Licencia. Enlazar solo uno Dejaria la
-// mitad del Programa sin Puerta.
-const repositories = computed(() => [
-  { label: 'La interfaz', url: props.repositoryUrl },
-  { label: 'La API', url: props.apiRepositoryUrl },
-].filter((repo) => repo.url))
 
 // Quienes escriben MUCHI. Las Redes de MUCHI viven en el Pie; estas son
 // Personas, y van donde se habla del Código.
@@ -41,15 +33,14 @@ const AUTHORS = [
             aria-label="Cerrar el aviso">×</button>
     <p class="mu-comunidad__eyebrow" @click="sayLibre">MUCHI es código abierto</p>
     <h2 @click="sayLibre">Aprende con MUCHI</h2>
-    <p @click="sayLibre">Está entera a la vista, interfaz y API. Revisa cómo está
-      hecha y ayúdanos a mejorarla.</p>
-    <!-- La Dirección Llega con la Configuración, un Instante después del primer
-         Pintado. El `nav` se Queda igual: si Apareciera recién con ella,
-         Empujaría hacia abajo a MUCHI y a la Carta con la Página ya a la Vista. -->
+    <p @click="sayLibre">MUCHI vive en este
+      <a class="mu-comunidad__repositorio" :href="repositoryUrl"
+         target="_blank" rel="noopener noreferrer">repositorio</a>.
+      Revisa el código y ayúdanos a mejorarlo.</p>
+    <!-- El `nav` mantiene su espacio aunque la Configuración todavía no haya
+         llegado, para no Empujar el contenido tras el primer Pintado. -->
     <nav aria-label="Participar en MUCHI" class="mu-comunidad__enlaces"
          @click="sayLibre">
-      <a v-for="repo in repositories" :key="repo.url" :href="repo.url"
-         target="_blank" rel="noopener noreferrer">{{ repo.label }}</a>
       <a v-if="repositoryUrl" :href="newIssueUrl"
          target="_blank" rel="noopener noreferrer">Comentar</a>
     </nav>
@@ -95,7 +86,7 @@ const AUTHORS = [
 }
 h2 { margin: 0 0 4px; font-size: 1rem; }
 p { margin: 0; }
-/* Los dos Enlaces Caben en una Línea: apilados Gastaban un Renglón cada uno. */
+/* El Espacio queda Reservado aunque la Configuración llegue después. */
 .mu-comunidad__enlaces {
   display: flex;
   gap: 6px 12px;
@@ -107,8 +98,13 @@ p { margin: 0; }
      Ve igual. */
   min-height: 1.5em;
 }
-.mu-comunidad__enlaces a + a::before { content: "· "; color: var(--mu-tinta-sw); }
 .mu-comunidad__enlaces a { font-weight: 700; }
+.mu-comunidad__repositorio {
+  color: var(--mu-acento);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: .15em;
+}
 /* Los dos Nombres se separan solos: una Coma escrita a mano se rompe cuando
    alguien suma o quita a alguien. */
 .mu-comunidad__firma { margin-top: 8px; font-size: .78rem; }

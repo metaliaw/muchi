@@ -45,7 +45,8 @@ const LAST_KEY = 'muchi_ultima'
 // Quién Publica lo Dice el Servidor y nadie más: sin Config todavía no hay
 // Publicidad, que es lo Correcto mientras la Página recién Arranca.
 const config = ref({ poll_seconds: 3, stock_fresh_seconds: 600,
-                     browser_check_limit: 5 })
+                     browser_check_limit: 5,
+                     repository_url: 'https://github.com/metaliaw/muchi' })
 const book = ref(null)
 const games = ref([])
 const game = ref('')

@@ -222,21 +222,22 @@ MUCHI_API_TOKEN=your-security-token
 ```
 
 `MUCHI_API_URL` accepts the base URL with or without `/v1`. The Security
-token is required and sent as `Authorization: Bearer <MUCHI_API_TOKEN>`,
-following the [API Specification](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml).
+token is required and sent as `Authorization: Bearer <MUCHI_API_TOKEN>`.
+The local client and its response shapes are documented in the
+[API integration guide](docs/api/README.md).
 Configure it on the Frontend Server; never publish it in the Repository or Links.
 
 On Linux or macOS:
 
 ```bash
-./start-web.sh   # BFF on :8000, Frontend at http://127.0.0.1:5173
+./start-web.sh   # BFF on :8000, Frontend at http://127.0.0.1:5174
 ```
 
-The local API needs two Processes. From the
-[muchi-api Repository](https://github.com/cangrejometralleta/muchi-api),
-run `./run.sh serve` and `./run.sh work`: the former receives Requests,
-the latter processes them. The Frontend Token must match the API's Token.
-A Search stuck in `queued` needs an available Worker.
+The API uses two Processes in a local environment: `serve` receives Requests
+and `work` processes them. Both are part of this repository. The Frontend
+Token must match the API Token. A Search stuck in `queued` needs an available
+Worker. See the [repository evolution note](docs/repository-evolution.md) for
+the history of this codebase.
 
 For Production, choose `MUCHI_ENV=production` and configure the URL and
 Token in the Deployment environment.
@@ -247,11 +248,10 @@ Token in the Deployment environment.
 writes it to `.env`. It is for local Development; Cloud Run mounts it
 automatically in the Cloud.
 
-Rotate it using `./rotate-secret.sh` from the
-[muchi-api Repository](https://github.com/cangrejometralleta/muchi-api).
-The Secret is created and versioned there, and Rotation reaches all
-three Consumers: Worker, API and this Frontend. A second Rotator here
-would silently become stale.
+The API deployment owns creation and versioning of this Secret. Rotation
+reaches the Worker, API and this Frontend; a second Rotator here could become
+stale. The local integration is described in the
+[API guide](docs/api/README.md).
 
 ## The Vue Frontend
 
@@ -344,31 +344,7 @@ index, see [Diarios de desarrollo](README.es.md#diarios-de-desarrollo).
 | [How Muchi Speaks](docs/how-muchi-speaks.md) | Phrase Catalog, Bubble precedence, three Notice channels, Sprite sheet and reduced Motion. |
 | [Sprite Lab](docs/muchi-sprite-lab.html) | Interactive Sprite previews, States, Sheets and animation examples. Open the HTML in a Browser. |
 | [Sealed Products](docs/sealed-product.md) | Catalog selection, measured Defaults, Box photos and misleading empty Results. |
-| [MUCHI API Contract](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml) | Consumed Routes and their Input/Output shapes. Owned by muchi-api. |
-
-### The API Has Its Own Repository
-
-MUCHI spans two public Repositories. This one renders the Experience and
-holds the BFF. [muchi-api](https://github.com/cangrejometralleta/muchi-api)
-queries Stores, orders Offers and retains Results.
-
-Each subject is documented in its owning location:
-
-- The [OpenAPI Contract](https://github.com/cangrejometralleta/muchi-api/blob/main/openapi.yaml)
-  lives there. A Copy here aged silently while Readers thought it was current.
-- The [Bruno collections](https://github.com/cangrejometralleta/muchi-api/tree/main/bruno)
-  live there. They call the API without the BFF, helping distinguish
-  Frontend failures from Service failures.
-- [Backend Architecture](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/architecture.md)
-  covers Queue, Worker, Persistence and Expiration there. The Frontend
-  and its Boundary are described [here](docs/architecture.md).
-- [Source Pacing](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/source-pacing.md)
-  explains how the API treats Stores that fail, run slowly or request
-  a pause. That Policy informs MUCHI's Notices: a Source that did not
-  answer must never be mistaken for a nonexistent Card.
-
-External Repository documents keep their upstream language; this
-Repository's translations cover the Documents maintained here.
+| [API Integration](docs/api/README.md) | Client code, response shapes, runtime settings and the API boundary. |
 
 ### Decisions Still Open
 
@@ -397,7 +373,7 @@ Repository's translations cover the Documents maintained here.
   between using open access and treating Visitors as a scraping fleet.
 - [Search Findings](docs/search-findings.md): Assumptions broken
   when Searches returned different Cards rather than Printings, their
-  Fixes and remaining Questions. API-side Findings live in its Repository.
+  Fixes and remaining Questions across the API and BFF boundary.
 - [Advertising, End to End](docs/advertising.md): Identifiers, the path
   to the first Ad, Google's Review requirements and troubleshooting.
 - [The Location That Never Leaves the Browser](docs/location-privacy.md): how
@@ -441,13 +417,11 @@ You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 ```
 
-[muchi-api](https://github.com/cangrejometralleta/muchi-api) uses the same
-License. Two Repositories, one Rule.
+This repository uses the GNU Affero General Public License.
 
 ## The Harness and Manifesto
 
-Both Repositories—the [MUCHI Front](https://github.com/metaliaw/muchi/blob/main/README.es.md)
-and [muchi-api](https://github.com/cangrejometralleta/muchi-api)—use
+This repository uses
 [OneTwoThree](https://github.com/cangrejometralleta/OneTwoThree), my shared
 Development Harness and Manifesto, introduced in its
 [English presentation](https://github.com/cangrejometralleta/OneTwoThree/blob/main/docs/presentation.en.md).

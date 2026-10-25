@@ -11,12 +11,9 @@ la Frontera, y sobre todo **qué se Rompió al Probarlo** — porque casi nada d
 que se Rompió era del Sellado. Estaba ahí antes, tapado por el Hecho de que una
 Carta suelta Tiene un Catálogo al que Preguntarle y una Caja no.
 
-Los Defectos del otro Lado —los del Contrato y las Fuentes— Viven en
-`docs/sealed-product.es.md` del
-[Repositorio muchi-api](https://github.com/cangrejometralleta/muchi-api). Cada
-Repositorio Guarda los suyos, por la misma Razón que en los
-[Hallazgos en los Buscadores](search-findings.es.md): una Copia del Documento
-Ajeno Envejece mal.
+Este documento registra los cambios y fallos del lado del Navegador. La
+[guía de integración con la API](api/README.es.md) señala el cliente local y
+las formas de respuesta de las que dependen estas funciones.
 
 ## El Catálogo se Elige, no se Deduce
 
@@ -158,8 +155,9 @@ La Respuesta no cumple el Contrato de la API: falta el Campo «sequence».
 
 Eso era lo único que Servía para Arreglarlo, y el Mensaje se lo Callaba.
 
-> El `omitempty` se Corrigió también del lado que Mentía. Está contado en el
-> Documento gemelo de muchi-api.
+> La respuesta de la API también se corrigió para conservar estos campos
+> obligatorios. El manejo local del contrato está en la
+> [Integración con la API](api/README.es.md).
 
 ## Qué Queda Abierto
 

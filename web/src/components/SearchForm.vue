@@ -46,7 +46,7 @@ const maxCards = computed(() => props.limits.max_cards || 0)
 const maxQuantity = computed(() => props.limits.max_quantity || 99)
 const selectedGame = computed(() =>
   props.games.find((item) => item.reference_key === game.value))
-// Los Idiomas los Declara el Juego en muchi-api: sin Declaración, sin Selector.
+// Los Idiomas los Declara el Juego en la API: sin Declaración, sin Selector.
 const declaredLanguages = computed(() => selectedGame.value?.languages || [])
 const languages = computed(() => describeLanguages(declaredLanguages.value))
 // Un Idioma de otro Juego no Vale en este: sin Declaración vuelve a Sin traducir.

@@ -124,11 +124,9 @@ def read_health() -> dict:
 MAX_CARDS = 100
 MAX_QUANTITY = 99
 
-# Muchi entero es Software Libre, y son dos Repositorios: la Interfaz con su BFF
-# acá, la API en el suyo. El Front los enlaza, así que las dos Direcciones salen
-# del mismo lugar.
+# Muchi entero vive en este Repositorio: la Interfaz, el BFF y la API.
+# El Front abre la Dirección del Proyecto desde esta Configuración.
 REPOSITORY_URL = "https://github.com/metaliaw/muchi"
-API_REPOSITORY_URL = "https://github.com/cangrejometralleta/muchi-api"
 
 
 @app.get("/api/config")
@@ -154,7 +152,6 @@ def read_config() -> dict:
         "adsense_slot": os.getenv("MUCHI_ADSENSE_SLOT", ""),
         "cart_ready": CART_READY,
         "repository_url": REPOSITORY_URL,
-        "api_repository_url": API_REPOSITORY_URL,
         "socials": links.read_socials(),
     }
 
@@ -202,12 +199,12 @@ def read_decklist(request: SearchRequest) -> dict:
 
 @app.get("/api/supported-games")
 def read_supported_games(kind: Literal["", "single", "sealed"] = "") -> dict:
-    """Los Juegos disponibles los nombra muchi-api, no el Front.
+    """Los Juegos disponibles los nombra la API, no el Front.
 
     Cada uno Dice si se Puede pedir en Cartas sueltas, en Sellado o en ambas.
     Nadie lo Declara por Juego: lo Declara cada Tienda y el Juego lo Hereda.
     Los que Declaran Idiomas los Traen, con su Etiqueta y su Ejemplo: quien
-    los Lee es muchi-api, y el Front solo Anuncia lo que ella Dice.
+    los Lee la API, y el Front solo Anuncia lo que ella Dice.
     """
     return {"games": build_muchi().searches.read_supported_games(kind)}
 
@@ -234,7 +231,7 @@ def autocomplete_cards(game: str = Query(min_length=1, max_length=50),
 def read_card(name: str = Query(min_length=1, max_length=200),
               game: str = Query("magic", min_length=1, max_length=50),
               language: str = Query("", max_length=20)) -> dict:
-    """El Nombre Canónico: el Front escribe en su Idioma, muchi-api lo Traduce."""
+    """El Nombre Canónico: el Front escribe en su Idioma, la API lo Traduce."""
     canonical = build_muchi().searches.resolve_card_name(game, name, language)
     if canonical is None:
         # El Fracaso se Nombra sin Voz: la Frase que Muchi Dice al no encontrar

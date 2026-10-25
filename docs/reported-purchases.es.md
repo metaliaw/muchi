@@ -25,7 +25,7 @@ sequenceDiagram
     participant P as Persona
     participant W as Carrito (Vue)
     participant B as BFF
-    participant A as muchi-api
+    participant A as API de Muchi
     participant S as Tienda
 
     P->>W: Comprar en Tienda X
@@ -79,7 +79,8 @@ stateDiagram-v2
 | Cliente de la API | [`muchi/api/client.py`](../muchi/api/client.py) | `link_order`, `report_order`, `StoreOrder` |
 
 `sessionStorage` solo evita que una recarga olvide que ya saliste a una
-tienda. El pedido vive en muchi-api; el token nunca llega al navegador.
+tienda. El pedido vive en el servicio de API; el token nunca llega al
+navegador.
 
 ## Qué No Hace
 
@@ -88,7 +89,7 @@ tienda. El pedido vive en muchi-api; el token nunca llega al navegador.
 - **No verifica.** Un número mal escrito o inventado se guarda tal cual.
 - **No libera nada.** Un pedido `linked` que nadie informa simplemente queda
   `linked`.
-- **No reemplaza los pedidos reales.** Donde muchi-api puede hacer el pedido
+- **No reemplaza los pedidos reales.** Donde la API puede hacer el pedido
   por su cuenta (tiendas WooCommerce, todavía en piloto), ese camino se
   confirma con el webhook de la propia tienda. Este flujo es para todas las
   demás.
@@ -101,5 +102,5 @@ Muchi. También le da a [Cuando Muchi Compre](when-muchi-buys.es.md) su primer
 número real: cuánta gente llega al carrito de una tienda, y cuántos vuelven
 diciendo que compraron.
 
-El lado de la API se describe en muchi-api,
-[Checkout Sin Agentes](https://github.com/cangrejometralleta/muchi-api/blob/main/docs/checkout/agentless-checkout.es.md).
+El cliente de API y las rutas del BFF para este flujo se enumeran en
+[Integración con la API](api/README.es.md).
