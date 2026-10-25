@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Levanta el Front nuevo en Desarrollo: el BFF en 8000 y Vite en 5173.
+# Levanta el Front nuevo en Desarrollo: el BFF en 8000 y Vite en 5174.
 # Vite reenvía /api al BFF, así el Navegador ve un solo Origen, igual que en
 # Producción, donde el mismo Servicio sirve el Front compilado.
 set -euo pipefail
