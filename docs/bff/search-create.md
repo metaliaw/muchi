@@ -11,6 +11,8 @@ The BFF returns an initial visible state and queued rows immediately. Slow
 source queries continue behind the API boundary, so the browser can begin
 polling without holding an HTTP request open. Rejected lines and invalid list
 sizes are returned before any search is created.
+If the API state includes `expires_at`, the BFF preserves it so the browser can
+skip reads for a search that has already expired.
 
 The route is implemented by [`create_search`](../../server/main.py); the API's
 queue and worker behavior belongs to its

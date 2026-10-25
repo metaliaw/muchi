@@ -8,7 +8,7 @@ from urllib.parse import quote
 import requests
 
 from muchi.mtg.models import Order
-from muchi.mtg.ports import QueryFailed, SearchRejected
+from muchi.mtg.ports import QueryFailed, SearchExpired, SearchRejected
 from muchi.mtg.search import (SearchItem, SearchOffer, SearchResults, SearchState,
                               StockCheck, StoreOrder)
 
@@ -19,6 +19,7 @@ def build_search(reply: dict) -> SearchState:
         processed=reply["processed"], found=reply["found"],
         errors=reply["errors"], current_card=reply.get("current_card") or "",
         game=reply.get("game") or "",
+        expires_at=reply.get("expires_at") or "",
     )
 
 
@@ -163,7 +164,8 @@ class SearchProvider:
 
     def request_reply(self, method: str, path: str, *, payload=None,
                       key: str | None = None, params=None,
-                      allow_not_found: bool = False) -> dict | None:
+                      allow_not_found: bool = False,
+                      expired_search: bool = False) -> dict | None:
         headers = {"Authorization": f"Bearer {self.token}", "Accept": "application/json"}
         if key:
             headers["Idempotency-Key"] = key
@@ -176,6 +178,8 @@ class SearchProvider:
             with response:
                 if response.status_code in (401, 403):
                     raise SearchRejected("La API rechazó el Código de Seguridad.")
+                if expired_search and response.status_code in (400, 404, 410):
+                    raise SearchExpired("La Búsqueda ya venció.")
                 if response.status_code == 404 and allow_not_found:
                     return None
                 if response.status_code == 409:
@@ -233,13 +237,15 @@ class SearchProvider:
         return offer
 
     def read_search(self, search_id: str) -> SearchState:
-        reply = self.request_reply("GET", f"/searches/{quote(search_id, safe='')}")
+        reply = self.request_reply("GET", f"/searches/{quote(search_id, safe='')}",
+                                   expired_search=True)
         return self.parse_reply(build_search, reply)
 
     def read_results(self, search_id: str, after: int = 0) -> SearchResults:
         reply = self.request_reply(
             "GET", f"/searches/{quote(search_id, safe='')}/results",
             params={"after": after, "limit": 50},
+            expired_search=True,
         )
         return self.parse_reply(build_results, reply)
 

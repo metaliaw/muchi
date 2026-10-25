@@ -11,6 +11,8 @@ El BFF devuelve de inmediato el estado visible inicial y las filas en cola. Las
 consultas lentas a tiendas siguen detrás de la frontera de la API, así que el
 Navegador puede empezar a sondear sin dejar una petición HTTP abierta. Las
 líneas rechazadas y listas inválidas se informan antes de crear la búsqueda.
+Si el estado de la API incluye `expires_at`, el BFF lo conserva para que el
+Navegador pueda omitir la lectura de una búsqueda que ya venció.
 
 La ruta está implementada por [`create_search`](../../server/main.py); la Cola
 y los Workers pertenecen a la

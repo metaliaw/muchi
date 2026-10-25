@@ -8,7 +8,7 @@ import requests
 from muchi.api.client import SearchProvider
 from muchi.api.settings import load_api_settings
 from muchi.mtg.models import Order
-from muchi.mtg.ports import QueryFailed
+from muchi.mtg.ports import QueryFailed, SearchExpired
 
 
 def search_reply(status="running"):
@@ -87,6 +87,19 @@ def test_an_unknown_card_is_an_answer_not_a_failure():
     assert make_provider({}, 404).resolve_card_name("magic", "zzzz") is None
     with pytest.raises(QueryFailed):
         make_provider({}, 503).resolve_card_name("magic", "Anillo Solar")
+
+
+@pytest.mark.parametrize("status", [400, 404, 410])
+def test_a_missing_search_is_reported_as_expired(status):
+    with pytest.raises(SearchExpired, match="ya venció"):
+        make_provider({}, status).read_search("search-1")
+
+
+def test_reads_the_expiration_from_the_search_contract():
+    expires_at = "2026-10-25T12:00:00Z"
+    state = make_provider({**search_reply(), "expires_at": expires_at}).read_search("search-1")
+
+    assert state.expires_at == expires_at
 
 
 def test_offer_keeps_embedded_card_metadata():

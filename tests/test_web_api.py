@@ -1,11 +1,12 @@
 """El BFF traduce el Dominio a JSON y nunca deja escapar el Token."""
 import importlib
+import json
 from decimal import Decimal
 
 import pytest
 from fastapi.testclient import TestClient
 
-from muchi.mtg.ports import QueryFailed, SearchRejected
+from muchi.mtg.ports import QueryFailed, SearchExpired, SearchRejected
 from muchi.mtg.search import (SearchItem, SearchOffer, SearchResults, SearchState,
                               StockCheck, StoreOrder)
 from server import links, main, presenter
@@ -195,6 +196,14 @@ def test_create_search_parses_the_decklist(client):
     ]
 
 
+def test_search_state_preserves_the_server_expiration():
+    expires_at = "2026-10-25T12:00:00Z"
+    state = SearchState("abc", "running", 1, 0, 0, 0,
+                        "", "magic", expires_at)
+
+    assert presenter.build_state(state)["expires_at"] == expires_at
+
+
 def test_create_search_rejects_lines_it_cannot_read(client):
     http, _ = client
     reply = http.post("/api/searches", json={
@@ -285,6 +294,16 @@ def test_rejected_search_stops_the_polling(client, monkeypatch):
     assert reply.status_code == 409 and reply.json()["retriable"] is False
 
 
+def test_expired_search_returns_a_specific_gone_response():
+    reply = main.handle_expired_search(None, SearchExpired("La Búsqueda ya venció."))
+
+    assert reply.status_code == 410
+    assert json.loads(reply.body) == {
+        "code": "search_expired", "detail": "La Búsqueda ya venció.",
+        "retriable": False,
+    }
+
+
 def test_failed_query_can_be_retried(client, monkeypatch):
     http, searches = client
     def fail(search_id):
@@ -298,6 +317,12 @@ def test_config_never_publishes_the_token(client):
     http, _ = client
     body = http.get("/api/config").text
     assert "token" not in body.lower()
+
+
+def test_muchi_exposes_the_expired_search_phrase():
+    assert main.read_muchi()["expired"] == [
+        {"text": "wow tu antigua búsqueda se venció", "state": "alert"},
+    ]
 
 
 def test_config_publishes_support_links(client, monkeypatch):

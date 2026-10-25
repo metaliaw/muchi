@@ -30,9 +30,10 @@ async function request(path, options = {}) {
       (typeof detail === 'string' ? detail : detail?.detail || validation) ||
         `La consulta falló: HTTP ${response.status}.`
     )
-    // Un 502 se reintenta; un 409 detiene el Ciclo, la Búsqueda ya no existe.
+    // Un 410 nombra Resultados vencidos; un 502 sí se reintenta.
     error.retriable = body?.retriable ?? response.status >= 500
     error.payload = body
+    error.code = body?.code || ''
     error.status = response.status
     throw error
   }

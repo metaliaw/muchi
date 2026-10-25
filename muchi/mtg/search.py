@@ -112,6 +112,7 @@ class SearchState:
     errors: int
     current_card: str = ""
     game: str = ""
+    expires_at: str = ""
 
     @property
     def done(self) -> bool:

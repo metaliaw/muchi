@@ -39,6 +39,7 @@ class PhraseBook:
     nerd: tuple[Phrase, ...] = ()
     libre: tuple[Phrase, ...] = ()
     bargain: tuple[Phrase, ...] = ()
+    expired: tuple[Phrase, ...] = ()
     fault: dict[str, tuple[Phrase, ...]] = field(default_factory=dict)
 
 
@@ -61,16 +62,16 @@ def build_line_phrases(rows) -> tuple[Phrase, ...]:
 def build_phrase_book(doc: dict) -> PhraseBook:
     """Valida el Catálogo completo; no introduce Defaults alternativos."""
     expected = {"every", "phrases", "greetings", "help", "dark", "light",
-                "nerd", "libre", "bargain", "fault"}
+                "nerd", "libre", "bargain", "expired", "fault"}
     if not isinstance(doc, dict) or set(doc) != expected:
         raise ValueError(
             "El Catálogo requiere every, phrases, greetings, help, dark, "
-            "light, nerd, libre, bargain y fault.")
+            "light, nerd, libre, bargain, expired y fault.")
     if type(doc["every"]) is not int or doc["every"] <= 0:
         raise ValueError("every debe ser un entero positivo.")
     # fault no Entra acá: es un Mapa de Familias, no una Lista.
     for key in ("phrases", "greetings", "help", "dark", "light", "nerd",
-                "libre", "bargain"):
+                "libre", "bargain", "expired"):
         if not isinstance(doc[key], list) or not doc[key]:
             raise ValueError(f"{key} debe ser una Lista no vacía.")
 
@@ -85,10 +86,11 @@ def build_phrase_book(doc: dict) -> PhraseBook:
     nerd = build_line_phrases(doc["nerd"])
     libre = build_line_phrases(doc["libre"])
     bargain = build_line_phrases(doc["bargain"])
+    expired = build_line_phrases(doc["expired"])
     fault = build_fault_families(doc["fault"])
 
     return PhraseBook(doc["every"], phrases, greetings, help_topics, dark,
-                      light, nerd, libre, bargain, fault)
+                      light, nerd, libre, bargain, expired, fault)
 
 
 def build_fault_families(doc) -> dict[str, tuple[Phrase, ...]]:

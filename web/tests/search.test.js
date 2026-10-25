@@ -1,7 +1,8 @@
 /** Las Páginas que el BFF manda de a una, acumuladas de este Lado. */
 import { describe, expect, it } from 'vitest'
 import {
-  BY_EDITION, BY_PRICE, groupByCardType, hasStoreCatalog, limitOf, pickable, replacePositions,
+  BY_EDITION, BY_PRICE, groupByCardType, hasStoreCatalog, isSearchExpired, limitOf,
+  pickable, replacePositions,
   spreadUnits, summarizeOffers, topOf, UNCOUNTED_UNITS, describeLanguages } from '../src/search.js'
 
 const offer = (position, card, price, store, amount = price) =>
@@ -14,6 +15,16 @@ describe('las Páginas acumuladas', () => {
     const mixed = replacePositions(current, [offer(2, 'sol ring', 1500, 'otra')])
 
     expect(mixed.map((row) => row.price_clp)).toEqual([1000, 1500])
+  })
+})
+
+describe('el Vencimiento de una Búsqueda guardada', () => {
+  it('Evita consultar la que ya venció según la Fecha del Servidor', () => {
+    const saved = { expires_at: '2026-10-25T12:00:00Z' }
+
+    expect(isSearchExpired(saved, Date.parse('2026-10-25T12:00:00Z'))).toBe(true)
+    expect(isSearchExpired(saved, Date.parse('2026-10-25T11:59:59Z'))).toBe(false)
+    expect(isSearchExpired({}, Date.parse('2026-10-25T12:00:00Z'))).toBe(false)
   })
 })
 

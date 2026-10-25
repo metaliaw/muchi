@@ -332,6 +332,7 @@ def build_state(state: SearchState) -> dict:
         "processed": state.processed, "found": state.found,
         "errors": state.errors, "current_card": state.current_card,
         "done": state.done, "game": state.game,
+        "expires_at": state.expires_at or None,
     }
 
 

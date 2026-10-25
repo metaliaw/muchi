@@ -16,6 +16,7 @@ def test_custom_catalog_controls_messages(tmp_path):
         "nerd": [{"text": "HAAAA NERDD!", "state": "happy"}],
         "libre": [{"text": "muchi es abierto", "state": "happy"}],
         "bargain": [{"text": "QUE OFERTON", "state": "happy"}],
+        "expired": [{"text": "wow tu antigua búsqueda se venció", "state": "alert"}],
         "fault": {"client": [{"text": "qué hice mal", "state": "angry"}],
                   "server": [{"text": "me miró feo: {detalle}", "state": "angry"}]},
     }
@@ -27,12 +28,14 @@ def test_custom_catalog_controls_messages(tmp_path):
     assert book.help_topics == (("Ayuda", "Consulta una Carta"),)
     assert book.dark == (phrases.Phrase("me pongo darkzz", "happy"),)
     assert book.light == (phrases.Phrase("prendieron las luces", "alert"),)
+    assert book.expired == (phrases.Phrase("wow tu antigua búsqueda se venció", "alert"),)
 
 
 @pytest.mark.parametrize("field,value", [
     ("every", None), ("every", True), ("every", 0),
     ("greetings", []), ("help", []), ("dark", []), ("light", []),
     ("nerd", []), ("libre", []), ("bargain", []),
+    ("expired", []),
     ("fault", []), ("fault", {"client": []}),
     ("fault", {"client": [{"text": "hm", "state": "angry"}]}),
     ("phrases", [{"state": "anxiety", "phrases": ["Texto"]}]),
@@ -90,6 +93,11 @@ def test_the_bargain_group_reaches_the_front():
     """Pasar por la Oferta más barata necesita al menos una Frase que decir."""
     book = phrases.read_phrases()
     assert book.bargain and all(p.text.strip() for p in book.bargain)
+
+
+def test_the_expired_group_reaches_the_front():
+    book = phrases.read_phrases()
+    assert book.expired == (phrases.Phrase("wow tu antigua búsqueda se venció", "alert"),)
 
 
 def test_the_nerd_group_reaches_the_front():

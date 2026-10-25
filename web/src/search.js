@@ -122,6 +122,12 @@ export const foldName = (value) => (value || '')
   .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
   .toLowerCase().split(/\s+/).filter(Boolean).join(' ')
 
+/** La Fecha del Servidor evita consultar un Resultado ya vencido. */
+export function isSearchExpired(saved, now = Date.now()) {
+  const expiration = Date.parse(saved?.expires_at || '')
+  return Number.isFinite(expiration) && expiration <= now
+}
+
 /** Una Línea Partida en lo que no es Nombre y el Nombre. */
 export function splitOrder(line) {
   const found = ORDER_QUANTITY.exec(line)

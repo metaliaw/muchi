@@ -23,7 +23,7 @@ load_dotenv()
 from muchi.api.settings import load_api_settings
 from muchi.mtg import cast as muchi_cast
 from muchi.mtg import decklist, phrases
-from muchi.mtg.ports import QueryFailed, SearchRejected
+from muchi.mtg.ports import QueryFailed, SearchExpired, SearchRejected
 from muchi.mtg.search import StockCheck
 from muchi.mtg.settings import load_offer_settings, load_rate_settings
 from muchi.paths import ROOT
@@ -97,6 +97,12 @@ def build_muchi():
 @app.exception_handler(SearchRejected)
 def handle_rejected(request, error: SearchRejected):
     return JSONResponse({"detail": str(error), "retriable": False}, status_code=409)
+
+
+@app.exception_handler(SearchExpired)
+def handle_expired_search(request, error: SearchExpired):
+    return JSONResponse({"code": "search_expired", "detail": str(error),
+                         "retriable": False}, status_code=410)
 
 
 @app.exception_handler(QueryFailed)
@@ -177,6 +183,7 @@ def read_muchi() -> dict:
         "nerd": rows(book.nerd),
         "libre": rows(book.libre),
         "bargain": rows(book.bargain),
+        "expired": rows(book.expired),
         "fault": {family: rows(said) for family, said in book.fault.items()},
         "help": [{"title": title, "detail": detail} for title, detail in book.help_topics],
     }

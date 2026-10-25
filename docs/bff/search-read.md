@@ -12,5 +12,11 @@ the presenter how to group related card names; it does not alter persisted API
 results. The browser can stop polling on terminal states and retain its last
 valid response when a later read fails.
 
+If the API has expired the search, the BFF responds with `410 Gone` and the
+`search_expired` code. Vue clears the identifier and Muchi explains the
+expiration without showing a technical rejection or retrying. State may
+include `expires_at`; when the API provides it, the browser discards an
+expired search before requesting its results.
+
 The route is implemented by [`read_search`](../../server/main.py) and
 [`presenter.py`](../../server/presenter.py).

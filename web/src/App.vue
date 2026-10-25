@@ -3,7 +3,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import * as api from './api.js'
 import { createNameTranslator, translateNames } from './names.js'
-import { declaredStock, topOf, useSearch } from './search.js'
+import { declaredStock, isSearchExpired, topOf, useSearch } from './search.js'
 import {
   confirmOffers, countReachable, readFreshChecks, rememberChecks, sayAge,
 } from './stock.js'
@@ -267,17 +267,40 @@ function removeCartOffer(offerId) {
   staleOfferIds.value = staleOfferIds.value.filter((id) => id !== offerId)
 }
 
+function forgetSearch() {
+  localStorage.removeItem(LAST_KEY)
+  startSearch('')
+  const url = new URL(location.href)
+  url.searchParams.delete('search')
+  window.history.replaceState({}, '', url)
+}
+
+function expireSearch() {
+  forgetSearch()
+  error.value = ''
+  sayFrom('expired')
+  dockOpen.value = true
+}
+
+function readSavedSearch() {
+  try {
+    return JSON.parse(localStorage.getItem(LAST_KEY) || 'null')
+  } catch {
+    return null
+  }
+}
+
 function remember(id, label) {
   const rest = history.value.filter((entry) => entry.id !== id)
   history.value = [{ id, label: label || id }, ...rest].slice(0, 20)
   localStorage.setItem('muchi_historial', JSON.stringify(history.value))
 }
 
-function selectSearch(id, initialState = null, initialItems = []) {
+function selectSearch(id, initialState = null, initialItems = [], expiresAt = '') {
   staleOfferIds.value = []
   startSearch(id, initialState, initialItems)
   localStorage.setItem(LAST_KEY, JSON.stringify(
-    { id, match: match.value, kind: kind.value }))
+    { id, match: match.value, kind: kind.value, expires_at: expiresAt }))
   const url = new URL(location.href)
   url.searchParams.set('search', id)
   url.searchParams.set('match', match.value)
@@ -380,7 +403,8 @@ async function send() {
     )
     remember(reply.state.id, reply.label)
     pending.value = null
-    selectSearch(reply.state.id, reply.state, reply.items || [])
+    selectSearch(reply.state.id, reply.state, reply.items || [],
+                 reply.state.expires_at || reply.expires_at || '')
     say('¡Miau! Ya salí a buscar', 'happy')
   } catch (failure) {
     error.value = failure.message
@@ -412,12 +436,22 @@ async function refresh() {
     const reply = await api.readSearch(searchId.value, cursor.value, match.value)
     playGame(applyState(reply.state))
     playGame(applyResults(reply))
+    const saved = readSavedSearch()
+    if (saved?.id === reply.state.id && reply.state.expires_at) {
+      saved.expires_at = reply.state.expires_at
+      localStorage.setItem(LAST_KEY, JSON.stringify(saved))
+    }
     checked.value = new Date().toISOString().slice(11, 19) + ' UTC'
     remember(reply.state.id)
     if (reply.state.done && !reply.has_more) {
       stopPolling()
     }
   } catch (failure) {
+    if (failure.code === 'search_expired' || failure.status === 410 ||
+        [400, 404].includes(failure.status)) {
+      expireSearch()
+      return
+    }
     if (failure.retriable) {
       // Los Resultados recibidos se conservan y se reintenta la Consulta.
       error.value = failure.message
@@ -468,17 +502,21 @@ function rememberedGame() {
 }
 
 // Una Búsqueda Guardada Caduca en el Servidor antes que en el Navegador. Si ya
-// no Está, se Olvida callado: nadie Abrió un Enlace roto, solo Volvió a Casa.
+// no Está, se Limpia y MUCHI lo Avisa antes de empezar otra.
 async function resumeLast() {
-  const saved = JSON.parse(localStorage.getItem(LAST_KEY) || 'null')
+  const saved = readSavedSearch()
   if (!saved?.id) return
+  if (isSearchExpired(saved)) {
+    expireSearch()
+    return
+  }
   match.value = saved.match === 'includes' ? 'includes' : 'exact'
   kind.value = saved.kind === 'sealed' ? 'sealed' : 'single'
   startSearch(saved.id)
   await refresh()
+  if (!searchId.value) return
   if (unavailable.value) {
-    localStorage.removeItem(LAST_KEY)
-    startSearch('')
+    forgetSearch()
     unavailable.value = ''
     return
   }
@@ -495,22 +533,30 @@ watch(busy, (value) => (value ? startPolling() : stopPolling()))
 onMounted(async () => {
   applyTheme()
   try {
-    const supported = await api.readSupportedGames()
+    const [supported, initialConfig, initialBook] = await Promise.all([
+      api.readSupportedGames(), api.readConfig(), api.readMuchi(),
+    ])
     games.value = supported.games || []
     game.value = rememberedGame() || games.value[0]?.reference_key || ''
     // La URL Manda sobre lo Recordado: quien Abre un Enlace de Cajas Ve Cajas.
     if (!new URLSearchParams(location.search).has('kind')) {
       kind.value = localStorage.getItem(KIND_KEY) === 'sealed' ? 'sealed' : 'single'
     }
-    ;[config.value, book.value] = await Promise.all([api.readConfig(), api.readMuchi()])
+    config.value = initialConfig
+    book.value = initialBook
   } catch (failure) {
     error.value = failure.message
     sayFault(failure)
   }
   // La URL Manda: con Búsqueda escrita, esa se Mira. Sin ella, Vuelve la última.
   if (searchId.value) {
-    await refresh()
-    await restoreStock()
+    const saved = readSavedSearch()
+    if (saved?.id === searchId.value && isSearchExpired(saved)) {
+      expireSearch()
+    } else {
+      await refresh()
+      if (searchId.value) await restoreStock()
+    }
   } else {
     await resumeLast()
   }
@@ -538,7 +584,6 @@ onUnmounted(stopPolling)
          la Esquina mientras la Carta se Pega arriba de la Lista. -->
     <div v-if="libreOpen" class="mu-abierto">
       <CommunityPanel :repository-url="config.repository_url"
-                      :api-repository-url="config.api_repository_url"
                       @libre="sayLibre" @close="closeLibre" />
     </div>
 

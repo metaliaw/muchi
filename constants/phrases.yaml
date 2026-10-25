@@ -92,3 +92,6 @@ bargain:
     state: happy
   - text: QUE OFERTON
     state: happy
+expired:
+  - text: wow tu antigua búsqueda se venció
+    state: alert

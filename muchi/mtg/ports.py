@@ -19,3 +19,6 @@ class QueryFailed(RuntimeError):
 class SearchRejected(QueryFailed):
     """El Servicio rechazó el Pedido; corregirlo permite un nuevo Envío."""
 
+
+class SearchExpired(QueryFailed):
+    """El Servicio ya venció los Resultados de esta Búsqueda."""
