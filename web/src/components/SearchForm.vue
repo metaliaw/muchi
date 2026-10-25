@@ -24,6 +24,10 @@ const SEALED_EXAMPLES = {
   yugioh: ['Blue-Eyes White Destiny Structure Deck', '2 Quarter Century Stampede Booster Box'],
   'one-piece': ['ST-01 Straw Hat Crew Starter Deck', '2 OP-01 Romance Dawn Booster Box'],
   digimon: ['ST-1 Gaia Red Starter Deck', '2 BT-01 New Evolution Booster Box'],
+  gundam: [
+    'Gundam TCG: Freedom Ascension Booster Pack (GD05)',
+    '2 Gundam TCG: Freedom Ascension Deck Build Box (SC01)',
+  ],
   riftbound: ['Origins Booster Box', '2 Proving Grounds Box Set'],
   // Casa MyL Titula sus Cajas así: el Display y el Mazo, no la "Booster Box"
   // que Nombra el resto de los Juegos.

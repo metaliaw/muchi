@@ -72,6 +72,8 @@ class FakeSearches:
     def read_supported_games(self, kind=""):
         self.asked_kind = kind
         games = [
+            {"name": "Gundam Card Game", "reference_key": "gundam",
+             "singles": False, "sealed": True},
             {"name": "Magic: The Gathering", "reference_key": "magic",
              "singles": True, "sealed": True,
              "languages": [
@@ -216,6 +218,8 @@ def test_supported_games_come_from_the_api(client):
     """Cada Juego Trae sus dos Marcas: qué se le Puede pedir."""
     http, _ = client
     assert http.get("/api/supported-games").json() == {"games": [
+        {"name": "Gundam Card Game", "reference_key": "gundam",
+         "singles": False, "sealed": True},
         {"name": "Magic: The Gathering", "reference_key": "magic",
          "singles": True, "sealed": True,
          "languages": [
@@ -242,7 +246,7 @@ def test_supported_games_answer_by_kind(client):
 
     games = http.get("/api/supported-games", params={"kind": "sealed"}).json()["games"]
 
-    assert [game["reference_key"] for game in games] == ["magic"]
+    assert [game["reference_key"] for game in games] == ["gundam", "magic"]
 
 
 def test_card_metadata_uses_the_selected_game(client):
