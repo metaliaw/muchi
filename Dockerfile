@@ -3,26 +3,27 @@
 # reproducible: la misma Imagen se construye igual en cualquier Máquina.
 FROM node:22-alpine AS web
 WORKDIR /web
-COPY web/package.json web/package-lock.json* ./
+COPY frontend/package.json frontend/package-lock.json* ./
 RUN npm ci || npm install
-COPY web/ ./
+COPY frontend/ ./
 RUN npm run build
 
 FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
 
-COPY requirements-web.txt ./
+COPY bff/requirements-web.txt ./
 # El Front no arrastra el Scraping antiguo: solo el Dominio, el Cliente HTTP
 # de la API y el BFF.
 RUN pip install --no-cache-dir -r requirements-web.txt \
     "requests>=2.32" "pyyaml>=6.0" "python-dotenv>=1.0"
 
-COPY muchi/ ./muchi/
-COPY server/ ./server/
-COPY config/ ./config/
-COPY constants/ ./constants/
-COPY --from=web /web/dist ./web/dist
+COPY bff/muchi/ ./bff/muchi/
+COPY bff/server/ ./bff/server/
+COPY bff/config/ ./bff/config/
+COPY bff/constants/ ./bff/constants/
+COPY --from=web /web/dist ./frontend/dist
+WORKDIR /app/bff
 
 ENV MUCHI_ENV=production PORT=8080
 EXPOSE 8080

@@ -111,7 +111,7 @@ Navegador Confirmó no se le Pregunta a nadie más, y una que el Plan no Nombra 
 Descarta —el Navegador Informa sobre esta Búsqueda, no sobre el Catálogo
 entero—, pero Vale aunque esté fuera del Tope de `stock_check_limit`: ese Tope
 Acota las Visitas que Hacemos nosotros, no quién Compite por la Corona.
-Quién Lleva la Marca de más barata se sigue Decidiendo en `server/presenter.py`,
+Quién Lleva la Marca de más barata se sigue Decidiendo en `bff/server/presenter.py`,
 con las mismas Reglas de [El Pedido de Stock](api/stock-order.es.md). Esa Decisión
 no Cruzó la Frontera, y no Debe: el Front no Recomienda.
 
@@ -122,7 +122,7 @@ no Cruzó la Frontera, y no Debe: el Front no Recomienda.
 Lo Confirmado Sobrevive a la Recarga, pero no como un Sí a secas: se Guarda con
 la Hora en que la Tienda lo Dijo, y Vuelve solo mientras esa Hora Aguante
 —`stock_fresh_seconds`, hoy **600** en
-[`config/offers.defaults.yaml`](../config/offers.defaults.yaml)—. Pasado el
+[`bff/config/offers.defaults.yaml`](../bff/config/offers.defaults.yaml)—. Pasado el
 Tope no Vuelve nada y el Botón Reaparece.
 
 Diez Minutos es lo que Dura armar un Carrito y Volver, y Cabe entero en una

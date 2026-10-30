@@ -71,11 +71,11 @@ stateDiagram-v2
 
 | Piece | Place | Holds |
 | --- | --- | --- |
-| Buttons, number form | [`CartPanel.vue`](../web/src/components/CartPanel.vue) | per-store state, one click opens the tab |
-| Lines, cleaning, memory | [`purchase.js`](../web/src/purchase.js) | which lines go, the number trimmed to 64 characters, `sessionStorage` per search |
-| Calls | [`api.js`](../web/src/api.js) | `linkStoreOrder`, `reportStoreOrder` |
-| BFF routes | [`server/main.py`](../server/main.py) | `/api/searches/{id}/orders/links`, `/api/searches/{id}/orders/{order_id}/report` |
-| API client | [`muchi/api/client.py`](../muchi/api/client.py) | `link_order`, `report_order`, `StoreOrder` |
+| Buttons, number form | [`CartPanel.vue`](../frontend/src/components/CartPanel.vue) | per-store state, one click opens the tab |
+| Lines, cleaning, memory | [`purchase.js`](../frontend/src/purchase.js) | which lines go, the number trimmed to 64 characters, `sessionStorage` per search |
+| Calls | [`api.js`](../frontend/src/api.js) | `linkStoreOrder`, `reportStoreOrder` |
+| BFF routes | [`bff/server/main.py`](../bff/server/main.py) | `/api/searches/{id}/orders/links`, `/api/searches/{id}/orders/{order_id}/report` |
+| API client | [`bff/muchi/api/client.py`](../bff/muchi/api/client.py) | `link_order`, `report_order`, `StoreOrder` |
 
 `sessionStorage` only saves a reload from forgetting that you already left for
 a store. The order itself lives in the API service; the token never reaches

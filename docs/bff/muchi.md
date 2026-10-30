@@ -11,4 +11,4 @@ The response groups phrases by their use and preserves each phrase's state.
 It does not choose when to speak; the interface chooses among the available
 lines.
 
-The route is implemented by [`read_muchi`](../../server/main.py).
+The route is implemented by [`read_muchi`](../../bff/server/main.py).

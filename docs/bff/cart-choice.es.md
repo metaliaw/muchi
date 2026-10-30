@@ -4,4 +4,4 @@
 
 `POST /api/searches/{id}/cart` recibe cantidades elegidas por quien compra y devuelve totales con la misma conversión y el mismo cálculo de envío que el carrito sugerido. Informa el plan de la Persona sin optimizar por encima de su decisión.
 
-La ruta está implementada por [`read_chosen_cart`](../../server/main.py) y [`build_cart`](../../server/presenter.py).
+La ruta está implementada por [`read_chosen_cart`](../../bff/server/main.py) y [`build_cart`](../../bff/server/presenter.py).

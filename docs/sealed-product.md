@@ -100,10 +100,10 @@ in Pokémon. Yet it never reached the Browser, getting lost four times:
 
 | Layer | What Happened |
 | --- | --- |
-| `muchi/api/client.py` | `build_offer` read twenty JSON fields, excluding `image` |
-| `muchi/mtg/search.py` | `SearchOffer` had nowhere to store it |
-| `server/presenter.py` | The Row sent to the Browser did not carry it either |
-| `web/src/components/OfferList.vue` | The Frontend looked in `offer.metadata.image`, where the API never puts it |
+| `bff/muchi/api/client.py` | `build_offer` read twenty JSON fields, excluding `image` |
+| `bff/muchi/mtg/search.py` | `SearchOffer` had nowhere to store it |
+| `bff/server/presenter.py` | The Row sent to the Browser did not carry it either |
+| `frontend/src/components/OfferList.vue` | The Frontend looked in `offer.metadata.image`, where the API never puts it |
 
 None had been noticed because single Cards did not need that Field:
 `CardArt` fetched their Images independently from the Catalog. The Gap

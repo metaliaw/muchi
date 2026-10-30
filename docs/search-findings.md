@@ -18,7 +18,7 @@ shapes maintained here, so findings can be kept beside the code they affect.
 
 ## Where Each Decision Lives
 
-`server/presenter.py` decides, and `web/src/search.js` is its Twin across
+`bff/server/presenter.py` decides, and `frontend/src/search.js` is its Twin across
 the Boundary. The BFF sends one Page per Cycle and the Frontend accumulates
 them, so the same Decision is written twice. Four of these five Findings
 touched both Twins.
@@ -27,10 +27,10 @@ touched both Twins.
 API response            card_key · faults · offers
         │
         ▼
-server/presenter.py      groups by Card type, crowns, builds the Cart
+bff/server/presenter.py  groups by Card type, crowns, builds the Cart
         │  one Page per Cycle
         ▼
-web/src/search.js        accumulates Pages and rebuilds the Summary
+frontend/src/search.js   accumulates Pages and rebuilds the Summary
         │
         ▼
 components/OfferList     renders, does not decide
@@ -135,8 +135,8 @@ removed. The local API client and its consumed shapes are now documented in
 
 ## What Remains Open
 
-1. The Frontend has no JS test runner. `web/src/search.js` is the Twin of
-   `server/presenter.py`, but only Python is tested. Nothing prevents the
+1. The Frontend has no JS test runner. `frontend/src/search.js` is the Twin of
+   `bff/server/presenter.py`, but only Python is tested. Nothing prevents the
    Twins from drifting; three Copies of the Matching rule drifted that
    way in the API without a Test noticing.
 2. `deploy.sh` runs neither `pytest` nor the Frontend build. Both must be

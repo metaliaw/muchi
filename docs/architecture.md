@@ -50,8 +50,8 @@ as the website.
 The BFF keeps API authentication out of the browser and gives Vue response
 shapes that already match the interface. It also owns public limits and
 presentation decisions such as offer ordering, stock labels and cart output.
-These rules are visible in [`server/main.py`](../server/main.py) and
-[`server/presenter.py`](../server/presenter.py), rather than hidden in a
+These rules are visible in [`bff/server/main.py`](../bff/server/main.py) and
+[`bff/server/presenter.py`](../bff/server/presenter.py), rather than hidden in a
 compiled client bundle.
 
 The BFF is not the search engine. It delegates search, stock and result

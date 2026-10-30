@@ -9,4 +9,4 @@ without maintaining a second, drifting list of stores.
 The list is derived from the configured search service, so disabled or
 unsupported sources are not asserted by the browser as available.
 
-The route is implemented by [`read_sources`](../../server/main.py).
+The route is implemented by [`read_sources`](../../bff/server/main.py).

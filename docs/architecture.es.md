@@ -53,8 +53,8 @@ El BFF mantiene la autenticación de API fuera del Navegador y da a Vue
 respuestas adaptadas a la Interfaz. También posee los límites públicos y las
 decisiones de presentación sobre orden de ofertas, etiquetas de stock y
 contenido del carrito. Estas reglas se pueden leer en
-[`server/main.py`](../server/main.py) y
-[`server/presenter.py`](../server/presenter.py); no quedan ocultas en el
+[`bff/server/main.py`](../bff/server/main.py) y
+[`bff/server/presenter.py`](../bff/server/presenter.py); no quedan ocultas en el
 paquete compilado del cliente.
 
 El BFF no es el buscador. Delega las operaciones de búsqueda, stock y

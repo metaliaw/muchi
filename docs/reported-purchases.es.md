@@ -72,11 +72,11 @@ stateDiagram-v2
 
 | Pieza | Lugar | Contiene |
 | --- | --- | --- |
-| Botones, formulario del número | [`CartPanel.vue`](../web/src/components/CartPanel.vue) | estado por tienda, un clic abre la pestaña |
-| Líneas, limpieza, memoria | [`purchase.js`](../web/src/purchase.js) | qué líneas van, el número recortado a 64 caracteres, `sessionStorage` por búsqueda |
-| Llamadas | [`api.js`](../web/src/api.js) | `linkStoreOrder`, `reportStoreOrder` |
-| Rutas del BFF | [`server/main.py`](../server/main.py) | `/api/searches/{id}/orders/links`, `/api/searches/{id}/orders/{order_id}/report` |
-| Cliente de la API | [`muchi/api/client.py`](../muchi/api/client.py) | `link_order`, `report_order`, `StoreOrder` |
+| Botones, formulario del número | [`CartPanel.vue`](../frontend/src/components/CartPanel.vue) | estado por tienda, un clic abre la pestaña |
+| Líneas, limpieza, memoria | [`purchase.js`](../frontend/src/purchase.js) | qué líneas van, el número recortado a 64 caracteres, `sessionStorage` por búsqueda |
+| Llamadas | [`api.js`](../frontend/src/api.js) | `linkStoreOrder`, `reportStoreOrder` |
+| Rutas del BFF | [`bff/server/main.py`](../bff/server/main.py) | `/api/searches/{id}/orders/links`, `/api/searches/{id}/orders/{order_id}/report` |
+| Cliente de la API | [`bff/muchi/api/client.py`](../bff/muchi/api/client.py) | `link_order`, `report_order`, `StoreOrder` |
 
 `sessionStorage` solo evita que una recarga olvide que ya saliste a una
 tienda. El pedido vive en el servicio de API; el token nunca llega al

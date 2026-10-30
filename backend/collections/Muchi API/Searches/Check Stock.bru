@@ -1,0 +1,32 @@
+meta {
+  name: Check Stock
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/searches/{{searchId}}/stock
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "offers": ["{{offerId}}"]
+  }
+}
+
+docs {
+  El Precio Sobrevive a la Búsqueda; el Stock no. Quien Corona la Oferta más
+  barata Pregunta acá antes de confiar en ella. La Oferta se Nombra con el `id`
+  que la Búsqueda le dio: una URL propia se Rechaza con 404, así esto nunca es
+  un Proxy. Una Tienda que no Contesta Responde `unknown`, no un Error.
+}
+
+tests {
+  test("cada Oferta Recibe una Lectura", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().offers).to.have.lengthOf(1);
+    expect(res.getBody().offers[0].stock_status).to.be.oneOf(["available", "unavailable", "unknown"]);
+  });
+}

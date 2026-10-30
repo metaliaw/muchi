@@ -10,4 +10,4 @@ safe.
 The BFF returns the updated visible state. Queue cleanup and terminal-state
 rules remain the API's responsibility.
 
-The route is implemented by [`cancel_search`](../../server/main.py).
+The route is implemented by [`cancel_search`](../../bff/server/main.py).

@@ -152,7 +152,7 @@ each offer to its entry. Use the cursor to request the next page.
 - The transport accepts the website hosts and local development addresses to
   reject requests with an unrelated Host header.
 - Firebase Hosting forwards Cloud Run's service host. If the service URL
-  changes, update that allowed host in `MCP_HOSTS` in `server/mcp.py` too.
+  changes, update that allowed host in `MCP_HOSTS` in `bff/server/mcp.py` too.
 
 The API retains results and applies its own expiration. An agent should keep
 the returned ID while those results remain available.

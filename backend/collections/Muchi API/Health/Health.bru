@@ -1,0 +1,21 @@
+meta {
+  name: Health
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/health
+  body: none
+  auth: none
+}
+
+docs {
+  La única Ruta sin Token. Responde 200 mientras el Servicio esté en pie.
+}
+
+tests {
+  test("el Servicio responde", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

@@ -10,4 +10,4 @@ the signal cheap and keeps an API outage distinct from a BFF process outage.
 It does not promise that searches are available; those dependencies are
 observed through request failures and service monitoring.
 
-The route is implemented by [`read_health`](../../server/main.py).
+The route is implemented by [`read_health`](../../bff/server/main.py).

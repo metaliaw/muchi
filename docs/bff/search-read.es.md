@@ -19,5 +19,5 @@ rechazo técnico ni volver a consultar. El estado puede incluir `expires_at`;
 cuando la API lo informa, el Navegador descarta una búsqueda vencida antes de
 pedir sus resultados.
 
-La ruta está implementada por [`read_search`](../../server/main.py) y
-[`presenter.py`](../../server/presenter.py).
+La ruta está implementada por [`read_search`](../../bff/server/main.py) y
+[`presenter.py`](../../bff/server/presenter.py).

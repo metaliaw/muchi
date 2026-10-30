@@ -1,0 +1,54 @@
+package catalog
+
+import (
+	"context"
+	"os"
+	"sort"
+	"testing"
+	"time"
+
+	"github.com/cangrejometralleta/muchi-api/internal/model"
+	"github.com/cangrejometralleta/muchi-api/internal/search"
+	"github.com/cangrejometralleta/muchi-api/internal/stores/commerce"
+	"github.com/cangrejometralleta/muchi-api/internal/stores/directory"
+)
+
+// TestMatchModeProbe Reads the same Card under both Modes against real Sources.
+func TestMatchModeProbe(t *testing.T) {
+	if os.Getenv("MUCHI_LIVE") == "" {
+		t.Skip("set MUCHI_LIVE=1")
+	}
+	config, err := directory.LoadStoreConfig("../../config/stores.yaml", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fetcher := probeFetcher()
+	builder := Builder{Shops: commerce.Shops{Config: config, Fetcher: fetcher}, TTL: time.Hour}
+	service := search.Service{
+		OfferService: search.OfferService{
+			Providers:     builder.Providers(),
+			SourcesByGame: builder.SourcesByGame(),
+		},
+	}
+	for _, mode := range []model.MatchMode{model.MatchExact, model.MatchIncludes} {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		items, _, err := service.FindCardOffers(ctx, model.GameYuGiOh, model.CardQuery{Name: "Kuriboh", Match: mode})
+		cancel()
+		if err != nil {
+			t.Fatalf("mode=%s err=%v", mode, err)
+		}
+		names := map[string]int{}
+		for _, item := range items {
+			names[item.CardName]++
+		}
+		titles := make([]string, 0, len(names))
+		for name := range names {
+			titles = append(titles, name)
+		}
+		sort.Strings(titles)
+		t.Logf("mode=%s offers=%d distinct=%d", mode, len(items), len(titles))
+		for _, title := range titles {
+			t.Logf("   %2dx %s", names[title], title)
+		}
+	}
+}

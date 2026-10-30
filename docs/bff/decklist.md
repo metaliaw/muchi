@@ -10,4 +10,4 @@ This preview shares the production parser, including sealed-product mode. It
 does not create a search, reserve work or query stores. Invalid lines remain
 visible to the user instead of silently becoming a different list.
 
-The route is implemented by [`read_decklist`](../../server/main.py).
+The route is implemented by [`read_decklist`](../../bff/server/main.py).

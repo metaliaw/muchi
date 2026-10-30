@@ -9,4 +9,4 @@ mantener otra lista de tiendas que se desactualice.
 La lista sale del servicio de búsqueda configurado, así que el Navegador no
 declara disponibles fuentes desactivadas o no admitidas.
 
-La ruta está implementada por [`read_sources`](../../server/main.py).
+La ruta está implementada por [`read_sources`](../../bff/server/main.py).

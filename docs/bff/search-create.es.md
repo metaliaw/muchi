@@ -14,6 +14,6 @@ líneas rechazadas y listas inválidas se informan antes de crear la búsqueda.
 Si el estado de la API incluye `expires_at`, el BFF lo conserva para que el
 Navegador pueda omitir la lectura de una búsqueda que ya venció.
 
-La ruta está implementada por [`create_search`](../../server/main.py); la Cola
+La ruta está implementada por [`create_search`](../../bff/server/main.py); la Cola
 y los Workers se describen en la
 [guía de arquitectura local](../architecture.es.md).

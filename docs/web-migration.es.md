@@ -10,10 +10,10 @@ habría tenido que reimplementar las Reglas.
 Ahora hay dos Piezas y una Frontera clara:
 
 ```
-Navegador ──► web/  (Vue 3 + Vite)      dibuja, no decide
+Navegador ──► frontend/  (Vue 3 + Vite)     dibuja, no decide
                 │  fetch /api/...
                 ▼
-           server/  (FastAPI, el BFF)   decide y guarda el Token
+           bff/server/  (FastAPI, el BFF)   decide y guarda el Token
                 │  Bearer + /v1
                 ▼
         API de Muchi (Cloud Run)        busca y persiste las Búsquedas
@@ -28,7 +28,7 @@ lo que el Front necesita.
 
 De paso, las Reglas del Dominio quedan en un solo Lugar. El Tratamiento, el
 Muchi Dólar, el Orden por Moneda, la Oferta más barata y el Reparto del
-Carrito viven en `server/presenter.py` y reusan `muchi/mtg/`, los mismos
+Carrito viven en `bff/server/presenter.py` y reusan `bff/muchi/mtg/`, los mismos
 Módulos que usaba `app.py`. El Front recibe JSON ya presentado: Pastillas con
 su Texto, Precios con su Moneda y la Oferta marcada como la más barata.
 
@@ -56,18 +56,18 @@ sigue funcionando entre Sesiones y entre Máquinas.
 
 ## Qué hace el Front
 
-`web/src/App.vue` orquesta: pide la Configuración, arranca la Consulta cada
+`frontend/src/App.vue` orquesta: pide la Configuración, arranca la Consulta cada
 `poll_seconds` mientras la Búsqueda está pendiente y la detiene al recibir un
 Estado terminal. El Historial de Búsquedas y la Elección de Tema viven en
 `localStorage`; antes vivían en la Sesión del Servidor y se perdían al cerrar.
 
-La Paleta es la misma de `muchi/mtg/style.py`, ahora en `web/src/styles.css`.
+La Paleta es la misma de `muchi/mtg/style.py`, ahora en `frontend/src/styles.css`.
 El Modo Oscuro no reescribe Reglas: cambia el Valor de las Variables CSS.
 
 ## Desarrollo
 
 ```bash
-cp .env.example .env      # completa MUCHI_API_URL y MUCHI_API_TOKEN
+cp bff/.env.example bff/.env # completa MUCHI_API_URL y MUCHI_API_TOKEN
 ./start-web.sh            # BFF en :8000, Front en http://127.0.0.1:5173
 ```
 
@@ -77,7 +77,7 @@ que configurar, ni en Desarrollo ni en Producción.
 ## Despliegue en GCP
 
 Un solo Servicio en Cloud Run sirve el Front compilado y el BFF. El
-`Dockerfile` compila `web/` con Node y copia el `dist` a la Imagen de Python.
+`Dockerfile` compila `frontend` con Node y copia el `dist` a la Imagen de Python.
 
 ```bash
 gcloud builds submit --config cloudbuild.yaml \

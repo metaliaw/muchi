@@ -4,5 +4,5 @@ set -eu
 cd -- "$(dirname -- "$0")"
 
 ./test.sh
-npm --prefix web ci
-npm --prefix web run build
+npm --prefix frontend ci
+npm --prefix frontend run build

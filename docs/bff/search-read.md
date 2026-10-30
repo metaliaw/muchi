@@ -18,5 +18,5 @@ expiration without showing a technical rejection or retrying. State may
 include `expires_at`; when the API provides it, the browser discards an
 expired search before requesting its results.
 
-The route is implemented by [`read_search`](../../server/main.py) and
-[`presenter.py`](../../server/presenter.py).
+The route is implemented by [`read_search`](../../bff/server/main.py) and
+[`presenter.py`](../../bff/server/presenter.py).

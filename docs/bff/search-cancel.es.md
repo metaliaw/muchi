@@ -10,4 +10,4 @@ seguras.
 El BFF devuelve el estado visible actualizado. La limpieza de la Cola y las
 reglas de estado terminal siguen siendo responsabilidad de la API.
 
-La ruta está implementada por [`cancel_search`](../../server/main.py).
+La ruta está implementada por [`cancel_search`](../../bff/server/main.py).

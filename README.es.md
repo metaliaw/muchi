@@ -70,7 +70,7 @@ Los Agentes también pueden iniciar Búsquedas y leer Ofertas por MCP. Consulta
 El Estado y las Ofertas se consultan cada **3 segundos** mientras la Búsqueda
 está pendiente, y cada Consulta espera a lo más **10 segundos** antes de darse
 por perdida. Los dos Números viven en
-[`config/api.defaults.yaml`](config/api.defaults.yaml) y se ajustan con
+[`bff/config/api.defaults.yaml`](bff/config/api.defaults.yaml) y se ajustan con
 `MUCHI_API_POLL_SECONDS` y `MUCHI_API_TIMEOUT_SECONDS`. El Front no los adivina:
 los lee de `/api/config` al arrancar, así que el Intervalo que escribe en
 Pantalla es el mismo que usa el Reloj.
@@ -139,8 +139,8 @@ desaparecer.
 
 MUCHI hoy busca Cartas de Magic, pero el Front nunca tuvo esa Lista escrita: la
 pide con `GET /api/supported-games` y dibuja lo que le respondan. Sumar un
-Juego es Trabajo del lado de la API —las Fuentes que lo conocen, los Nombres,
-las Ediciones— y no un cambio en este Repositorio.
+Juego es Trabajo de la API —las Fuentes que lo conocen, los Nombres, las
+Ediciones—, y la API también vive en este Repositorio.
 
 Abre un Issue contando **qué Juego** y, sobre todo, **dónde se compra en Chile**:
 las Tiendas o Listas que ya venden esas Cartas. Un Juego sin Fuentes que
@@ -224,7 +224,7 @@ se arma el Total hoy y qué Parte se le agregaría.
 ## Ejecutar el Proyecto
 
 Necesitas Python con `venv` y acceso a una instancia de MUCHI API. Copia
-[.env.example](.env.example) a `.env` y configura estas Variables:
+[.env.example](bff/.env.example) a `bff/.env` y configura estas Variables:
 
 ```dotenv
 MUCHI_ENV=development
@@ -279,14 +279,14 @@ Servicio. Un solo Script despliega ambos en ese orden:
 ```
 
 La [Nota de Migración](docs/web-migration.es.md) explica la Frontera entre
-`web/` y `server/` y las Rutas del BFF.
+`frontend` y `bff/server` y las Rutas del BFF.
 
 ## Configuración y Arquitectura
 
 El Front carga su Configuración en este orden:
 
-1. [Defaults de conexión](config/api.defaults.yaml).
-2. `config/api.development.yaml` o `config/api.production.yaml`, según `MUCHI_ENV`.
+1. [Defaults de conexión](bff/config/api.defaults.yaml).
+2. `bff/config/api.development.yaml` o `bff/config/api.production.yaml`, según `MUCHI_ENV`.
 3. `MUCHI_API_TIMEOUT_SECONDS` y `MUCHI_API_POLL_SECONDS`, si están definidas.
 
 Los Tiempos deben ser positivos y finitos; hoy son 3 segundos de Intervalo y 10
@@ -295,8 +295,8 @@ Entradas, noventa y nueve copias— no se configuran: salen del Formato, un Mazo
 de Commander de cien Cartas. El Front los lee de `/api/config` y los escribe
 junto al Formulario, así que el Número vive en un solo lugar. Los Archivos de Configuración usan
 YAML; las Credenciales se inyectan por separado. Las Frases de MUCHI están en
-[constants/phrases.yaml](constants/phrases.yaml), incluidos los Saludos y la Ayuda.
-`muchi/mtg/phrases.py` carga ese Contenido y genera las Burbujas y los Corazones;
+[constants/phrases.yaml](bff/constants/phrases.yaml), incluidos los Saludos y la Ayuda.
+`bff/muchi/mtg/phrases.py` carga ese Contenido y genera las Burbujas y los Corazones;
 `messaging.py` sólo decide la prioridad de los Mensajes.
 
 La API recibe la Lista mediante `POST /v1/searches`. El Front consulta su
@@ -314,23 +314,23 @@ actual. Los archivos de SQLite existentes no se eliminan ni se importan.
 Con el Entorno virtual activo:
 
 ```bash
-pip install -r requirements-dev.txt
-python -m pytest -q
+pip install -r bff/requirements-dev.txt
+PYTHONPATH=bff python -m pytest -q bff/tests
 ```
 
 La suite habitual prueba el Cliente HTTP y la Interfaz con Servicios simulados,
 sin conectarse a la API. Para comprobar la Integración real, inicia la API,
-configura `.env` y ejecuta:
+configura `bff/.env` y ejecuta:
 
 ```bash
-MUCHI_API_INTEGRATION=1 python -m pytest tests/test_muchi_api_integration.py
+MUCHI_API_INTEGRATION=1 PYTHONPATH=bff python -m pytest bff/tests/test_muchi_api_integration.py
 ```
 
 Para probar **Sol Ring desde el Front hasta las Ofertas reales**, con el Worker
 levantado (puede tardar varios minutos):
 
 ```bash
-MUCHI_API_INTEGRATION=1 MUCHI_API_SEARCH_INTEGRATION=1 python -m pytest -q tests/test_muchi_api_integration.py
+MUCHI_API_INTEGRATION=1 MUCHI_API_SEARCH_INTEGRATION=1 PYTHONPATH=bff python -m pytest -q bff/tests/test_muchi_api_integration.py
 ```
 
 Puedes añadir `MUCHI_API_SEARCH_ID` para verificar una Búsqueda existente.

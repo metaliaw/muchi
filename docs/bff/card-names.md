@@ -6,4 +6,4 @@
 
 The browser accepts names in the person's language while the search domain works with canonical identities. The API reads the name through the game's language provider and refuses a `language` the game does not declare in `supported-games`. A card the catalog does not know answers 404, apart from a catalog that did not answer, which is a failure and can be retried.
 
-The route is implemented by [`read_card`](../../server/main.py).
+The route is implemented by [`read_card`](../../bff/server/main.py).

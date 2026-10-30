@@ -197,14 +197,14 @@ check_site() {
         ok "La Etiqueta google-adsense-account lleva $CLIENT"
     else
         bad "Falta la Etiqueta google-adsense-account con $CLIENT en el <head>"
-        note "Vive en web/index.html"
+        note "Vive en frontend/index.html"
     fi
 
     if printf '%s' "$html" | grep -q "adsbygoogle.js?client=$CLIENT"; then
         ok "El Cargador adsbygoogle.js apunta a $CLIENT"
     else
         bad "El Cargador adsbygoogle.js falta o apunta a otro Cliente"
-        note "Vive en web/index.html"
+        note "Vive en frontend/index.html"
     fi
 
     # El Identificador aparece en tres Lugares y ninguno lee a los otros: el

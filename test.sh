@@ -6,13 +6,13 @@ cd -- "$(dirname -- "$0")"
 PYTHON=python3
 if [ -x .venv/bin/python ]; then PYTHON=.venv/bin/python; fi
 
-"$PYTHON" -m pip install -q -r requirements-dev.txt
+"$PYTHON" -m pip install -q -r bff/requirements-dev.txt
 
 echo "== Python"
-PYTHONPATH=. "$PYTHON" -m pytest -q "$@"
+PYTHONPATH=bff "$PYTHON" -m pytest -q bff/tests "$@"
 
 echo "== JavaScript"
 # Sin Dependencias instaladas no hay Runner: `npm ci` las Trae una vez y el
 # Script Sigue sirviendo en una Copia recién clonada.
-if [ ! -d web/node_modules ]; then npm --prefix web ci; fi
-npm --prefix web run test
+if [ ! -d frontend/node_modules ]; then npm --prefix frontend ci; fi
+npm --prefix frontend run test

@@ -107,7 +107,7 @@ and five hundred only when none respond.
 Browser confirmed is not checked elsewhere; an Offer absent from the Plan
 is discarded — the Browser reports on this Search, not the entire Catalog.
 A Confirmation still counts beyond `stock_check_limit`, which limits our
-Visits, rather than eligibility for the Crown. `server/presenter.py` still
+Visits, rather than eligibility for the Crown. `bff/server/presenter.py` still
 decides who gets the cheapest marker under the same rules as
 [The Stock Request](api/stock-order.md). That Decision stays on the
 Server; the Frontend does not recommend.
@@ -118,7 +118,7 @@ Server; the Frontend does not recommend.
 
 Confirmation survives a Reload with the Time the Store supplied it.
 It returns only while fresh under `stock_fresh_seconds`, currently 600 in
-[`config/offers.defaults.yaml`](../config/offers.defaults.yaml).
+[`bff/config/offers.defaults.yaml`](../bff/config/offers.defaults.yaml).
 After that Limit, nothing returns and the Button reappears.
 
 Ten minutes covers building a Cart and returning within a Shopping session;

@@ -6,4 +6,4 @@
 
 El Navegador acepta nombres en el idioma de la Persona mientras el dominio de búsqueda trabaja con identidades canónicas. La API lee el nombre por el proveedor de idiomas del juego y rechaza un `language` que el juego no declare en `supported-games`. Una carta que el catálogo no conoce responde 404, aparte de un catálogo que no contestó, que es un fallo y se puede reintentar.
 
-La ruta está implementada por [`read_card`](../../server/main.py).
+La ruta está implementada por [`read_card`](../../bff/server/main.py).

@@ -155,7 +155,7 @@ siguiente.
   Desarrollo para frenar solicitudes con un Host ajeno.
 - Firebase Hosting reenvía el Host de Servicio de Cloud Run. Si cambia la URL
   del Servicio, actualiza también ese Host permitido en `MCP_HOSTS` de
-  `server/mcp.py`.
+  `bff/server/mcp.py`.
 
 La API conserva los Resultados y aplica su propio Vencimiento. Un Agente debe
 guardar el Identificador recibido mientras los Resultados sigan disponibles.

@@ -68,7 +68,7 @@ Agents can also start Searches and read Offers through MCP. See
 
 While a Search is pending, State and Offers are polled every 3 seconds.
 Each Request waits at most 10 seconds before timing out. Both Numbers live in
-[`config/api.defaults.yaml`](config/api.defaults.yaml), adjustable through
+[`bff/config/api.defaults.yaml`](bff/config/api.defaults.yaml), adjustable through
 `MUCHI_API_POLL_SECONDS` and `MUCHI_API_TIMEOUT_SECONDS`. The Frontend reads
 them from `/api/config` at startup, so the Interval displayed matches the
 one used by its Timer.
@@ -132,8 +132,8 @@ only occasionally and cannot update regularly, say so beforehand.
 
 MUCHI currently searches Magic Cards, but the Frontend never hardcoded
 that Game list: it requests `GET /api/supported-games` and renders the
-response. Adding a Game is API-side Work — Sources, Names and Editions —
-rather than a change in this Repository.
+response. Adding a Game is API Work — Sources, Names and Editions — and
+the API also lives in this Repository.
 
 Open an Issue describing the Game and, especially, where people buy it
 in Chile: Stores or Lists already selling those Cards. A Game without
@@ -213,7 +213,7 @@ Total is built and which component would be added.
 ## Run the Project
 
 You need Python with `venv` and access to a MUCHI API instance. Copy
-[.env.example](.env.example) to `.env` and configure:
+[.env.example](bff/.env.example) to `bff/.env` and configure:
 
 ```dotenv
 MUCHI_ENV=development
@@ -267,14 +267,14 @@ the same Service. One Script deploys both in that Order:
 ```
 
 The [Migration note](docs/web-migration.md) explains the Boundary
-between `web/` and `server/` and the BFF Routes.
+between `frontend` and `bff/server` and the BFF Routes.
 
 ## Configuration and Architecture
 
 The Frontend loads Configuration in this Order:
 
-1. [Connection defaults](config/api.defaults.yaml).
-2. `config/api.development.yaml` or `config/api.production.yaml`, according
+1. [Connection defaults](bff/config/api.defaults.yaml).
+2. `bff/config/api.development.yaml` or `bff/config/api.production.yaml`, according
    to `MUCHI_ENV`.
 3. `MUCHI_API_TIMEOUT_SECONDS` and `MUCHI_API_POLL_SECONDS`, if defined.
 
@@ -286,7 +286,7 @@ the Number in one place. Configuration files use YAML; Credentials are
 injected separately.
 
 MUCHI's Phrases, including Greetings and Help, live in
-[constants/phrases.yaml](constants/phrases.yaml). `muchi/mtg/phrases.py`
+[constants/phrases.yaml](bff/constants/phrases.yaml). `bff/muchi/mtg/phrases.py`
 loads that Content and generates Bubbles and Hearts; `messaging.py`
 only decides Message priority.
 
@@ -305,23 +305,23 @@ Flow. Existing SQLite files are neither deleted nor imported.
 With your virtual Environment active:
 
 ```bash
-pip install -r requirements-dev.txt
-python -m pytest -q
+pip install -r bff/requirements-dev.txt
+PYTHONPATH=bff python -m pytest -q bff/tests
 ```
 
 The regular Suite tests the HTTP client and Interface with mocked Services,
 without connecting to the API. For real Integration, start the API,
-configure `.env` and run:
+configure `bff/.env` and run:
 
 ```bash
-MUCHI_API_INTEGRATION=1 python -m pytest tests/test_muchi_api_integration.py
+MUCHI_API_INTEGRATION=1 PYTHONPATH=bff python -m pytest bff/tests/test_muchi_api_integration.py
 ```
 
 To test Sol Ring from the Frontend through real Offers, with the Worker
 running — this may take several minutes:
 
 ```bash
-MUCHI_API_INTEGRATION=1 MUCHI_API_SEARCH_INTEGRATION=1 python -m pytest -q tests/test_muchi_api_integration.py
+MUCHI_API_INTEGRATION=1 MUCHI_API_SEARCH_INTEGRATION=1 PYTHONPATH=bff python -m pytest -q bff/tests/test_muchi_api_integration.py
 ```
 
 Add `MUCHI_API_SEARCH_ID` to verify an existing Search.

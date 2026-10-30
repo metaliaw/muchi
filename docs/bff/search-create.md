@@ -14,6 +14,6 @@ sizes are returned before any search is created.
 If the API state includes `expires_at`, the BFF preserves it so the browser can
 skip reads for a search that has already expired.
 
-The route is implemented by [`create_search`](../../server/main.py); queue and
+The route is implemented by [`create_search`](../../bff/server/main.py); queue and
 worker responsibilities are outlined in the local
 [architecture guide](../architecture.md).
