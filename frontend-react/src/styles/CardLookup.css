@@ -1,0 +1,9 @@
+/* Extraído de CardLookup.vue: el Ámbito de Vue se vuelve una Clase Anidada. */
+.mu-scope-CardLookup {
+summary { cursor: pointer; font-weight: 600; margin-top: 12px; }
+.mu-caption { margin: 6px 0 0; }
+.mu-fila { display: flex; gap: 10px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+/* El Campo y el Selector se reparten la mitad del Contenedor; el Boton toma
+   lo que sobra. Bajo 800px la Fila se apila y la mitad deja de aplicar. */
+.mu-fila input { flex: 1 1 50%; min-width: 0; }
+}

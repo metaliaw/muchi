@@ -1,0 +1,20 @@
+/* Extraído de SearchProgress.vue: el Ámbito de Vue se vuelve una Clase Anidada. */
+.mu-scope-SearchProgress {
+.mu-barra { height: 10px; border-radius: 999px; background: var(--mu-niebla); overflow: hidden; }
+.mu-patrocinio + .mu-barra,
+.mu-google + .mu-barra { margin-top: 16px; }
+.mu-barra-int {
+  height: 100%; border-radius: 999px; transition: width .3s ease;
+  background: linear-gradient(90deg, var(--mu-acento), var(--mu-peri));
+}
+code { background: var(--mu-cond-bg); padding: 1px 6px; border-radius: 8px; }
+.mu-id { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+.mu-id-campo {
+  flex: 1 1 220px; min-width: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .82rem;
+  background: var(--mu-cond-bg);
+}
+/* Se lee y se copia, no se escribe: el Cursor lo dice antes de intentarlo. */
+.mu-id-campo:read-only { cursor: text; }
+}

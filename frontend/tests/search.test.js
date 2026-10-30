@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   BY_EDITION, BY_PRICE, groupByCardType, hasStoreCatalog, isSearchExpired, limitOf,
-  pickable, replacePositions,
+  pickable, replacePositions, startSearch, withResults, withState, withStock,
   spreadUnits, summarizeOffers, topOf, UNCOUNTED_UNITS, describeLanguages } from '../src/search.js'
 
 const offer = (position, card, price, store, amount = price) =>
@@ -190,5 +190,36 @@ describe('el Campo anuncia los Idiomas del Juego', () => {
   it('Sin Idiomas no hay nada que Anunciar', () => {
     expect(describeLanguages(undefined)).toBeNull()
     expect(describeLanguages([])).toBeNull()
+  })
+})
+
+describe('Búsqueda como Dato', () => {
+  it('Siente solo las Llaves que Cambiaron', () => {
+    const first = withState(startSearch('s1'), { status: 'queued', game: 'magic' })
+    expect(first.game).toBe('magic')
+    const second = withState(first.search, { status: 'running', game: 'magic' })
+    expect(second.search.stateChanges).toEqual(['status'])
+  })
+
+  it('Acumula Páginas sin Mutar la anterior', () => {
+    const before = startSearch('s1')
+    const { search, game } = withResults(before, {
+      items: [{ position: 0, name: 'Sol Ring', game: 'magic' }],
+      offers: [], cursor: 3, has_more: true,
+    })
+    expect(before.items).toEqual([])
+    expect(search.items).toHaveLength(1)
+    expect([search.cursor, search.hasMore, game]).toEqual([3, true, 'magic'])
+  })
+
+  it('Mueve la Corona solo en los Tipos comprobados', () => {
+    const search = { ...startSearch('s1'), offers: [
+      { offer_id: 'a', card_type: 'x', best: true },
+      { offer_id: 'b', card_type: 'x', best: false },
+      { offer_id: 'c', card_type: 'y', best: true },
+    ] }
+    const next = withStock(search, { offers: [], best: [{ card_type: 'x', offer_id: 'b' }] })
+    expect(next.offers.map((row) => row.best)).toEqual([false, true, true])
+    expect(next.stocked).toBe(true)
   })
 })

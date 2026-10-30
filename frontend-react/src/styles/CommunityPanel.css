@@ -1,0 +1,60 @@
+/* Extraído de CommunityPanel.vue: el Ámbito de Vue se vuelve una Clase Anidada. */
+.mu-scope-CommunityPanel {
+.mu-comunidad {
+  box-shadow: none;
+  /* La X se Apoya en esta Esquina. */
+  position: relative;
+  /* Abre la Columna y lo que Sigue Flota: cada Línea de más acá Empuja a MUCHI
+     y a la Carta un Renglón más abajo del primer Vistazo. */
+  padding: 14px 16px;
+  /* Al lado hay Paneles blancos: un 9% se perdia contra ellos. El Tinte
+     sube y el Desvanecido se estira, para que el Panel se distinga sin
+     gritar. Mismo Color, el de siempre. */
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--mu-peri) 22%, transparent), transparent 78%),
+    var(--mu-blanco);
+}
+/* El Texto Esquiva la X: sin la Sangría, el Rótulo le Pasaría por debajo. */
+.mu-comunidad__cerrar {
+  position: absolute; top: 6px; right: 8px;
+  background: none; border: 0; box-shadow: none; padding: 0 4px;
+  line-height: 1; font-size: 1.1rem; cursor: pointer;
+  color: var(--mu-tinta-sw); opacity: .7;
+}
+.mu-comunidad__cerrar:hover { opacity: 1; }
+.mu-comunidad__eyebrow {
+  margin: 0 0 5px;
+  padding-right: 20px;
+  color: var(--mu-peri);
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .09em;
+}
+h2 { margin: 0 0 4px; font-size: 1rem; }
+p { margin: 0; }
+/* El Espacio queda Reservado aunque la Configuración llegue después. */
+.mu-comunidad__enlaces {
+  display: flex;
+  gap: 6px 12px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+  font-size: .9rem;
+  /* Un Renglón Reservado, Lleguen o no los Enlaces. La Medida es la misma
+     `line-height` del Cuerpo: reservar de menos Deja un Salto pequeño, que se
+     Ve igual. */
+  min-height: 1.5em;
+}
+.mu-comunidad__enlaces a { font-weight: 700; }
+.mu-comunidad__repositorio {
+  color: var(--mu-acento);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: .15em;
+}
+/* Los dos Nombres se separan solos: una Coma escrita a mano se rompe cuando
+   alguien suma o quita a alguien. */
+.mu-comunidad__firma { margin-top: 8px; font-size: .78rem; }
+.mu-comunidad__firma a { font-weight: 700; }
+.mu-comunidad__firma a + a::before { content: ' y '; font-weight: 400; }
+.mu-comunidad__firma a:first-of-type { margin-left: 3px; }
+}

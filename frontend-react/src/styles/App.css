@@ -1,0 +1,132 @@
+/* Extraído de App.vue: el Ámbito de Vue se vuelve una Clase Anidada. */
+.mu-scope-App {
+.mu-confirmar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.mu-confirmar > button { flex: none; }
+.mu-confirmar > .mu-caption { flex: 1; min-width: 200px; }
+.mu-hero {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+  background: linear-gradient(135deg, var(--mu-acento), var(--mu-peri));
+  color: #fff; padding: 26px 24px; border-radius: 0 0 28px 28px;
+  box-shadow: var(--mu-sombra);
+}
+/* El Nombre Manda a la Izquierda; los Enlaces Acompañan a la Derecha y, cuando
+   no Caben, Bajan a su propia Línea sin Perder ese Lado. La Regla Nombra al
+   `nav` y no al último Hijo: sin Redes configuradas no hay `nav`, y el Nombre
+   se Iba a la Derecha él solo. */
+.mu-hero__nombre { min-width: 0; }
+.mu-hero nav { margin-left: auto; }
+.mu-hero h1 { margin: 0; font-size: 2.4rem; font-weight: 800; letter-spacing: -1px; }
+.mu-hero h1 a { color: inherit; text-decoration: none; }
+.mu-hero p { margin: 4px 0 0; opacity: .9; }
+.mu-grilla {
+  display: grid; grid-template-columns: 260px 1fr; gap: 16px 20px;
+  grid-template-areas: "abierto lista" "flotante lista";
+  /* La Lista Cruza las dos Filas. Sin esto, el Alto extra de las Ofertas
+     Engorda la Fila del Aviso y MUCHI Arranca más abajo. */
+  grid-template-rows: max-content 1fr;
+  max-width: 1100px; margin: 22px auto; padding: 0 16px; align-items: start;
+}
+.mu-abierto {
+  grid-area: abierto;
+  /* El Panel Decide su alto. Recortarlo acá Corta su Borde inferior cuando el
+     Texto Crece o los Enlaces Bajan a otra Línea. */
+  min-width: 0;
+}
+/* MUCHI y la Carta Acompañan el Recorrido de la Lista. Flotan juntos, en un
+   solo Bloque: dos Pegados por separado se Taparían uno al otro al Bajar. */
+.mu-flotante {
+  grid-area: flotante; position: sticky; top: 16px;
+  display: flex; flex-direction: column; gap: 16px;
+  /* El Bloque nunca Pasa del Alto de la Ventana. Si algo le Crece adentro
+     —Auto Ads Mete Anuncios donde Encuentra un Hueco— MUCHI Quedaría empujado
+     fuera de la Pantalla, Flotando debajo del Borde. */
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
+/* Lo que MUCHI no Puso ahí va al Final del Bloque, nunca delante de MUCHI ni
+   de la Carta. No se Esconde: se Ordena. */
+.mu-flotante > :not(.mu-muelle):not(.mu-tarjeta) { order: 9; }
+/* Un Anuncio suelto en la Rejilla no Abre una Fila encima de MUCHI. El Slot
+   de las Ofertas Vive dentro de AdSpot, no como Hijo de la Grilla. */
+.mu-grilla > ins,
+.mu-grilla > .google-auto-placed {
+  grid-column: 1 / -1;
+  max-height: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+/* En Escritorio el Muelle es un Panel más: sin Barra ni Tirador. */
+.mu-muelle, .mu-muelle__cuerpo { display: contents; }
+.mu-columna { grid-area: lista; display: flex; flex-direction: column; gap: 16px; }
+.mu-historia { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+summary { cursor: pointer; font-weight: 600; }
+/* En Escritorio el Muelle es el Lateral de siempre: sin Barra ni Tirador. */
+.mu-muelle__tirador { display: none; }
+/* En Móvil la Grilla es una sola Columna: el Lateral Suelta el Flote
+   para no Tapar el Contenido al Bajar, y MUCHI y la Carta Bajan al Muelle.
+   Dos Columnas de verdad dejarían cada Oferta en 200px: el Precio y las
+   Pastillas se Parten, y la Carta se Mira con lupa. */
+@media (max-width: 800px) {
+  /* La Carta Manda arriba y la Lista Corre debajo: la Pantalla se Parte en dos
+     y quien Mira una Impresión sigue viendo los Precios. El Aviso Cierra la
+     Página: se Lee una vez, y no antes que el Buscador. */
+  .mu-grilla {
+    grid-template-columns: 1fr;
+    grid-template-areas: "carta" "lista" "abierto";
+  }
+  /* El Bloque flotante se Desarma: MUCHI se Va a la Esquina por su cuenta y la
+     Carta se Pega arriba de la Lista. */
+  .mu-flotante { display: contents; }
+  /* El Muelle Vuelve a ser un Bloque para poder Fijarse al pie. */
+  .mu-muelle { display: flex; flex-direction: column; }
+  .mu-muelle__cuerpo { display: none; flex-direction: column; gap: 16px; }
+  .mu-tarjeta {
+    position: sticky; top: 0; z-index: 10;
+    margin: 0 -16px; padding: 0 16px 8px; background: var(--mu-papel);
+  }
+  /* Sin Carta mirada no hay nada que Fijar: la Lista se Queda con la Pantalla. */
+  .mu-tarjeta.vacia { display: none; }
+  .mu-muelle {
+    /* `top` Vuelve a auto: Heredado del Lateral pegajoso, Estiraba el Muelle
+       de Borde a Borde y Tapaba la Página entera. */
+    position: fixed; top: auto; left: 0; right: 0; bottom: 0; z-index: 20; gap: 10px;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+    background: var(--mu-papel);
+    border-top: 2px solid var(--mu-rosa-cl);
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -6px 20px rgba(110, 90, 104, .22);
+  }
+  .mu-muelle__tirador {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    width: 100%; padding: 8px 4px; border: 0; border-radius: 12px;
+    background: none; color: var(--mu-tinta); font: inherit; font-weight: 700;
+    cursor: pointer; text-align: left;
+  }
+  .mu-muelle__dicho { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* Cerrado no es una Barra: es un Botón redondo en la Esquina. Mientras hay
+     una Carta a la Vista, MUCHI Espera ahí en vez de Ocupar un Borde entero. */
+  .mu-muelle:not(.abierto) {
+    left: auto; right: 12px; width: auto;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    padding: 0; border-radius: 999px;
+  }
+  .mu-muelle:not(.abierto) .mu-muelle__dicho,
+  .mu-muelle:not(.abierto) .mu-muelle__flecha { display: none; }
+  .mu-muelle:not(.abierto) .mu-muelle__tirador {
+    width: 54px; height: 54px; padding: 0;
+    justify-content: center; font-size: 1.5rem;
+  }
+  /* Un Punto Avisa que MUCHI Dijo algo, sin Abrirse encima de la Carta. */
+  .mu-muelle:not(.abierto).dijo .mu-muelle__gato::after {
+    content: ""; position: absolute; top: 10px; right: 10px;
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--mu-acento); border: 2px solid var(--mu-papel);
+  }
+  /* Cerrado Ocupa una Línea; abierto Crece hasta donde la Lista sigue Asomando. */
+  .mu-muelle.abierto .mu-muelle__cuerpo {
+    display: flex; max-height: 62vh; overflow-y: auto; padding-bottom: 4px;
+  }
+}
+}

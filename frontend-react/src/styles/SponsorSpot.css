@@ -1,0 +1,22 @@
+/* Extraído de SponsorSpot.vue: el Ámbito de Vue se vuelve una Clase Anidada. */
+.mu-scope-SponsorSpot {
+.mu-patrocinio {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px 18px;
+  align-items: center;
+  padding: 18px 20px;
+  border: 1px dashed var(--mu-tinta-sw);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--mu-blanco) 55%, transparent);
+  color: var(--mu-tinta-sw);
+  font-size: .85rem;
+}
+.mu-patrocinio__marca { font-size: .72rem; }
+p { display: flex; gap: 6px; margin: 0; color: var(--mu-tinta); }
+a { white-space: nowrap; }
+@media (max-width: 620px) {
+  .mu-patrocinio { grid-template-columns: 1fr; gap: 4px; }
+  p { flex-direction: column; }
+}
+}

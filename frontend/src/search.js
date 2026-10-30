@@ -5,7 +5,6 @@
  * del BFF describe la Página que viaja y no las anteriores. Es el Gemelo de
  * `server/presenter.py` — la misma Decisión, del otro lado de la Frontera.
  */
-import { ref } from 'vue'
 
 /** Las Filas nuevas mandan: una Posición que vuelve reemplaza a la anterior. */
 export function replacePositions(current, incoming) {
@@ -220,80 +219,63 @@ export function spreadUnits(groups, askedFor, criterion = BY_PRICE) {
   return filled
 }
 
-/** Todo lo que pertenece a una Búsqueda, declarado y limpiado en un solo Lugar. */
-export function useSearch() {
-  const id = ref(new URLSearchParams(location.search).get('search') || '')
-  const state = ref(null)
-  const items = ref([])
-  const offers = ref([])
-  const summary = ref(null)
-  const notices = ref([])
-  const cursor = ref(0)
-  const hasMore = ref(false)
-  const checked = ref('')
-  const unavailable = ref('')
-  // Si el Stock de esta Búsqueda ya se comprobó Oferta por Oferta.
-  const stocked = ref(false)
-  // Las Llaves del Estado que Cambiaron en el último Ciclo. La Vista las usa
-  // para Reaccionar solo a lo Nuevo; vacío significa "nada se movió".
-  const stateChanges = ref([])
-
-  function start(searchId, initialState = null, initialItems = []) {
-    id.value = searchId
-    state.value = initialState
-    stateChanges.value = []
-    items.value = initialItems
-    offers.value = []
-    summary.value = null
-    notices.value = []
-    cursor.value = 0
-    hasMore.value = false
-    unavailable.value = ''
-    checked.value = ''
-    stocked.value = false
+// La Búsqueda como Dato: un Objeto plano y Funciones que Devuelven el
+// siguiente. No Conocen ningún Framework; Vue y React las Envuelven a su modo.
+export function emptySearch(id = '') {
+  return {
+    id, state: null, items: [], offers: [], summary: null, notices: [],
+    cursor: 0, hasMore: false, checked: '', unavailable: '',
+    // Si el Stock de esta Búsqueda ya se comprobó Oferta por Oferta.
+    stocked: false,
+    // Las Llaves del Estado que Cambiaron en el último Ciclo. La Vista las usa
+    // para Reaccionar solo a lo Nuevo; vacío significa "nada se movió".
+    stateChanges: [],
   }
-
-  // Compara el Estado recibido con el que ya se muestra. El Servidor manda el
-  // Estado entero en cada Ciclo; el Delta se Siente aquí, no en la Red.
-  // Devuelve el Juego que el Estado nombra, o vacío si no nombra ninguno.
-  function applyState(incoming) {
-    const current = state.value
-    stateChanges.value = current
-      ? Object.keys(incoming).filter((key) => incoming[key] !== current[key])
-      : Object.keys(incoming)
-    state.value = incoming
-    return incoming.game || ''
-  }
-
-  /** Acumula la Página recibida. Devuelve el Juego que las Cartas nombran. */
-  function applyResults(reply) {
-    items.value = replacePositions(items.value, reply.items || [])
-      .sort((left, right) => left.position - right.position)
-    offers.value = replacePositions(offers.value, reply.offers || [])
-      .sort(byCardThenPrice)
-    notices.value = replacePositions(notices.value, reply.notices || [])
-    summary.value = summarizeOffers(offers.value)
-    cursor.value = reply.cursor
-    hasMore.value = reply.has_more
-    return items.value.find((item) => item.game)?.game || ''
-  }
-
-  /** Escribe las Filas que el BFF comprobó, y mueve la Corona con ellas. */
-  function applyStock(answer) {
-    const fresh = new Map((answer.offers || []).map((row) => [row.offer_id, row]))
-    const crowned = new Map((answer.best || []).map((row) => [row.card_type, row.offer_id]))
-    const asked = new Set([...crowned.keys(), ...(answer.uncrowned || [])])
-    offers.value = offers.value.map((row) => {
-      // Un Tipo que nadie comprobó conserva la Corona que trajo el BFF.
-      const best = asked.has(row.card_type)
-        ? crowned.get(row.card_type) === row.offer_id
-        : row.best
-      return { ...row, ...(fresh.get(row.offer_id) || {}), best }
-    })
-    stocked.value = asked.size > 0
-  }
-
-  return { id, state, items, offers, summary, notices, cursor, hasMore, checked,
-           unavailable, stocked, stateChanges, start, applyState, applyResults,
-           applyStock }
 }
+
+export function startSearch(searchId, initialState = null, initialItems = []) {
+  return { ...emptySearch(searchId), state: initialState, items: initialItems }
+}
+
+// Compara el Estado recibido con el que ya se muestra. El Servidor manda el
+// Estado entero en cada Ciclo; el Delta se Siente aquí, no en la Red.
+// Devuelve también el Juego que el Estado nombra, o vacío si no nombra ninguno.
+export function withState(search, incoming) {
+  const current = search.state
+  const stateChanges = current
+    ? Object.keys(incoming).filter((key) => incoming[key] !== current[key])
+    : Object.keys(incoming)
+  return { search: { ...search, state: incoming, stateChanges }, game: incoming.game || '' }
+}
+
+/** Acumula la Página recibida. Devuelve también el Juego que las Cartas nombran. */
+export function withResults(search, reply) {
+  const items = replacePositions(search.items, reply.items || [])
+    .sort((left, right) => left.position - right.position)
+  const offers = replacePositions(search.offers, reply.offers || [])
+    .sort(byCardThenPrice)
+  const notices = replacePositions(search.notices, reply.notices || [])
+  return {
+    search: { ...search, items, offers, notices, summary: summarizeOffers(offers),
+              cursor: reply.cursor, hasMore: reply.has_more },
+    game: items.find((item) => item.game)?.game || '',
+  }
+}
+
+/** Escribe las Filas que el BFF comprobó, y mueve la Corona con ellas. */
+export function withStock(search, answer) {
+  const fresh = new Map((answer.offers || []).map((row) => [row.offer_id, row]))
+  const crowned = new Map((answer.best || []).map((row) => [row.card_type, row.offer_id]))
+  const asked = new Set([...crowned.keys(), ...(answer.uncrowned || [])])
+  const offers = search.offers.map((row) => {
+    // Un Tipo que nadie comprobó conserva la Corona que trajo el BFF.
+    const best = asked.has(row.card_type)
+      ? crowned.get(row.card_type) === row.offer_id
+      : row.best
+    return { ...row, ...(fresh.get(row.offer_id) || {}), best }
+  })
+  return { ...search, offers, stocked: asked.size > 0 }
+}
+
+export const searchFromLocation = () =>
+  new URLSearchParams(location.search).get('search') || ''

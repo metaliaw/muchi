@@ -1,0 +1,5 @@
+/* Extraído de SourcesPanel.vue: el Ámbito de Vue se vuelve una Clase Anidada. */
+.mu-scope-SourcesPanel {
+table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: .9rem; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--mu-rosa-cl); }
+}

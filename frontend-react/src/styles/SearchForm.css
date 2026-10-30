@@ -1,0 +1,37 @@
+/* Extraído de SearchForm.vue: el Ámbito de Vue se vuelve una Clase Anidada. */
+.mu-scope-SearchForm {
+h2 { margin-top: 0; }
+.mu-juego { display: grid; gap: 6px; margin-bottom: 10px; font-weight: 600; }
+/* Pasado el Tope, el Aviso deja de ser una Nota al pie. */
+.pasado { color: var(--mu-acento); font-weight: 700; }
+/* El Botón y su Nota Comparten Línea: la Nota Parte adentro de su Columna en
+   vez de Empujar al Botón a una Línea propia. */
+.mu-fila { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
+.mu-fila > button { flex: none; }
+.mu-fila > .mu-caption, .mu-fila > input { min-width: 0; }
+.mu-fila > input { flex: 1; }
+/* El Modo va pegado al Campo que cambia, no escondido en un Menu. */
+.mu-modo { border: 0; padding: 0; margin: 10px 0 0; display: grid; gap: 8px 16px; }
+/* Un Catálogo que este Juego no Vende se Ve apagado, no Desaparece: Saber que
+   Existe y que acá no Hay es más Útil que un Selector que Cambia de Tamaño. */
+.mu-modo--sin { opacity: .45; }
+/* El Final Ofrecido se Lee como lo que es: una Propuesta a un Tab de Distancia,
+   pegada al Campo para que el Ojo no la Busque. */
+.mu-final { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 4px 0 0; }
+.mu-final > button { font-weight: 700; }
+.mu-modo--sin input { cursor: not-allowed; }
+.mu-modo legend { padding: 0; }
+/* Las dos Opciones Comparten Fila mientras Quepan enteras. */
+@media (min-width: 560px) {
+  .mu-modo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mu-modo legend { grid-column: 1 / -1; }
+}
+/* El Botón Redondo se Alinea con la primera Línea del Texto, no con su Centro:
+   una Etiqueta de tres Líneas dejaba el Punto flotando a media Altura. */
+.mu-modo label {
+  display: grid; grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px; align-items: start; cursor: pointer;
+}
+.mu-modo input { margin: 3px 0 0; }
+summary { cursor: pointer; font-weight: 600; margin-top: 12px; }
+}

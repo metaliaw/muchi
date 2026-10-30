@@ -1,0 +1,28 @@
+/* Extraído de SiteLinks.vue: el Ámbito de Vue se vuelve una Clase Anidada. */
+.mu-scope-SiteLinks {
+/* Viven en la Barra de arriba, a la Derecha del Nombre. Antes Flotaban fijos
+   sobre el Contenido, y en Móvil se Peleaban el Borde de abajo con el Muelle. */
+.mu-insignias {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 7px 12px; border-radius: 999px;
+  background: var(--mu-blanco);
+  border: 2px solid var(--mu-rosa-cl);
+  box-shadow: var(--mu-sombra);
+}
+.mu-corte { width: 1px; height: 20px; background: var(--mu-rosa-cl); margin: 0 2px; }
+.mu-icono {
+  display: grid; place-items: center;
+  width: 30px; height: 30px; border-radius: 50%;
+  font-size: 1rem; line-height: 1; text-decoration: none;
+}
+a.mu-icono:hover { background: var(--mu-rosa-lav); transform: translateY(-1px); }
+a.mu-icono { transition: background .15s, transform .15s; }
+.mu-icono.apoyo { background: var(--mu-rosa-lav); }
+
+/* En Móvil los Iconos Encogen y la Fila entera se Va a la Derecha, debajo del
+   Título, sin Partirse en dos Grupos. */
+@media (max-width: 560px) {
+  .mu-insignias { gap: 4px; padding: 6px 10px; flex-wrap: nowrap; }
+  .mu-icono { width: 26px; height: 26px; font-size: .92rem; }
+}
+}

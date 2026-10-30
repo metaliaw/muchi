@@ -1,0 +1,67 @@
+/* Extraído de CartPanel.vue: el Ámbito de Vue se vuelve una Clase Anidada. */
+.mu-scope-CartPanel {
+/* Cerrado: un Botón redondo pegado al Borde derecho, sobre la Lista. */
+.mu-carrito {
+  position: fixed; z-index: 30;
+  right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  display: flex; flex-direction: column;
+  background: var(--mu-papel);
+  border: 2px solid var(--mu-rosa-cl);
+  border-radius: 999px;
+  box-shadow: var(--mu-sombra);
+}
+.mu-carrito__tirador {
+  display: flex; align-items: center; justify-content: center;
+  width: 54px; height: 54px; padding: 0;
+  border: 0; border-radius: 999px; background: none;
+  color: var(--mu-tinta); font: inherit; font-size: 1.5rem; font-weight: 700;
+  cursor: pointer;
+}
+.mu-carrito:not(.abierto) .mu-carrito__dicho,
+.mu-carrito:not(.abierto) .mu-carrito__flecha { display: none; }
+.mu-carrito__cuerpo { display: none; }
+/* Abierto: una Barra lateral de Alto completo. El Total y el Reparto se Leen
+   sin Perder de vista las Ofertas que los Arman. */
+.mu-carrito.abierto {
+  top: 0; right: 0; bottom: 0; width: min(380px, 92vw);
+  padding: 8px 14px 14px;
+  border-width: 0 0 0 2px; border-radius: 18px 0 0 18px;
+}
+.mu-carrito.abierto .mu-carrito__tirador {
+  width: 100%; height: auto; padding: 8px 4px;
+  justify-content: space-between; gap: 12px;
+  border-radius: 12px; font-size: 1rem; text-align: left;
+}
+.mu-carrito.abierto .mu-carrito__dicho {
+  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mu-carrito.abierto .mu-carrito__cuerpo { display: block; flex: 1; overflow-y: auto; }
+.mu-obra { margin: 0; font-size: .9rem; }
+.mu-carro { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+label { display: flex; flex-direction: column; gap: 6px; max-width: 240px; font-size: .9rem; }
+.mu-total { font-size: 1.3rem; font-weight: 800; color: var(--mu-acento); }
+.mu-tienda { border-top: 1px solid var(--mu-rosa-cl); padding-top: 10px; }
+.mu-tienda h3 { margin: 0; }
+.mu-compra { margin: 8px 0; display: flex; flex-direction: column; gap: 6px; }
+.mu-compra__informe { display: flex; flex-direction: column; gap: 6px; }
+.mu-compra__informe label { max-width: none; }
+.mu-compra__acciones { display: flex; align-items: center; gap: 12px; }
+.mu-compra__hecha { color: var(--mu-acento); font-weight: 600; }
+.mu-linea { display: flex; justify-content: space-between; gap: 12px; margin: 4px 0; }
+
+/* En Móvil el Botón se Pone al lado del de MUCHI, en la misma Esquina, y el
+   Cajón Toma la Pantalla entera: 380px sobre un Teléfono no Dejan Lista
+   detrás que Mirar. */
+@media (max-width: 800px) {
+  .mu-carrito:not(.abierto) {
+    right: calc(12px + 54px + 10px);
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+  /* MUCHI abierto se Queda con el Borde entero: el Botón Espera su Turno. */
+  .mu-carrito.ocupado:not(.abierto) { display: none; }
+  .mu-carrito.abierto {
+    width: 100%; border-radius: 0; border-left-width: 0;
+    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  }
+}
+}

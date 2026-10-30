@@ -3,7 +3,8 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import * as api from './api.js'
 import { createNameTranslator, translateNames } from './names.js'
-import { declaredStock, isSearchExpired, topOf, useSearch } from './search.js'
+import { declaredStock, isSearchExpired, topOf } from './search.js'
+import { useSearch } from './useSearch.js'
 import {
   confirmOffers, countReachable, readFreshChecks, rememberChecks, sayAge,
 } from './stock.js'

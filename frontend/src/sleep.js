@@ -1,29 +1,12 @@
 import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { ACTIVITY_EVENTS, createSleepClock, pickSleep } from './sleepClock.js'
 
-const SLEEP_DELAY = 10_000
-const SLEEP_PHRASES = [
-  'me voy a mimirsh', 'zzz… sueñito entre cartitas',
-  'una siestita y vuelvo, miau', 'al tutito por falta de chamba',
-]
-const ACTIVITY_EVENTS = ['pointerdown', 'pointermove', 'keydown', 'scroll', 'input']
-
-export function createSleepClock(onSleep, isBusy) {
-  let timer
-  function wake() {
-    clearTimeout(timer)
-    if (!isBusy()) timer = setTimeout(onSleep, SLEEP_DELAY)
-  }
-  function stop() { clearTimeout(timer) }
-  return { wake, stop }
-}
+export { createSleepClock }
 
 export function useMuchiSleep(busy, message) {
   const sleeping = ref(null)
   const clock = createSleepClock(() => {
-    sleeping.value = {
-      text: SLEEP_PHRASES[Math.floor(Math.random() * SLEEP_PHRASES.length)],
-      state: 'sleep',
-    }
+    sleeping.value = pickSleep()
   }, () => busy.value)
   function wakeMuchi() {
     sleeping.value = null

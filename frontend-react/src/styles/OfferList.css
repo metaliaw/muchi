@@ -1,0 +1,100 @@
+/* Extraído de OfferList.vue: el Ámbito de Vue se vuelve una Clase Anidada. */
+.mu-scope-OfferList {
+/* Las Copias Abren la Oferta por la Izquierda: es lo primero que se Mira
+   cuando se está Armando una Compra, y ahí el Número Cabe grande. */
+/* Flex y no Grid: una Oferta sin Identificador no Lleva Ficha, y una Columna
+   vacía le Comería el Ancho al Cuerpo. */
+.mu-oferta { display: flex; align-items: flex-start; gap: 14px; }
+.mu-elige {
+  flex: none; width: 20px; height: 20px; margin: 26px 0 0; accent-color: var(--mu-acento);
+  cursor: pointer;
+}
+/* El Hueco de una Agotada Guarda la Columna: sin él, su Ficha se Corre y las
+   Ofertas Dejan de Alinearse entre sí. */
+.mu-elige--fuera { display: block; cursor: default; }
+/* Una Agotada se Sigue Viendo, apagada: su Precio Dice algo del Mercado,
+   pero no es una Compra posible y no Debería Competir por la Atención. */
+/* Se Puede Tocar para Sumar, y la Mano lo Dice antes que cualquier Cartel. */
+.mu-oferta.tomable { cursor: pointer; }
+.mu-oferta.tomable:hover { border-color: var(--mu-rosa); }
+.mu-oferta.agotada, .mu-oferta.desactualizada { opacity: .55; }
+.mu-oferta.agotada .mu-precio { color: var(--mu-tinta-sw); }
+.mu-copias--fuera {
+  flex: none; min-width: 4.6rem; padding: 10px 12px; border-radius: 16px;
+  display: grid; align-content: center; justify-content: center;
+  background: var(--mu-cond-bg); border: 1px dashed var(--mu-tinta-sw);
+}
+.mu-oferta-cuerpo { flex: 1; min-width: 0; }
+.mu-copias {
+  flex: none;
+  display: grid; grid-template-columns: auto auto auto; justify-content: center;
+  align-items: center; align-content: center; gap: 2px 6px;
+  /* Un Ancho fijo Alinea todas las Fichas: con uno y con doce Dígitos, los
+     Nombres de las Ofertas Empiezan en la misma Columna. */
+  min-width: 4.6rem; padding: 8px 10px; border-radius: 16px;
+  background: var(--mu-papel); border: 1px solid var(--mu-rosa-cl);
+  cursor: pointer;
+}
+.mu-copias input {
+  width: 3ch; padding: 0; border: 0; background: none; text-align: right;
+  font-size: 1.5rem; font-weight: 800; color: var(--mu-acento);
+  font-family: inherit;
+}
+/* Las Flechitas Roban el Ancho que el Número Necesita para Verse. */
+.mu-copias input::-webkit-outer-spin-button,
+.mu-copias input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.mu-copias input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+.mu-copias input:focus { outline: none; }
+/* Cero es la Mayoría: la Ficha se Apaga para que Resalten las que sí Compran. */
+.mu-copias.vacia { background: none; border-color: var(--mu-niebla); }
+.mu-copias.vacia input { color: var(--mu-tinta-sw); }
+.mu-copias:focus-within { border-color: var(--mu-acento); }
+.mu-copias__cuenta { display: flex; align-items: baseline; gap: 4px; cursor: pointer; }
+.mu-copias__total { font-size: 1.05rem; font-weight: 700; color: var(--mu-tinta-sw); }
+/* El Más y el Menos Son el Camino corto; el Campo Sigue ahí para el Número
+   que no se Alcanza a Golpes. */
+.mu-copias__paso {
+  width: 26px; height: 26px; padding: 0; border-radius: 50%;
+  border: 1px solid var(--mu-rosa-cl); background: var(--mu-blanco);
+  color: var(--mu-acento); font-size: 1.1rem; font-weight: 800; line-height: 1;
+  cursor: pointer;
+}
+.mu-copias__paso:hover:not(:disabled) { background: var(--mu-rosa-cl); }
+.mu-copias__paso:disabled { opacity: .35; cursor: default; }
+.mu-copias__rotulo {
+  grid-column: 1 / -1; text-align: center;
+  font-size: .72rem; letter-spacing: .04em;
+  color: var(--mu-tinta-sw);
+}
+.mu-lista { margin-bottom: 14px; }
+.mu-lista h2 { margin-top: 0; }
+.mu-lista-fila { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.mu-filtros { display: flex; gap: 14px; flex-wrap: wrap; margin: 14px 0; }
+.mu-filtro { display: flex; align-items: center; gap: 8px; width: fit-content; font-weight: 700; }
+.mu-filtro select { min-width: 120px; padding: 7px 30px 7px 9px; border: 1px solid var(--mu-linea); border-radius: 4px; background: var(--mu-papel); color: var(--mu-tinta); font: inherit; }
+.mu-fichas { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 14px 0; }
+.mu-ficha { display: flex; flex-direction: column; gap: 4px; }
+.mu-ficha strong { font-size: 1.4rem; }
+.mu-oferta { margin-bottom: 12px; }
+.mu-oferta.mejor { border-color: var(--mu-peri); }
+/* La Elegida se Nota sin Gritar: un Borde, no un Fondo entero. Va después de
+   `mejor` porque Elegir otra es Contradecir la Recomendación, y lo que Manda
+   en la Pantalla es la Decisión de quien Compra. */
+.mu-oferta.elegida { border-color: var(--mu-acento); box-shadow: var(--mu-sombra-sw); }
+.mu-oferta-cab { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+h3 { margin: 0; font-size: 1.05rem; }
+/* El Encabezado separa una Carta de la siguiente sin robarle Peso al Precio. */
+.mu-grupo { display: flex; justify-content: space-between; align-items: baseline;
+            gap: 12px; flex-wrap: wrap; margin: 18px 0 8px; font-size: 1.1rem; }
+/* El Cursor avisa que el Nombre hace algo antes de que nadie lo pulse. */
+.mu-mirable { cursor: pointer; }
+.mu-mirable:hover, .mu-mirable:focus-visible { text-decoration: underline dotted; }
+.mu-precio { font-weight: 800; color: var(--mu-acento); }
+.mu-retiros { width: fit-content; margin: 8px 0 4px; color: var(--mu-tinta); font-size: .88rem; }
+.mu-retiros summary { cursor: pointer; }
+.mu-retiros summary::marker { color: var(--mu-peri); }
+.mu-retiros__mas { color: var(--mu-tinta-sw); }
+.mu-retiros ul { margin: 4px 0 0; padding-left: 20px; }
+.mu-detalle-boton { padding: 0; border-radius: 0; background: none; color: var(--mu-acento); box-shadow: none; font-weight: 700; text-decoration: underline; }
+.mu-detalle-boton:hover:not(:disabled) { transform: none; }
+}
