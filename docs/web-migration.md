@@ -10,7 +10,7 @@ would have had to implement the Rules again.
 Now there are two Parts and a clear Boundary:
 
 ```text
-Browser ──► frontend/  (Vue 3 + Vite) renders, does not decide
+Browser ──► frontend/  (React 19 + Vite) renders, does not decide
                 │  fetch /api/...
                 ▼
            bff/server/  (FastAPI, the BFF) decides and keeps the Token
@@ -55,13 +55,13 @@ continues working across Sessions and Machines.
 
 ## What the Frontend Does
 
-`frontend/src/App.vue` orchestrates: it loads Configuration, polls every
+`frontend/src/App.jsx` orchestrates: it loads Configuration, polls every
 `poll_seconds` while the Search is pending and stops on a terminal State.
 Search history and Theme selection live in `localStorage`; previously they
 lived in the Server session and were lost when it closed.
 
 The Palette is the same one from `muchi/mtg/style.py`, now in
-`frontend/src/styles.css`. Dark mode changes CSS variable Values without rewriting Rules.
+`frontend/src/shared/styles.css`. Dark mode changes CSS variable Values without rewriting Rules.
 
 ## Development
 
@@ -101,3 +101,7 @@ both CORS and a second Deployment to keep synchronized.
 It is gone. `app.py`, its Configuration, its Dependency and the Parts that
 built HTML for it were removed when Vue replaced it. Its History lives in
 the Commits; its Code is no longer in the current tree.
+
+A Vue 3 Frontend came next, and React 19 later replaced it in turn. The
+Boundary did not move: both talked to the same BFF, and the framework-free
+Logic —Search, Stock, Names— moved whole into `frontend/src/shared/`.

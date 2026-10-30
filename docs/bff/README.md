@@ -9,7 +9,7 @@ in the local [architecture guide](../architecture.md).
 
 ## Serve the Application
 
-- [`GET /{path}` and `/assets/*`](spa.md) serves built files and Vue history
+- [`GET /{path}` and `/assets/*`](spa.md) serves built files and React history
   routes from the same origin as the BFF.
 - [`GET /api/health`](health.md) gives Cloud Run and operators a cheap liveness
   signal without calling the API.

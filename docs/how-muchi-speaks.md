@@ -10,8 +10,8 @@ and why they are separate.
 | Part | Question It Answers | Location |
 | --- | --- | --- |
 | Catalog | What Muchi can say | [`bff/constants/phrases.yaml`](../bff/constants/phrases.yaml) on the Server |
-| Bubble | What she says now, and who took the turn | [`MuchiPanel.vue`](../frontend/src/components/MuchiPanel.vue) |
-| Sheet | What she looks like while saying it | [`MuchiSprite.vue`](../frontend/src/components/MuchiSprite.vue) |
+| Bubble | What she says now, and who took the turn | [`MuchiPanel.jsx`](../frontend/src/components/MuchiPanel.jsx) |
+| Sheet | What she looks like while saying it | [`MuchiSprite.jsx`](../frontend/src/components/MuchiSprite.jsx) |
 
 All three share one Vocabulary: five States. Text says `happy`, and the
 Sheet already knows which Row that means.
@@ -31,7 +31,7 @@ the Sprite sheet draws one Row per State.
 | `alert` | Catalog nerves, Light mode | 3 | 6 | 100 ms | Ends and signals |
 | `angry` | Any Failure Muchi reports | 4 | 6 | 90 ms | Ends and signals |
 
-Numbers live in [`frontend/src/assets/muchi-sheets.json`](../frontend/src/assets/muchi-sheets.json).
+Numbers live in [`frontend/src/shared/assets/muchi-sheets.json`](../frontend/src/shared/assets/muchi-sheets.json).
 Changing `talk` timing means editing an `ms` value. The
 [Sprite lab](muchi-sprite-lab.html) lets you inspect Frames before editing the Sheet.
 
@@ -94,10 +94,10 @@ flowchart TD
     message -.->|"clears it on arrival"| said
 ```
 
-`message` comes from [`App.vue`](../frontend/src/App.vue), set by
+`message` comes from [`App.jsx`](../frontend/src/App.jsx), set by
 `say(text, mood)`. `said` starts inside the Panel after Petting or toggling
 the Light. The Greeting is chosen once per Session and remembered;
-choosing on every Render would change it whenever Vue repaints the Panel.
+choosing on every Render would change it whenever React repaints the Panel.
 
 A `watch` clears `said` when a `message` arrives. Otherwise, an old Light
 comment would reappear after a Search, as though Muchi were resuming a
@@ -199,7 +199,7 @@ sequenceDiagram
     Panel->>Sprite: state returns to the Bubble's State
 ```
 
-Repeating the same State must animate again. Vue reuses an Element if its
+Repeating the same State must animate again. React reuses an Element if its
 Key stays unchanged, and a finished Animation does not restart itself.
 A `tick` increases on every State change to force a new Element; without
 it, the second consecutive Pet would do nothing.
@@ -256,9 +256,9 @@ Row was drawn to work while still.
 1. [`bff/constants/phrases.yaml`](../bff/constants/phrases.yaml): everything Muchi can say.
 2. [`bff/muchi/mtg/phrases.py`](../bff/muchi/mtg/phrases.py): Validation and invalid
    Catalog behavior.
-3. [`frontend/src/components/MuchiPanel.vue`](../frontend/src/components/MuchiPanel.vue):
+3. [`frontend/src/components/MuchiPanel.jsx`](../frontend/src/components/MuchiPanel.jsx):
    Bubble precedence, Petting and Hearts.
-4. [`frontend/src/components/MuchiSprite.vue`](../frontend/src/components/MuchiSprite.vue):
+4. [`frontend/src/components/MuchiSprite.jsx`](../frontend/src/components/MuchiSprite.jsx):
    Film, `steps()` and the rest Signal.
-5. [`frontend/src/App.vue`](../frontend/src/App.vue): callers of `say` and the one
+5. [`frontend/src/App.jsx`](../frontend/src/App.jsx): callers of `say` and the one
    line that opens the Dock.

@@ -10,7 +10,7 @@ tiene una razón de ser. La frontera y la Cola de la API se describen en la
 ## Servir la Aplicación
 
 - [`GET /{path}` y `/assets/*`](spa.es.md) sirve los archivos compilados y las
-  rutas de Vue desde el mismo origen del BFF.
+  rutas de React desde el mismo origen del BFF.
 - [`GET /api/health`](health.es.md) da a Cloud Run y a Operaciones una señal de
   salud barata, sin llamar a la API.
 - [`GET /ads.txt`](ads.es.md) publica el vendedor autorizado de AdSense solo

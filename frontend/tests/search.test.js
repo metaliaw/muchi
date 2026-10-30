@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   BY_EDITION, BY_PRICE, groupByCardType, hasStoreCatalog, isSearchExpired, limitOf,
   pickable, replacePositions, startSearch, withResults, withState, withStock,
-  spreadUnits, summarizeOffers, topOf, UNCOUNTED_UNITS, describeLanguages } from '../src/search.js'
+  spreadUnits, summarizeOffers, topOf, UNCOUNTED_UNITS, describeLanguages } from '../src/shared/search.js'
 
 const offer = (position, card, price, store, amount = price) =>
   ({ position, card_name: card, price_clp: price, store, currency: 'CLP', amount })

@@ -105,7 +105,7 @@ Pokémon. Pero no Llegaba al Navegador, y se Perdía cuatro veces seguidas:
 | `bff/muchi/api/client.py` | `build_offer` Leía veinte Campos del JSON y `image` no era ninguno |
 | `bff/muchi/mtg/search.py` | `SearchOffer` no Tenía dónde Guardarla |
 | `bff/server/presenter.py` | La Fila que Viaja al Navegador tampoco la Llevaba |
-| `frontend/src/components/OfferList.vue` | Y el Front la Buscaba en `offer.metadata.image` — un Lugar donde la API nunca la Pone |
+| `frontend/src/components/OfferList.jsx` | Y el Front la Buscaba en `offer.metadata.image` — un Lugar donde la API nunca la Pone |
 
 Ninguna de las cuatro se Había notado, y la Razón es la misma que Vuelve
 interesante al Sellado entero: **para una Carta suelta nadie Necesita ese Campo.**

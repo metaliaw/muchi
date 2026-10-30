@@ -1,6 +1,6 @@
 /** La Compra en cada Tienda: qué se Manda, qué se Recuerda, qué se Rechaza. */
 import { describe, expect, it } from 'vitest'
-import { buildLinkItems, cleanStoreOrder, readPurchases, rememberPurchases } from '../src/purchase.js'
+import { buildLinkItems, cleanStoreOrder, readPurchases, rememberPurchases } from '../src/shared/purchase.js'
 
 function memory() {
   const rows = {}

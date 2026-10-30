@@ -21,7 +21,7 @@ The Question Happens when Offers Load, because "Near me" is the default Order.
 If the Answer is no, the Order Stays by Price and a Notice Says so: "I could
 not tell where you are". Nothing Breaks and nothing Insists.
 
-Three Options Ask for the Least, in [`nearby.js`](../frontend/src/nearby.js):
+Three Options Ask for the Least, in [`nearby.js`](../frontend/src/shared/nearby.js):
 
 | Option | Value | Why |
 | --- | --- | --- |
@@ -52,8 +52,8 @@ sequenceDiagram
    by [`places.py`](../bff/server/places.py). It is a public File, written by
    hand, the same for every Visitor.
 2. **The Frontend asks for the Origin.** `askLocation()` Returns
-   `{ lat, lng }` or `null`, and it is Kept in `origin`, a Vue ref inside
-   [`OfferList.vue`](../frontend/src/components/OfferList.vue).
+   `{ lat, lng }` or `null`, and it is Kept in `origin`, a React ref inside
+   [`OfferList.jsx`](../frontend/src/components/OfferList.jsx).
 3. **The Frontend Computes.** `sortByDistance` Measures every Store against
    the Origin by Haversine and Reorders the Rows. Only the Order that is Seen
    Changes; the Quantity Spread keeps Reading Offers by Price.
@@ -65,9 +65,9 @@ sequenceDiagram
 The Guarantee does not Rest on a Promise; it Rests on the Shape of the Flow.
 
 - **The Request does not Carry the Point.** Requests Leave through
-  [`api.js`](../frontend/src/api.js) with the Body each Screen Hands it, and none
+  [`api.js`](../frontend/src/shared/api.js) with the Body each Screen Hands it, and none
   Hands it `origin`. The Offers Response is the Same for any Visitor.
-- **Only `OfferList.vue` and `nearby.js` Touch the Origin.** No other File in
+- **Only `OfferList.jsx` and `nearby.js` Touch the Origin.** No other File in
   `frontend/src` or in the BFF Calls `navigator.geolocation` or Reads the variable.
 - **Nothing is Persisted.** The Origin goes to neither `localStorage` nor
   `sessionStorage`. Reloading the Page is Asking again; the Search History

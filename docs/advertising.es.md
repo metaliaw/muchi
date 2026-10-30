@@ -118,15 +118,15 @@ Cuando el Sitio esté en `READY`:
 
 El Código que Google muestra trae `data-ad-slot="1234567890"`. Esos diez
 Dígitos son el Valor. No copies el `<script>` ni el `<ins>`: los arma
-[`GoogleAd.vue`](../frontend/src/components/GoogleAd.vue).
+[`GoogleAd.jsx`](../frontend/src/components/GoogleAd.jsx).
 
 El mismo Número se puede leer por API, y es el `reportingDimensionId` del
 Bloque. `check-ads.sh` lo imprime y cierra con la Línea lista para copiar.
 
 ## Cómo decide el Front qué dibujar
 
-Tres Condiciones, en [`App.vue`](../frontend/src/App.vue) y
-[`AdSpot.vue`](../frontend/src/components/AdSpot.vue):
+Tres Condiciones, en [`App.jsx`](../frontend/src/App.jsx) y
+[`AdSpot.jsx`](../frontend/src/components/AdSpot.jsx):
 
 1. **`environment === 'production'`.** Fuera de Producción el Algoritmo decide
    igual, pero se dibuja un Placeholder: así se prueba la Elección sin
@@ -138,7 +138,7 @@ Tres Condiciones, en [`App.vue`](../frontend/src/App.vue) y
    Identificador de la Búsqueda, así que no cambia entre las Consultas
    automáticas de una misma Búsqueda.
 
-Si el Script de Google no carga —un Bloqueador, una Red caída— `GoogleAd.vue`
+Si el Script de Google no carga —un Bloqueador, una Red caída— `GoogleAd.jsx`
 no deja un Hueco: dice que Muchi sigue buscando Ofertas.
 
 ## Las Variables

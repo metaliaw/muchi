@@ -2,7 +2,7 @@
 
 # Arquitectura del BFF de Muchi
 
-La experiencia Vue de Muchi, el Backend-for-Frontend (BFF) en FastAPI y la
+La experiencia React de Muchi, el Backend-for-Frontend (BFF) en FastAPI y la
 implementación de la API viven en este repositorio. La API puede correr como
 un servicio separado para recibir búsquedas, procesar la Cola con Workers,
 persistir resultados, aplicar caducidad y recuperarse de fallos. Esta página
@@ -17,7 +17,7 @@ flowchart LR
     dns["muchitcg.cl<br/>NIC Chile y Cloud DNS"]
 
     subgraph front["metaliaw/muchi · este repositorio"]
-        hosting["Firebase Hosting<br/>archivos estáticos de Vue"]
+        hosting["Firebase Hosting<br/>archivos estáticos de React"]
         bff["Cloud Run<br/>BFF FastAPI y SPA"]
         mcp["MCP<br/>Streamable HTTP"]
         presenter["Reglas de presentación<br/>server/presenter.py"]
@@ -41,7 +41,7 @@ flowchart LR
 Cloud DNS resuelve el nombre público. Firebase Hosting sirve la Interfaz
 compilada y envía las peticiones `/api/*` al BFF. El BFF valida entradas
 públicas, llama al dominio Muchi y usa la credencial de API del lado servidor
-para cruzar la frontera entre repositorios. Vue nunca recibe esa credencial.
+para cruzar la frontera entre repositorios. React nunca recibe esa credencial.
 
 El mismo Servicio expone MCP en `/mcp/` para Agentes. Sus herramientas crean
 Búsquedas y leen sus Resultados a través del Dominio Muchi; usan el mismo
@@ -49,7 +49,7 @@ Token y la misma API que el Sitio.
 
 ## Para Qué Existe el BFF
 
-El BFF mantiene la autenticación de API fuera del Navegador y da a Vue
+El BFF mantiene la autenticación de API fuera del Navegador y da a React
 respuestas adaptadas a la Interfaz. También posee los límites públicos y las
 decisiones de presentación sobre orden de ofertas, etiquetas de stock y
 contenido del carrito. Estas reglas se pueden leer en
@@ -69,7 +69,7 @@ roles de servicio y las formas de respuesta.
 ```mermaid
 sequenceDiagram
     actor Person as Persona
-    participant Web as Vue
+    participant Web as React
     participant BFF as BFF FastAPI
     participant Domain as Dominio Muchi
     participant API as API de Muchi
@@ -99,7 +99,7 @@ la idempotencia de los Workers y el comportamiento de la Cola.
 
 Cada ruta pública tiene su propia explicación de propósito, entrada y frontera
 en la [guía de entrypoints del BFF](bff/README.es.md). El índice se organiza
-por las tareas que habilita cada ruta, desde servir Vue hasta crear y presentar
+por las tareas que habilita cada ruta, desde servir React hasta crear y presentar
 búsquedas.
 
 ## Seguridad y Operación

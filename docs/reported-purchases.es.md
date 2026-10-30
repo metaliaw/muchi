@@ -23,7 +23,7 @@ como exactamente eso: tu respuesta.
 ```mermaid
 sequenceDiagram
     participant P as Persona
-    participant W as Carrito (Vue)
+    participant W as Carrito (React)
     participant B as BFF
     participant A as API de Muchi
     participant S as Tienda
@@ -72,9 +72,9 @@ stateDiagram-v2
 
 | Pieza | Lugar | Contiene |
 | --- | --- | --- |
-| Botones, formulario del número | [`CartPanel.vue`](../frontend/src/components/CartPanel.vue) | estado por tienda, un clic abre la pestaña |
-| Líneas, limpieza, memoria | [`purchase.js`](../frontend/src/purchase.js) | qué líneas van, el número recortado a 64 caracteres, `sessionStorage` por búsqueda |
-| Llamadas | [`api.js`](../frontend/src/api.js) | `linkStoreOrder`, `reportStoreOrder` |
+| Botones, formulario del número | [`CartPanel.jsx`](../frontend/src/components/CartPanel.jsx) | estado por tienda, un clic abre la pestaña |
+| Líneas, limpieza, memoria | [`purchase.js`](../frontend/src/shared/purchase.js) | qué líneas van, el número recortado a 64 caracteres, `sessionStorage` por búsqueda |
+| Llamadas | [`api.js`](../frontend/src/shared/api.js) | `linkStoreOrder`, `reportStoreOrder` |
 | Rutas del BFF | [`bff/server/main.py`](../bff/server/main.py) | `/api/searches/{id}/orders/links`, `/api/searches/{id}/orders/{order_id}/report` |
 | Cliente de la API | [`bff/muchi/api/client.py`](../bff/muchi/api/client.py) | `link_order`, `report_order`, `StoreOrder` |
 

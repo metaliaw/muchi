@@ -2,7 +2,7 @@
 
 # Config Describes the Public Runtime
 
-`GET /api/config` lets the Vue application learn the current public limits,
+`GET /api/config` lets the React application learn the current public limits,
 polling interval, exchange rate, feature switches, links and social networks
 from the same deployment that serves it.
 

@@ -116,15 +116,15 @@ Once the Site is `READY`, choose:
 
 Google's Code contains `data-ad-slot="1234567890"`. Those ten Digits are
 the Value. Do not copy the `<script>` or `<ins>`: those are built by
-[`GoogleAd.vue`](../frontend/src/components/GoogleAd.vue).
+[`GoogleAd.jsx`](../frontend/src/components/GoogleAd.jsx).
 
 The same Number is available through the API as the unit's
 `reportingDimensionId`. `check-ads.sh` prints it and ends with a ready-to-copy Command.
 
 ## How the Frontend Chooses What to Render
 
-Three conditions live in [`App.vue`](../frontend/src/App.vue) and
-[`AdSpot.vue`](../frontend/src/components/AdSpot.vue):
+Three conditions live in [`App.jsx`](../frontend/src/App.jsx) and
+[`AdSpot.jsx`](../frontend/src/components/AdSpot.jsx):
 
 1. `environment === 'production'`. Outside Production, the same Algorithm
    chooses a placement but renders a Placeholder, letting you test the
@@ -136,7 +136,7 @@ Three conditions live in [`App.vue`](../frontend/src/App.vue) and
    Hash and stays stable across Polls of the same Search.
 
 If Google's Script fails to load because of an Ad blocker or Network
-failure, `GoogleAd.vue` leaves no Hole: it says Muchi is still looking for Offers.
+failure, `GoogleAd.jsx` leaves no Hole: it says Muchi is still looking for Offers.
 
 ## The Variables
 

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createSleepClock } from '../src/sleep.js'
+import { createSleepClock } from '../src/shared/sleepClock.js'
 
 afterEach(() => vi.useRealTimers())
 

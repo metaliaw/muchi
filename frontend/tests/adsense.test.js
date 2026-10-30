@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 // El Script se Cachea por Módulo: cada Prueba Empieza con uno Nuevo.
 async function freshLoader() {
   vi.resetModules()
-  return (await import('../src/adsense.js')).loadAds
+  return (await import('../src/shared/adsense.js')).loadAds
 }
 
 // Las Pruebas Corren sin Navegador: un Documento mínimo Anota los Scripts.

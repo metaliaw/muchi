@@ -6,7 +6,7 @@ MUCHI helps you find Magic Cards and compare Store offers. Search for one
 Card or paste a complete List to calculate a proposed Purchase in CLP,
 including Shipping costs.
 
-The MUCHI API performs Searches and retains their Results. This Vue 3
+The MUCHI API performs Searches and retains their Results. This React 19
 Frontend displays Progress, Offers and the Cart.
 
 To look behind the Screen, explore
@@ -253,9 +253,9 @@ reaches the Worker, API and this Frontend; a second Rotator here could become
 stale. The local integration is described in the
 [API guide](docs/api/README.md).
 
-## The Vue Frontend
+## The React Frontend
 
-The Frontend is Vue 3, served by a FastAPI BFF that keeps the Security
+The Frontend is React 19, served by a FastAPI BFF that keeps the Security
 token and makes decisions on its behalf.
 
 In Production, Cloud Run serves the BFF and retains a Frontend copy.

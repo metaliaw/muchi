@@ -1,30 +1,38 @@
-import { ref } from 'vue'
+import { useCallback, useRef, useState } from 'react'
 import { emptySearch, searchFromLocation, startSearch, withResults, withState, withStock }
-  from './search.js'
+  from '@shared/search.js'
 
-/** La Búsqueda en Refs de Vue: misma Interfaz de siempre, Lógica de arriba. */
+/**
+ * La Búsqueda en Estado de React, sobre la misma Lógica que usa Vue.
+ *
+ * `latest` Guarda el Valor vigente: el Sondeo llama a applyState y
+ * applyResults en el mismo Ciclo, y el segundo debe ver lo que dejó el primero
+ * sin esperar un Render.
+ */
 export function useSearch() {
-  const refs = Object.fromEntries(Object.entries(emptySearch(searchFromLocation()))
-    .map(([key, value]) => [key, ref(value)]))
-  const read = () => Object.fromEntries(Object.entries(refs).map(([key, r]) => [key, r.value]))
-  const write = (search) => {
-    for (const [key, value] of Object.entries(search)) {
-      if (refs[key].value !== value) refs[key].value = value
-    }
-  }
+  const [search, setSearch] = useState(() => emptySearch(searchFromLocation()))
+  const latest = useRef(search)
+  const write = useCallback((next) => {
+    latest.current = next
+    setSearch(next)
+  }, [])
 
-  const start = (...args) => write(startSearch(...args))
-  const applyState = (incoming) => {
-    const { search, game } = withState(read(), incoming)
-    write(search)
+  const start = useCallback((...args) => write(startSearch(...args)), [write])
+  const applyState = useCallback((incoming) => {
+    const { search: next, game } = withState(latest.current, incoming)
+    write(next)
     return game
-  }
-  const applyResults = (reply) => {
-    const { search, game } = withResults(read(), reply)
-    write(search)
+  }, [write])
+  const applyResults = useCallback((reply) => {
+    const { search: next, game } = withResults(latest.current, reply)
+    write(next)
     return game
-  }
-  const applyStock = (answer) => write(withStock(read(), answer))
+  }, [write])
+  const applyStock = useCallback((answer) => write(withStock(latest.current, answer)), [write])
+  const update = useCallback((fields) => write({ ...latest.current, ...fields }), [write])
 
-  return { ...refs, start, applyState, applyResults, applyStock }
+  // Lo vigente, para las Funciones asíncronas que no Esperan un Render.
+  const read = useCallback(() => latest.current, [])
+
+  return { ...search, start, applyState, applyResults, applyStock, update, read }
 }

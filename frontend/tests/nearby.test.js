@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { askLocation, distanceKm, sortByDistance } from '../src/nearby.js'
+import { askLocation, distanceKm, sortByDistance } from '../src/shared/nearby.js'
 
 const OBELISCO = { lat: -34.6037, lng: -58.3816 }
 const LA_PLATA = { lat: -34.9214, lng: -57.9545 }

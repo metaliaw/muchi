@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createNameTranslator, translateNames } from '../src/names.js'
+import { createNameTranslator, translateNames } from '../src/shared/names.js'
 
 const catalog = { 'Anillo solar': 'Sol Ring', 'Rayo': 'Lightning Bolt' }
 const ask = (name) => Promise.resolve(catalog[name] ?? null)

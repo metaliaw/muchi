@@ -7,7 +7,7 @@ Puedes consultar una Carta o pegar una Lista completa y calcular una propuesta
 de Compra en CLP que considere también el costo de los Envíos.
 
 La API de MUCHI realiza las Búsquedas y conserva sus Resultados. Este Front,
-construido con Vue 3, muestra el Avance, las Ofertas y el Carrito.
+construido con React 19, muestra el Avance, las Ofertas y el Carrito.
 
 Quienes quieran mirar detrás de la Pantalla pueden recorrer la
 [Arquitectura de MUCHI](docs/architecture.es.md), sus Decisiones públicas y las
@@ -265,9 +265,9 @@ Secreto. La Rotación alcanza al Worker, la API y este Front; un segundo
 Rotador aquí podría quedar desactualizado. La integración local se describe
 en la [guía de la API](docs/api/README.es.md).
 
-## El Front Vue
+## El Front React
 
-El Front es Vue 3 y lo sirve un BFF en FastAPI que conserva el Código de
+El Front es React 19 y lo sirve un BFF en FastAPI que conserva el Código de
 Seguridad y decide por él.
 
 En Producción, Cloud Run sirve el BFF y conserva una copia del Front. Firebase

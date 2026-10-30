@@ -21,7 +21,7 @@ La Pregunta Ocurre al Cargar las Ofertas, porque «Cerca mío» es el Orden por
 defecto. Si la Respuesta es no, el Orden Queda por Precio y un Aviso lo Dice:
 «No pude saber dónde estás». Nada se Rompe y nada se Insiste.
 
-Tres Opciones Piden lo Mínimo, en [`nearby.js`](../frontend/src/nearby.js):
+Tres Opciones Piden lo Mínimo, en [`nearby.js`](../frontend/src/shared/nearby.js):
 
 | Opción | Valor | Por qué |
 | --- | --- | --- |
@@ -52,8 +52,8 @@ sequenceDiagram
    por [`places.py`](../bff/server/places.py). Es un Archivo público, escrito a
    mano, igual para todos los Visitantes.
 2. **El Front pide el Origen.** `askLocation()` Devuelve `{ lat, lng }` o
-   `null`, y se Guarda en `origin`, una Referencia de Vue dentro de
-   [`OfferList.vue`](../frontend/src/components/OfferList.vue).
+   `null`, y se Guarda en `origin`, una Referencia de React dentro de
+   [`OfferList.jsx`](../frontend/src/components/OfferList.jsx).
 3. **El Front Calcula.** `sortByDistance` Mide cada Tienda contra el Origen
    por Haversine y Reordena las Filas. Lo que Cambia es el Orden que se Ve;
    el Reparto de Cantidades sigue Leyendo las Ofertas por Precio.
@@ -65,10 +65,10 @@ sequenceDiagram
 La Garantía no Descansa en una Promesa; Descansa en la Forma del Flujo.
 
 - **La Petición no Lleva el Punto.** Las Peticiones Salen por
-  [`api.js`](../frontend/src/api.js) con el Cuerpo que cada Pantalla le Entrega, y
+  [`api.js`](../frontend/src/shared/api.js) con el Cuerpo que cada Pantalla le Entrega, y
   ninguna le Entrega `origin`. La Respuesta de Ofertas es la Misma para
   cualquier Visitante.
-- **Solo `OfferList.vue` y `nearby.js` Tocan el Origen.** Ningún otro Archivo
+- **Solo `OfferList.jsx` y `nearby.js` Tocan el Origen.** Ningún otro Archivo
   de `frontend/src` ni del BFF Llama a `navigator.geolocation` ni Lee la Variable.
 - **Nada se Persiste.** El Origen no va a `localStorage` ni a
   `sessionStorage`. Recargar la Página es Volver a Preguntar; el Historial de

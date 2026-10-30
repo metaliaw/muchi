@@ -10,8 +10,8 @@ hacen eso y por qué están separadas.
 | Pieza | Responde | Dónde vive |
 | --- | --- | --- |
 | El Catálogo | Qué puede decir Muchi | [`bff/constants/phrases.yaml`](../bff/constants/phrases.yaml) en el Servidor |
-| La Burbuja | Qué dice ahora, y quién le ganó el turno | [`MuchiPanel.vue`](../frontend/src/components/MuchiPanel.vue) |
-| La Hoja | Cómo se ve mientras lo dice | [`MuchiSprite.vue`](../frontend/src/components/MuchiSprite.vue) |
+| La Burbuja | Qué dice ahora, y quién le ganó el turno | [`MuchiPanel.jsx`](../frontend/src/components/MuchiPanel.jsx) |
+| La Hoja | Cómo se ve mientras lo dice | [`MuchiSprite.jsx`](../frontend/src/components/MuchiSprite.jsx) |
 
 Las tres se hablan con un solo Vocabulario: cinco Estados. Un Texto no dice
 «ponte contenta», dice `happy`, y la Hoja ya sabe qué Fila es esa.
@@ -31,7 +31,7 @@ la Hoja de Sprites con una Fila por cada uno.
 | `alert` | Nervios del Catálogo, Modo Claro | 3 | 6 | 100 ms | Termina y avisa |
 | `angry` | Cualquier Fallo que Muchi cuenta | 4 | 6 | 90 ms | Termina y avisa |
 
-Los Números viven en [`frontend/src/assets/muchi-sheets.json`](../frontend/src/assets/muchi-sheets.json),
+Los Números viven en [`frontend/src/shared/assets/muchi-sheets.json`](../frontend/src/shared/assets/muchi-sheets.json),
 no en el Código. Cambiar el Ritmo de `talk` es editar un `ms`, y
 [`docs/muchi-sprite-lab.es.html`](muchi-sprite-lab.es.html) permite mirarlos cuadro a
 cuadro antes de tocar la Hoja.
@@ -95,11 +95,11 @@ flowchart TD
     message -.->|"lo borra al llegar"| said
 ```
 
-`message` baja desde [`App.vue`](../frontend/src/App.vue), que lo escribe con
+`message` baja desde [`App.jsx`](../frontend/src/App.jsx), que lo escribe con
 `say(text, mood)`. `said` nace dentro del Panel, de una Caricia o del
 Interruptor de la Luz. El Saludo se elige una sola vez por Sesión y se
 memoriza: si se sorteara en cada Pintado, Muchi cambiaría de Saludo cada vez
-que Vue vuelve a dibujar el Panel.
+que React vuelve a dibujar el Panel.
 
 Cuando llega un `message`, un `watch` limpia `said`. Sin esa Limpieza, un
 Comentario viejo sobre la Luz volvería a aparecer al terminar la Búsqueda,
@@ -205,7 +205,7 @@ sequenceDiagram
     Panel->>Sprite: state vuelve a lo que diga la Burbuja
 ```
 
-Repetir el mismo Estado también debe volver a animarlo. Vue reusa el Elemento
+Repetir el mismo Estado también debe volver a animarlo. React reusa el Elemento
 si su Clave no cambia, y una Animación ya terminada no se reinicia sola: por
 eso un `tick` sube en cada Cambio de Estado y fuerza un Elemento nuevo. Sin él,
 la segunda Caricia seguida no haría nada.
@@ -266,9 +266,9 @@ quieto.
    puede decir.
 2. [`bff/muchi/mtg/phrases.py`](../bff/muchi/mtg/phrases.py) — la Validación, y qué
    pasa si el Catálogo está mal.
-3. [`frontend/src/components/MuchiPanel.vue`](../frontend/src/components/MuchiPanel.vue) —
+3. [`frontend/src/components/MuchiPanel.jsx`](../frontend/src/components/MuchiPanel.jsx) —
    la Precedencia de la Burbuja, las Caricias y los Corazones.
-4. [`frontend/src/components/MuchiSprite.vue`](../frontend/src/components/MuchiSprite.vue) —
+4. [`frontend/src/components/MuchiSprite.jsx`](../frontend/src/components/MuchiSprite.jsx) —
    el Film, los `steps()` y el Aviso de reposo.
-5. [`frontend/src/App.vue`](../frontend/src/App.vue) — quién llama a `say`, y la única
+5. [`frontend/src/App.jsx`](../frontend/src/App.jsx) — quién llama a `say`, y la única
    Línea que abre el Muelle.

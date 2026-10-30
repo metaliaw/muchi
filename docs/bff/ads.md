@@ -7,7 +7,7 @@ valid publisher ID is configured. With no valid ID, the route returns 404 so
 the site does not claim an advertising relationship it does not have.
 
 The publisher ID is runtime configuration. The BFF can change it without
-rebuilding Vue, and the seller authority identifier remains part of the
+rebuilding React, and the seller authority identifier remains part of the
 published format.
 
 The route is implemented by [`read_ads_txt`](../../bff/server/main.py).

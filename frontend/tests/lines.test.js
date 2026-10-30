@@ -1,6 +1,6 @@
 /** La Línea que Lleva el Cursor y el Final que Muchi Ofrece. */
 import { describe, expect, it } from 'vitest'
-import { completionFor, foldName, lineAround, splitOrder } from '../src/search.js'
+import { completionFor, foldName, lineAround, splitOrder } from '../src/shared/search.js'
 
 describe('la Línea que se está escribiendo', () => {
   it('Separa la Cantidad del Nombre', () => {

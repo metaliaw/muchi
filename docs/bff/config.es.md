@@ -2,7 +2,7 @@
 
 # Config Describe el Entorno Público
 
-`GET /api/config` permite que Vue conozca los límites públicos, el intervalo
+`GET /api/config` permite que React conozca los límites públicos, el intervalo
 de sondeo, el tipo de cambio, las funciones activas, los enlaces y las redes
 sociales de la misma versión que la sirve.
 

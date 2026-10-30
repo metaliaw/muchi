@@ -2,7 +2,7 @@
 
 # Muchi BFF Architecture
 
-Muchi's Vue experience, FastAPI Backend-for-Frontend (BFF), and API
+Muchi's React experience, FastAPI Backend-for-Frontend (BFF), and API
 implementation live in this repository. The API can run as a separate service
 for search collection, queueing, workers, persistence, expiration and recovery.
 This page describes the browser-facing boundary and service flow.
@@ -16,7 +16,7 @@ flowchart LR
     dns["muchitcg.cl<br/>NIC Chile and Cloud DNS"]
 
     subgraph front["metaliaw/muchi · this repository"]
-        hosting["Firebase Hosting<br/>static Vue files"]
+        hosting["Firebase Hosting<br/>static React files"]
         bff["Cloud Run<br/>FastAPI BFF and SPA"]
         mcp["MCP<br/>Streamable HTTP"]
         presenter["Presentation rules<br/>server/presenter.py"]
@@ -40,14 +40,14 @@ flowchart LR
 Cloud DNS resolves the public name. Firebase Hosting serves the compiled
 interface and sends `/api/*` requests to the BFF. The BFF validates public
 inputs, calls the Muchi domain, and uses the server-side API credential for
-requests across the repository boundary. Vue never receives that credential.
+requests across the repository boundary. React never receives that credential.
 The same service exposes MCP at `/mcp/` for agents. Its tools create Searches
 and read their Results through the Muchi domain, using the same token and API
 as the website.
 
 ## Why the BFF Exists
 
-The BFF keeps API authentication out of the browser and gives Vue response
+The BFF keeps API authentication out of the browser and gives React response
 shapes that already match the interface. It also owns public limits and
 presentation decisions such as offer ordering, stock labels and cart output.
 These rules are visible in [`bff/server/main.py`](../bff/server/main.py) and
@@ -65,7 +65,7 @@ client, service roles and response shapes.
 ```mermaid
 sequenceDiagram
     actor Person
-    participant Web as Vue
+    participant Web as React
     participant BFF as FastAPI BFF
     participant Domain as Muchi domain
     participant API as Muchi API
@@ -95,7 +95,7 @@ idempotency and queue behavior.
 
 Each public route has its own explanation of its purpose, input and boundary
 in the [BFF entry-point guide](bff/README.md). The index is arranged by the
-task each route enables, from serving the Vue application to creating and
+task each route enables, from serving the React application to creating and
 presenting searches.
 
 ## Security and Operations

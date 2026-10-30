@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   confirmOffer, confirmOffers, countReachable, pickCandidates, readFreshChecks,
   readShopifyProbe, readShopifyStock, rememberChecks, sayAge,
-} from '../src/stock.js'
+} from '../src/shared/stock.js'
 
 // Una Tienda de mentira: contesta lo que se le Diga y Anota a quién visitaron.
 function store(answers) {
